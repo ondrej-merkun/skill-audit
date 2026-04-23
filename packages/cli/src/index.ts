@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { runScan } from './commands/scan.js';
 
 const program = new Command();
 
@@ -11,8 +12,11 @@ program
   .command('scan')
   .description('Scan installed agent skills for security issues')
   .action(() => {
-    console.log('not yet implemented');
-    process.exit(0);
+    runScan().catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[skillaudit] fatal: ${msg}\n`);
+      process.exit(2);
+    });
   });
 
 program.parse();
