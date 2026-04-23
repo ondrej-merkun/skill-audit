@@ -128,7 +128,7 @@ at the bottom and the loop will stop.
 
 ## Phase 5 — Scan command + output (spec: §6, §7)
 
-- [ ] **5.1** Wire up `scan` command in `src/commands/scan.ts`:
+- [x] **5.1** Wire up `scan` command in `src/commands/scan.ts`:
   discover → run rules → score → render. Default TUI table output.
 - [ ] **5.2** Implement `src/output/table.ts` — renders the exact hero
   mockup from spec §6 using cli-table3 + chalk. Severity dots, two-
