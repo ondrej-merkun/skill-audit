@@ -106,7 +106,7 @@ at the bottom and the loop will stop.
 
 ## Phase 4 — Scoring, verdict, allowlist (spec: §4 "Scoring")
 
-- [ ] **4.1** Implement `src/score.ts` with the formula from spec:
+- [x] **4.1** Implement `src/score.ts` with the formula from spec:
   `score = max(0, 100 - (25·C + 10·H + 3·M + 1·L))` counting unique
   rule IDs. Verdict bands: 85-100 PASS, 50-84 REVIEW, 1-49 FAIL,
   0 FAIL(hard).
