@@ -10,6 +10,7 @@ import { PROMPT_INJECTION_RULES } from '../packages/cli/src/rules/prompt-injecti
 import { GIT_HISTORY_RULES } from '../packages/cli/src/rules/git-history.js';
 import { DEPENDENCIES_RULES } from '../packages/cli/src/rules/dependencies.js';
 import { OBFUSCATION_RULES } from '../packages/cli/src/rules/obfuscation.js';
+import { SKILL_SPECIFIC_RULES } from '../packages/cli/src/rules/skill-specific.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -23,6 +24,7 @@ const ALL_RULES = [
   ...GIT_HISTORY_RULES,
   ...DEPENDENCIES_RULES,
   ...OBFUSCATION_RULES,
+  ...SKILL_SPECIFIC_RULES,
 ];
 
 describe('rule fixtures', () => {
