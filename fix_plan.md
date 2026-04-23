@@ -23,7 +23,7 @@ at the bottom and the loop will stop.
 - [x] **1.4** Configure tsconfig with strict mode, `moduleResolution:
   "bundler"`, `target: "ES2022"`. Configure biome (`biome.json`) with
   recommended rules + 2-space indent.
-- [ ] **1.5** Create `packages/cli/src/index.ts` with shebang and a
+- [x] **1.5** Create `packages/cli/src/index.ts` with shebang and a
   commander skeleton: root command prints version, `scan` subcommand
   stub exits 0 with "not yet implemented". `pnpm build && node
   packages/cli/dist/index.js --version` must work.
