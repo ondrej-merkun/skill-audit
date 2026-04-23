@@ -97,7 +97,7 @@ at the bottom and the loop will stop.
 - [x] **3.8** Implement `src/rules/obfuscation.ts` — 5 rules:
   `OBFS-BASE64-LARGE`, `OBFS-HEX-LARGE`, `OBFS-EVAL-ATOB`,
   `OBFS-STRING-CONCAT-CMD`, `OBFS-HOMOGLYPH`.
-- [ ] **3.9** Implement `src/rules/skill-specific.ts` — 5 rules:
+- [x] **3.9** Implement `src/rules/skill-specific.ts` — 5 rules:
   `SKILL-CURL-BASH-IN-MD`, `SKILL-FETCH-AND-EXEC`,
   `SKILL-DISABLE-SAFETY`, `SKILL-PASSWORD-ZIP`, `SKILL-MEMORY-WRITE`.
 - [ ] **3.10** Implement `src/rules/secrets.ts` — `SEC-HARDCODED-KEY`
