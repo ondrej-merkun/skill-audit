@@ -66,7 +66,7 @@ at the bottom and the loop will stop.
 
 ## Phase 3 — Rule engine (spec: §4)
 
-- [ ] **3.1** Implement the rule runner in `src/rules/engine.ts`:
+- [x] **3.1** Implement the rule runner in `src/rules/engine.ts`:
   iterates files in a skill tree, runs applicable rules, returns
   `Finding[]`. Includes a per-pattern regex timeout wrapper
   (abort after 500ms to avoid catastrophic backtracking).
