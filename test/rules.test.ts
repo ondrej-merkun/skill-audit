@@ -5,12 +5,13 @@ import { describe, expect, it } from 'vitest';
 import { runRules } from '../packages/cli/src/rules/engine.js';
 import { CODE_EXECUTION_RULES } from '../packages/cli/src/rules/code-execution.js';
 import { NETWORK_EXFIL_RULES } from '../packages/cli/src/rules/network-exfil.js';
+import { FILESYSTEM_RULES } from '../packages/cli/src/rules/filesystem.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const FIXTURES_DIR = join(__dirname, 'fixtures');
 
-const ALL_RULES = [...CODE_EXECUTION_RULES, ...NETWORK_EXFIL_RULES];
+const ALL_RULES = [...CODE_EXECUTION_RULES, ...NETWORK_EXFIL_RULES, ...FILESYSTEM_RULES];
 
 describe('rule fixtures', () => {
   for (const rule of ALL_RULES) {
