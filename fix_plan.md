@@ -35,7 +35,7 @@ at the bottom and the loop will stop.
 
 ## Phase 2 — Discovery layer (spec: §3)
 
-- [ ] **2.1** Implement the discovery registry in
+- [x] **2.1** Implement the discovery registry in
   `src/discovery/index.ts` — loads all discovery plugins and exposes
   `discoverAll(): Promise<Skill[]>`. Each plugin implements the
   `AgentDiscovery` interface from `types.ts`.
