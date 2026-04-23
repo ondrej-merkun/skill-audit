@@ -110,7 +110,7 @@ at the bottom and the loop will stop.
   `score = max(0, 100 - (25·C + 10·H + 3·M + 1·L))` counting unique
   rule IDs. Verdict bands: 85-100 PASS, 50-84 REVIEW, 1-49 FAIL,
   0 FAIL(hard).
-- [ ] **4.2** Implement mandatory-fail override list in `src/score.ts`:
+- [x] **4.2** Implement mandatory-fail override list in `src/score.ts`:
   any of `NET-EXFIL-ENV`, `NET-WEBHOOK-KNOWN`, `SKILL-PASSWORD-ZIP`,
   `PI-EXFIL-TRIGGER-CLAUSE`, `OBFS-EVAL-ATOB`, or `DEPS-REMOTE-IMPORT`
   + pipe-to-shell, or compound `FS-CREDSTORE` + `NET-*` → FAIL regardless of score.
