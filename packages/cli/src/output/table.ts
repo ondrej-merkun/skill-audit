@@ -2,86 +2,176 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 import type { ScanResult, ScannedSkill, Verdict } from '../types.js';
 
-const DOTS: Record<string, string> = {
-  critical: chalk.red('●'),
-  high: chalk.yellow('●'),
-  medium: chalk.hex('#FFA500')('●'),
-  low: chalk.blue('●'),
-  info: chalk.gray('●'),
+const C_CRITICAL = chalk.hex('#FF4444');
+const C_HIGH = chalk.hex('#FF8C00');
+const C_MEDIUM = chalk.hex('#FFD700');
+const C_PASS = chalk.hex('#4EC9B0');
+const C_GREY = chalk.hex('#8B8B8B');
+
+const MAX_ROWS = 20;
+
+// Borderless table chars — produces aligned columns with no box borders
+const NO_BORDERS = {
+  top: '',
+  'top-mid': '',
+  'top-left': '',
+  'top-right': '',
+  bottom: '',
+  'bottom-mid': '',
+  'bottom-left': '',
+  'bottom-right': '',
+  left: ' ',
+  'left-mid': '',
+  mid: '',
+  'mid-mid': '',
+  right: '',
+  'right-mid': '',
+  middle: ' ',
 };
 
-function colorVerdict(verdict: Verdict): string {
-  if (verdict === 'PASS') return chalk.green(verdict);
-  if (verdict === 'REVIEW') return chalk.yellow(verdict);
-  return chalk.red(verdict);
+function verdictDot(skill: ScannedSkill): string {
+  const { verdict, score } = skill.summary;
+  if (verdict === 'FAIL') return '🔴';
+  if (verdict === 'PASS') return '🟢';
+  return score < 75 ? '🟠' : '🟡';
 }
 
-function colorScore(score: number): string {
-  if (score >= 85) return chalk.green(String(score));
-  if (score >= 50) return chalk.yellow(String(score));
-  return chalk.red(String(score));
+function colorVerdict(skill: ScannedSkill): string {
+  const { verdict, score } = skill.summary;
+  if (verdict === 'FAIL') return C_CRITICAL(verdict);
+  if (verdict === 'PASS') return C_PASS(verdict);
+  return score < 75 ? C_HIGH(verdict) : C_MEDIUM(verdict);
+}
+
+function colorScore(skill: ScannedSkill): string {
+  const { verdict, score } = skill.summary;
+  if (verdict === 'FAIL') return C_CRITICAL(String(score));
+  if (verdict === 'PASS') return C_PASS(String(score));
+  return score < 75 ? C_HIGH(String(score)) : C_MEDIUM(String(score));
 }
 
 function topIssue(skill: ScannedSkill): string {
-  if (skill.findings.length === 0) return chalk.gray('—');
-  // Pick the most severe finding
-  const order = ['critical', 'high', 'medium', 'low', 'info'];
+  if (skill.summary.allowlisted) return C_PASS('allowlisted ✓');
+  if (skill.findings.length === 0) return C_GREY('—');
+
+  const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
   const sorted = [...skill.findings].sort(
-    (a, b) => order.indexOf(a.severity) - order.indexOf(b.severity)
+    (a, b) => (order[a.severity] ?? 99) - (order[b.severity] ?? 99)
   );
   const top = sorted[0];
-  if (!top) return chalk.gray('—');
-  return `${DOTS[top.severity] ?? '●'} ${top.ruleId}`;
+  if (!top) return C_GREY('—');
+
+  const ruleLabel = top.ruleId.toLowerCase();
+  if (top.line > 0) {
+    const loc = top.file.replace(/^.*[\\/]/, ''); // basename only
+    return `${ruleLabel} ${C_GREY(`(${loc}:${top.line})`)}`;
+  }
+  return ruleLabel;
 }
 
-function issueCount(skill: ScannedSkill): string {
-  const { critical, high, medium, low } = skill.summary;
-  const parts: string[] = [];
-  if (critical > 0) parts.push(chalk.red(`${critical}C`));
-  if (high > 0) parts.push(chalk.yellow(`${high}H`));
-  if (medium > 0) parts.push(chalk.hex('#FFA500')(`${medium}M`));
-  if (low > 0) parts.push(chalk.blue(`${low}L`));
-  return parts.length > 0 ? parts.join(' ') : chalk.gray('clean');
+function sortedByVerdict(skills: ScannedSkill[]): ScannedSkill[] {
+  const order: Record<Verdict, number> = { FAIL: 0, REVIEW: 1, PASS: 2 };
+  return [...skills].sort((a, b) => order[a.summary.verdict] - order[b.summary.verdict]);
 }
 
-export function renderTable(result: ScanResult): void {
+export function renderTableToString(result: ScanResult): string {
+  const { skills, scan, agents, summary } = result;
+  const agentCount = agents.length;
+  const durationS = (scan.durationMs / 1000).toFixed(1);
+  const lines: string[] = [];
+
+  // ── Header box ──────────────────────────────────────────────────────
+  const headerContent = `  skillaudit  scanned ${summary.skillsScanned} skill${summary.skillsScanned !== 1 ? 's' : ''} across ${agentCount} agent${agentCount !== 1 ? 's' : ''} in ${durationS}s`;
+  const boxWidth = Math.max(82, headerContent.length + 4);
+  lines.push(`┌${'─'.repeat(boxWidth - 2)}┐`);
+  lines.push(`│${headerContent}${' '.repeat(boxWidth - 2 - headerContent.length)}│`);
+  lines.push(`└${'─'.repeat(boxWidth - 2)}┘`);
+  lines.push('');
+
+  if (skills.length === 0) {
+    lines.push('  No skills found.');
+    lines.push('');
+    return lines.join('\n');
+  }
+
+  // ── Column header row ────────────────────────────────────────────────
+  const head = [
+    chalk.bold('AGENT'),
+    chalk.bold('SKILL'),
+    chalk.bold('VERDICT'),
+    chalk.bold('SCORE'),
+    chalk.bold('TOP ISSUE'),
+  ];
+
+  // ── Rows ──────────────────────────────────────────────────────────────
+  const ordered = sortedByVerdict(skills);
+  const shown = ordered.slice(0, MAX_ROWS);
+  const extra = ordered.length - shown.length;
+
   const table = new Table({
-    head: [
-      chalk.bold('Agent'),
-      chalk.bold('Skill'),
-      chalk.bold('Score'),
-      chalk.bold('Verdict'),
-      chalk.bold('Issues'),
-      chalk.bold('Top Finding'),
-    ],
-    style: { compact: false },
-    wordWrap: true,
+    head,
+    chars: NO_BORDERS,
+    style: { compact: false, 'padding-left': 1, 'padding-right': 1, head: [], border: [] },
+    wordWrap: false,
   });
 
-  for (const skill of result.skills) {
+  for (const skill of shown) {
     table.push([
       skill.agentId,
-      skill.name,
-      colorScore(skill.summary.score),
-      colorVerdict(skill.summary.verdict),
-      issueCount(skill),
+      `${verdictDot(skill)} ${skill.name}`,
+      colorVerdict(skill),
+      colorScore(skill),
       topIssue(skill),
     ]);
   }
 
-  console.log(table.toString());
-  renderSummary(result);
+  lines.push(table.toString());
+
+  if (extra > 0) {
+    lines.push(`  ${C_GREY(`...${extra} more row${extra !== 1 ? 's' : ''}`)}`);
+  }
+
+  lines.push('');
+
+  // ── Scan summary footer ───────────────────────────────────────────────
+  const allFindings = skills.flatMap((s) => s.findings);
+  const uniqueRules = new Set(allFindings.map((f) => f.ruleId)).size;
+  const crit = allFindings.filter((f) => f.severity === 'critical').length;
+  const high = allFindings.filter((f) => f.severity === 'high').length;
+  const med = allFindings.filter((f) => f.severity === 'medium').length;
+  const low = allFindings.filter((f) => f.severity === 'low').length;
+
+  const label = (s: string): string => s.padEnd(26, '.');
+  const durationFull = (scan.durationMs / 1000).toFixed(2);
+
+  lines.push(`  ── Scan summary ${'─'.repeat(Math.max(0, boxWidth - 18))}`);
+  lines.push(`  ${label('Skills scanned')} ${summary.skillsScanned}`);
+  lines.push(
+    `  ${label('Unique issues')} ${uniqueRules}  (${C_CRITICAL(`${crit} critical`)}, ${C_HIGH(`${high} high`)}, ${C_MEDIUM(`${med} medium`)}, ${low} low)`
+  );
+
+  const compromisedStr =
+    summary.compromised > 0
+      ? `${C_CRITICAL(String(summary.compromised))}   (${summary.percentCompromised}% of installed)`
+      : '0';
+  lines.push(`  ${label('Compromised skills')} ${compromisedStr}`);
+  lines.push(`  ${label('Duration')} ${durationFull}s`);
+  lines.push('');
+
+  // ── Next-step commands ────────────────────────────────────────────────
+  const firstFail = ordered.find((s) => s.summary.verdict === 'FAIL');
+  const firstReview = ordered.find((s) => s.summary.verdict === 'REVIEW');
+  const highlight = firstFail ?? firstReview;
+  if (highlight) {
+    lines.push(`  →  skillaudit explain ${highlight.name}    ${C_GREY('See full findings')}`);
+  }
+  lines.push(`  →  skillaudit ignore <skill>    ${C_GREY('Allowlist a false positive')}`);
+  lines.push(`  →  skillaudit --html report.html    ${C_GREY('Generate shareable HTML')}`);
+  lines.push('');
+
+  return lines.join('\n');
 }
 
-function renderSummary(result: ScanResult): void {
-  const { summary, scan } = result;
-  const verdict = colorVerdict(summary.verdict);
-  const pct =
-    summary.compromised > 0 ? chalk.red(`${summary.percentCompromised}%`) : chalk.green('0%');
-
-  console.log(
-    `\n  ${verdict}  ${summary.skillsScanned} skills scanned · ` +
-      `${pct} compromised (${summary.compromised}/${summary.skillsScanned}) · ` +
-      `${scan.durationMs}ms`
-  );
+export function renderTable(result: ScanResult): void {
+  process.stdout.write(renderTableToString(result));
 }
