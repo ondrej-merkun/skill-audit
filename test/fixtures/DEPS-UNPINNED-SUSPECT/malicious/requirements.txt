@@ -1,0 +1,4 @@
+requests
+flask>=2.0
+numpy
+boto3>=1.26

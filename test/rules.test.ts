@@ -8,6 +8,7 @@ import { NETWORK_EXFIL_RULES } from '../packages/cli/src/rules/network-exfil.js'
 import { FILESYSTEM_RULES } from '../packages/cli/src/rules/filesystem.js';
 import { PROMPT_INJECTION_RULES } from '../packages/cli/src/rules/prompt-injection.js';
 import { GIT_HISTORY_RULES } from '../packages/cli/src/rules/git-history.js';
+import { DEPENDENCIES_RULES } from '../packages/cli/src/rules/dependencies.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -19,6 +20,7 @@ const ALL_RULES = [
   ...FILESYSTEM_RULES,
   ...PROMPT_INJECTION_RULES,
   ...GIT_HISTORY_RULES,
+  ...DEPENDENCIES_RULES,
 ];
 
 describe('rule fixtures', () => {

@@ -60,9 +60,12 @@ async function discoverMcpJson(mcpJsonPath: string, scope: Skill['scope']): Prom
 }
 
 async function discoverRulesDir(dir: string, scope: Skill['scope']): Promise<Skill[]> {
-  let entries: Awaited<ReturnType<typeof readdir>>;
+  let entries: { isFile(): boolean; name: string }[];
   try {
-    entries = await readdir(dir, { withFileTypes: true });
+    entries = (await readdir(dir, { withFileTypes: true })) as {
+      isFile(): boolean;
+      name: string;
+    }[];
   } catch {
     return [];
   }

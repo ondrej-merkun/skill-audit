@@ -29,9 +29,12 @@ async function pathExists(p: string): Promise<boolean> {
 }
 
 async function discoverSkillsDir(dir: string, scope: Skill['scope']): Promise<Skill[]> {
-  let entries: Awaited<ReturnType<typeof readdir>>;
+  let entries: { isDirectory(): boolean; name: string }[];
   try {
-    entries = await readdir(dir, { withFileTypes: true });
+    entries = (await readdir(dir, { withFileTypes: true })) as {
+      isDirectory(): boolean;
+      name: string;
+    }[];
   } catch {
     return [];
   }
@@ -79,9 +82,12 @@ async function discoverSingleFile(
 }
 
 async function discoverInstructionsDir(dir: string, scope: Skill['scope']): Promise<Skill[]> {
-  let entries: Awaited<ReturnType<typeof readdir>>;
+  let entries: { isFile(): boolean; name: string }[];
   try {
-    entries = await readdir(dir, { withFileTypes: true });
+    entries = (await readdir(dir, { withFileTypes: true })) as {
+      isFile(): boolean;
+      name: string;
+    }[];
   } catch {
     return [];
   }
