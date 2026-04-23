@@ -1,0 +1,39 @@
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { runRules } from '../packages/cli/src/rules/engine.js';
+import { CODE_EXECUTION_RULES } from '../packages/cli/src/rules/code-execution.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const FIXTURES_DIR = join(__dirname, 'fixtures');
+
+const ALL_RULES = [...CODE_EXECUTION_RULES];
+
+describe('rule fixtures', () => {
+  for (const rule of ALL_RULES) {
+    const ruleDir = join(FIXTURES_DIR, rule.id);
+    if (!existsSync(ruleDir)) continue;
+
+    describe(rule.id, () => {
+      const maliciousDir = join(ruleDir, 'malicious');
+      const benignDir = join(ruleDir, 'benign');
+
+      if (existsSync(maliciousDir)) {
+        it('fires on malicious fixture', async () => {
+          const findings = await runRules(maliciousDir, [rule]);
+          expect(findings.length).toBeGreaterThan(0);
+          expect(findings.every((f) => f.ruleId === rule.id)).toBe(true);
+        });
+      }
+
+      if (existsSync(benignDir)) {
+        it('does not fire on benign fixture', async () => {
+          const findings = await runRules(benignDir, [rule]);
+          expect(findings).toEqual([]);
+        });
+      }
+    });
+  }
+});
