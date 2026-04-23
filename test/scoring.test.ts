@@ -201,3 +201,59 @@ describe('mandatory-fail overrides', () => {
     expect(result.verdict).toBe('FAIL');
   });
 });
+
+describe('allowlist matching', () => {
+  // anthropic-skills.json uses placeholder SHA for all entries
+  const ALLOWLISTED_SHA = '0000000000000000000000000000000000000000000000000000000000000000';
+
+  it('should set allowlisted: true and demote PI-OVERRIDE to info on SHA match', () => {
+    const result = scoreFindings([finding('PI-OVERRIDE', 'critical')], ALLOWLISTED_SHA);
+    expect(result.allowlisted).toBe(true);
+    expect(result.critical).toBe(0);
+    expect(result.info).toBe(1);
+    expect(result.score).toBe(100);
+    expect(result.verdict).toBe('PASS');
+  });
+
+  it('should demote all PI-* rules to info, not just PI-OVERRIDE', () => {
+    const result = scoreFindings(
+      [
+        finding('PI-OVERRIDE', 'critical'),
+        finding('PI-JAILBREAK', 'high'),
+        finding('PI-HIDDEN-UNICODE', 'medium'),
+      ],
+      ALLOWLISTED_SHA,
+    );
+    expect(result.allowlisted).toBe(true);
+    expect(result.critical).toBe(0);
+    expect(result.high).toBe(0);
+    expect(result.medium).toBe(0);
+    expect(result.info).toBe(3);
+    expect(result.score).toBe(100);
+  });
+
+  it('should not demote non-PI findings when allowlisted', () => {
+    const result = scoreFindings(
+      [finding('PI-OVERRIDE', 'critical'), finding('NET-EXFIL-ENV', 'critical')],
+      ALLOWLISTED_SHA,
+    );
+    expect(result.allowlisted).toBe(true);
+    // NET-EXFIL-ENV stays critical and triggers mandatory-fail
+    expect(result.critical).toBe(1);
+    expect(result.verdict).toBe('FAIL');
+    expect(result.mandatoryFail).toContain('NET-EXFIL-ENV');
+  });
+
+  it('should not allowlist when SHA does not match', () => {
+    const result = scoreFindings([finding('PI-OVERRIDE', 'critical')], 'deadbeef');
+    expect(result.allowlisted).toBe(false);
+    expect(result.critical).toBe(1);
+    expect(result.score).toBe(75);
+  });
+
+  it('should not allowlist when treeSha256 is undefined', () => {
+    const result = scoreFindings([finding('PI-OVERRIDE', 'critical')]);
+    expect(result.allowlisted).toBe(false);
+    expect(result.critical).toBe(1);
+  });
+});
