@@ -39,7 +39,7 @@ at the bottom and the loop will stop.
   `src/discovery/index.ts` — loads all discovery plugins and exposes
   `discoverAll(): Promise<Skill[]>`. Each plugin implements the
   `AgentDiscovery` interface from `types.ts`.
-- [ ] **2.2** Implement `src/discovery/claude-code.ts` — reads
+- [x] **2.2** Implement `src/discovery/claude-code.ts` — reads
   `~/.claude/skills/`, `~/.claude/plugins/`, `~/.claude/commands/`,
   `~/.claude/agents/`, and `~/.claude.json` for MCP servers (including
   the `projects.<abs-path>.mcpServers` shape). Also reads the
@@ -230,7 +230,20 @@ at the bottom and the loop will stop.
 
 ## Decisions made during implementation
 
-(Append to this list when Ralph makes a judgment call not covered by SPEC.md.)
+- **2.2: initDefaultPlugins()** — Moved plugin registration out of the registry
+  module's top-level initialization into an explicit `initDefaultPlugins()`
+  function. Rationale: module-level registration caused the discovery-registry
+  tests to scan the real `~/.claude/` directory on import, causing timeouts.
+  This function will be called from the CLI entry point (task 5.1).
+
+- **2.2: SKILLAUDIT_CWD env var** — Added `SKILLAUDIT_CWD` as an override for
+  `process.cwd()` in the claude-code plugin. Vitest worker threads don't support
+  `process.chdir()`, so tests set this env var instead. Consistent with the
+  existing `HOME`/`USERPROFILE` pattern.
+
+- **2.2: treeSha256 placeholder in claude-code.ts** — Implemented a minimal inline
+  `computeTreeSha256()` function. Task 2.6 will extract it into the shared
+  `src/discovery/tree-hash.ts` helper.
 
 ## Blockers
 
