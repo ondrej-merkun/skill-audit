@@ -1,5 +1,22 @@
 import type { Finding, Severity, SkillSummary, Verdict } from './types.js';
 
+/** Rules that individually force a FAIL verdict regardless of score. */
+const MANDATORY_FAIL_STANDALONE = new Set([
+  'NET-EXFIL-ENV',
+  'NET-WEBHOOK-KNOWN',
+  'SKILL-PASSWORD-ZIP',
+  'PI-EXFIL-TRIGGER-CLAUSE',
+  'OBFS-EVAL-ATOB',
+]);
+
+/** Rules that represent a pipe-to-shell pattern (used in compound check). */
+const PIPE_TO_SHELL_RULES = new Set([
+  'SKILL-CURL-BASH-IN-MD',
+  'SKILL-FETCH-AND-EXEC',
+  'CODEEXEC-JS-CHILDPROCESS-SHELL',
+  'CODEEXEC-SHELL-BACKTICK',
+]);
+
 function countUniqueRulesBySeverity(findings: Finding[], severity: Severity): number {
   const ids = new Set<string>();
   for (const f of findings) {
@@ -14,6 +31,43 @@ function verdictFromScore(score: number): Verdict {
   return 'FAIL';
 }
 
+/**
+ * Returns the rule IDs that triggered a mandatory-fail override.
+ * Empty array means no override applies.
+ */
+function getMandatoryFailIds(findings: Finding[]): string[] {
+  const ruleIds = new Set(findings.map((f) => f.ruleId));
+  const triggered = new Set<string>();
+
+  for (const id of MANDATORY_FAIL_STANDALONE) {
+    if (ruleIds.has(id)) triggered.add(id);
+  }
+
+  // DEPS-REMOTE-IMPORT combined with any pipe-to-shell rule
+  if (ruleIds.has('DEPS-REMOTE-IMPORT')) {
+    for (const pipeId of PIPE_TO_SHELL_RULES) {
+      if (ruleIds.has(pipeId)) {
+        triggered.add('DEPS-REMOTE-IMPORT');
+        triggered.add(pipeId);
+        break;
+      }
+    }
+  }
+
+  // FS-CREDSTORE combined with any NET-* rule
+  if (ruleIds.has('FS-CREDSTORE')) {
+    for (const id of ruleIds) {
+      if (id.startsWith('NET-')) {
+        triggered.add('FS-CREDSTORE');
+        triggered.add(id);
+        break;
+      }
+    }
+  }
+
+  return [...triggered];
+}
+
 /** Compute a SkillSummary from a list of findings using the spec §4 scoring formula. */
 export function scoreFindings(findings: Finding[]): SkillSummary {
   const critical = countUniqueRulesBySeverity(findings, 'critical');
@@ -23,7 +77,8 @@ export function scoreFindings(findings: Finding[]): SkillSummary {
   const info = countUniqueRulesBySeverity(findings, 'info');
 
   const score = Math.max(0, 100 - (25 * critical + 10 * high + 3 * medium + 1 * low));
-  const verdict = verdictFromScore(score);
+  const mandatoryFail = getMandatoryFailIds(findings);
+  const verdict: Verdict = mandatoryFail.length > 0 ? 'FAIL' : verdictFromScore(score);
 
   return {
     critical,
@@ -33,7 +88,7 @@ export function scoreFindings(findings: Finding[]): SkillSummary {
     info,
     score,
     verdict,
-    mandatoryFail: [],
+    mandatoryFail,
     allowlisted: false,
   };
 }

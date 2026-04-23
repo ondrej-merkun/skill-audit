@@ -108,3 +108,96 @@ describe('scoreFindings', () => {
     expect(result.verdict).toBe('REVIEW');
   });
 });
+
+describe('mandatory-fail overrides', () => {
+  it('should force FAIL for NET-EXFIL-ENV even if score would be REVIEW', () => {
+    const result = scoreFindings([finding('NET-EXFIL-ENV', 'critical')]);
+    expect(result.verdict).toBe('FAIL');
+    expect(result.mandatoryFail).toContain('NET-EXFIL-ENV');
+  });
+
+  it('should force FAIL for NET-WEBHOOK-KNOWN', () => {
+    const result = scoreFindings([finding('NET-WEBHOOK-KNOWN', 'high')]);
+    expect(result.verdict).toBe('FAIL');
+    expect(result.mandatoryFail).toContain('NET-WEBHOOK-KNOWN');
+  });
+
+  it('should force FAIL for SKILL-PASSWORD-ZIP', () => {
+    const result = scoreFindings([finding('SKILL-PASSWORD-ZIP', 'high')]);
+    expect(result.verdict).toBe('FAIL');
+    expect(result.mandatoryFail).toContain('SKILL-PASSWORD-ZIP');
+  });
+
+  it('should force FAIL for PI-EXFIL-TRIGGER-CLAUSE', () => {
+    const result = scoreFindings([finding('PI-EXFIL-TRIGGER-CLAUSE', 'critical')]);
+    expect(result.verdict).toBe('FAIL');
+    expect(result.mandatoryFail).toContain('PI-EXFIL-TRIGGER-CLAUSE');
+  });
+
+  it('should force FAIL for OBFS-EVAL-ATOB', () => {
+    const result = scoreFindings([finding('OBFS-EVAL-ATOB', 'critical')]);
+    expect(result.verdict).toBe('FAIL');
+    expect(result.mandatoryFail).toContain('OBFS-EVAL-ATOB');
+  });
+
+  it('should force FAIL for DEPS-REMOTE-IMPORT + SKILL-CURL-BASH-IN-MD', () => {
+    const result = scoreFindings([
+      finding('DEPS-REMOTE-IMPORT', 'high'),
+      finding('SKILL-CURL-BASH-IN-MD', 'high'),
+    ]);
+    expect(result.verdict).toBe('FAIL');
+    expect(result.mandatoryFail).toContain('DEPS-REMOTE-IMPORT');
+    expect(result.mandatoryFail).toContain('SKILL-CURL-BASH-IN-MD');
+  });
+
+  it('should NOT force FAIL for DEPS-REMOTE-IMPORT alone', () => {
+    const result = scoreFindings([finding('DEPS-REMOTE-IMPORT', 'high')]);
+    // DEPS-REMOTE-IMPORT alone: score = 100 - 10 = 90 → PASS
+    expect(result.verdict).toBe('PASS');
+    expect(result.mandatoryFail).toEqual([]);
+  });
+
+  it('should force FAIL for FS-CREDSTORE + NET-EXFIL-ENV compound', () => {
+    const result = scoreFindings([
+      finding('FS-CREDSTORE', 'high'),
+      finding('NET-EXFIL-ENV', 'critical'),
+    ]);
+    expect(result.verdict).toBe('FAIL');
+    expect(result.mandatoryFail).toContain('FS-CREDSTORE');
+    expect(result.mandatoryFail).toContain('NET-EXFIL-ENV');
+  });
+
+  it('should force FAIL for FS-CREDSTORE + any NET-* rule', () => {
+    const result = scoreFindings([
+      finding('FS-CREDSTORE', 'high'),
+      finding('NET-OUTBOUND-NONLOCAL', 'medium'),
+    ]);
+    expect(result.verdict).toBe('FAIL');
+    expect(result.mandatoryFail).toContain('FS-CREDSTORE');
+    expect(result.mandatoryFail).toContain('NET-OUTBOUND-NONLOCAL');
+  });
+
+  it('should NOT force FAIL for FS-CREDSTORE alone (no NET-* present)', () => {
+    const result = scoreFindings([finding('FS-CREDSTORE', 'high')]);
+    // FS-CREDSTORE alone: score = 100 - 10 = 90 → PASS
+    expect(result.verdict).toBe('PASS');
+    expect(result.mandatoryFail).toEqual([]);
+  });
+
+  it('should include all triggered mandatory-fail IDs when multiple apply', () => {
+    const result = scoreFindings([
+      finding('NET-EXFIL-ENV', 'critical'),
+      finding('OBFS-EVAL-ATOB', 'critical'),
+    ]);
+    expect(result.verdict).toBe('FAIL');
+    expect(result.mandatoryFail).toContain('NET-EXFIL-ENV');
+    expect(result.mandatoryFail).toContain('OBFS-EVAL-ATOB');
+  });
+
+  it('should force FAIL even when score would be high (REVIEW) for mandatory rule', () => {
+    // Only 1 critical = score 75 (REVIEW band), but mandatory-fail overrides
+    const result = scoreFindings([finding('PI-EXFIL-TRIGGER-CLAUSE', 'critical')]);
+    expect(result.score).toBe(75);
+    expect(result.verdict).toBe('FAIL');
+  });
+});
