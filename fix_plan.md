@@ -57,7 +57,7 @@ at the bottom and the loop will stop.
 - [x] **2.5** Implement `src/discovery/copilot.ts` — reads
   `~/.copilot/skills/*/SKILL.md`, `.github/skills/*/SKILL.md`,
   `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`.
-- [ ] **2.6** Compute `treeSha256` for every skill in a shared helper
+- [x] **2.6** Compute `treeSha256` for every skill in a shared helper
   (`src/discovery/tree-hash.ts`): concatenate relative paths +
   sha256 of file contents, sort stable, sha256 the result. Deterministic.
 - [ ] **2.7** Add tests for each discovery plugin with fixture skill
