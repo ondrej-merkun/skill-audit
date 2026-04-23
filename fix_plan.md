@@ -114,7 +114,7 @@ at the bottom and the loop will stop.
   any of `NET-EXFIL-ENV`, `NET-WEBHOOK-KNOWN`, `SKILL-PASSWORD-ZIP`,
   `PI-EXFIL-TRIGGER-CLAUSE`, `OBFS-EVAL-ATOB`, or `DEPS-REMOTE-IMPORT`
   + pipe-to-shell, or compound `FS-CREDSTORE` + `NET-*` → FAIL regardless of score.
-- [ ] **4.3** Create `src/allowlist/anthropic-skills.json` — hand-curated
+- [x] **4.3** Create `src/allowlist/anthropic-skills.json` — hand-curated
   with placeholder sha256 entries for the ~17 official Anthropic skills
   and the Trail of Bits skills mentioned in the spec. Add a note at
   the top: "Regenerate with scripts/vendor-allowlist.ts".
