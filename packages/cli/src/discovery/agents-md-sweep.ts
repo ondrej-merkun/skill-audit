@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { readFile, stat } from 'node:fs/promises';
+import { stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { AgentDiscovery, Skill } from '../types.js';
+import { computeTreeSha256 } from './tree-hash.js';
 
 const AGENT_ID = 'cross-agent';
 
@@ -32,11 +33,6 @@ async function pathExists(p: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-async function computeFileSha256(filePath: string): Promise<string> {
-  const content = await readFile(filePath);
-  return createHash('sha256').update(content).digest('hex');
 }
 
 // Returns the chain of directories from dir up to the filesystem root, inclusive.
@@ -80,7 +76,7 @@ const agentsMdSweepDiscovery: AgentDiscovery = {
           manifestPath: filePath,
           format: 'agents-md',
           scope: 'project',
-          treeSha256: await computeFileSha256(filePath),
+          treeSha256: await computeTreeSha256(filePath),
         });
       }
     }

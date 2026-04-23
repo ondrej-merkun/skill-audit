@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import os from 'node:os';
-import { basename, join, relative } from 'node:path';
+import { basename, join } from 'node:path';
 import type { AgentDiscovery, Skill } from '../types.js';
+import { computeTreeSha256 } from './tree-hash.js';
 
 const AGENT_ID = 'claude-code';
 
@@ -45,45 +46,6 @@ async function listFiles(dir: string, ext: string): Promise<string[]> {
   } catch {
     return [];
   }
-}
-
-// Minimal treeSha256 — the shared helper in task 2.6 will replace direct calls.
-async function computeTreeSha256(p: string): Promise<string> {
-  let s: Awaited<ReturnType<typeof stat>>;
-  try {
-    s = await stat(p);
-  } catch {
-    return '';
-  }
-
-  if (s.isFile()) {
-    const content = await readFile(p);
-    return createHash('sha256').update(content).digest('hex');
-  }
-
-  // Directory: collect all files recursively, stable-sort by relative path.
-  const entries: Array<{ rel: string; sha: string }> = [];
-
-  async function walk(dir: string): Promise<void> {
-    const items = await readdir(dir, { withFileTypes: true }).catch(() => []);
-    for (const item of items) {
-      const full = join(dir, item.name);
-      if (item.isDirectory()) {
-        await walk(full);
-      } else if (item.isFile()) {
-        const content = await readFile(full);
-        entries.push({
-          rel: relative(p, full),
-          sha: createHash('sha256').update(content).digest('hex'),
-        });
-      }
-    }
-  }
-
-  await walk(p);
-  entries.sort((a, b) => a.rel.localeCompare(b.rel));
-  const combined = entries.map((e) => `${e.rel}:${e.sha}`).join('\n');
-  return createHash('sha256').update(combined).digest('hex');
 }
 
 async function skillFromDir(
