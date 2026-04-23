@@ -27,7 +27,7 @@ at the bottom and the loop will stop.
   commander skeleton: root command prints version, `scan` subcommand
   stub exits 0 with "not yet implemented". `pnpm build && node
   packages/cli/dist/index.js --version` must work.
-- [ ] **1.6** Create `packages/cli/src/types.ts` with `AgentDiscovery`,
+- [x] **1.6** Create `packages/cli/src/types.ts` with `AgentDiscovery`,
   `Skill`, `Finding`, `Rule`, `Severity`, `Verdict`, `ScanResult` types
   exactly as specified in `specs/SPEC.md` §2-§4.
 - [ ] **1.7** Set up `vitest.config.ts` at root. Create a trivial
