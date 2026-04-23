@@ -94,7 +94,7 @@ at the bottom and the loop will stop.
 - [x] **3.7** Implement `src/rules/dependencies.ts` — 5 rules:
   `DEPS-UNPINNED-SUSPECT`, `DEPS-INSTALL-SCRIPT-HOOKS`,
   `DEPS-TYPOSQUAT`, `DEPS-INLINE-INSTALL`, `DEPS-REMOTE-IMPORT`.
-- [ ] **3.8** Implement `src/rules/obfuscation.ts` — 5 rules:
+- [x] **3.8** Implement `src/rules/obfuscation.ts` — 5 rules:
   `OBFS-BASE64-LARGE`, `OBFS-HEX-LARGE`, `OBFS-EVAL-ATOB`,
   `OBFS-STRING-CONCAT-CMD`, `OBFS-HOMOGLYPH`.
 - [ ] **3.9** Implement `src/rules/skill-specific.ts` — 5 rules:
