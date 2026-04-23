@@ -1,0 +1,139 @@
+import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { matchesGlob, runPatternWithTimeout, runRules } from '../packages/cli/src/rules/engine.js';
+import type { Rule } from '../packages/cli/src/types.js';
+
+describe('matchesGlob', () => {
+  it('matches literal filenames', () => {
+    expect(matchesGlob('SKILL.md', 'SKILL.md')).toBe(true);
+    expect(matchesGlob('AGENTS.md', 'SKILL.md')).toBe(false);
+  });
+
+  it('matches *.ext patterns', () => {
+    expect(matchesGlob('foo.md', '*.md')).toBe(true);
+    expect(matchesGlob('foo.py', '*.md')).toBe(false);
+    expect(matchesGlob('bar.mdc', '*.mdc')).toBe(true);
+  });
+
+  it('matches suffix-wildcard patterns', () => {
+    expect(matchesGlob('README', 'README*')).toBe(true);
+    expect(matchesGlob('README.md', 'README*')).toBe(true);
+  });
+
+  it('matches interior-wildcard patterns like .env*', () => {
+    expect(matchesGlob('.env', '.env*')).toBe(true);
+    expect(matchesGlob('.env.local', '.env*')).toBe(true);
+    expect(matchesGlob('env', '.env*')).toBe(false);
+  });
+});
+
+describe('runPatternWithTimeout', () => {
+  it('returns matches for a simple pattern', async () => {
+    const matches = await runPatternWithTimeout(/hello/i, 'say Hello world');
+    expect(matches.length).toBe(1);
+    expect(matches[0]?.text).toBe('Hello');
+  });
+
+  it('returns multiple matches', async () => {
+    const matches = await runPatternWithTimeout(/\d+/, 'foo 1 bar 2 baz 3');
+    expect(matches.length).toBe(3);
+  });
+
+  it('returns empty array when no match', async () => {
+    const matches = await runPatternWithTimeout(/xyz/, 'hello world');
+    expect(matches.length).toBe(0);
+  });
+
+  it('returns empty array on timeout', async () => {
+    // Catastrophic backtracking pattern on adversarial input
+    const catastrophic = /(a+)+b/;
+    const adversarial = 'a'.repeat(25); // no 'b' — forces backtracking
+    const matches = await runPatternWithTimeout(catastrophic, adversarial, 50);
+    // Should return empty (timed out) rather than hanging
+    expect(matches).toEqual([]);
+  }, 5000);
+});
+
+describe('runRules', () => {
+  let tmpDir: string;
+
+  const TEST_RULE: Rule = {
+    id: 'TEST-SECRET-PATTERN',
+    category: 'test',
+    severity: 'high',
+    appliesTo: ['*.md', 'SKILL.md'],
+    patterns: [/sk-[a-zA-Z0-9]{20,}/],
+    message: 'Hardcoded secret found.',
+    fix: 'Remove the secret.',
+    cwe: ['CWE-312'],
+  };
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'skillaudit-engine-'));
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it('returns empty array for empty directory', async () => {
+    const findings = await runRules(tmpDir, [TEST_RULE]);
+    expect(findings).toEqual([]);
+  });
+
+  it('returns empty array for nonexistent path', async () => {
+    const findings = await runRules('/does/not/exist/ever', [TEST_RULE]);
+    expect(findings).toEqual([]);
+  });
+
+  it('detects a match in a markdown file', async () => {
+    await writeFile(join(tmpDir, 'SKILL.md'), 'key: sk-abcdefghijklmnopqrstuvwxyz\n');
+    const findings = await runRules(tmpDir, [TEST_RULE]);
+    expect(findings.length).toBe(1);
+    expect(findings[0]?.ruleId).toBe('TEST-SECRET-PATTERN');
+    expect(findings[0]?.line).toBe(1);
+    expect(findings[0]?.column).toBeGreaterThan(0);
+    expect(findings[0]?.severity).toBe('high');
+  });
+
+  it('does not fire on files not matching appliesTo', async () => {
+    await writeFile(join(tmpDir, 'script.sh'), 'sk-abcdefghijklmnopqrstuvwxyz\n');
+    const findings = await runRules(tmpDir, [TEST_RULE]);
+    expect(findings).toEqual([]);
+  });
+
+  it('returns one finding per line even if multiple patterns match', async () => {
+    const multiPatternRule: Rule = {
+      ...TEST_RULE,
+      id: 'MULTI-PAT',
+      patterns: [/sk-[a-zA-Z0-9]{20,}/, /sk-[a-z]{20,}/],
+    };
+    await writeFile(join(tmpDir, 'SKILL.md'), 'sk-abcdefghijklmnopqrstuvwxyz\n');
+    const findings = await runRules(tmpDir, [multiPatternRule]);
+    expect(findings.length).toBe(1);
+  });
+
+  it('walks subdirectories', async () => {
+    const sub = join(tmpDir, 'sub');
+    await mkdir(sub);
+    await writeFile(join(sub, 'notes.md'), 'sk-abcdefghijklmnopqrstuvwxyz\n');
+    const findings = await runRules(tmpDir, [TEST_RULE]);
+    expect(findings.length).toBe(1);
+  });
+
+  it('records correct snippet', async () => {
+    await writeFile(join(tmpDir, 'SKILL.md'), 'line one\nkey: sk-abcdefghijklmnopqrstuvwxyz\nline three\n');
+    const findings = await runRules(tmpDir, [TEST_RULE]);
+    expect(findings[0]?.line).toBe(2);
+    expect(findings[0]?.snippet).toMatch(/sk-/);
+  });
+
+  it('scans a single file path (not a directory)', async () => {
+    const file = join(tmpDir, 'SKILL.md');
+    await writeFile(file, 'key: sk-abcdefghijklmnopqrstuvwxyz\n');
+    const findings = await runRules(file, [TEST_RULE]);
+    expect(findings.length).toBe(1);
+  });
+});
