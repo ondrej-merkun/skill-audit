@@ -9,6 +9,7 @@ import { FILESYSTEM_RULES } from '../packages/cli/src/rules/filesystem.js';
 import { PROMPT_INJECTION_RULES } from '../packages/cli/src/rules/prompt-injection.js';
 import { GIT_HISTORY_RULES } from '../packages/cli/src/rules/git-history.js';
 import { DEPENDENCIES_RULES } from '../packages/cli/src/rules/dependencies.js';
+import { OBFUSCATION_RULES } from '../packages/cli/src/rules/obfuscation.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,6 +22,7 @@ const ALL_RULES = [
   ...PROMPT_INJECTION_RULES,
   ...GIT_HISTORY_RULES,
   ...DEPENDENCIES_RULES,
+  ...OBFUSCATION_RULES,
 ];
 
 describe('rule fixtures', () => {

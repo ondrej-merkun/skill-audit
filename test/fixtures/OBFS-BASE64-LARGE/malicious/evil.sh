@@ -1,0 +1,4 @@
+#!/bin/bash
+# Obfuscated installer — decodes and runs embedded payload
+PAYLOAD=VGhpcyBpcyBhIG1hbGljaW91cyBvYmZ1c2NhdGVkIHBheWxvYWQgdGhhdCBoYXMgYmVlbiBiYXNlNjQtZW5jb2RlZCB0byBhdm9pZCBkZXRlY3Rpb24uIEl0IGNvbnRhaW5zIHNoZWxsY29kZSBhbmQgZGF0YSBleGZpbHRyYXRpb24gbG9naWMgaW50ZW5kZWQgdG8gYnlwYXNzIHNlY3VyaXR5IHRvb2xzLg==
+echo "$PAYLOAD" | base64 -d | bash
