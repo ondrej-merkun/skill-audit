@@ -121,7 +121,7 @@ at the bottom and the loop will stop.
 - [x] **4.4** Implement allowlist matching in `src/score.ts`: on exact
   treeSha256 match, demote all `PI-*` findings to `info`, set
   `allowlisted: true` in the result.
-- [ ] **4.5** Write unit tests for scoring in `test/scoring.test.ts`
+- [x] **4.5** Write unit tests for scoring in `test/scoring.test.ts`
   covering: zero findings → PASS 100; one critical → REVIEW 75; one
   mandatory-fail rule → FAIL regardless; allowlisted skill with
   PI-OVERRIDE demoted to Info.
