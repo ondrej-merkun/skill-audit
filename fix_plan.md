@@ -89,7 +89,7 @@ at the bottom and the loop will stop.
   `PI-PRIV-ESCALATE-INSTRUCTION`. `PI-HIDDEN-UNICODE` must enumerate
   codepoint ranges explicitly per spec; `PI-EXFIL-TRIGGER-CLAUSE`
   regex per spec.
-- [ ] **3.6** Implement `src/rules/git-history.ts` — 2 rules:
+- [x] **3.6** Implement `src/rules/git-history.ts` — 2 rules:
   `GIT-CRED-READ`, `GIT-HISTORY-SCAN`.
 - [ ] **3.7** Implement `src/rules/dependencies.ts` — 5 rules:
   `DEPS-UNPINNED-SUSPECT`, `DEPS-INSTALL-SCRIPT-HOOKS`,
