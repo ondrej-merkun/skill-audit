@@ -14,7 +14,7 @@ at the bottom and the loop will stop.
   listing `packages/*`. Create root `package.json` with `type: module`,
   `private: true`, scripts for `build`, `test`, `lint`, `typecheck` that
   delegate to pnpm workspace.
-- [ ] **1.2** Create `packages/cli/package.json` as `@skillaudit/cli`,
+- [x] **1.2** Create `packages/cli/package.json` as `@skillaudit/cli`,
   `name: "skillaudit"` for the bin, with a `bin` entry pointing to
   `dist/index.js`. Add deps: commander, chalk@^5, cli-table3, ora,
   listr2. Add devDeps: tsup, vitest, typescript, biome, @types/node.
