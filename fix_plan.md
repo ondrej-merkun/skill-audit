@@ -100,7 +100,7 @@ at the bottom and the loop will stop.
 - [x] **3.9** Implement `src/rules/skill-specific.ts` — 5 rules:
   `SKILL-CURL-BASH-IN-MD`, `SKILL-FETCH-AND-EXEC`,
   `SKILL-DISABLE-SAFETY`, `SKILL-PASSWORD-ZIP`, `SKILL-MEMORY-WRITE`.
-- [ ] **3.10** Implement `src/rules/secrets.ts` — `SEC-HARDCODED-KEY`
+- [x] **3.10** Implement `src/rules/secrets.ts` — `SEC-HARDCODED-KEY`
   covering OpenAI (`sk-...`), Anthropic (`sk-ant-...`), GitHub
   (`ghp_...`, `gho_...`), AWS (`AKIA...`), generic high-entropy.
 
