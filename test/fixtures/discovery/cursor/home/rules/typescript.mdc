@@ -1,0 +1,11 @@
+---
+description: TypeScript coding standards
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: false
+---
+
+# TypeScript Standards
+
+- Use strict mode
+- Prefer `const` over `let`
+- Explicit return types on exported functions

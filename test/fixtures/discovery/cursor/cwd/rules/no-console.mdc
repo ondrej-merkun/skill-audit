@@ -1,0 +1,9 @@
+---
+description: Disallow console.log in production code
+globs: ["src/**/*.ts"]
+alwaysApply: true
+---
+
+# No Console Logging
+
+Do not use `console.log` in production code. Use a proper logger instead.
