@@ -1,6 +1,7 @@
 import type { AgentDiscovery, Skill } from '../types.js';
 import agentsMdSweepDiscovery from './agents-md-sweep.js';
 import claudeCodeDiscovery from './claude-code.js';
+import copilotDiscovery from './copilot.js';
 import cursorDiscovery from './cursor.js';
 
 // Registry starts empty so test files get a clean slate on import.
@@ -13,12 +14,7 @@ const PLUGINS: AgentDiscovery[] = [];
  * can import the registry without touching the real filesystem.
  */
 export function initDefaultPlugins(): void {
-  PLUGINS.push(
-    claudeCodeDiscovery,
-    cursorDiscovery,
-    agentsMdSweepDiscovery
-    // copilot added in task 2.5
-  );
+  PLUGINS.push(claudeCodeDiscovery, cursorDiscovery, copilotDiscovery, agentsMdSweepDiscovery);
 }
 
 /**
