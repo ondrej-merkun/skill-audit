@@ -46,7 +46,7 @@ at the bottom and the loop will stop.
   project-local `.claude/`, `.mcp.json`, and `.claude-plugin/plugin.json`
   in `process.cwd()`. Emits one `Skill` per discovered item with
   correct `format` and `scope`.
-- [ ] **2.3** Implement `src/discovery/cursor.ts` — reads
+- [x] **2.3** Implement `src/discovery/cursor.ts` — reads
   `~/.cursor/mcp.json`, `~/.cursor/rules/`, and project-local
   `.cursor/mcp.json`, `.cursor/rules/*.mdc`, legacy `.cursorrules`.
 - [ ] **2.4** Implement `src/discovery/agents-md-sweep.ts` — walks the
