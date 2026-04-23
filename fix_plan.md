@@ -54,7 +54,7 @@ at the bottom and the loop will stop.
   `AGENTS.override.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`,
   `.windsurfrules`, `CONVENTIONS.md`. Emits one `Skill` per file with
   `agentId: 'cross-agent'`.
-- [ ] **2.5** Implement `src/discovery/copilot.ts` — reads
+- [x] **2.5** Implement `src/discovery/copilot.ts` — reads
   `~/.copilot/skills/*/SKILL.md`, `.github/skills/*/SKILL.md`,
   `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`.
 - [ ] **2.6** Compute `treeSha256` for every skill in a shared helper
