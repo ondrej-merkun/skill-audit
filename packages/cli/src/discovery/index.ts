@@ -1,9 +1,21 @@
 import type { AgentDiscovery, Skill } from '../types.js';
+import claudeCodeDiscovery from './claude-code.js';
 
-// Registry of all discovery plugins — append new plugins here as they are implemented
-const PLUGINS: AgentDiscovery[] = [
-  // claude-code, cursor, copilot, agents-md-sweep added in tasks 2.2–2.5
-];
+// Registry starts empty so test files get a clean slate on import.
+// Call initDefaultPlugins() from the CLI entry point to register built-ins.
+const PLUGINS: AgentDiscovery[] = [];
+
+/**
+ * Register all built-in discovery plugins.
+ * Called once from the CLI entry point — NOT at module load time, so tests
+ * can import the registry without touching the real filesystem.
+ */
+export function initDefaultPlugins(): void {
+  PLUGINS.push(
+    claudeCodeDiscovery
+    // cursor, copilot, agents-md-sweep added in tasks 2.3–2.5
+  );
+}
 
 /**
  * Run all registered discovery plugins and collect every skill they find.
