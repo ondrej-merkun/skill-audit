@@ -18,7 +18,7 @@ at the bottom and the loop will stop.
   `name: "skillaudit"` for the bin, with a `bin` entry pointing to
   `dist/index.js`. Add deps: commander, chalk@^5, cli-table3, ora,
   listr2. Add devDeps: tsup, vitest, typescript, biome, @types/node.
-- [ ] **1.3** Configure tsup (`tsup.config.ts`) to emit CJS+ESM+dts
+- [x] **1.3** Configure tsup (`tsup.config.ts`) to emit CJS+ESM+dts
   from `src/index.ts`, target node20, shebang on bin.
 - [ ] **1.4** Configure tsconfig with strict mode, `moduleResolution:
   "bundler"`, `target: "ES2022"`. Configure biome (`biome.json`) with
