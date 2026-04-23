@@ -79,7 +79,7 @@ at the bottom and the loop will stop.
   `NET-EXFIL-ENV`, `NET-OUTBOUND-NONLOCAL`, `NET-WEBHOOK-KNOWN`,
   `NET-RAW-SOCKET`, `NET-DNS-UNUSUAL-TLD`. `NET-EXFIL-ENV` is the
   highest-value rule — implement carefully per spec §4 example.
-- [ ] **3.4** Implement `src/rules/filesystem.ts` — 4 rules:
+- [x] **3.4** Implement `src/rules/filesystem.ts` — 4 rules:
   `FS-CREDSTORE`, `FS-KEYCHAIN-ACCESS`, `FS-DOTENV-READ`,
   `FS-BOUNDARY-ESCAPE`. `FS-CREDSTORE` path-literal regex per spec.
 - [ ] **3.5** Implement `src/rules/prompt-injection.ts` — 8 rules:
