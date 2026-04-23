@@ -1,4 +1,8 @@
+import allowlistData from './allowlist/anthropic-skills.json';
 import type { Finding, Severity, SkillSummary, Verdict } from './types.js';
+
+/** SHA-256 tree hashes of trusted/allowlisted skills (exact match demotes PI-* to info). */
+const ALLOWLISTED_SHAS = new Set(allowlistData.entries.map((e) => e.sha256_tree));
 
 /** Rules that individually force a FAIL verdict regardless of score. */
 const MANDATORY_FAIL_STANDALONE = new Set([
@@ -69,15 +73,24 @@ function getMandatoryFailIds(findings: Finding[]): string[] {
 }
 
 /** Compute a SkillSummary from a list of findings using the spec §4 scoring formula. */
-export function scoreFindings(findings: Finding[]): SkillSummary {
-  const critical = countUniqueRulesBySeverity(findings, 'critical');
-  const high = countUniqueRulesBySeverity(findings, 'high');
-  const medium = countUniqueRulesBySeverity(findings, 'medium');
-  const low = countUniqueRulesBySeverity(findings, 'low');
-  const info = countUniqueRulesBySeverity(findings, 'info');
+export function scoreFindings(findings: Finding[], treeSha256?: string): SkillSummary {
+  const isAllowlisted = treeSha256 !== undefined && ALLOWLISTED_SHAS.has(treeSha256);
+
+  // On allowlist match, demote all PI-* findings to info before scoring.
+  const effectiveFindings = isAllowlisted
+    ? findings.map(
+        (f): Finding => (f.ruleId.startsWith('PI-') ? { ...f, severity: 'info' as const } : f)
+      )
+    : findings;
+
+  const critical = countUniqueRulesBySeverity(effectiveFindings, 'critical');
+  const high = countUniqueRulesBySeverity(effectiveFindings, 'high');
+  const medium = countUniqueRulesBySeverity(effectiveFindings, 'medium');
+  const low = countUniqueRulesBySeverity(effectiveFindings, 'low');
+  const info = countUniqueRulesBySeverity(effectiveFindings, 'info');
 
   const score = Math.max(0, 100 - (25 * critical + 10 * high + 3 * medium + 1 * low));
-  const mandatoryFail = getMandatoryFailIds(findings);
+  const mandatoryFail = getMandatoryFailIds(effectiveFindings);
   const verdict: Verdict = mandatoryFail.length > 0 ? 'FAIL' : verdictFromScore(score);
 
   return {
@@ -89,6 +102,6 @@ export function scoreFindings(findings: Finding[]): SkillSummary {
     score,
     verdict,
     mandatoryFail,
-    allowlisted: false,
+    allowlisted: isAllowlisted,
   };
 }
