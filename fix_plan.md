@@ -49,7 +49,7 @@ at the bottom and the loop will stop.
 - [x] **2.3** Implement `src/discovery/cursor.ts` — reads
   `~/.cursor/mcp.json`, `~/.cursor/rules/`, and project-local
   `.cursor/mcp.json`, `.cursor/rules/*.mdc`, legacy `.cursorrules`.
-- [ ] **2.4** Implement `src/discovery/agents-md-sweep.ts` — walks the
+- [x] **2.4** Implement `src/discovery/agents-md-sweep.ts` — walks the
   current directory and its parents, collecting `AGENTS.md`,
   `AGENTS.override.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`,
   `.windsurfrules`, `CONVENTIONS.md`. Emits one `Skill` per file with
