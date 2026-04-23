@@ -82,7 +82,7 @@ at the bottom and the loop will stop.
 - [x] **3.4** Implement `src/rules/filesystem.ts` — 4 rules:
   `FS-CREDSTORE`, `FS-KEYCHAIN-ACCESS`, `FS-DOTENV-READ`,
   `FS-BOUNDARY-ESCAPE`. `FS-CREDSTORE` path-literal regex per spec.
-- [ ] **3.5** Implement `src/rules/prompt-injection.ts` — 8 rules:
+- [x] **3.5** Implement `src/rules/prompt-injection.ts` — 8 rules:
   `PI-OVERRIDE`, `PI-JAILBREAK`, `PI-HIDDEN-UNICODE`,
   `PI-HIDDEN-HTML-COMMENT`, `PI-WHITE-ON-WHITE`,
   `PI-METADATA-MISMATCH`, `PI-EXFIL-TRIGGER-CLAUSE`,
