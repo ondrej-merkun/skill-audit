@@ -20,7 +20,7 @@ at the bottom and the loop will stop.
   listr2. Add devDeps: tsup, vitest, typescript, biome, @types/node.
 - [x] **1.3** Configure tsup (`tsup.config.ts`) to emit CJS+ESM+dts
   from `src/index.ts`, target node20, shebang on bin.
-- [ ] **1.4** Configure tsconfig with strict mode, `moduleResolution:
+- [x] **1.4** Configure tsconfig with strict mode, `moduleResolution:
   "bundler"`, `target: "ES2022"`. Configure biome (`biome.json`) with
   recommended rules + 2-space indent.
 - [ ] **1.5** Create `packages/cli/src/index.ts` with shebang and a
