@@ -1,0 +1,34 @@
+# Ralph loop artifacts
+logs/
+.ralph/
+
+# Node / pnpm
+node_modules/
+dist/
+*.tsbuildinfo
+.pnpm-store/
+pnpm-debug.log*
+
+# Test / coverage
+coverage/
+.vitest-cache/
+
+# Cache directories (enrichment cache lives in ~/.cache/skillaudit/ per spec,
+# not in the repo — but just in case)
+.cache/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# Environment & secrets (test fixtures under test/fixtures/ are OK — they're
+# meant to look like secrets, for detection testing)
+.env
+.env.local
+.env.*.local
+!test/fixtures/**/.env
