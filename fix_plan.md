@@ -118,7 +118,7 @@ at the bottom and the loop will stop.
   with placeholder sha256 entries for the ~17 official Anthropic skills
   and the Trail of Bits skills mentioned in the spec. Add a note at
   the top: "Regenerate with scripts/vendor-allowlist.ts".
-- [ ] **4.4** Implement allowlist matching in `src/score.ts`: on exact
+- [x] **4.4** Implement allowlist matching in `src/score.ts`: on exact
   treeSha256 match, demote all `PI-*` findings to `info`, set
   `allowlisted: true` in the result.
 - [ ] **4.5** Write unit tests for scoring in `test/scoring.test.ts`
