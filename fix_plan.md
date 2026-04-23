@@ -91,7 +91,7 @@ at the bottom and the loop will stop.
   regex per spec.
 - [x] **3.6** Implement `src/rules/git-history.ts` — 2 rules:
   `GIT-CRED-READ`, `GIT-HISTORY-SCAN`.
-- [ ] **3.7** Implement `src/rules/dependencies.ts` — 5 rules:
+- [x] **3.7** Implement `src/rules/dependencies.ts` — 5 rules:
   `DEPS-UNPINNED-SUSPECT`, `DEPS-INSTALL-SCRIPT-HOOKS`,
   `DEPS-TYPOSQUAT`, `DEPS-INLINE-INSTALL`, `DEPS-REMOTE-IMPORT`.
 - [ ] **3.8** Implement `src/rules/obfuscation.ts` — 5 rules:
