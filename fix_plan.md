@@ -30,7 +30,7 @@ at the bottom and the loop will stop.
 - [x] **1.6** Create `packages/cli/src/types.ts` with `AgentDiscovery`,
   `Skill`, `Finding`, `Rule`, `Severity`, `Verdict`, `ScanResult` types
   exactly as specified in `specs/SPEC.md` §2-§4.
-- [ ] **1.7** Set up `vitest.config.ts` at root. Create a trivial
+- [x] **1.7** Set up `vitest.config.ts` at root. Create a trivial
   passing test `test/smoke.test.ts` to prove the runner works.
 
 ## Phase 2 — Discovery layer (spec: §3)
