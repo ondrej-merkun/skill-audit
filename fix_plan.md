@@ -75,7 +75,7 @@ at the bottom and the loop will stop.
   `CODEEXEC-JS-EVAL-FUNCTION`, `CODEEXEC-JS-CHILDPROCESS-SHELL`,
   `CODEEXEC-DESERIALIZE`, `CODEEXEC-SHELL-BACKTICK`. Ship a
   malicious + benign fixture per rule.
-- [ ] **3.3** Implement `src/rules/network-exfil.ts` — 5 rules:
+- [x] **3.3** Implement `src/rules/network-exfil.ts` — 5 rules:
   `NET-EXFIL-ENV`, `NET-OUTBOUND-NONLOCAL`, `NET-WEBHOOK-KNOWN`,
   `NET-RAW-SOCKET`, `NET-DNS-UNUSUAL-TLD`. `NET-EXFIL-ENV` is the
   highest-value rule — implement carefully per spec §4 example.
