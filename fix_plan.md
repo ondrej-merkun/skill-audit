@@ -130,7 +130,7 @@ at the bottom and the loop will stop.
 
 - [x] **5.1** Wire up `scan` command in `src/commands/scan.ts`:
   discover → run rules → score → render. Default TUI table output.
-- [ ] **5.2** Implement `src/output/table.ts` — renders the exact hero
+- [x] **5.2** Implement `src/output/table.ts` — renders the exact hero
   mockup from spec §6 using cli-table3 + chalk. Severity dots, two-
   column layout, score column, top-issue column, 4-color palette.
 - [ ] **5.3** Implement `src/output/summary.ts` — the scan-summary
