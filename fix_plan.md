@@ -205,7 +205,7 @@ at the bottom and the loop will stop.
 - [x] **10.3** Add `test/e2e.test.ts` — runs the compiled CLI
   against both fixture sets via `execa`, asserts expected verdicts
   and JSON structure.
-- [ ] **10.4** Write `README.md` per spec §9 "README design": ~250
+- [x] **10.4** Write `README.md` per spec §9 "README design": ~250
   lines, badges, Snyk 36% stat blockquote with attribution, `npx
   skillaudit` above the fold, placeholder for hero GIF, supported
   agents table, FAQ section.
