@@ -1,5 +1,7 @@
 import ora from 'ora';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
+import { renderJson } from '../output/json.js';
+import { renderSummary } from '../output/summary.js';
 import { renderTable } from '../output/table.js';
 import { runRules } from '../rules/engine.js';
 import { ALL_RULES } from '../rules/index.js';
@@ -8,7 +10,26 @@ import type { AgentInfo, ScanResult, ScannedSkill, Skill } from '../types.js';
 
 const TOOL_VERSION = '0.1.0';
 
-export async function runScan(): Promise<void> {
+export type ScanOptions = {
+  json: boolean;
+  summary: boolean;
+  offline: boolean;
+  strict: boolean;
+  agent: string | undefined;
+  failOn: string | undefined;
+};
+
+const DEFAULT_OPTIONS: ScanOptions = {
+  json: false,
+  summary: false,
+  offline: false,
+  strict: false,
+  agent: undefined,
+  failOn: undefined,
+};
+
+export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
+  const options: ScanOptions = { ...DEFAULT_OPTIONS, ...opts };
   const startedAt = new Date().toISOString();
   const start = Date.now();
 
@@ -27,6 +48,22 @@ export async function runScan(): Promise<void> {
   }
 
   discoverSpinner.succeed(`Found ${skills.length} skill${skills.length === 1 ? '' : 's'}`);
+
+  if (options.agent !== undefined) {
+    const agentId = options.agent;
+    const before = skills.length;
+    skills = skills.filter((s) => s.agentId === agentId);
+    if (skills.length === 0) {
+      process.stderr.write(
+        `[skillaudit] no skills found for agent "${agentId}" (${before} total)\n`
+      );
+      process.exit(0);
+    }
+  }
+
+  if (options.offline) {
+    process.stderr.write('[skillaudit] offline mode — enrichment skipped\n');
+  }
 
   if (skills.length === 0) {
     process.stdout.write('No skills found. Install some agent skills and try again.\n');
@@ -77,5 +114,11 @@ export async function runScan(): Promise<void> {
     },
   };
 
-  renderTable(result);
+  if (options.json) {
+    process.stdout.write(`${renderJson(result)}\n`);
+  } else if (options.summary) {
+    renderSummary(result);
+  } else {
+    renderTable(result);
+  }
 }
