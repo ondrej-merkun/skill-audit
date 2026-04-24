@@ -1,7 +1,9 @@
+import { writeFile } from 'node:fs/promises';
 import ora from 'ora';
 import { loadIgnoreList } from '../allowlist/ignore.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
 import { enrichAll } from '../enrich/index.js';
+import { renderHtml } from '../output/html.js';
 import { renderJson } from '../output/json.js';
 import { renderSummary } from '../output/summary.js';
 import { renderTable } from '../output/table.js';
@@ -29,6 +31,7 @@ export function computeExitCode(
 export type ScanOptions = {
   json: boolean;
   summary: boolean;
+  html: string | undefined;
   offline: boolean;
   strict: boolean;
   agent: string | undefined;
@@ -39,6 +42,7 @@ export type ScanOptions = {
 const DEFAULT_OPTIONS: ScanOptions = {
   json: false,
   summary: false,
+  html: undefined,
   offline: false,
   strict: false,
   agent: undefined,
@@ -185,11 +189,20 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     },
   };
 
+  if (options.html !== undefined) {
+    const htmlOut = renderHtml(result);
+    await writeFile(options.html, htmlOut, 'utf-8');
+    process.stderr.write(`[skillaudit] HTML report written to ${options.html}\n`);
+    // Also render the table to stdout unless --json or --summary
+    if (!options.json && !options.summary) {
+      renderTable(result);
+    }
+  }
   if (options.json) {
     process.stdout.write(`${renderJson(result)}\n`);
   } else if (options.summary) {
     renderSummary(result);
-  } else {
+  } else if (options.html === undefined) {
     renderTable(result);
   }
 

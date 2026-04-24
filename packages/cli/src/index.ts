@@ -19,6 +19,7 @@ program
   .description('Scan installed agent skills for security issues')
   .option('--json', 'emit JSON to stdout instead of TUI table')
   .option('--summary', 'emit compact one-liner summary instead of full table')
+  .option('--html <file>', 'write standalone HTML report to <file>')
   .option('--offline', 'skip network enrichment calls')
   .option('--strict', 'treat REVIEW band as FAIL for exit code purposes')
   .option('--agent <id>', 'restrict scan to a single agent (e.g. claude-code, cursor)')
@@ -32,6 +33,7 @@ program
     const options: Partial<ScanOptions> = {
       json: cmdOpts.json === true,
       summary: cmdOpts.summary === true,
+      html: typeof cmdOpts.html === 'string' ? cmdOpts.html : undefined,
       offline: cmdOpts.offline === true,
       strict: cmdOpts.strict === true,
       agent: typeof cmdOpts.agent === 'string' ? cmdOpts.agent : undefined,
