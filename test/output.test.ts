@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderTable, renderTableToString } from '../packages/cli/src/output/table.js';
+import {
+  renderSummaryFooter,
+  renderSummaryCompact,
+  renderSummary,
+} from '../packages/cli/src/output/summary.js';
 import type { ScanResult, ScannedSkill } from '../packages/cli/src/types.js';
 
 function makeSkill(overrides: Partial<ScannedSkill> = {}): ScannedSkill {
@@ -259,6 +264,128 @@ describe('renderTableToString', () => {
     const out = renderTableToString(result);
     expect(out).toContain('skillaudit explain bad-skill');
     expect(out).toContain('skillaudit --html report.html');
+  });
+});
+
+describe('renderSummaryFooter', () => {
+  it('includes Skills scanned count', () => {
+    const out = renderSummaryFooter(makeScanResult(), [makeSkill()]);
+    expect(out).toContain('Skills scanned');
+    expect(out).toContain('1');
+  });
+
+  it('includes Unique issues line', () => {
+    const out = renderSummaryFooter(makeScanResult(), [makeSkill()]);
+    expect(out).toContain('Unique issues');
+  });
+
+  it('shows compromised count when non-zero', () => {
+    const failSkill = makeSkill({
+      summary: {
+        critical: 1,
+        high: 0,
+        medium: 0,
+        low: 0,
+        info: 0,
+        score: 0,
+        verdict: 'FAIL',
+        mandatoryFail: ['NET-EXFIL-ENV'],
+        allowlisted: false,
+      },
+    });
+    const result = makeScanResult({
+      skills: [failSkill],
+      summary: { skillsScanned: 1, compromised: 1, percentCompromised: 100, verdict: 'FAIL' },
+    });
+    const out = renderSummaryFooter(result, [failSkill]);
+    expect(out).toContain('Compromised skills');
+    expect(out).toContain('100%');
+  });
+
+  it('shows Duration line', () => {
+    const out = renderSummaryFooter(makeScanResult(), [makeSkill()]);
+    expect(out).toContain('Duration');
+    expect(out).toContain('1.32s');
+  });
+
+  it('shows next-command for FAIL skill', () => {
+    const failSkill = makeSkill({
+      name: 'risky-skill',
+      summary: {
+        critical: 1,
+        high: 0,
+        medium: 0,
+        low: 0,
+        info: 0,
+        score: 0,
+        verdict: 'FAIL',
+        mandatoryFail: ['NET-EXFIL-ENV'],
+        allowlisted: false,
+      },
+    });
+    const result = makeScanResult({
+      skills: [failSkill],
+      summary: { skillsScanned: 1, compromised: 1, percentCompromised: 100, verdict: 'FAIL' },
+    });
+    const out = renderSummaryFooter(result, [failSkill]);
+    expect(out).toContain('skillaudit explain risky-skill');
+    expect(out).toContain('skillaudit --html report.html');
+  });
+
+  it('omits Enrichment line when no enrichment data', () => {
+    const out = renderSummaryFooter(makeScanResult(), [makeSkill()]);
+    expect(out).not.toContain('Enrichment');
+  });
+
+  it('shows Enrichment line when skills.sh data is present', () => {
+    const enrichedSkill = makeSkill({
+      enrichment: { skillsSh: { gen: 'Low', socketAlerts: 0, snyk: 'Low' } },
+    });
+    const result = makeScanResult({ skills: [enrichedSkill] });
+    const out = renderSummaryFooter(result, [enrichedSkill]);
+    expect(out).toContain('Enrichment');
+    expect(out).toContain('skills.sh');
+  });
+});
+
+describe('renderSummaryCompact', () => {
+  it('includes skill count', () => {
+    const out = renderSummaryCompact(makeScanResult());
+    expect(out).toContain('1 skills');
+  });
+
+  it('includes compromised count', () => {
+    const out = renderSummaryCompact(
+      makeScanResult({
+        summary: { skillsScanned: 5, compromised: 2, percentCompromised: 40, verdict: 'FAIL' },
+      })
+    );
+    expect(out).toContain('2 compromised');
+    expect(out).toContain('40%');
+  });
+
+  it('includes verdict string', () => {
+    const out = renderSummaryCompact(makeScanResult());
+    expect(out).toContain('PASS');
+  });
+
+  it('includes duration', () => {
+    const out = renderSummaryCompact(makeScanResult());
+    expect(out).toContain('1.32s');
+  });
+
+  it('ends with newline', () => {
+    const out = renderSummaryCompact(makeScanResult());
+    expect(out.endsWith('\n')).toBe(true);
+  });
+});
+
+describe('renderSummary', () => {
+  it('writes compact summary to stdout', () => {
+    const spy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    renderSummary(makeScanResult());
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });
 

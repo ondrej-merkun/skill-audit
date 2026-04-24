@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
 import type { ScanResult, ScannedSkill, Verdict } from '../types.js';
+import { renderSummaryFooter } from './summary.js';
 
 const C_CRITICAL = chalk.hex('#FF4444');
 const C_HIGH = chalk.hex('#FF8C00');
@@ -132,42 +133,7 @@ export function renderTableToString(result: ScanResult): string {
   }
 
   lines.push('');
-
-  // ── Scan summary footer ───────────────────────────────────────────────
-  const allFindings = skills.flatMap((s) => s.findings);
-  const uniqueRules = new Set(allFindings.map((f) => f.ruleId)).size;
-  const crit = allFindings.filter((f) => f.severity === 'critical').length;
-  const high = allFindings.filter((f) => f.severity === 'high').length;
-  const med = allFindings.filter((f) => f.severity === 'medium').length;
-  const low = allFindings.filter((f) => f.severity === 'low').length;
-
-  const label = (s: string): string => s.padEnd(26, '.');
-  const durationFull = (scan.durationMs / 1000).toFixed(2);
-
-  lines.push(`  ── Scan summary ${'─'.repeat(Math.max(0, boxWidth - 18))}`);
-  lines.push(`  ${label('Skills scanned')} ${summary.skillsScanned}`);
-  lines.push(
-    `  ${label('Unique issues')} ${uniqueRules}  (${C_CRITICAL(`${crit} critical`)}, ${C_HIGH(`${high} high`)}, ${C_MEDIUM(`${med} medium`)}, ${low} low)`
-  );
-
-  const compromisedStr =
-    summary.compromised > 0
-      ? `${C_CRITICAL(String(summary.compromised))}   (${summary.percentCompromised}% of installed)`
-      : '0';
-  lines.push(`  ${label('Compromised skills')} ${compromisedStr}`);
-  lines.push(`  ${label('Duration')} ${durationFull}s`);
-  lines.push('');
-
-  // ── Next-step commands ────────────────────────────────────────────────
-  const firstFail = ordered.find((s) => s.summary.verdict === 'FAIL');
-  const firstReview = ordered.find((s) => s.summary.verdict === 'REVIEW');
-  const highlight = firstFail ?? firstReview;
-  if (highlight) {
-    lines.push(`  →  skillaudit explain ${highlight.name}    ${C_GREY('See full findings')}`);
-  }
-  lines.push(`  →  skillaudit ignore <skill>    ${C_GREY('Allowlist a false positive')}`);
-  lines.push(`  →  skillaudit --html report.html    ${C_GREY('Generate shareable HTML')}`);
-  lines.push('');
+  lines.push(renderSummaryFooter(result, ordered, boxWidth));
 
   return lines.join('\n');
 }
