@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { runExplain } from './commands/explain.js';
 import type { ExplainOptions } from './commands/explain.js';
+import { runIgnore } from './commands/ignore.js';
 import { runList } from './commands/list.js';
 import type { ListOptions } from './commands/list.js';
 import { runScan } from './commands/scan.js';
@@ -70,6 +71,17 @@ program
       json: cmdOpts.json === true,
     };
     runExplain(nameOrId, options).catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[skillaudit] fatal: ${msg}\n`);
+      process.exit(2);
+    });
+  });
+
+program
+  .command('ignore <skill-name-or-id>')
+  .description('Add a skill to the ignore list (skipped on future scans)')
+  .action((nameOrId: string) => {
+    runIgnore(nameOrId).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
       process.stderr.write(`[skillaudit] fatal: ${msg}\n`);
       process.exit(2);

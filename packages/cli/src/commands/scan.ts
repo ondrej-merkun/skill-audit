@@ -1,4 +1,5 @@
 import ora from 'ora';
+import { loadIgnoreList } from '../allowlist/ignore.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
 import { enrichAll } from '../enrich/index.js';
 import { renderJson } from '../output/json.js';
@@ -85,15 +86,33 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     return;
   }
 
+  const ignoreList = await loadIgnoreList();
+
+  const toScan = skills.filter((s) => !ignoreList.has(s.treeSha256));
+  const ignoredSkills = skills.filter((s) => ignoreList.has(s.treeSha256));
+
+  if (ignoredSkills.length > 0) {
+    process.stderr.write(
+      `[skillaudit] ignoring ${ignoredSkills.length} skill${ignoredSkills.length === 1 ? '' : 's'} (run with --all to include)\n`
+    );
+  }
+
   const scanSpinner = ora(
-    `Scanning ${skills.length} skill${skills.length === 1 ? '' : 's'}…`
+    `Scanning ${toScan.length} skill${toScan.length === 1 ? '' : 's'}…`
   ).start();
 
   const scannedSkills: ScannedSkill[] = [];
   const agentMap = new Map<string, number>();
   let incompleteCount = 0;
 
-  for (const skill of skills) {
+  // Ignored skills appear in output with no findings and ignored: true
+  for (const skill of ignoredSkills) {
+    const summary = scoreFindings([], skill.treeSha256);
+    scannedSkills.push({ ...skill, findings: [], enrichment: {}, summary, ignored: true });
+    agentMap.set(skill.agentId, (agentMap.get(skill.agentId) ?? 0) + 1);
+  }
+
+  for (const skill of toScan) {
     try {
       const findings = await runRules(skill.path, ALL_RULES);
       const summary = scoreFindings(findings, skill.treeSha256);
@@ -133,10 +152,11 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     skillsScanned: count,
   }));
 
-  const compromised = scannedSkills.filter((s) => s.summary.verdict === 'FAIL').length;
-  const overallVerdict = scannedSkills.some((s) => s.summary.verdict === 'FAIL')
+  const activeSkills = scannedSkills.filter((s) => !s.ignored);
+  const compromised = activeSkills.filter((s) => s.summary.verdict === 'FAIL').length;
+  const overallVerdict = activeSkills.some((s) => s.summary.verdict === 'FAIL')
     ? 'FAIL'
-    : scannedSkills.some((s) => s.summary.verdict === 'REVIEW')
+    : activeSkills.some((s) => s.summary.verdict === 'REVIEW')
       ? 'REVIEW'
       : 'PASS';
 
@@ -146,9 +166,9 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     agents,
     skills: scannedSkills,
     summary: {
-      skillsScanned: skills.length,
+      skillsScanned: toScan.length,
       compromised,
-      percentCompromised: skills.length > 0 ? Math.round((compromised / skills.length) * 100) : 0,
+      percentCompromised: toScan.length > 0 ? Math.round((compromised / toScan.length) * 100) : 0,
       verdict: overallVerdict,
     },
   };

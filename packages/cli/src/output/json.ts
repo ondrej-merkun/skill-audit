@@ -42,6 +42,7 @@ function serializeSkill(s: ScannedSkill): object {
     path: s.path,
     tree_sha256: s.treeSha256,
     allowlisted: s.summary.allowlisted,
+    ignored: s.ignored === true,
     findings: s.findings.map(serializeFinding),
     enrichment: serializeEnrichment(s.enrichment),
     summary: {

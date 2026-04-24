@@ -85,6 +85,7 @@ export type ScannedSkill = Skill & {
   findings: Finding[];
   enrichment: Enrichment;
   summary: SkillSummary;
+  ignored?: true;
 };
 
 export type AgentInfo = {
