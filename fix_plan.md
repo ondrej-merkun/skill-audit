@@ -141,7 +141,7 @@ at the bottom and the loop will stop.
   field order.
 - [x] **5.5** Wire flags: `--json`, `--summary`, `--offline`,
   `--strict`, `--agent <id>`, `--fail-on <band>` on the scan command.
-- [ ] **5.6** Implement exit-code logic per spec §7: 0 all PASS, 1
+- [x] **5.6** Implement exit-code logic per spec §7: 0 all PASS, 1
   any REVIEW/FAIL (respecting `--fail-on`), 2 tool error, 3 incomplete.
 
 ## Phase 6 — Enrichment (spec: §5)
