@@ -199,7 +199,7 @@ at the bottom and the loop will stop.
   known-bad skill trees covering: env-exfil, password-zip, trigger-
   clause, hidden-unicode, obfuscated-eval, credstore-read. Each is a
   folder matching a real skill shape (`SKILL.md` + scripts).
-- [ ] **10.2** Assemble `test/fixtures/benign/` with at least 10
+- [x] **10.2** Assemble `test/fixtures/benign/` with at least 10
   plausible-looking but safe skills: PDF extractor, git helper,
   kanban, ffmpeg wrapper, date parser, etc.
 - [ ] **10.3** Add `test/e2e.test.ts` — runs the compiled CLI
