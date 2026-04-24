@@ -152,7 +152,7 @@ at the bottom and the loop will stop.
 - [x] **6.2** Implement `src/enrich/skills-sh.ts` — POST to
   `https://add-skill.vercel.sh/audit`, 5s timeout, fail-silent, honest
   User-Agent `skillaudit/0.1.0 (+github.com/<you>/skillaudit)`.
-- [ ] **6.3** Implement `src/enrich/github.ts` — `GET /repos/{owner}/{repo}`
+- [x] **6.3** Implement `src/enrich/github.ts` — `GET /repos/{owner}/{repo}`
   unauthenticated by default, picks up `GITHUB_TOKEN` if present,
   ETag-cached.
 - [ ] **6.4** Implement `src/enrich/deps-dev.ts` — unified scorecard +
