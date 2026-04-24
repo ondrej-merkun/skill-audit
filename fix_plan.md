@@ -139,7 +139,7 @@ at the bottom and the loop will stop.
 - [x] **5.4** Implement `src/output/json.ts` — emits the exact schema
   from spec §6 JSON section. Schema version "1.0". Deterministic
   field order.
-- [ ] **5.5** Wire flags: `--json`, `--summary`, `--offline`,
+- [x] **5.5** Wire flags: `--json`, `--summary`, `--offline`,
   `--strict`, `--agent <id>`, `--fail-on <band>` on the scan command.
 - [ ] **5.6** Implement exit-code logic per spec §7: 0 all PASS, 1
   any REVIEW/FAIL (respecting `--fail-on`), 2 tool error, 3 incomplete.
