@@ -218,7 +218,7 @@ at the bottom and the loop will stop.
 - [x] **11.2** Add `action.yml` at repo root — GitHub Action composite
   wrapping `npx skillaudit scan --json`, per the gitleaks pattern in
   spec §9 "Go-to-market".
-- [ ] **11.3** Add `.github/workflows/release.yml` — `changesets` or
+- [x] **11.3** Add `.github/workflows/release.yml` — `changesets` or
   `pnpm publish --access public` triggered on tag push. Do not publish
   yet — this just stages the automation.
 
@@ -255,3 +255,5 @@ at the bottom and the loop will stop.
 
 (If Ralph hits something it cannot proceed past, document here with error
 output and what was attempted.)
+
+ALL TASKS COMPLETE
