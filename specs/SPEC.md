@@ -210,7 +210,7 @@ Adding a new agent = adding one file and registering in `discovery/index.ts`. No
 
 | Agent | User-global paths | Project-local | Manifest |
 |---|---|---|---|
-| **Claude Code** | `~/.claude/skills/*/SKILL.md`, `~/.claude/plugins/`, `~/.claude/commands/*.md`, `~/.claude/agents/*.md`, MCP in `~/.claude.json` (inc. `projects.<abs-path>.mcpServers`) | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.mcp.json`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` | `SKILL.md` (YAML+MD), `plugin.json`, `.mcp.json` |
+| **Claude Code** | `~/.claude/skills/*/SKILL.md`; `~/.claude/plugins/<marketplace>/<plugin>/skills/<skill>/SKILL.md` **(recursive — walk to any depth where a SKILL.md is present)**; `~/.claude/plugins/<marketplace>/<plugin>/{agents,commands}/**`; `~/.claude/commands/*.md`; `~/.claude/agents/*.md`; MCP in `~/.claude.json` (inc. `projects.<abs-path>.mcpServers`) | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.mcp.json`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` | `SKILL.md` (YAML+MD), `plugin.json`, `.mcp.json` |
 | **Claude Desktop** | macOS `~/Library/Application Support/Claude/claude_desktop_config.json`; Windows `%APPDATA%\Claude\claude_desktop_config.json`; Linux `~/.config/claude-desktop/claude_desktop_config.json` | — | JSON (`mcpServers`) |
 | **OpenAI Codex** | `~/.codex/AGENTS.md`, `~/.codex/AGENTS.override.md`, `~/.codex/config.toml`, `~/.codex/skills/`, `~/.codex/plugins/`, `~/.codex/prompts/`. `$CODEX_HOME` override. | `AGENTS.md` (walked up), `.codex/config.toml` (if trusted) | `AGENTS.md`, `SKILL.md`, TOML `[mcp_servers.*]` |
 | **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, legacy `.cursorrules` | `.mdc`, JSON |
@@ -220,6 +220,12 @@ Adding a new agent = adding one file and registering in `discovery/index.ts`. No
 | **Cline** | VS Code `globalStorage/saoudrizwan.claude-dev/` | `.clinerules/*.md`, legacy `.clinerules`, cross-reads `.cursorrules`, `AGENTS.md`, `CLAUDE.md` | `.md` w/ YAML FM |
 | **Continue.dev** | `~/.continue/{rules,prompts,mcpServers,assistants}/*`, `~/.continue/config.yaml` | `.continue/*`, `.continue/config.yaml` | YAML |
 | **Cross-agent (AGENTS.md sweep)** | — | `AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `CONVENTIONS.md` (catches 7+ agents in one pass) | plain `.md` |
+
+**Discovery depth rule.** When a path contains "plugins" or
+"marketplace", walk the full tree and emit one Skill per leaf
+SKILL.md / plugin.json / command .md, not one Skill per intermediate
+directory. On a machine with a marketplace installed, this produces
+hundreds of skills, not tens.
 
 **MVP discovery shortlist** (covers ~85% of user value):
 1. Claude Code (skills, plugins, agents, commands, all MCP sources)
@@ -329,6 +335,15 @@ unzip\s+-P\s+["']?\S+["']?\s+\S+\.zip
 **Strict mode.** `--strict` collapses REVIEW into FAIL. Use in CI.
 
 **Expected MVP performance.** Snyk's 91% / 100% recall numbers require their LLM-augmented engine. A pure-regex MVP should expect **~60-70% recall** on confirmed malicious with **~5-10% FPR** before the allowlist (FPR drops to ~2% after). Honest-market that in the README.
+
+### Performance budget (enforced)
+
+`skillaudit scan` against 500 skills must finish in < 10 s on a
+warm cache on a 2020-era laptop. If a design choice pushes past
+this, redesign before shipping. Worker-thread-per-regex is NOT
+acceptable at this scale — batch regex execution per file, or
+keep execution in the main thread with a simpler timeout strategy
+(e.g. pre-flight length/complexity caps on user-sourced content).
 
 ## 5. Cloud enrichment layer
 

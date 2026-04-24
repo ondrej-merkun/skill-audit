@@ -7,6 +7,20 @@ Local-first, zero-auth, published as `npx skillaudit`.
 Full spec: **`specs/SPEC.md`**. Ralph loop protocol: **`PROMPT.md`**.
 Workflow conventions: **`AGENT.md`**. Task list / progress: **`fix_plan.md`**.
 
+> **Spec rev: 2026-04-25 (post-mortem v1)** — done criteria expanded (6→10
+> steps), Identity section added, exports-field rule added, discovery depth
+> clarified, performance budget added. See `.postmortem/analysis.md`.
+
+## Identity
+
+- GitHub handle: `ondrejmerkun`
+- npm package name: `skill-audit`
+- Author byline (README, blog, HN): "Ondrej Merkun"
+
+Never guess these from paths, filesystem layout, or commit metadata.
+If a task needs a URL like `github.com/<handle>/skillaudit`, pull
+the handle from this section verbatim.
+
 ## Tech stack
 
 TypeScript (strict) on Node 20+, pnpm workspaces, tsup (CJS+ESM+dts),
@@ -75,8 +89,18 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
 2. New code has tests; `pnpm test` passes.
 3. `pnpm build` produces a clean `dist/`.
 4. `pnpm lint` produces no errors (warnings fine).
-5. `fix_plan.md` checkbox flipped to `- [x]`.
-6. Two conventional commits: one for the feature, one for the checkbox.
+5. `pnpm typecheck` passes (no `tsc --noEmit` errors on ANY package).
+6. `pnpm build 2>&1 | grep -iE 'warn|error'` emits nothing. Build
+   warnings count as failures — fix them before committing.
+7. For any task that ships a user-facing command or artefact: execute it
+   against a real input (`node packages/cli/dist/index.js scan` against
+   `$HOME`, or open the generated HTML / README / action.yml). Paste the
+   observed output into the commit message or reject the task.
+8. For any task that adds a file reference (image, link, badge) to a
+   markdown file: verify the referenced path resolves on disk. Broken
+   links block the commit.
+9. `fix_plan.md` checkbox flipped to `- [x]`.
+10. Two conventional commits: one for the feature, one for the checkbox.
 
 ## Never
 

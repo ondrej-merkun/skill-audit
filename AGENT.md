@@ -19,6 +19,21 @@ and structure code in this repo. Keep it short and keep it accurate.
 | Test runner | vitest |
 | Linter/formatter | biome |
 
+Conditional `exports` in `package.json` must list `"types"` FIRST,
+then `"import"`, then `"require"`. Node's resolution picks the first
+matching condition — putting `"types"` last silently disables it and
+tsup emits a build warning. Example:
+
+```json
+"exports": {
+  ".": {
+    "types": "./dist/index.d.ts",
+    "import": "./dist/index.js",
+    "require": "./dist/index.cjs"
+  }
+}
+```
+
 Do **not** add: ink, react, yargs, jest, eslint, prettier, axios
 (use native fetch), lodash (use native), or any native-module
 dependency (`node-gyp`).
@@ -105,6 +120,15 @@ fire) and one benign (must not fire). File them under
 `test/fixtures/<rule-id>/malicious/` and `test/fixtures/<rule-id>/benign/`.
 The test harness (`test/rules.test.ts`) walks these automatically.
 
+## Testing conventions
+
+- Tests that assert on chalk-styled output MUST strip ANSI before
+  comparing. Use `import stripAnsi from 'strip-ansi'` (already a
+  transitive dep via chalk) and call `expect(stripAnsi(out)).toContain(…)`.
+- Never assume chalk is disabled. vitest runs in a non-TTY child
+  process by default, but `FORCE_COLOR=1` on the dev machine flips
+  that. Tests must pass both with and without colour.
+
 ## Commit style
 
 Conventional commits. Scope is the package or subsystem:
@@ -125,8 +149,15 @@ A task is done when:
 2. New code has tests, and `pnpm test` passes.
 3. `pnpm build` produces a clean `dist/`.
 4. `pnpm lint` produces no errors (warnings ok).
-5. You've updated `fix_plan.md` checkbox.
-6. You've committed both the feature and the checkbox change.
+5. `pnpm typecheck` passes (no `tsc --noEmit` errors on ANY package).
+6. `pnpm build 2>&1 | grep -iE 'warn|error'` emits nothing. Build
+   warnings count as failures — fix them before committing.
+7. For any task that ships a user-facing command or artefact: execute it
+   against a real input. Paste observed output into the commit message.
+8. For any task that adds a file reference to a markdown file: verify the
+   path resolves on disk. Broken links block the commit.
+9. You've updated `fix_plan.md` checkbox.
+10. You've committed both the feature and the checkbox change.
 
 ## When the spec and AGENT.md disagree
 

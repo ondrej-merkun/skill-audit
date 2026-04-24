@@ -38,6 +38,12 @@ stack. **One item per loop.** If you find yourself thinking "while I'm
 here I might as well also…" — stop. Finish this task, commit, exit. The
 next iteration will pick up the next task.
 
+**Orphan exception.** If the *current* task creates, moves, or
+supersedes a file that an *earlier iteration* left as scaffolding
+(e.g. this task creates the "real" version of a placeholder added
+in an earlier task), delete the predecessor in this same commit.
+Do not leave two files with the same purpose.
+
 Rules for implementation:
 - Follow conventions in `AGENT.md` (file layout, testing, commit style).
 - Use the specified tech stack: TypeScript on Node 20+, pnpm, tsup,

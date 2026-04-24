@@ -205,10 +205,19 @@ at the bottom and the loop will stop.
 - [x] **10.3** Add `test/e2e.test.ts` — runs the compiled CLI
   against both fixture sets via `execa`, asserts expected verdicts
   and JSON structure.
+- [ ] **10.4a** Create `LICENSE` (Apache-2.0 text, copyright line
+  `Copyright 2026 Ondrej Merkun`).
+- [ ] **10.4b** Create `docs/logo.svg` — minimal placeholder (red
+  magnifying-glass SVG, 180 × 180). Either ship an asset or delete
+  the `<img>` tag from the README — don't leave dangling references.
 - [x] **10.4** Write `README.md` per spec §9 "README design": ~250
   lines, badges, Snyk 36% stat blockquote with attribution, `npx
   skillaudit` above the fold, placeholder for hero GIF, supported
   agents table, FAQ section.
+- [ ] **10.5** Measure `skillaudit scan` elapsed time against `~/.claude`
+  on the developer's own machine. If > 10 s for 500 skills, file a
+  blocker. This MUST be the final task before Phase 11 is permitted
+  to start.
 
 ## Phase 11 — Distribution scaffolding
 
