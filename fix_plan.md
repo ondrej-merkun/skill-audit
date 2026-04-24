@@ -179,7 +179,7 @@ at the bottom and the loop will stop.
 
 ## Phase 8 — HTML report (spec: §6 "HTML report")
 
-- [ ] **8.1** Implement `src/output/html.ts` — single standalone HTML
+- [x] **8.1** Implement `src/output/html.ts` — single standalone HTML
   file with inlined CSS + JS, no network calls. Layout: sticky header,
   left-rail agent tree, main grid sorted FAIL-first, slide-out detail
   panel on row click, export buttons. Use `--html <file>` flag.
