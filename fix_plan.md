@@ -155,7 +155,7 @@ at the bottom and the loop will stop.
 - [x] **6.3** Implement `src/enrich/github.ts` — `GET /repos/{owner}/{repo}`
   unauthenticated by default, picks up `GITHUB_TOKEN` if present,
   ETag-cached.
-- [ ] **6.4** Implement `src/enrich/deps-dev.ts` — unified scorecard +
+- [x] **6.4** Implement `src/enrich/deps-dev.ts` — unified scorecard +
   OSV lookup, no auth, cached.
 - [ ] **6.5** Wire enrichment into the scan pipeline: after rules run,
   augment each `Skill` with `enrichment` field; surface in both table
