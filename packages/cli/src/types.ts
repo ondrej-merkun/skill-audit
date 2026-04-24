@@ -57,9 +57,15 @@ export type GitHubEnrichment = {
   contributors: number;
 };
 
+export type DepsDevEnrichment = {
+  scorecardScore: number | null;
+  osvAdvisories: number;
+};
+
 export type Enrichment = {
   skillsSh?: SkillsShEnrichment;
   github?: GitHubEnrichment;
+  depsdev?: DepsDevEnrichment;
 };
 
 export type SkillSummary = {
