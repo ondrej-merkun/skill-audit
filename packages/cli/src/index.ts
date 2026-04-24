@@ -1,4 +1,6 @@
 import { Command } from 'commander';
+import { runList } from './commands/list.js';
+import type { ListOptions } from './commands/list.js';
 import { runScan } from './commands/scan.js';
 import type { ScanOptions } from './commands/scan.js';
 
@@ -32,6 +34,23 @@ program
       failOn: typeof cmdOpts.failOn === 'string' ? cmdOpts.failOn : undefined,
     };
     runScan(options).catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[skillaudit] fatal: ${msg}\n`);
+      process.exit(2);
+    });
+  });
+
+program
+  .command('list')
+  .description('List all discovered agent skills without scanning')
+  .option('--agent <id>', 'restrict to a single agent (e.g. claude-code, cursor)')
+  .option('--json', 'emit JSON array to stdout')
+  .action((cmdOpts: Record<string, unknown>) => {
+    const options: Partial<ListOptions> = {
+      agent: typeof cmdOpts.agent === 'string' ? cmdOpts.agent : undefined,
+      json: cmdOpts.json === true,
+    };
+    runList(options).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
       process.stderr.write(`[skillaudit] fatal: ${msg}\n`);
       process.exit(2);
