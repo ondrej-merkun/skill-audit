@@ -6,9 +6,23 @@ import { renderTable } from '../output/table.js';
 import { runRules } from '../rules/engine.js';
 import { ALL_RULES } from '../rules/index.js';
 import { scoreFindings } from '../score.js';
-import type { AgentInfo, ScanResult, ScannedSkill, Skill } from '../types.js';
+import type { AgentInfo, ScanResult, ScannedSkill, Skill, Verdict } from '../types.js';
 
 const TOOL_VERSION = '0.1.0';
+
+export function computeExitCode(
+  verdict: Verdict,
+  options: { failOn?: string; strict?: boolean },
+  incomplete = false
+): number {
+  // strict promotes REVIEW to FAIL for exit code purposes
+  const threshold = options.strict ? 'REVIEW' : (options.failOn?.toUpperCase() ?? 'FAIL');
+  const triggersExit1 = threshold === 'REVIEW' ? verdict !== 'PASS' : verdict === 'FAIL';
+  if (triggersExit1) return 1;
+  // incomplete scan with no failures → signal partial results
+  if (incomplete) return 3;
+  return 0;
+}
 
 export type ScanOptions = {
   json: boolean;
@@ -76,11 +90,18 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
 
   const scannedSkills: ScannedSkill[] = [];
   const agentMap = new Map<string, number>();
+  let incompleteCount = 0;
 
   for (const skill of skills) {
-    const findings = await runRules(skill.path, ALL_RULES);
-    const summary = scoreFindings(findings, skill.treeSha256);
-    scannedSkills.push({ ...skill, findings, enrichment: {}, summary });
+    try {
+      const findings = await runRules(skill.path, ALL_RULES);
+      const summary = scoreFindings(findings, skill.treeSha256);
+      scannedSkills.push({ ...skill, findings, enrichment: {}, summary });
+    } catch (err) {
+      incompleteCount++;
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[skillaudit] skipping "${skill.name}": ${msg}\n`);
+    }
     agentMap.set(skill.agentId, (agentMap.get(skill.agentId) ?? 0) + 1);
   }
 
@@ -120,5 +141,13 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     renderSummary(result);
   } else {
     renderTable(result);
+  }
+
+  const exitOpts: { failOn?: string; strict?: boolean } = {};
+  if (options.failOn !== undefined) exitOpts.failOn = options.failOn;
+  if (options.strict) exitOpts.strict = options.strict;
+  const exitCode = computeExitCode(overallVerdict, exitOpts, incompleteCount > 0);
+  if (exitCode !== 0) {
+    process.exit(exitCode);
   }
 }
