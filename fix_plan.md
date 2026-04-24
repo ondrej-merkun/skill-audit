@@ -166,7 +166,7 @@ at the bottom and the loop will stop.
 
 - [x] **7.1** Implement `list` command — discovers skills, prints a
   table with agent, name, path, scope. No scanning. Fast.
-- [ ] **7.2** Implement `explain <skill-name-or-id>` — runs full scan
+- [x] **7.2** Implement `explain <skill-name-or-id>` — runs full scan
   restricted to that skill, renders the detail view from spec §6
   "Detail view" mockup. Looks up enrichment.
 - [ ] **7.3** Implement `ignore <skill-name>` — appends skill's
