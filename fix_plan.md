@@ -133,7 +133,7 @@ at the bottom and the loop will stop.
 - [x] **5.2** Implement `src/output/table.ts` — renders the exact hero
   mockup from spec §6 using cli-table3 + chalk. Severity dots, two-
   column layout, score column, top-issue column, 4-color palette.
-- [ ] **5.3** Implement `src/output/summary.ts` — the scan-summary
+- [x] **5.3** Implement `src/output/summary.ts` — the scan-summary
   footer with skill count, unique issues, compromised count and %,
   enrichment status, duration, and the 3 arrow-prefixed next-commands.
 - [ ] **5.4** Implement `src/output/json.ts` — emits the exact schema
