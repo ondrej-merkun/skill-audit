@@ -202,7 +202,7 @@ at the bottom and the loop will stop.
 - [x] **10.2** Assemble `test/fixtures/benign/` with at least 10
   plausible-looking but safe skills: PDF extractor, git helper,
   kanban, ffmpeg wrapper, date parser, etc.
-- [ ] **10.3** Add `test/e2e.test.ts` — runs the compiled CLI
+- [x] **10.3** Add `test/e2e.test.ts` — runs the compiled CLI
   against both fixture sets via `execa`, asserts expected verdicts
   and JSON structure.
 - [ ] **10.4** Write `README.md` per spec §9 "README design": ~250
