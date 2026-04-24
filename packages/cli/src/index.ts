@@ -1,4 +1,6 @@
 import { Command } from 'commander';
+import { runExplain } from './commands/explain.js';
+import type { ExplainOptions } from './commands/explain.js';
 import { runList } from './commands/list.js';
 import type { ListOptions } from './commands/list.js';
 import { runScan } from './commands/scan.js';
@@ -51,6 +53,23 @@ program
       json: cmdOpts.json === true,
     };
     runList(options).catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[skillaudit] fatal: ${msg}\n`);
+      process.exit(2);
+    });
+  });
+
+program
+  .command('explain <skill-name-or-id>')
+  .description('Show full detail view for a single skill')
+  .option('--offline', 'skip network enrichment calls')
+  .option('--json', 'emit JSON to stdout instead of detail view')
+  .action((nameOrId: string, cmdOpts: Record<string, unknown>) => {
+    const options: Partial<ExplainOptions> = {
+      offline: cmdOpts.offline === true,
+      json: cmdOpts.json === true,
+    };
+    runExplain(nameOrId, options).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
       process.stderr.write(`[skillaudit] fatal: ${msg}\n`);
       process.exit(2);
