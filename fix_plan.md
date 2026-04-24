@@ -212,7 +212,7 @@ at the bottom and the loop will stop.
 
 ## Phase 11 — Distribution scaffolding
 
-- [ ] **11.1** Add `.github/workflows/ci.yml` — runs `pnpm install`,
+- [x] **11.1** Add `.github/workflows/ci.yml` — runs `pnpm install`,
   `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm typecheck` on Node 20
   and 22, Linux + macOS.
 - [ ] **11.2** Add `action.yml` at repo root — GitHub Action composite
