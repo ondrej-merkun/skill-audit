@@ -33,6 +33,7 @@ export type ScanOptions = {
   strict: boolean;
   agent: string | undefined;
   failOn: string | undefined;
+  deep: boolean;
 };
 
 const DEFAULT_OPTIONS: ScanOptions = {
@@ -42,10 +43,21 @@ const DEFAULT_OPTIONS: ScanOptions = {
   strict: false,
   agent: undefined,
   failOn: undefined,
+  deep: false,
 };
+
+const DEEP_MODE_MESSAGE =
+  'Deep mode coming soon. LLM-assisted semantic analysis will be opt-in and local via Ollama.';
 
 export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   const options: ScanOptions = { ...DEFAULT_OPTIONS, ...opts };
+
+  if (options.deep) {
+    process.stderr.write(`${DEEP_MODE_MESSAGE}\n`);
+    process.exit(2);
+    return; // unreachable in production; allows mocked exit in tests
+  }
+
   const startedAt = new Date().toISOString();
   const start = Date.now();
 
