@@ -146,7 +146,7 @@ at the bottom and the loop will stop.
 
 ## Phase 6 — Enrichment (spec: §5)
 
-- [ ] **6.1** Implement file-backed cache in `src/enrich/cache.ts`
+- [x] **6.1** Implement file-backed cache in `src/enrich/cache.ts`
   storing to `~/.cache/skillaudit/<source>/`, 24h TTL, stale-on-error
   fallback, ETag support for HTTP.
 - [ ] **6.2** Implement `src/enrich/skills-sh.ts` — POST to
