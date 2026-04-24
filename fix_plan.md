@@ -195,7 +195,7 @@ at the bottom and the loop will stop.
 
 ## Phase 10 — Tests, fixtures, polish
 
-- [ ] **10.1** Assemble `test/fixtures/malicious/` with at least 10
+- [x] **10.1** Assemble `test/fixtures/malicious/` with at least 10
   known-bad skill trees covering: env-exfil, password-zip, trigger-
   clause, hidden-unicode, obfuscated-eval, credstore-read. Each is a
   folder matching a real skill shape (`SKILL.md` + scripts).
