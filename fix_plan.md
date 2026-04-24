@@ -173,7 +173,7 @@ at the bottom and the loop will stop.
   treeSha256 to `~/.config/skillaudit/ignore.yaml`. On next scan,
   ignored skills are skipped but still listed with `ignored: true` in
   JSON output.
-- [ ] **7.4** Implement `--deep` flag stub: errors with the exact
+- [x] **7.4** Implement `--deep` flag stub: errors with the exact
   message from spec §7: "Deep mode coming soon. LLM-assisted semantic
   analysis will be opt-in and local via Ollama." Exit code 2.
 
