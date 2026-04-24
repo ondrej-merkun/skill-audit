@@ -186,7 +186,7 @@ at the bottom and the loop will stop.
 
 ## Phase 9 — Claude Code skill wrapper (spec: §8)
 
-- [ ] **9.1** Create `packages/skill/SKILL.md` with the exact content
+- [x] **9.1** Create `packages/skill/SKILL.md` with the exact content
   from spec §8. This is the skill users install into their
   `~/.claude/skills/` to call `npx skillaudit` from Claude Code.
 - [ ] **9.2** Create `packages/skill/README.md` explaining how to
