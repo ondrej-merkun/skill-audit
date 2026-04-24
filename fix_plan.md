@@ -157,7 +157,7 @@ at the bottom and the loop will stop.
   ETag-cached.
 - [x] **6.4** Implement `src/enrich/deps-dev.ts` — unified scorecard +
   OSV lookup, no auth, cached.
-- [ ] **6.5** Wire enrichment into the scan pipeline: after rules run,
+- [x] **6.5** Wire enrichment into the scan pipeline: after rules run,
   augment each `Skill` with `enrichment` field; surface in both table
   and JSON output. Always runs in parallel with a 5s per-call timeout.
   `--offline` skips entirely with a single stderr line.
