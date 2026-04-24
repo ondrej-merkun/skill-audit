@@ -215,7 +215,7 @@ at the bottom and the loop will stop.
 - [x] **11.1** Add `.github/workflows/ci.yml` — runs `pnpm install`,
   `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm typecheck` on Node 20
   and 22, Linux + macOS.
-- [ ] **11.2** Add `action.yml` at repo root — GitHub Action composite
+- [x] **11.2** Add `action.yml` at repo root — GitHub Action composite
   wrapping `npx skillaudit scan --json`, per the gitleaks pattern in
   spec §9 "Go-to-market".
 - [ ] **11.3** Add `.github/workflows/release.yml` — `changesets` or
