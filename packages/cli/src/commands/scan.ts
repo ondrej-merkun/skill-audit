@@ -1,5 +1,6 @@
 import ora from 'ora';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
+import { enrichAll } from '../enrich/index.js';
 import { renderJson } from '../output/json.js';
 import { renderSummary } from '../output/summary.js';
 import { renderTable } from '../output/table.js';
@@ -106,6 +107,23 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   }
 
   scanSpinner.succeed('Scan complete');
+
+  if (!options.offline && scannedSkills.length > 0) {
+    const enrichSpinner = ora('Enriching…').start();
+    try {
+      const enrichments = await enrichAll(scannedSkills);
+      for (let i = 0; i < scannedSkills.length; i++) {
+        const s = scannedSkills[i];
+        const e = enrichments[i];
+        if (s !== undefined && e !== undefined) {
+          scannedSkills[i] = { ...s, enrichment: e };
+        }
+      }
+      enrichSpinner.succeed('Enrichment complete');
+    } catch {
+      enrichSpinner.warn('Enrichment failed (continuing)');
+    }
+  }
 
   const durationMs = Date.now() - start;
 
