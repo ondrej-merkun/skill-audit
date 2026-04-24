@@ -136,7 +136,7 @@ at the bottom and the loop will stop.
 - [x] **5.3** Implement `src/output/summary.ts` — the scan-summary
   footer with skill count, unique issues, compromised count and %,
   enrichment status, duration, and the 3 arrow-prefixed next-commands.
-- [ ] **5.4** Implement `src/output/json.ts` — emits the exact schema
+- [x] **5.4** Implement `src/output/json.ts` — emits the exact schema
   from spec §6 JSON section. Schema version "1.0". Deterministic
   field order.
 - [ ] **5.5** Wire flags: `--json`, `--summary`, `--offline`,
