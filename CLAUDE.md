@@ -6,6 +6,9 @@ Local-first, zero-auth, published as `npx skillaudit`.
 
 Full spec: **`specs/SPEC.md`**. Ralph loop protocol: **`PROMPT.md`**.
 Workflow conventions: **`AGENT.md`**. Task list / progress: **`fix_plan.md`**.
+**Hard-won lessons (READ AT SESSION START): `LESSONS.md`.** Append a new
+bullet there whenever a task teaches something a future run would benefit
+from — see the instructions at the top of that file.
 
 > **Spec rev: 2026-04-25 (post-mortem v1)** — done criteria expanded (6→10
 > steps), Identity section added, exports-field rule added, discovery depth

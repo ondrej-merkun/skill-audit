@@ -12,8 +12,11 @@ iteration you do ONE task, commit it, and exit.
 Read, in this order:
 
 1. `AGENT.md` — how to build, test, and commit in this repo.
-2. `fix_plan.md` — the prioritized task list with checkboxes.
-3. `git log --oneline -20` — what past iterations have already done.
+2. `LESSONS.md` — hard-won lessons from prior runs. Skimming this
+   is mandatory — past Ralph has already hit the pothole you're
+   about to step in.
+3. `fix_plan.md` — the prioritized task list with checkboxes.
+4. `git log --oneline -20` — what past iterations have already done.
 
 ### 2. Pick ONE task
 
@@ -73,6 +76,26 @@ If any fail, fix them before committing. Do not commit broken builds.
 If you genuinely can't fix (e.g. a dependency install is failing for
 infra reasons), document the exact failure in `fix_plan.md` as a
 blocker and exit without committing code changes.
+
+### 4b. Capture any new lesson
+
+Before you commit, ask: *"Did this task teach me something a future
+iteration would benefit from, that isn't already in `AGENT.md` /
+`CLAUDE.md` / `PROMPT.md`?"* Typical triggers:
+
+- A verification step you nearly skipped, that caught a real bug.
+- A spec ambiguity you had to resolve (record the resolution).
+- A performance, architecture, or tooling surprise.
+- A near-miss that only passed because of luck (TTY detection,
+  environment variable, machine-specific path).
+
+If yes: append ONE bullet to the appropriate section of `LESSONS.md`
+using the `LN.M — One-line rule.` format at the top of that file.
+Keep it terse. Stage the `LESSONS.md` change as part of the FEATURE
+commit in step 5 (not the checkbox commit), so the lesson travels
+with the evidence that produced it.
+
+If no: skip this step. Don't manufacture lessons.
 
 ### 5. Commit
 

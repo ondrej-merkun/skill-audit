@@ -3,6 +3,12 @@
 This file tells Ralph (and any future contributor) how to build, test,
 and structure code in this repo. Keep it short and keep it accurate.
 
+**Start-of-session: read `LESSONS.md`** at the repo root. It's the
+distilled record of how previous runs broke, with explicit rules to
+avoid repeating the same mistakes. If your current task produces a
+new lesson, append a bullet there in the SAME commit as the fix
+(see `PROMPT.md` step 4b).
+
 ## Tech stack (do not drift)
 
 | Concern | Choice |
