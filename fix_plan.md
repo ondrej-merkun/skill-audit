@@ -306,6 +306,20 @@ Task 10.5 (perf measurement) cannot be re-run meaningfully until
   After this lands, re-run task 10.5 and check it. Root commit:
   `26abe68`.
 
+- [ ] **12.8** **(Issue H)** Verify the remote GitHub Actions CI
+  pipelines actually run and pass on GitHub, not just locally. Create
+  or update a branch/PR for the current plan state, wait for all
+  required GitHub checks to complete, and inspect failed logs with
+  `gh run view --log-failed` / `gh pr checks --watch` as appropriate.
+  Fix any workflow or code failures needed to make the remote checks
+  green. Run the local CI-equivalent command list first (`pnpm install
+  && pnpm build && pnpm test && pnpm lint && pnpm typecheck`) so
+  obvious failures are caught before pushing. Do not create a release
+  tag or publish package artifacts just to test release automation;
+  validate release workflow syntax/config without triggering publish
+  unless a release task explicitly asks for it. Paste the final remote
+  run URLs and pass/fail summary into the commit or PR body.
+
 ## Phase 13 — Additional agent discovery (spec: §3 v0.2 expansion)
 
 Net-new agent support beyond the MVP shortlist. Each task adds one
@@ -426,5 +440,3 @@ intermediate directory.
 
 (If Ralph hits something it cannot proceed past, document here with error
 output and what was attempted.)
-
-ALL TASKS COMPLETE
