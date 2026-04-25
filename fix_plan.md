@@ -441,6 +441,18 @@ intermediate directory.
 (If Ralph hits something it cannot proceed past, document here with error
 output and what was attempted.)
 
+- **10.5 performance measurement blocked (2026-04-25)** — Real-machine
+  `~/.claude` contains 1,271 `SKILL.md` / `plugin.json` candidates, but the
+  current Claude Code discovery found only 21 skills and scanned 18 after
+  ignore filtering. Command attempted after `pnpm build`:
+  `node packages/cli/dist/index.js scan --agent claude-code --summary --offline
+  --fail-on never`. Observed output stopped at `Found 21 skills` and
+  `Scanning 18 skills...`; the process still had not completed after more than
+  9 minutes, exceeding the <10s / 500-skill budget by a wide margin while also
+  failing to discover the real 500+ skill set. Do not check off 10.5 until
+  tasks 12.6 (discovery depth) and 12.7 (rule-engine performance) land, then
+  re-run this measurement against the full `~/.claude` tree.
+
 - **10.4a verification blocked (2026-04-25)** — README License removal is
   mechanically simple, but the required clean verification cannot pass on the
   current tree before later planned fixes run:
