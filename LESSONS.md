@@ -58,6 +58,11 @@ Source of lessons 1.x – 6.x: `.postmortem/analysis.md` (run 2026-04-23).
   Keep test/config files in the root typecheck surface so CI sees
   assertion-helper drift before runtime.
 
+- **L1.7 — Do not `process.exit(1)` immediately after writing machine output.** _Task
+  12.8 remote CI passed locally but Node 20 on macOS truncated `scan --json`
+  stdout before Vitest could parse it._
+  Set `process.exitCode` for normal verdict exits so stdout/stderr can flush.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

@@ -247,6 +247,6 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   if (options.strict) exitOpts.strict = options.strict;
   const exitCode = computeExitCode(overallVerdict, exitOpts, incompleteCount > 0);
   if (exitCode !== 0) {
-    process.exit(exitCode);
+    process.exitCode = exitCode;
   }
 }
