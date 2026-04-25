@@ -369,7 +369,7 @@ intermediate directory.
   list` against `$HOME` post-implementation and paste the row
   count + a sample of Codex paths into the commit body.
 
-- [ ] **13.2** Implement `packages/cli/src/discovery/gemini.ts` —
+- [x] **13.2** Implement `packages/cli/src/discovery/gemini.ts` —
   Gemini CLI extensions/commands/agents discovery.
 
   **Paths to scan** (per SPEC.md §3 canonical-paths table):
