@@ -205,11 +205,7 @@ at the bottom and the loop will stop.
 - [x] **10.3** Add `test/e2e.test.ts` — runs the compiled CLI
   against both fixture sets via `execa`, asserts expected verdicts
   and JSON structure.
-- [ ] **10.4a** Create `LICENSE` (Apache-2.0 text, copyright line
-  `Copyright 2026 Ondrej Merkun`).
-- [ ] **10.4b** Create `docs/logo.svg` — minimal placeholder (red
-  magnifying-glass SVG, 180 × 180). Either ship an asset or delete
-  the `<img>` tag from the README — don't leave dangling references.
+- [ ] **10.4a** Remove mention of License from the readme (we do not need it)
 - [x] **10.4** Write `README.md` per spec §9 "README design": ~250
   lines, badges, Snyk 36% stat blockquote with attribution, `npx
   skillaudit` above the fold, placeholder for hero GIF, supported
@@ -230,6 +226,92 @@ at the bottom and the loop will stop.
 - [x] **11.3** Add `.github/workflows/release.yml` — `changesets` or
   `pnpm publish --access public` triggered on tag push. Do not publish
   yet — this just stages the automation.
+
+## Phase 12 — Post-mortem fixes (run-1, see `.postmortem/analysis.md`)
+
+Order is dependency-correct: trivial green-bar fixes first, then
+correctness bugs, then the rule-engine performance rewrite last.
+Task 10.5 (perf measurement) cannot be re-run meaningfully until
+12.7 (discovery depth) and 12.8 (engine perf) are both done.
+
+- [ ] **12.1** **(Issue B)** Reorder conditional `exports` in
+  `packages/cli/package.json:12-18` so `"types"` comes FIRST, then
+  `"import"`, then `"require"`. Verify with `pnpm build 2>&1 |
+  grep -iE 'warn|error'` — must emit nothing. See AGENT.md
+  "Tech stack" for the canonical shape. Root commit: `c0a6334`.
+
+- [ ] **12.2** **(Issue C)** Fix
+  `packages/cli/test/output.test.ts:358-366` (the
+  `renderSummaryCompact > includes compromised count` test): wrap the
+  asserted output in `stripAnsi(...)` so the chalk-coloured `2`
+  matches `'2 compromised'`. Audit ALL chalk-styled assertions in
+  the suite for the same bug and convert them too. Re-run with both
+  `FORCE_COLOR=0` and `FORCE_COLOR=1` — both must pass. Add the
+  ANSI-strip rule check to LESSONS.md L1.4 evidence. Root commit:
+  `42ac1fb`.
+
+- [ ] **12.3** **(Issue D)** Delete
+  `packages/cli/test/smoke.test.ts` — it duplicates the root-level
+  `test/smoke.test.ts` from task 1.7. Confirm `pnpm test` still
+  finds and runs the surviving smoke test. This is the canonical
+  "orphan exception" case from PROMPT.md. Root commit: `68c914e`
+  (introduced), `ca6eb4b` (should have removed).
+
+- [ ] **12.4** **(Issue G)** Replace every occurrence of the typo
+  `ondrejmerun` with the correct GitHub handle `ondrejmerkun`.
+  Known sites: 4 places in `README.md` (badges, action `uses:`
+  example, repo links) plus the `uses:` line in any
+  `.github/workflows/*.yml` example. Run
+  `git grep -n ondrejmerun` after the fix — must return nothing.
+  Pull the canonical handle from `CLAUDE.md § Identity`, never from
+  filesystem paths. Root commit: `0d6e97a`.
+
+- [ ] **12.5** **(Issue F)** Resolve the broken `<img src="docs/
+  logo.svg" />` in `README.md:2`. Two acceptable options: (a) ship
+  a minimal placeholder `docs/logo.svg` (red magnifying-glass,
+  180×180, plain SVG, no external refs); or (b) delete the `<img>`
+  tag entirely. Verify post-fix that every relative link/image in
+  the README resolves on disk. Root commit: `0d6e97a`.
+
+- [ ] **12.6** **(Issue E)** Fix `pnpm typecheck` so it passes on
+  Node 20 AND Node 22, Linux AND macOS. Likely required: add a
+  root `tsconfig.json`, align `@types/node` with the matrix legs in
+  `.github/workflows/ci.yml`, and confirm `tsc --noEmit` runs
+  cleanly inside `packages/cli`. Run the full CI command list
+  locally (`pnpm install && pnpm build && pnpm test && pnpm lint &&
+  pnpm typecheck`) before committing. Root commit: `04f5ace`.
+
+- [ ] **12.7** **(Issue A2)** Rewrite `discoverPluginDirs` in
+  `packages/cli/src/discovery/claude-code.ts:91` to walk the full
+  plugin tree per the spec's discovery-depth rule (SPEC.md §3, post
+  patch 3.4): emit one `Skill` per leaf `SKILL.md` /
+  `plugin.json` / agents/* / commands/*, NOT one per intermediate
+  marketplace or plugin directory. Apply the same depth fix to
+  `~/.claude/agents/`, `~/.claude/commands/`, and any nested
+  `plugins/*/skills/`. Add a fixture under `test/fixtures/discovery/
+  claude-code/` mirroring a real
+  `<marketplace>/<plugin>/skills/<skill>/SKILL.md` layout with at
+  least 3 nested skills and assert each is emitted as its own row.
+  Run `node packages/cli/dist/index.js list` against `$HOME` and
+  paste the row count + a few sample paths into the commit body.
+  Root commit: `8c710ac`.
+
+- [ ] **12.8** **(Issue A1)** Replace the worker-thread-per-pattern
+  architecture in `packages/cli/src/rules/engine.ts:127-154`. The
+  current loop spawns ~8k workers for 20 skills (cubic at scale).
+  Acceptable replacements: (a) batch all patterns of a given rule
+  into a single combined RegExp executed once per file in the main
+  thread; or (b) keep main-thread execution with a pre-flight cap
+  on user-sourced content size + a cheap regex-complexity heuristic
+  to avoid catastrophic-backtracking inputs. Either way, drop
+  workers from the hot path. Also parallelize per-skill rule
+  execution in `src/commands/scan.ts:131` (e.g. `Promise.all` with
+  a small concurrency cap). Acceptance: `node packages/cli/dist/
+  index.js scan` against `$HOME` (real machine, post-12.7 with full
+  skill discovery) finishes in < 10s for 500 skills, per
+  SPEC.md §4 "Performance budget". Paste timing into commit body.
+  After this lands, re-run task 10.5 and check it. Root commit:
+  `26abe68`.
 
 ---
 
