@@ -12,7 +12,6 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/skillaudit"><img src="https://img.shields.io/npm/v/skillaudit" alt="npm version" /></a>
   <a href="https://github.com/ondrejmerun/skillaudit/actions"><img src="https://img.shields.io/github/actions/workflow/status/ondrejmerun/skillaudit/ci.yml" alt="CI" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache 2.0 license" /></a>
 </p>
 
 ---
@@ -222,9 +221,3 @@ Pipe the JSON to your SAST aggregator or use the GitHub Action directly.
 - Homebrew tap
 
 No promises beyond that. Issues triaged weekly.
-
----
-
-## License
-
-Apache 2.0 — see [LICENSE](LICENSE). No CLA. PRs welcome.
