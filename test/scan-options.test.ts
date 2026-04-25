@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import stripAnsi from './helpers/strip-ansi.js';
 import type { ScannedSkill, Skill } from '../packages/cli/src/types.js';
 
 // Mock discovery and rules engine before importing runScan
@@ -65,7 +66,7 @@ describe('runScan flag wiring', () => {
   it('--summary emits compact summary line to stdout', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     await runScan({ summary: true });
-    const out = stdoutChunks.join('');
+    const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('skills');
     expect(out).toMatch(/PASS|REVIEW|FAIL/);
   });
@@ -96,14 +97,14 @@ describe('runScan flag wiring', () => {
     const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as never);
     await runScan({ agent: 'cursor' });
     expect(exitSpy).toHaveBeenCalledWith(0);
-    const errOut = stderrChunks.join('');
+    const errOut = stripAnsi(stderrChunks.join(''));
     expect(errOut).toContain('"cursor"');
   });
 
   it('--offline writes notice to stderr', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     await runScan({ offline: true });
-    const errOut = stderrChunks.join('');
+    const errOut = stripAnsi(stderrChunks.join(''));
     expect(errOut).toContain('offline mode');
   });
 
@@ -118,7 +119,7 @@ describe('runScan flag wiring', () => {
     const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as never);
     await runScan({ deep: true });
     expect(exitSpy).toHaveBeenCalledWith(2);
-    const errOut = stderrChunks.join('');
+    const errOut = stripAnsi(stderrChunks.join(''));
     expect(errOut).toContain('Deep mode coming soon');
     expect(errOut).toContain('Ollama');
     // discovery must not have been called — we exit before touching plugins

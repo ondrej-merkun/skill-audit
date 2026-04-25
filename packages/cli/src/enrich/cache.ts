@@ -37,7 +37,11 @@ export async function cacheGet<T>(source: string, key: string): Promise<CacheGet
     const raw = await readFile(filePath, 'utf8');
     const entry: CacheEntry<T> = JSON.parse(raw) as CacheEntry<T>;
     const stale = Date.now() - entry.cachedAt > TTL_MS;
-    return { data: entry.data, etag: entry.etag, stale };
+    return {
+      data: entry.data,
+      stale,
+      ...(entry.etag !== undefined ? { etag: entry.etag } : {}),
+    };
   } catch {
     return null;
   }

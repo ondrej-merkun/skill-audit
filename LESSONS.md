@@ -41,7 +41,9 @@ Source of lessons 1.x – 6.x: `.postmortem/analysis.md` (run 2026-04-23).
 - **L1.4 — Chalk-styled output must be ANSI-stripped in tests.** _Task
   5.3 `renderSummaryCompact` asserted `toContain('2 compromised')` but
   the runtime output was `\x1b[38;2;255;68;68m2\x1b[39m compromised`.
-  Vitest's non-TTY child process hid it; `FORCE_COLOR=1` surfaced it._
+  Vitest's non-TTY child process hid it; `FORCE_COLOR=1` surfaced it.
+  Task 12.2/root `42ac1fb` proved the same audit must cover all
+  chalk-styled command/output assertions, not just the failing line._
   Use `stripAnsi(out)` around every chalk assertion. Tests must pass
   with AND without `FORCE_COLOR=1`.
 

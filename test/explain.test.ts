@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import stripAnsi from './helpers/strip-ansi.js';
 import type { Enrichment, Finding, Skill, SkillSummary } from '../packages/cli/src/types.js';
 
 vi.mock('../packages/cli/src/discovery/index.js', () => ({
@@ -112,7 +113,7 @@ describe('runExplain', () => {
 
     await runExplain('test-skill', { offline: true });
 
-    const out = stdoutChunks.join('');
+    const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('test-skill');
     expect(out).toContain('claude-code');
     expect(out).toContain('PASS');
@@ -130,7 +131,7 @@ describe('runExplain', () => {
 
     await runExplain('test-skill', { offline: true });
 
-    const out = stdoutChunks.join('');
+    const out = stripAnsi(stdoutChunks.join(''));
     const critIdx = out.indexOf('NET-EXFIL-ENV');
     const medIdx = out.indexOf('FS-DOTENV-READ');
     expect(critIdx).toBeLessThan(medIdx);
@@ -153,7 +154,7 @@ describe('runExplain', () => {
 
     await expect(runExplain('nonexistent', { offline: true })).rejects.toThrow('process.exit called');
     expect(processExitSpy).toHaveBeenCalledWith(1);
-    const err = stderrChunks.join('');
+    const err = stripAnsi(stderrChunks.join(''));
     expect(err).toContain('nonexistent');
     expect(err).toContain('skillaudit list');
   });
@@ -166,7 +167,7 @@ describe('runExplain', () => {
 
     await runExplain('test-skill', { offline: true });
 
-    const out = stdoutChunks.join('');
+    const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('No issues found');
   });
 
@@ -180,7 +181,7 @@ describe('runExplain', () => {
 
     await expect(runExplain('test-skill', { offline: true })).rejects.toThrow('process.exit called');
 
-    const out = stdoutChunks.join('');
+    const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('rm -rf');
   });
 
@@ -192,7 +193,7 @@ describe('runExplain', () => {
 
     await runExplain('test-skill', { offline: true, json: true });
 
-    const out = stdoutChunks.join('');
+    const out = stripAnsi(stdoutChunks.join(''));
     expect(() => JSON.parse(out)).not.toThrow();
     const parsed = JSON.parse(out);
     expect(parsed.schema_version ?? parsed.schemaVersion).toBeTruthy();
@@ -207,7 +208,7 @@ describe('runExplain', () => {
 
     await runExplain('complex', { offline: true });
 
-    const out = stdoutChunks.join('');
+    const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('MyComplexSkill');
   });
 
@@ -222,7 +223,7 @@ describe('runExplain', () => {
 
     await runExplain('test-skill', {});
 
-    const out = stdoutChunks.join('');
+    const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('Enrichment');
     expect(out).toContain('3 stars');
   });
@@ -246,7 +247,7 @@ describe('runExplain', () => {
 
     await runExplain('test-skill', { offline: true });
 
-    const out = stdoutChunks.join('');
+    const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('│');
     expect(out).toContain('line one');
     expect(out).toContain('line two');

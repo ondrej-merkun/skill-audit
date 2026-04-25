@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import stripAnsi from './helpers/strip-ansi.js';
 import type { Skill } from '../packages/cli/src/types.js';
 
 vi.mock('../packages/cli/src/discovery/index.js', () => ({
@@ -48,7 +49,7 @@ describe('runList', () => {
   it('renders a table with agent, name, path, scope columns', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     await runList({});
-    const out = stdoutChunks.join('');
+    const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('claude-code');
     expect(out).toContain('test-skill');
     expect(out).toContain('user');
@@ -57,14 +58,14 @@ describe('runList', () => {
   it('prints skill count in footer', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill(), makeSkill({ id: 's2', name: 'other' })]);
     await runList({});
-    const out = stdoutChunks.join('');
+    const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('2 skills found');
   });
 
   it('shows "No skills found" message when discovery returns empty', async () => {
     vi.mocked(discoverAll).mockResolvedValue([]);
     await runList({});
-    const out = stdoutChunks.join('');
+    const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('No skills found');
   });
 

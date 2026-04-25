@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import stripAnsi from './helpers/strip-ansi.js';
 import { renderTable, renderTableToString } from '../packages/cli/src/output/table.js';
 import {
   renderSummaryFooter,
@@ -54,13 +55,13 @@ function makeScanResult(overrides: Partial<ScanResult> = {}): ScanResult {
 describe('renderTableToString', () => {
   it('includes skill count and agent count in header', () => {
     const result = makeScanResult();
-    const out = renderTableToString(result);
+    const out = stripAnsi(renderTableToString(result));
     expect(out).toContain('scanned 1 skill');
     expect(out).toContain('1 agent');
   });
 
   it('shows 🟢 dot and PASS for a clean skill', () => {
-    const out = renderTableToString(makeScanResult());
+    const out = stripAnsi(renderTableToString(makeScanResult()));
     expect(out).toContain('🟢');
     expect(out).toContain('PASS');
   });
@@ -98,7 +99,7 @@ describe('renderTableToString', () => {
       ],
       summary: { skillsScanned: 1, compromised: 1, percentCompromised: 100, verdict: 'FAIL' },
     });
-    const out = renderTableToString(result);
+    const out = stripAnsi(renderTableToString(result));
     expect(out).toContain('🔴');
     expect(out).toContain('FAIL');
     expect(out).toContain('net-exfil-env');
@@ -123,7 +124,7 @@ describe('renderTableToString', () => {
         }),
       ],
     });
-    const out = renderTableToString(result);
+    const out = stripAnsi(renderTableToString(result));
     expect(out).toContain('🟠');
   });
 
@@ -145,7 +146,7 @@ describe('renderTableToString', () => {
         }),
       ],
     });
-    const out = renderTableToString(result);
+    const out = stripAnsi(renderTableToString(result));
     expect(out).toContain('🟡');
   });
 
@@ -168,12 +169,12 @@ describe('renderTableToString', () => {
         }),
       ],
     });
-    const out = renderTableToString(result);
+    const out = stripAnsi(renderTableToString(result));
     expect(out).toContain('allowlisted ✓');
   });
 
   it('shows "—" for a clean non-allowlisted skill', () => {
-    const out = renderTableToString(makeScanResult());
+    const out = stripAnsi(renderTableToString(makeScanResult()));
     expect(out).toContain('—');
   });
 
@@ -213,7 +214,7 @@ describe('renderTableToString', () => {
       ],
       summary: { skillsScanned: 2, compromised: 1, percentCompromised: 50, verdict: 'FAIL' },
     });
-    const out = renderTableToString(result);
+    const out = stripAnsi(renderTableToString(result));
     const failIdx = out.indexOf('fail-skill');
     const passIdx = out.indexOf('pass-skill');
     expect(failIdx).toBeLessThan(passIdx);
@@ -238,7 +239,7 @@ describe('renderTableToString', () => {
       ],
       summary: { skillsScanned: 1, compromised: 1, percentCompromised: 100, verdict: 'FAIL' },
     });
-    const out = renderTableToString(result);
+    const out = stripAnsi(renderTableToString(result));
     expect(out).toContain('Compromised skills');
   });
 
@@ -262,7 +263,7 @@ describe('renderTableToString', () => {
       ],
       summary: { skillsScanned: 1, compromised: 1, percentCompromised: 100, verdict: 'FAIL' },
     });
-    const out = renderTableToString(result);
+    const out = stripAnsi(renderTableToString(result));
     expect(out).toContain('skillaudit explain bad-skill');
     expect(out).toContain('skillaudit --html report.html');
   });
@@ -270,13 +271,13 @@ describe('renderTableToString', () => {
 
 describe('renderSummaryFooter', () => {
   it('includes Skills scanned count', () => {
-    const out = renderSummaryFooter(makeScanResult(), [makeSkill()]);
+    const out = stripAnsi(renderSummaryFooter(makeScanResult(), [makeSkill()]));
     expect(out).toContain('Skills scanned');
     expect(out).toContain('1');
   });
 
   it('includes Unique issues line', () => {
-    const out = renderSummaryFooter(makeScanResult(), [makeSkill()]);
+    const out = stripAnsi(renderSummaryFooter(makeScanResult(), [makeSkill()]));
     expect(out).toContain('Unique issues');
   });
 
@@ -298,13 +299,13 @@ describe('renderSummaryFooter', () => {
       skills: [failSkill],
       summary: { skillsScanned: 1, compromised: 1, percentCompromised: 100, verdict: 'FAIL' },
     });
-    const out = renderSummaryFooter(result, [failSkill]);
+    const out = stripAnsi(renderSummaryFooter(result, [failSkill]));
     expect(out).toContain('Compromised skills');
     expect(out).toContain('100%');
   });
 
   it('shows Duration line', () => {
-    const out = renderSummaryFooter(makeScanResult(), [makeSkill()]);
+    const out = stripAnsi(renderSummaryFooter(makeScanResult(), [makeSkill()]));
     expect(out).toContain('Duration');
     expect(out).toContain('1.32s');
   });
@@ -328,13 +329,13 @@ describe('renderSummaryFooter', () => {
       skills: [failSkill],
       summary: { skillsScanned: 1, compromised: 1, percentCompromised: 100, verdict: 'FAIL' },
     });
-    const out = renderSummaryFooter(result, [failSkill]);
+    const out = stripAnsi(renderSummaryFooter(result, [failSkill]));
     expect(out).toContain('skillaudit explain risky-skill');
     expect(out).toContain('skillaudit --html report.html');
   });
 
   it('omits Enrichment line when no enrichment data', () => {
-    const out = renderSummaryFooter(makeScanResult(), [makeSkill()]);
+    const out = stripAnsi(renderSummaryFooter(makeScanResult(), [makeSkill()]));
     expect(out).not.toContain('Enrichment');
   });
 
@@ -343,7 +344,7 @@ describe('renderSummaryFooter', () => {
       enrichment: { skillsSh: { gen: 'Low', socketAlerts: 0, snyk: 'Low' } },
     });
     const result = makeScanResult({ skills: [enrichedSkill] });
-    const out = renderSummaryFooter(result, [enrichedSkill]);
+    const out = stripAnsi(renderSummaryFooter(result, [enrichedSkill]));
     expect(out).toContain('Enrichment');
     expect(out).toContain('skills.sh');
   });
@@ -351,32 +352,34 @@ describe('renderSummaryFooter', () => {
 
 describe('renderSummaryCompact', () => {
   it('includes skill count', () => {
-    const out = renderSummaryCompact(makeScanResult());
+    const out = stripAnsi(renderSummaryCompact(makeScanResult()));
     expect(out).toContain('1 skills');
   });
 
   it('includes compromised count', () => {
-    const out = renderSummaryCompact(
-      makeScanResult({
-        summary: { skillsScanned: 5, compromised: 2, percentCompromised: 40, verdict: 'FAIL' },
-      })
+    const out = stripAnsi(
+      renderSummaryCompact(
+        makeScanResult({
+          summary: { skillsScanned: 5, compromised: 2, percentCompromised: 40, verdict: 'FAIL' },
+        })
+      )
     );
     expect(out).toContain('2 compromised');
     expect(out).toContain('40%');
   });
 
   it('includes verdict string', () => {
-    const out = renderSummaryCompact(makeScanResult());
+    const out = stripAnsi(renderSummaryCompact(makeScanResult()));
     expect(out).toContain('PASS');
   });
 
   it('includes duration', () => {
-    const out = renderSummaryCompact(makeScanResult());
+    const out = stripAnsi(renderSummaryCompact(makeScanResult()));
     expect(out).toContain('1.32s');
   });
 
   it('ends with newline', () => {
-    const out = renderSummaryCompact(makeScanResult());
+    const out = stripAnsi(renderSummaryCompact(makeScanResult()));
     expect(out.endsWith('\n')).toBe(true);
   });
 });
