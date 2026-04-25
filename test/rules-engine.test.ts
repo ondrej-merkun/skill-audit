@@ -46,12 +46,12 @@ describe('runPatternWithTimeout', () => {
     expect(matches.length).toBe(0);
   });
 
-  it('returns empty array on timeout', async () => {
-    // Catastrophic backtracking pattern on adversarial input
+  it('returns empty array for unsafe nested-quantifier patterns', async () => {
+    // Catastrophic backtracking pattern on adversarial input.
     const catastrophic = /(a+)+b/;
-    const adversarial = 'a'.repeat(25); // no 'b' — forces backtracking
+    const adversarial = 'a'.repeat(25); // no 'b' forces backtracking
     const matches = await runPatternWithTimeout(catastrophic, adversarial, 50);
-    // Should return empty (timed out) rather than hanging
+    // Should return empty before executing the unsafe pattern.
     expect(matches).toEqual([]);
   }, 5000);
 });

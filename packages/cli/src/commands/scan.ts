@@ -52,6 +52,30 @@ const DEFAULT_OPTIONS: ScanOptions = {
 
 const DEEP_MODE_MESSAGE =
   'Deep mode coming soon. LLM-assisted semantic analysis will be opt-in and local via Ollama.';
+const SCAN_CONCURRENCY = 8;
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  mapper: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  async function worker(): Promise<void> {
+    while (nextIndex < items.length) {
+      const index = nextIndex++;
+      const item = items[index];
+      if (item !== undefined) {
+        results[index] = await mapper(item);
+      }
+    }
+  }
+
+  const workerCount = Math.min(limit, items.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
+}
 
 export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   const options: ScanOptions = { ...DEFAULT_OPTIONS, ...opts };
@@ -128,17 +152,29 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     agentMap.set(skill.agentId, (agentMap.get(skill.agentId) ?? 0) + 1);
   }
 
-  for (const skill of toScan) {
-    try {
-      const findings = await runRules(skill.path, ALL_RULES);
-      const summary = scoreFindings(findings, skill.treeSha256);
-      scannedSkills.push({ ...skill, findings, enrichment: {}, summary });
-    } catch (err) {
-      incompleteCount++;
-      const msg = err instanceof Error ? err.message : String(err);
-      process.stderr.write(`[skillaudit] skipping "${skill.name}": ${msg}\n`);
+  const scanOutcomes = await mapWithConcurrency(
+    toScan,
+    SCAN_CONCURRENCY,
+    async (skill): Promise<{ skill: Skill; scannedSkill?: ScannedSkill; error?: string }> => {
+      try {
+        const findings = await runRules(skill.path, ALL_RULES);
+        const summary = scoreFindings(findings, skill.treeSha256);
+        return { skill, scannedSkill: { ...skill, findings, enrichment: {}, summary } };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { skill, error: msg };
+      }
     }
-    agentMap.set(skill.agentId, (agentMap.get(skill.agentId) ?? 0) + 1);
+  );
+
+  for (const outcome of scanOutcomes) {
+    if (outcome.scannedSkill !== undefined) {
+      scannedSkills.push(outcome.scannedSkill);
+    } else {
+      incompleteCount++;
+      process.stderr.write(`[skillaudit] skipping "${outcome.skill.name}": ${outcome.error}\n`);
+    }
+    agentMap.set(outcome.skill.agentId, (agentMap.get(outcome.skill.agentId) ?? 0) + 1);
   }
 
   scanSpinner.succeed('Scan complete');

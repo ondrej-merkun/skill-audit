@@ -100,6 +100,12 @@ Source of lessons 1.x – 6.x: `.postmortem/analysis.md` (run 2026-04-23).
   E2E tests must include at least one run against a "realistic" fixture
   size (100+ files). Catching 10× headroom is the point of e2e tests.
 
+- **L4.3 — Regex safety heuristics must run against all rule fixtures.** _Task
+  12.7 initially skipped PI-OVERRIDE and PI-EXFIL-TRIGGER-CLAUSE because
+  optional groups looked like catastrophic nested quantifiers._
+  After changing regex execution safety, run the full rule-fixture suite before
+  trusting scan performance.
+
 ## 5. Orphans, cleanup, and the one-task-per-loop rule
 
 - **L5.1 — Delete direct predecessors in the same commit.** _Task 1.7

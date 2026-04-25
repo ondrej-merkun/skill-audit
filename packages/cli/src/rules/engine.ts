@@ -1,62 +1,46 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { Worker } from 'node:worker_threads';
 import type { Finding, Rule } from '../types.js';
 
 const REGEX_TIMEOUT_MS = 500;
-
-// Worker code running in a dedicated thread to enable hard timeout via terminate().
-// Uses matchAll (no .exec loop) to avoid the text triggering security scanners.
-const WORKER_SCRIPT = `
-const { workerData, parentPort } = require('worker_threads');
-const { source, flags, content } = workerData;
-try {
-  const g = flags.includes('g') ? flags : flags + 'g';
-  const re = new RegExp(source, g);
-  const matches = [];
-  for (const m of content.matchAll(re)) {
-    matches.push({ index: m.index ?? 0, text: m[0] });
-  }
-  parentPort.postMessage({ matches });
-} catch (_) {
-  parentPort.postMessage({ matches: [] });
-}
-`;
+const MAX_SCANNED_CONTENT_CHARS = 1_000_000;
 
 type RawMatch = { index: number; text: string };
 
 /**
- * Runs a single regex pattern against content with a hard timeout.
- * Returns empty array on timeout — no match is reported, but no hang either.
- * The worker thread is terminated on timeout, aborting catastrophic backtracking.
+ * Runs a single regex pattern against content without spawning workers.
+ * Returns empty array for inputs that fail the pre-flight safety caps.
  */
 export function runPatternWithTimeout(
   pattern: RegExp,
   content: string,
   timeoutMs = REGEX_TIMEOUT_MS
 ): Promise<RawMatch[]> {
-  return new Promise((resolve) => {
-    const worker = new Worker(WORKER_SCRIPT, {
-      eval: true,
-      workerData: { source: pattern.source, flags: pattern.flags, content },
-    });
+  void timeoutMs;
+  if (!isSafeRegexInput(pattern, content)) return Promise.resolve([]);
 
-    const timer = setTimeout(() => {
-      void worker.terminate();
-      resolve([]);
-    }, timeoutMs);
+  const flags = pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`;
+  const re = new RegExp(pattern.source, flags);
+  const matches: RawMatch[] = [];
 
-    worker.once('message', (data: { matches: RawMatch[] }) => {
-      clearTimeout(timer);
-      void worker.terminate();
-      resolve(Array.isArray(data?.matches) ? data.matches : []);
-    });
+  try {
+    for (const match of content.matchAll(re)) {
+      matches.push({ index: match.index ?? 0, text: match[0] });
+    }
+  } catch {
+    return Promise.resolve([]);
+  }
 
-    worker.once('error', () => {
-      clearTimeout(timer);
-      resolve([]);
-    });
-  });
+  return Promise.resolve(matches);
+}
+
+function isSafeRegexInput(pattern: RegExp, content: string): boolean {
+  if (content.length > MAX_SCANNED_CONTENT_CHARS) return false;
+  return !hasNestedQuantifier(pattern.source);
+}
+
+function hasNestedQuantifier(source: string): boolean {
+  return /\((?:[^()\\]|\\.)*[+*](?:[^()\\]|\\.)*\)[+*{]/.test(source);
 }
 
 /** Returns 1-based line and 1-based column for a byte offset in content. */
