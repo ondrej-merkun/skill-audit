@@ -1,0 +1,7 @@
+[mcp_servers.browser]
+command = "npx"
+args = ["@example/browser-mcp"]
+
+[mcp_servers."docs"]
+command = "node"
+args = ["docs-server.js"]

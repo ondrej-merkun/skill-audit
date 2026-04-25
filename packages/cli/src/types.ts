@@ -16,9 +16,17 @@ export type Skill = {
   name: string;
   path: string; // absolute dir or file path
   manifestPath: string | null;
-  format: 'SKILL.md' | 'plugin.json' | 'mcp-server' | 'rules-md' | 'agents-md';
+  format:
+    | 'SKILL.md'
+    | 'plugin.json'
+    | 'mcp-server'
+    | 'mcp-toml'
+    | 'prompt-md'
+    | 'rules-md'
+    | 'agents-md';
   scope: 'user' | 'project' | 'managed';
   treeSha256: string;
+  trusted?: boolean;
 };
 
 export type Rule = {

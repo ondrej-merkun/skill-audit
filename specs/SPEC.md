@@ -230,10 +230,11 @@ hundreds of skills, not tens.
 **MVP discovery shortlist** (covers ~85% of user value):
 1. Claude Code (skills, plugins, agents, commands, all MCP sources)
 2. Cursor (MCP + rules)
-3. Cross-cutting AGENTS.md + `.mcp.json` sweep (catches Codex, Gemini, Copilot, Windsurf, Cline, Zed, Amp, Factory)
-4. GitHub Copilot (`.github/skills/`, `.github/copilot-instructions.md`)
+3. OpenAI Codex (`~/.codex/AGENTS*.md`, `config.toml`, `skills/`, `plugins/`, `prompts/`)
+4. Cross-cutting AGENTS.md + `.mcp.json` sweep (catches Gemini, Copilot, Windsurf, Cline, Zed, Amp, Factory)
+5. GitHub Copilot (`.github/skills/`, `.github/copilot-instructions.md`)
 
-v0.2 adds: Gemini CLI extensions, Continue.dev, Codex skills, Claude Desktop MCP.
+v0.2 adds: Gemini CLI extensions, Continue.dev, Claude Desktop MCP.
 
 ### Disambiguation
 When a skill appears at both user scope and project scope, list both rows in the table and mark `scope` column. Dedupe by `treeSha256` (same tree hash → identical content, report once with all path annotations). When a skill appears in a project's `.claude/` AND is symlinked from `~/.claude/`, follow the symlink and mark `link`.

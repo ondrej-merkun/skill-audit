@@ -13,6 +13,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import agentsMdSweepDiscovery from '../packages/cli/src/discovery/agents-md-sweep.js';
 import claudeCodeDiscovery from '../packages/cli/src/discovery/claude-code.js';
+import codexDiscovery from '../packages/cli/src/discovery/codex.js';
 import copilotDiscovery from '../packages/cli/src/discovery/copilot.js';
 import cursorDiscovery from '../packages/cli/src/discovery/cursor.js';
 
@@ -169,6 +170,106 @@ describe('claude-code: fixture skill tree', () => {
   it('fixture skill content is reflected in treeSha256', async () => {
     const skills = await claudeCodeDiscovery.discoverSkills();
     const skill = skills.find((s) => s.name === 'git-helper');
+    expect(skill?.treeSha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+// ── codex ───────────────────────────────────────────────────────────────────
+
+describe('codex: fixture skill tree', () => {
+  let tempHome: string;
+  let tempCwd: string;
+  let originalCodexHome: string | undefined;
+  let originalCwd: string | undefined;
+
+  beforeEach(async () => {
+    tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-codex-home-'));
+    tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-codex-cwd-'));
+    originalCodexHome = process.env['CODEX_HOME'];
+    originalCwd = process.env['SKILLAUDIT_CWD'];
+    process.env['CODEX_HOME'] = tempHome;
+    process.env['SKILLAUDIT_CWD'] = tempCwd;
+
+    await writeFile(join(tempHome, 'AGENTS.md'), await fixture('codex', 'AGENTS.md'));
+    await writeFile(join(tempHome, 'AGENTS.override.md'), await fixture('codex', 'AGENTS.override.md'));
+    await writeFile(join(tempHome, 'config.toml'), await fixture('codex', 'config.toml'));
+
+    const skillDir = join(tempHome, 'skills', 'review-helper');
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(join(skillDir, 'SKILL.md'), await fixture('codex', 'skills', 'review-helper', 'SKILL.md'));
+
+    await cp(join(FIXTURES, 'codex', 'plugins'), join(tempHome, 'plugins'), {
+      recursive: true,
+    });
+
+    const promptsDir = join(tempHome, 'prompts');
+    await mkdir(promptsDir, { recursive: true });
+    await writeFile(join(promptsDir, 'ship.md'), await fixture('codex', 'prompts', 'ship.md'));
+
+    const projectCodexDir = join(tempCwd, '.codex');
+    await mkdir(projectCodexDir, { recursive: true });
+    await writeFile(
+      join(projectCodexDir, 'config.toml'),
+      await fixture('codex', 'project', '.codex', 'config.toml')
+    );
+  });
+
+  afterEach(async () => {
+    if (originalCodexHome === undefined) {
+      delete process.env['CODEX_HOME'];
+    } else {
+      process.env['CODEX_HOME'] = originalCodexHome;
+    }
+    if (originalCwd === undefined) {
+      delete process.env['SKILLAUDIT_CWD'];
+    } else {
+      process.env['SKILLAUDIT_CWD'] = originalCwd;
+    }
+    await rm(tempHome, { recursive: true, force: true });
+    await rm(tempCwd, { recursive: true, force: true });
+  });
+
+  it('uses CODEX_HOME and discovers user AGENTS files', async () => {
+    expect(await codexDiscovery.isInstalled()).toBe(true);
+
+    const skills = await codexDiscovery.discoverSkills();
+    const byName = new Map(skills.map((skill) => [skill.name, skill]));
+
+    expect(byName.get('AGENTS.md')?.format).toBe('agents-md');
+    expect(byName.get('AGENTS.override.md')?.format).toBe('agents-md');
+    expect(byName.get('AGENTS.md')?.path.startsWith(tempHome)).toBe(true);
+  });
+
+  it('discovers one mcp-toml row per user config MCP server', async () => {
+    const skills = await codexDiscovery.discoverSkills();
+    const mcpNames = skills
+      .filter((skill) => skill.format === 'mcp-toml' && skill.scope === 'user')
+      .map((skill) => skill.name);
+
+    expect(mcpNames).toEqual(['browser', 'docs']);
+  });
+
+  it('discovers user skills, nested plugin leaves, and prompts', async () => {
+    const skills = await codexDiscovery.discoverSkills();
+    const byName = new Map(skills.map((skill) => [skill.name, skill]));
+
+    expect(byName.get('review-helper')?.format).toBe('SKILL.md');
+    expect(byName.get('audit-helper')?.format).toBe('SKILL.md');
+    expect(byName.get('examples')?.format).toBe('plugin.json');
+    expect(byName.get('quick-check')?.format).toBe('prompt-md');
+    expect(byName.get('ship')?.format).toBe('prompt-md');
+
+    expect(byName.has('plugins')).toBe(false);
+    expect(byName.has('openai')).toBe(false);
+  });
+
+  it('emits project-local .codex/config.toml as untrusted project config', async () => {
+    const skills = await codexDiscovery.discoverSkills();
+    const skill = skills.find((candidate) => candidate.name === '.codex/config.toml');
+
+    expect(skill?.format).toBe('mcp-toml');
+    expect(skill?.scope).toBe('project');
+    expect(skill?.trusted).toBe(false);
     expect(skill?.treeSha256).toMatch(/^[0-9a-f]{64}$/);
   });
 });

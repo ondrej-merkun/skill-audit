@@ -397,17 +397,17 @@ intermediate directory.
   paths that don't match the on-disk layout (handle gracefully,
   emit a Finding-friendly warning, don't crash).
 
-  After this lands, register both new plugins in
+  After this lands, register the Gemini plugin in
   `initDefaultPlugins()` via task 13.3. Update `specs/SPEC.md §3
   "MVP discovery shortlist"` to mention Gemini if shipping pre-v0.2.
 
-- [ ] **13.3** Register `codex` and `gemini` discovery plugins in
+- [ ] **13.3** Register the `gemini` discovery plugin in
   `packages/cli/src/discovery/index.ts` `initDefaultPlugins()`,
-  alongside the existing `claude-code`, `cursor`, `copilot`, and
-  `agents-md-sweep` registrations. Verify `node packages/cli/dist/
-  index.js list` shows skills from both new agents on a test machine
-  with at least a few of each installed. Paste row counts grouped by
-  `agentId` into the commit body.
+  alongside the existing `claude-code`, `cursor`, `copilot`, `codex`,
+  and `agents-md-sweep` registrations. Verify `node packages/cli/dist/
+  index.js list` shows skills from Gemini on a test machine with at
+  least a few installed. Paste row counts grouped by `agentId` into
+  the commit body.
 
 ---
 
@@ -437,6 +437,11 @@ intermediate directory.
   were written via Bash heredoc (cat > file << HEREDOC). One detection regex
   in code-execution.ts uses RegExp constructor with split strings to avoid
   triggering the same hook on the pattern for JS dynamic code detection.
+
+- **13.1: Codex registration timing** — Registered `codex` in
+  `initDefaultPlugins()` during task 13.1 because that task explicitly requires
+  validating `node packages/cli/dist/index.js list` against real Codex paths.
+  Task 13.3 now only needs to register Gemini.
 
 ## Blockers
 
