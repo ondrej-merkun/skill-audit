@@ -313,6 +313,93 @@ Task 10.5 (perf measurement) cannot be re-run meaningfully until
   After this lands, re-run task 10.5 and check it. Root commit:
   `26abe68`.
 
+## Phase 13 — Additional agent discovery (spec: §3 v0.2 expansion)
+
+Net-new agent support beyond the MVP shortlist. Each task adds one
+discovery plugin per the existing `AgentDiscovery` interface
+(`packages/cli/src/discovery/index.ts`) and registers it via
+`initDefaultPlugins()`. Each plugin follows the same pattern as
+`claude-code.ts` / `cursor.ts` / `copilot.ts`: HOME/USERPROFILE
+override for tests, `treeSha256` via the shared helper, one `Skill`
+per leaf, no `os.homedir()` directly. Apply LESSONS.md L2.1 — walk
+plugin/extension trees recursively, never emit one Skill per
+intermediate directory.
+
+- [ ] **13.1** Implement `packages/cli/src/discovery/codex.ts` — OpenAI
+  Codex skills/plugins/prompts discovery.
+
+  **Paths to scan** (per SPEC.md §3 canonical-paths table):
+  - `~/.codex/AGENTS.md`, `~/.codex/AGENTS.override.md` — emit one
+    Skill each, `format: 'agents-md'`.
+  - `~/.codex/config.toml` — parse `[mcp_servers.*]` tables, emit
+    one Skill per MCP server, `format: 'mcp-toml'`.
+  - `~/.codex/skills/<skill>/SKILL.md` — emit one Skill per leaf,
+    `format: 'skill-md'`.
+  - `~/.codex/plugins/<marketplace>/<plugin>/skills/<skill>/SKILL.md`
+    — recursive walk, one Skill per leaf SKILL.md / plugin.json /
+    leaf command file (mirror the depth rule from task 12.7 — do
+    NOT emit one Skill per intermediate directory).
+  - `~/.codex/prompts/*.md` — emit one Skill per file,
+    `format: 'prompt-md'`.
+  - Project-local: `AGENTS.md` and `AGENTS.override.md` walked up
+    from `process.cwd()` to repo root (let the existing
+    `agents-md-sweep.ts` handle these — don't double-emit).
+    `.codex/config.toml` only if the user has explicitly trusted
+    project-local config (out of MVP scope — emit a Skill with
+    `scope: 'project'` and `trusted: false`, let scoring decide).
+
+  **`$CODEX_HOME` override** — if the env var is set, use that
+  instead of `~/.codex`. Tests must exercise this override.
+
+  Add fixture under `test/fixtures/discovery/codex/` with at least
+  one of each format, including a nested
+  `plugins/<mp>/<plug>/skills/<s>/SKILL.md`. Test asserts the
+  recursive walk emits each leaf as its own row. Update
+  `specs/SPEC.md §3 "MVP discovery shortlist"` to add Codex if
+  this lands before v0.2. Run `node packages/cli/dist/index.js
+  list` against `$HOME` post-implementation and paste the row
+  count + a sample of Codex paths into the commit body.
+
+- [ ] **13.2** Implement `packages/cli/src/discovery/gemini.ts` —
+  Gemini CLI extensions/commands/agents discovery.
+
+  **Paths to scan** (per SPEC.md §3 canonical-paths table):
+  - `~/.gemini/extensions/<ext>/gemini-extension.json` — parse the
+    JSON manifest, emit one Skill per extension,
+    `format: 'gemini-extension-json'`. Include any nested
+    `commands/`, `agents/`, or `mcpServers` declared in the
+    manifest as fields on the same Skill (don't double-emit).
+  - `~/.gemini/commands/*.toml` — emit one Skill per file,
+    `format: 'gemini-command-toml'`. Walk recursively if the
+    install convention nests them (mirror LESSONS.md L2.1).
+  - `~/.gemini/agents/<agent>/<agent>.md` — emit one Skill per leaf
+    agent, `format: 'gemini-agent-md'`. Recursive walk.
+  - `~/.gemini/settings.json` — parse `mcpServers` table only,
+    emit one Skill per MCP server, `format: 'mcp-json'`.
+  - Project-local: `.gemini/extensions/`, `.gemini/commands/`, and
+    `GEMINI.md` (let `agents-md-sweep.ts` handle the latter — don't
+    double-emit).
+
+  Add fixture under `test/fixtures/discovery/gemini/` with at
+  least one extension (manifest + nested commands), one
+  free-standing command TOML, one agent .md, and one MCP entry in
+  `settings.json`. Test the manifest-aware extension parser
+  separately from the directory walker — the manifest may declare
+  paths that don't match the on-disk layout (handle gracefully,
+  emit a Finding-friendly warning, don't crash).
+
+  After this lands, register both new plugins in
+  `initDefaultPlugins()` via task 13.3. Update `specs/SPEC.md §3
+  "MVP discovery shortlist"` to mention Gemini if shipping pre-v0.2.
+
+- [ ] **13.3** Register `codex` and `gemini` discovery plugins in
+  `packages/cli/src/discovery/index.ts` `initDefaultPlugins()`,
+  alongside the existing `claude-code`, `cursor`, `copilot`, and
+  `agents-md-sweep` registrations. Verify `node packages/cli/dist/
+  index.js list` shows skills from both new agents on a test machine
+  with at least a few of each installed. Paste row counts grouped by
+  `agentId` into the commit body.
+
 ---
 
 ## Dependencies added
