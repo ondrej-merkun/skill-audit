@@ -285,7 +285,7 @@ Task 10.5 (perf measurement) cannot be re-run meaningfully until
   paste the row count + a few sample paths into the commit body.
   Root commit: `8c710ac`.
 
-- [ ] **12.7** **(Issue A1)** Replace the worker-thread-per-pattern
+- [x] **12.7** **(Issue A1)** Replace the worker-thread-per-pattern
   architecture in `packages/cli/src/rules/engine.ts:127-154`. The
   current loop spawns ~8k workers for 20 skills (cubic at scale).
   Acceptable replacements: (a) batch all patterns of a given rule
@@ -302,7 +302,7 @@ Task 10.5 (perf measurement) cannot be re-run meaningfully until
   After this lands, re-run task 10.5 and check it. Root commit:
   `26abe68`.
 
-  - [ ] **10.5** Measure `skillaudit scan` elapsed time against `~/.claude`
+  - [x] **10.5** Measure `skillaudit scan` elapsed time against `~/.claude`
   on the developer's own machine. Strictly run the command with a 2-minute timeout - it should NEVER
   take longer than that and if it does, it's likely the known case of it getting stuck.
   Kill the process in such case and dig into what is making it stuck and fix it before continuing!
