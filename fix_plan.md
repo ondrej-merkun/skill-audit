@@ -262,7 +262,7 @@ Task 10.5 (perf measurement) cannot be re-run meaningfully until
   Pull the canonical handle from `CLAUDE.md § Identity`, never from
   filesystem paths. Root commit: `0d6e97a`.
 
-- [ ] **12.5** **(Issue E)** Fix `pnpm typecheck` so it passes on
+- [x] **12.5** **(Issue E)** Fix `pnpm typecheck` so it passes on
   Node 20 AND Node 22, Linux AND macOS. Likely required: add a
   root `tsconfig.json`, align `@types/node` with the matrix legs in
   `.github/workflows/ci.yml`, and confirm `tsc --noEmit` runs
