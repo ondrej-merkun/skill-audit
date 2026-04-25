@@ -39,9 +39,11 @@ npx skillaudit
 | **Claude Code** | `~/.claude/skills/`, `~/.claude/plugins/`, `~/.claude/agents/`, `~/.claude/commands/`, MCP in `~/.claude.json` | `.claude/`, `.mcp.json`, `.claude-plugin/` |
 | **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, `.cursorrules` |
 | **GitHub Copilot** | `~/.copilot/skills/*/SKILL.md` | `.github/skills/`, `.github/copilot-instructions.md`, `.github/instructions/` |
+| **OpenAI Codex** | `~/.codex/AGENTS.md`, `~/.codex/config.toml`, `~/.codex/skills/`, `~/.codex/plugins/`, `~/.codex/prompts/` | `AGENTS.md`, `AGENTS.override.md`, `.codex/config.toml` |
+| **Gemini CLI** | `~/.gemini/extensions/`, `~/.gemini/commands/`, `~/.gemini/agents/`, `~/.gemini/settings.json` | `.gemini/extensions/`, `.gemini/commands/`, `GEMINI.md` |
 | **Cross-agent sweep** | — | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.windsurfrules`, `CONVENTIONS.md` (walks parents) |
 
-> **v0.2 adds:** Gemini CLI extensions, Continue.dev, OpenAI Codex skills, Claude Desktop MCP.
+> **v0.2 adds:** Continue.dev and Claude Desktop MCP.
 
 ---
 
@@ -216,7 +218,7 @@ Yes — `skillaudit scan --json --fail-on REVIEW` exits 1 on any REVIEW or FAIL 
 Pipe the JSON to your SAST aggregator or use the GitHub Action directly.
 
 **v0.2 roadmap**
-- Gemini CLI + Continue.dev + Codex skills discovery
+- Continue.dev + Claude Desktop MCP discovery
 - `--deep` mode: local LLM semantic analysis via Ollama
 - Homebrew tap
 

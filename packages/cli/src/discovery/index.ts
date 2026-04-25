@@ -4,6 +4,7 @@ import claudeCodeDiscovery from './claude-code.js';
 import codexDiscovery from './codex.js';
 import copilotDiscovery from './copilot.js';
 import cursorDiscovery from './cursor.js';
+import geminiDiscovery from './gemini.js';
 
 // Registry starts empty so test files get a clean slate on import.
 // Call initDefaultPlugins() from the CLI entry point to register built-ins.
@@ -20,6 +21,7 @@ export function initDefaultPlugins(): void {
     cursorDiscovery,
     copilotDiscovery,
     codexDiscovery,
+    geminiDiscovery,
     agentsMdSweepDiscovery
   );
 }

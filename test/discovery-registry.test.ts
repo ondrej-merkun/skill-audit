@@ -1,5 +1,13 @@
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { clearPlugins, discoverAll, registerPlugin } from '../packages/cli/src/discovery/index.js';
+import {
+  clearPlugins,
+  discoverAll,
+  initDefaultPlugins,
+  registerPlugin,
+} from '../packages/cli/src/discovery/index.js';
 import type { AgentDiscovery, Skill } from '../packages/cli/src/types.js';
 
 const makeSkill = (overrides: Partial<Skill> = {}): Skill => ({
@@ -111,5 +119,55 @@ describe('discoverAll', () => {
     vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const skills = await discoverAll();
     expect(skills).toContainEqual(goodSkill);
+  });
+
+  it('registers Gemini in the default plugin set', async () => {
+    const tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-reg-home-'));
+    const tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-reg-cwd-'));
+    const originalHome = process.env['HOME'];
+    const originalCwd = process.env['SKILLAUDIT_CWD'];
+    const originalCodexHome = process.env['CODEX_HOME'];
+
+    try {
+      process.env['HOME'] = tempHome;
+      process.env['SKILLAUDIT_CWD'] = tempCwd;
+      process.env['CODEX_HOME'] = join(tempHome, '.codex');
+
+      const commandsDir = join(tempHome, '.gemini', 'commands');
+      await mkdir(commandsDir, { recursive: true });
+      await writeFile(join(commandsDir, 'audit.toml'), 'description = "Audit workspace"\n');
+
+      initDefaultPlugins();
+
+      const skills = await discoverAll();
+      expect(skills).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            agentId: 'gemini',
+            name: 'audit',
+            format: 'gemini-command-toml',
+            scope: 'user',
+          }),
+        ])
+      );
+    } finally {
+      if (originalHome === undefined) {
+        delete process.env['HOME'];
+      } else {
+        process.env['HOME'] = originalHome;
+      }
+      if (originalCwd === undefined) {
+        delete process.env['SKILLAUDIT_CWD'];
+      } else {
+        process.env['SKILLAUDIT_CWD'] = originalCwd;
+      }
+      if (originalCodexHome === undefined) {
+        delete process.env['CODEX_HOME'];
+      } else {
+        process.env['CODEX_HOME'] = originalCodexHome;
+      }
+      await rm(tempHome, { recursive: true, force: true });
+      await rm(tempCwd, { recursive: true, force: true });
+    }
   });
 });
