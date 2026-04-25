@@ -210,10 +210,6 @@ at the bottom and the loop will stop.
   lines, badges, Snyk 36% stat blockquote with attribution, `npx
   skillaudit` above the fold, placeholder for hero GIF, supported
   agents table, FAQ section.
-- [ ] **10.5** Measure `skillaudit scan` elapsed time against `~/.claude`
-  on the developer's own machine. If > 10 s for 500 skills, file a
-  blocker. This MUST be the final task before Phase 11 is permitted
-  to start.
 
 ## Phase 11 — Distribution scaffolding
 
@@ -305,6 +301,12 @@ Task 10.5 (perf measurement) cannot be re-run meaningfully until
   SPEC.md §4 "Performance budget". Paste timing into commit body.
   After this lands, re-run task 10.5 and check it. Root commit:
   `26abe68`.
+
+  - [ ] **10.5** Measure `skillaudit scan` elapsed time against `~/.claude`
+  on the developer's own machine. Strictly run the command with a 2-minute timeout - it should NEVER
+  take longer than that and if it does, it's likely the known case of it getting stuck.
+  Kill the process in such case and dig into what is making it stuck and fix it before continuing!
+  If > 10 s for 500 skills, file a blocker.
 
 - [ ] **12.8** **(Issue H)** Verify the remote GitHub Actions CI
   pipelines actually run and pass on GitHub, not just locally. Create
@@ -440,30 +442,3 @@ intermediate directory.
 
 (If Ralph hits something it cannot proceed past, document here with error
 output and what was attempted.)
-
-- **10.5 performance measurement blocked (2026-04-25)** — Real-machine
-  `~/.claude` contains 1,271 `SKILL.md` / `plugin.json` candidates, but the
-  current Claude Code discovery found only 21 skills and scanned 18 after
-  ignore filtering. Command attempted after `pnpm build`:
-  `node packages/cli/dist/index.js scan --agent claude-code --summary --offline
-  --fail-on never`. Observed output stopped at `Found 21 skills` and
-  `Scanning 18 skills...`; the process still had not completed after more than
-  9 minutes, exceeding the <10s / 500-skill budget by a wide margin while also
-  failing to discover the real 500+ skill set. Do not check off 10.5 until
-  tasks 12.6 (discovery depth) and 12.7 (rule-engine performance) land, then
-  re-run this measurement against the full `~/.claude` tree.
-
-- **10.4a verification blocked (2026-04-25)** — README License removal is
-  mechanically simple, but the required clean verification cannot pass on the
-  current tree before later planned fixes run:
-  - `pnpm build` exits 0 but emits the known conditional-exports warning from
-    `packages/cli/package.json:16` (`"types"` comes after `"import"` and
-    `"require"`), which task 12.1 is scheduled to fix.
-  - `pnpm typecheck` exits 2 with
-    `src/enrich/cache.ts(40,5): error TS2375` because `cacheGet()` returns
-    `etag: string | undefined` for optional property `etag?: string`, which
-    task 12.5 is scheduled to fix.
-  - `pnpm test` passed: 23 files, 338 tests.
-  - `pnpm lint` passed: biome checked 34 files with no fixes.
-  Ralph stopped rather than taking tasks 12.1/12.5 out of order or committing
-  a README-only change with known failing verification.
