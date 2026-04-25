@@ -308,7 +308,7 @@ Task 10.5 (perf measurement) cannot be re-run meaningfully until
   Kill the process in such case and dig into what is making it stuck and fix it before continuing!
   If > 10 s for 500 skills, file a blocker.
 
-- [ ] **12.8** **(Issue H)** Verify the remote GitHub Actions CI
+- [x] **12.8** **(Issue H)** Verify the remote GitHub Actions CI
   pipelines actually run and pass on GitHub, not just locally. Create
   or update a branch/PR for the current plan state, wait for all
   required GitHub checks to complete, and inspect failed logs with
