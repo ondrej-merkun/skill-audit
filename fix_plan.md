@@ -334,7 +334,7 @@ per leaf, no `os.homedir()` directly. Apply LESSONS.md L2.1 — walk
 plugin/extension trees recursively, never emit one Skill per
 intermediate directory.
 
-- [ ] **13.1** Implement `packages/cli/src/discovery/codex.ts` — OpenAI
+- [x] **13.1** Implement `packages/cli/src/discovery/codex.ts` — OpenAI
   Codex skills/plugins/prompts discovery.
 
   **Paths to scan** (per SPEC.md §3 canonical-paths table):
