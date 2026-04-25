@@ -253,7 +253,7 @@ Task 10.5 (perf measurement) cannot be re-run meaningfully until
   "orphan exception" case from PROMPT.md. Root commit: `68c914e`
   (introduced), `ca6eb4b` (should have removed).
 
-- [ ] **12.4** **(Issue G)** Replace every occurrence of the misspelled
+- [x] **12.4** **(Issue G)** Replace every occurrence of the misspelled
   GitHub handle with the correct GitHub handle `ondrejmerkun`.
   Known sites: 4 places in `README.md` (badges, action `uses:`
   example, repo links) plus the `uses:` line in any
