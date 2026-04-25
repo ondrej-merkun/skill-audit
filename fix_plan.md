@@ -270,7 +270,7 @@ Task 10.5 (perf measurement) cannot be re-run meaningfully until
   locally (`pnpm install && pnpm build && pnpm test && pnpm lint &&
   pnpm typecheck`) before committing. Root commit: `04f5ace`.
 
-- [ ] **12.6** **(Issue A2)** Rewrite `discoverPluginDirs` in
+- [x] **12.6** **(Issue A2)** Rewrite `discoverPluginDirs` in
   `packages/cli/src/discovery/claude-code.ts:91` to walk the full
   plugin tree per the spec's discovery-depth rule (SPEC.md §3, post
   patch 3.4): emit one `Skill` per leaf `SKILL.md` /
