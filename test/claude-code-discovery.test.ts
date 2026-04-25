@@ -76,6 +76,34 @@ describe('claude-code discovery plugin', () => {
     expect(skill?.manifestPath).toMatch(/plugin\.json$/);
   });
 
+  it('discovers nested plugin skills as leaf skills, not marketplace directories', async () => {
+    const marketplaceDir = join(tempHome, '.claude', 'plugins', 'marketplace-one');
+    const skillDir = join(marketplaceDir, 'review-tools', 'skills', 'review-skill');
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(join(skillDir, 'SKILL.md'), '# Review Skill');
+
+    const skills = await claudeCodeDiscovery.discoverSkills();
+    const names = skills.map((s) => s.name);
+
+    expect(names).toContain('review-skill');
+    expect(names).not.toContain('marketplace-one');
+    expect(names).not.toContain('review-tools');
+    expect(skills.find((s) => s.name === 'review-skill')?.format).toBe('SKILL.md');
+  });
+
+  it('discovers nested plugin commands and agents', async () => {
+    const pluginDir = join(tempHome, '.claude', 'plugins', 'marketplace-one', 'toolkit');
+    await mkdir(join(pluginDir, 'commands', 'quality'), { recursive: true });
+    await mkdir(join(pluginDir, 'agents'), { recursive: true });
+    await writeFile(join(pluginDir, 'commands', 'quality', 'audit.md'), '# Audit Command');
+    await writeFile(join(pluginDir, 'agents', 'reviewer.md'), '# Reviewer Agent');
+
+    const skills = await claudeCodeDiscovery.discoverSkills();
+
+    expect(skills.find((s) => s.name === 'audit')?.format).toBe('SKILL.md');
+    expect(skills.find((s) => s.name === 'reviewer')?.format).toBe('agents-md');
+  });
+
   it('discovers commands from ~/.claude/commands/', async () => {
     const commandsDir = join(tempHome, '.claude', 'commands');
     await mkdir(commandsDir, { recursive: true });
@@ -100,7 +128,7 @@ describe('claude-code discovery plugin', () => {
     expect(skill).toBeDefined();
     expect(skill?.format).toBe('agents-md');
     expect(skill?.scope).toBe('user');
-    expect(skill?.manifestPath).toBeNull();
+    expect(skill?.manifestPath).toMatch(/AGENTS\.md$/);
   });
 
   // --- discoverSkills: MCP from ~/.claude.json ---

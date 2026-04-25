@@ -7,7 +7,7 @@
  * real-world content rather than minimal inline strings.
  */
 
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -104,6 +104,10 @@ describe('claude-code: fixture skill tree', () => {
       join(cwdSkillDir, 'SKILL.md'),
       await fixture('claude-code', 'cwd-skills', 'local-linter', 'SKILL.md')
     );
+
+    await cp(join(FIXTURES, 'claude-code', 'plugins'), join(tempHome, '.claude', 'plugins'), {
+      recursive: true,
+    });
   });
 
   afterEach(async () => {
@@ -143,6 +147,23 @@ describe('claude-code: fixture skill tree', () => {
     const skill = skills.find((s) => s.name === 'local-linter');
     expect(skill).toBeDefined();
     expect(skill?.scope).toBe('project');
+  });
+
+  it('discovers each nested plugin leaf from fixture content', async () => {
+    const skills = await claudeCodeDiscovery.discoverSkills();
+    const byName = new Map(skills.map((skill) => [skill.name, skill]));
+
+    for (const skillName of ['proof', 'work', 'review']) {
+      expect(byName.get(skillName)?.format).toBe('SKILL.md');
+      expect(byName.get(skillName)?.scope).toBe('user');
+    }
+
+    expect(byName.get('compound-engineering')?.format).toBe('plugin.json');
+    expect(byName.get('polish')?.format).toBe('SKILL.md');
+    expect(byName.get('reviewer')?.format).toBe('agents-md');
+
+    expect(byName.has('plugins')).toBe(false);
+    expect(byName.has('compound-engineering/compound-engineering')).toBe(false);
   });
 
   it('fixture skill content is reflected in treeSha256', async () => {
