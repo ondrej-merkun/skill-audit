@@ -9,7 +9,7 @@ Measured on Apple M1 Pro, Node 20, warm FS cache. Commands run from repo root.
 | `pnpm build` (warm) | **1.7 s** | `dts: true` → 636 ms | tsup esm+cjs themselves = ~60 ms combined |
 | `pnpm build` (cold) | 2.0 s | same + `clean:true` rm | |
 | `pnpm lint` | **1.4 s** | `pnpm -r` wrapper | biome itself: 33 ms |
-| `pnpm typecheck` | **1.8 s** | full `tsc --noEmit`, no cache | also currently **failing** on `src/enrich/cache.ts:40` (pre-existing, unrelated) |
+| `pnpm typecheck` | **1.8 s** | full `tsc --noEmit`, no cache | previously failed on `src/enrich/cache.ts:40`; fixed in task 12.5 |
 | `pnpm test` | **62.0 s** | `test/e2e.test.ts` = 61.7 s | see below |
 | binary `scan --offline` | 1.3 s | 1.1 s of that is node+ESM import startup | |
 
@@ -72,4 +72,4 @@ The "10 malicious skills" scan is ~28 s of actual scan work (subtract 1.3 s star
 Going from 67 s to ~4 s per iteration means an 8-hour Ralph loop runs ~16× more iterations.
 
 ## Out of scope but worth noting
-- `pnpm typecheck` is currently failing (`exactOptionalPropertyTypes` vs optional `etag` in `src/enrich/cache.ts:40`). Fix either way — Ralph is running against a broken typecheck today.
+- `pnpm typecheck` previously failed (`exactOptionalPropertyTypes` vs optional `etag` in `src/enrich/cache.ts:40`). Task 12.5 fixed the typecheck path.

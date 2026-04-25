@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { MockInstance } from 'vitest';
 import stripAnsi from './helpers/strip-ansi.js';
 import type { Enrichment, Finding, Skill, SkillSummary } from '../packages/cli/src/types.js';
 
@@ -83,7 +84,7 @@ function makeFinding(overrides: Partial<Finding> = {}): Finding {
 describe('runExplain', () => {
   let stdoutChunks: string[];
   let stderrChunks: string[];
-  let processExitSpy: ReturnType<typeof vi.spyOn>;
+  let processExitSpy: MockInstance<[code?: string | number | null | undefined], never>;
 
   beforeEach(() => {
     stdoutChunks = [];

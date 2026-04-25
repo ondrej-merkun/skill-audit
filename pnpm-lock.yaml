@@ -8,6 +8,12 @@ importers:
 
   .:
     devDependencies:
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.39
+      typescript:
+        specifier: ^5.5.2
+        version: 5.9.3
       vitest:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.39)

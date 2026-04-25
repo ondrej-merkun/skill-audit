@@ -52,6 +52,12 @@ Source of lessons 1.x – 6.x: `.postmortem/analysis.md` (run 2026-04-23).
   Before committing any markdown change, confirm each referenced path
   exists. If you reference it, create it (or delete the reference).
 
+- **L1.6 — Typecheck repo-level tests, not just package src.** _Task
+  12.5 added root `tsconfig.json` coverage and immediately caught an
+  over-broad `process.exit` spy type in `test/explain.test.ts`._
+  Keep test/config files in the root typecheck surface so CI sees
+  assertion-helper drift before runtime.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

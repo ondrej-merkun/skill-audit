@@ -6,9 +6,11 @@
     "build": "pnpm -r run build",
     "test": "vitest run",
     "lint": "pnpm -r run lint",
-    "typecheck": "pnpm -r run typecheck"
+    "typecheck": "tsc --noEmit -p tsconfig.json && pnpm -r run typecheck"
   },
   "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.2",
     "vitest": "^1.6.0"
   },
   "engines": {
