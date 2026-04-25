@@ -246,7 +246,7 @@ Task 10.5 (perf measurement) cannot be re-run meaningfully until
   ANSI-strip rule check to LESSONS.md L1.4 evidence. Root commit:
   `42ac1fb`.
 
-- [ ] **12.3** **(Issue D)** Delete
+- [x] **12.3** **(Issue D)** Delete
   `packages/cli/test/smoke.test.ts` — it duplicates the root-level
   `test/smoke.test.ts` from task 1.7. Confirm `pnpm test` still
   finds and runs the surviving smoke test. This is the canonical
