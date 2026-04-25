@@ -1,0 +1,2 @@
+description = "Summarize the active Gemini workspace"
+prompt = "Summarize the current workspace without changing files."

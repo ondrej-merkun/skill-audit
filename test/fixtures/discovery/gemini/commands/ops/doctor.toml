@@ -1,0 +1,2 @@
+description = "Check local Gemini CLI setup"
+prompt = "Inspect configuration and report setup problems."

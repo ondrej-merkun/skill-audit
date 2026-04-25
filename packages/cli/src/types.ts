@@ -21,12 +21,17 @@ export type Skill = {
     | 'plugin.json'
     | 'mcp-server'
     | 'mcp-toml'
+    | 'mcp-json'
     | 'prompt-md'
     | 'rules-md'
-    | 'agents-md';
+    | 'agents-md'
+    | 'gemini-extension-json'
+    | 'gemini-command-toml'
+    | 'gemini-agent-md';
   scope: 'user' | 'project' | 'managed';
   treeSha256: string;
   trusted?: boolean;
+  metadata?: Record<string, unknown>;
 };
 
 export type Rule = {

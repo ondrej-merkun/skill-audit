@@ -63,6 +63,11 @@ Source of lessons 1.x – 6.x: `.postmortem/analysis.md` (run 2026-04-23).
   stdout before Vitest could parse it._
   Set `process.exitCode` for normal verdict exits so stdout/stderr can flush.
 
+- **L1.8 — Do not run build and e2e tests in parallel.** _Task 13.2 saw
+  `--help` exit 1 because `pnpm build` cleaned `dist/` while Vitest was
+  executing the built binary._
+  Run build and test as separate sequential verification steps.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

@@ -199,9 +199,21 @@ interface Skill {
   name: string;
   path: string;                      // absolute dir
   manifestPath: string | null;       // SKILL.md / plugin.json / config.toml / null
-  format: 'SKILL.md' | 'plugin.json' | 'mcp-server' | 'rules-md' | 'agents-md';
+  format:
+    | 'SKILL.md'
+    | 'plugin.json'
+    | 'mcp-server'
+    | 'mcp-toml'
+    | 'mcp-json'
+    | 'prompt-md'
+    | 'rules-md'
+    | 'agents-md'
+    | 'gemini-extension-json'
+    | 'gemini-command-toml'
+    | 'gemini-agent-md';
   scope: 'user' | 'project' | 'managed';
   treeSha256: string;                // for allowlist matching
+  metadata?: Record<string, unknown>; // agent-specific manifest details
 }
 ```
 Adding a new agent = adding one file and registering in `discovery/index.ts`. No class hierarchies.

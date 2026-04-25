@@ -1,0 +1,2 @@
+description = "Review project changes"
+prompt = "Review this project diff."

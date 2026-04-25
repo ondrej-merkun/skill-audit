@@ -16,6 +16,9 @@ import claudeCodeDiscovery from '../packages/cli/src/discovery/claude-code.js';
 import codexDiscovery from '../packages/cli/src/discovery/codex.js';
 import copilotDiscovery from '../packages/cli/src/discovery/copilot.js';
 import cursorDiscovery from '../packages/cli/src/discovery/cursor.js';
+import geminiDiscovery, {
+  parseGeminiExtensionManifest,
+} from '../packages/cli/src/discovery/gemini.js';
 
 const FIXTURES = new URL('./fixtures/discovery', import.meta.url).pathname;
 
@@ -271,6 +274,126 @@ describe('codex: fixture skill tree', () => {
     expect(skill?.scope).toBe('project');
     expect(skill?.trusted).toBe(false);
     expect(skill?.treeSha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+// ── gemini ──────────────────────────────────────────────────────────────────
+
+describe('gemini: fixture skill tree', () => {
+  let tempHome: string;
+  let tempCwd: string;
+  let originalHome: string | undefined;
+  let originalCwd: string | undefined;
+
+  beforeEach(async () => {
+    tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-gem-home-'));
+    tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-gem-cwd-'));
+    originalHome = process.env['HOME'];
+    originalCwd = process.env['SKILLAUDIT_CWD'];
+    process.env['HOME'] = tempHome;
+    process.env['SKILLAUDIT_CWD'] = tempCwd;
+
+    await cp(join(FIXTURES, 'gemini', 'extensions'), join(tempHome, '.gemini', 'extensions'), {
+      recursive: true,
+    });
+    await cp(
+      join(FIXTURES, 'gemini', 'project', '.gemini', 'extensions'),
+      join(tempCwd, '.gemini', 'extensions'),
+      { recursive: true }
+    );
+
+    const userCommandsDir = join(tempHome, '.gemini', 'commands', 'ops');
+    await mkdir(userCommandsDir, { recursive: true });
+    await writeFile(
+      join(userCommandsDir, 'doctor.toml'),
+      await fixture('gemini', 'commands', 'ops', 'doctor.toml')
+    );
+
+    const projectCommandsDir = join(tempCwd, '.gemini', 'commands');
+    await mkdir(projectCommandsDir, { recursive: true });
+    await writeFile(
+      join(projectCommandsDir, 'review.toml'),
+      await fixture('gemini', 'project', '.gemini', 'commands', 'review.toml')
+    );
+
+    const agentDir = join(tempHome, '.gemini', 'agents', 'planner');
+    await mkdir(agentDir, { recursive: true });
+    await writeFile(join(agentDir, 'planner.md'), await fixture('gemini', 'agents', 'planner', 'planner.md'));
+
+    await writeFile(
+      join(tempHome, '.gemini', 'settings.json'),
+      await fixture('gemini', 'settings.json')
+    );
+  });
+
+  afterEach(async () => {
+    if (originalHome === undefined) {
+      delete process.env['HOME'];
+    } else {
+      process.env['HOME'] = originalHome;
+    }
+    if (originalCwd === undefined) {
+      delete process.env['SKILLAUDIT_CWD'];
+    } else {
+      process.env['SKILLAUDIT_CWD'] = originalCwd;
+    }
+    await rm(tempHome, { recursive: true, force: true });
+    await rm(tempCwd, { recursive: true, force: true });
+  });
+
+  it('parses extension manifest metadata without depending on directory walking', async () => {
+    const raw = await fixture('gemini', 'extensions', 'workspace-tools', 'gemini-extension.json');
+    const parsed = await parseGeminiExtensionManifest(
+      raw,
+      join(FIXTURES, 'gemini', 'extensions', 'workspace-tools')
+    );
+
+    expect(parsed?.name).toBe('workspace-tools');
+    expect(parsed?.metadata.commands).toContain('commands/summarize.toml');
+    expect(parsed?.metadata.agents).toContain('agents/reviewer.md');
+    expect(parsed?.metadata.mcpServers).toEqual(['browser']);
+    expect(parsed?.metadata.warnings).toContain(
+      'manifest references missing path: commands/missing.toml'
+    );
+  });
+
+  it('discovers user extensions, nested commands, agents, and MCP settings', async () => {
+    expect(await geminiDiscovery.isInstalled()).toBe(true);
+
+    const skills = await geminiDiscovery.discoverSkills();
+    const byName = new Map(skills.map((skill) => [skill.name, skill]));
+
+    expect(byName.get('workspace-tools')?.format).toBe('gemini-extension-json');
+    expect(byName.get('workspace-tools')?.scope).toBe('user');
+    expect(byName.get('doctor')?.format).toBe('gemini-command-toml');
+    expect(byName.get('doctor')?.scope).toBe('user');
+    expect(byName.get('planner')?.format).toBe('gemini-agent-md');
+    expect(byName.get('browser')?.format).toBe('mcp-json');
+  });
+
+  it('discovers project-local Gemini extensions and commands without GEMINI.md duplicates', async () => {
+    const skills = await geminiDiscovery.discoverSkills();
+    const byName = new Map(skills.map((skill) => [skill.name, skill]));
+
+    expect(byName.get('project-helper')?.format).toBe('gemini-extension-json');
+    expect(byName.get('project-helper')?.scope).toBe('project');
+    expect(byName.get('review')?.format).toBe('gemini-command-toml');
+    expect(byName.get('review')?.scope).toBe('project');
+    expect(byName.has('GEMINI.md')).toBe(false);
+  });
+
+  it('keeps manifest-declared nested entries on the extension skill only', async () => {
+    const skills = await geminiDiscovery.discoverSkills();
+    const extension = skills.find((skill) => skill.name === 'workspace-tools');
+
+    expect(extension?.metadata).toMatchObject({
+      commands: ['commands/missing.toml', 'commands/summarize.toml'],
+      agents: ['agents/reviewer.md'],
+      mcpServers: ['browser'],
+    });
+    expect(skills.find((skill) => skill.name === 'summarize')).toBeUndefined();
+    expect(skills.find((skill) => skill.name === 'reviewer')).toBeUndefined();
+    expect(extension?.treeSha256).toMatch(/^[0-9a-f]{64}$/);
   });
 });
 

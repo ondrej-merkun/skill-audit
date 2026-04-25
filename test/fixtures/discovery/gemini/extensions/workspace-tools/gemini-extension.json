@@ -1,0 +1,16 @@
+{
+  "name": "workspace-tools",
+  "commands": [
+    "commands/summarize.toml",
+    "commands/missing.toml"
+  ],
+  "agents": [
+    "agents/reviewer.md"
+  ],
+  "mcpServers": {
+    "browser": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-browser"]
+    }
+  }
+}
