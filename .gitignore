@@ -16,6 +16,7 @@ coverage/
 # Cache directories (enrichment cache lives in ~/.cache/skillaudit/ per spec,
 # not in the repo — but just in case)
 .cache/
+.serena/
 
 # Editor / OS
 .DS_Store
@@ -32,3 +33,5 @@ coverage/
 .env.local
 .env.*.local
 !test/fixtures/**/.env
+
+.postmortem

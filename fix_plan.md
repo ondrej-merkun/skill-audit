@@ -440,3 +440,18 @@ intermediate directory.
 
 (If Ralph hits something it cannot proceed past, document here with error
 output and what was attempted.)
+
+- **10.4a verification blocked (2026-04-25)** — README License removal is
+  mechanically simple, but the required clean verification cannot pass on the
+  current tree before later planned fixes run:
+  - `pnpm build` exits 0 but emits the known conditional-exports warning from
+    `packages/cli/package.json:16` (`"types"` comes after `"import"` and
+    `"require"`), which task 12.1 is scheduled to fix.
+  - `pnpm typecheck` exits 2 with
+    `src/enrich/cache.ts(40,5): error TS2375` because `cacheGet()` returns
+    `etag: string | undefined` for optional property `etag?: string`, which
+    task 12.5 is scheduled to fix.
+  - `pnpm test` passed: 23 files, 338 tests.
+  - `pnpm lint` passed: biome checked 34 files with no fixes.
+  Ralph stopped rather than taking tasks 12.1/12.5 out of order or committing
+  a README-only change with known failing verification.
