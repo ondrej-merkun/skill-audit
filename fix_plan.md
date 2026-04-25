@@ -230,7 +230,7 @@ correctness bugs, then the rule-engine performance rewrite last.
 Task 10.5 (perf measurement) cannot be re-run meaningfully until
 12.6 (discovery depth) and 12.7 (engine perf) are both done.
 
-- [ ] **12.1** **(Issue B)** Reorder conditional `exports` in
+- [x] **12.1** **(Issue B)** Reorder conditional `exports` in
   `packages/cli/package.json:12-18` so `"types"` comes FIRST, then
   `"import"`, then `"require"`. Verify with `pnpm build 2>&1 |
   grep -iE 'warn|error'` — must emit nothing. See AGENT.md
