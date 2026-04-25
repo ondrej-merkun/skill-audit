@@ -401,7 +401,7 @@ intermediate directory.
   `initDefaultPlugins()` via task 13.3. Update `specs/SPEC.md §3
   "MVP discovery shortlist"` to mention Gemini if shipping pre-v0.2.
 
-- [ ] **13.3** Register the `gemini` discovery plugin in
+- [x] **13.3** Register the `gemini` discovery plugin in
   `packages/cli/src/discovery/index.ts` `initDefaultPlugins()`,
   alongside the existing `claude-code`, `cursor`, `copilot`, `codex`,
   and `agents-md-sweep` registrations. Verify `node packages/cli/dist/
