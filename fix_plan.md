@@ -232,7 +232,7 @@ at the bottom and the loop will stop.
 Order is dependency-correct: trivial green-bar fixes first, then
 correctness bugs, then the rule-engine performance rewrite last.
 Task 10.5 (perf measurement) cannot be re-run meaningfully until
-12.7 (discovery depth) and 12.8 (engine perf) are both done.
+12.6 (discovery depth) and 12.7 (engine perf) are both done.
 
 - [ ] **12.1** **(Issue B)** Reorder conditional `exports` in
   `packages/cli/package.json:12-18` so `"types"` comes FIRST, then
@@ -266,14 +266,7 @@ Task 10.5 (perf measurement) cannot be re-run meaningfully until
   Pull the canonical handle from `CLAUDE.md § Identity`, never from
   filesystem paths. Root commit: `0d6e97a`.
 
-- [ ] **12.5** **(Issue F)** Resolve the broken `<img src="docs/
-  logo.svg" />` in `README.md:2`. Two acceptable options: (a) ship
-  a minimal placeholder `docs/logo.svg` (red magnifying-glass,
-  180×180, plain SVG, no external refs); or (b) delete the `<img>`
-  tag entirely. Verify post-fix that every relative link/image in
-  the README resolves on disk. Root commit: `0d6e97a`.
-
-- [ ] **12.6** **(Issue E)** Fix `pnpm typecheck` so it passes on
+- [ ] **12.5** **(Issue E)** Fix `pnpm typecheck` so it passes on
   Node 20 AND Node 22, Linux AND macOS. Likely required: add a
   root `tsconfig.json`, align `@types/node` with the matrix legs in
   `.github/workflows/ci.yml`, and confirm `tsc --noEmit` runs
@@ -281,7 +274,7 @@ Task 10.5 (perf measurement) cannot be re-run meaningfully until
   locally (`pnpm install && pnpm build && pnpm test && pnpm lint &&
   pnpm typecheck`) before committing. Root commit: `04f5ace`.
 
-- [ ] **12.7** **(Issue A2)** Rewrite `discoverPluginDirs` in
+- [ ] **12.6** **(Issue A2)** Rewrite `discoverPluginDirs` in
   `packages/cli/src/discovery/claude-code.ts:91` to walk the full
   plugin tree per the spec's discovery-depth rule (SPEC.md §3, post
   patch 3.4): emit one `Skill` per leaf `SKILL.md` /
@@ -296,7 +289,7 @@ Task 10.5 (perf measurement) cannot be re-run meaningfully until
   paste the row count + a few sample paths into the commit body.
   Root commit: `8c710ac`.
 
-- [ ] **12.8** **(Issue A1)** Replace the worker-thread-per-pattern
+- [ ] **12.7** **(Issue A1)** Replace the worker-thread-per-pattern
   architecture in `packages/cli/src/rules/engine.ts:127-154`. The
   current loop spawns ~8k workers for 20 skills (cubic at scale).
   Acceptable replacements: (a) batch all patterns of a given rule
@@ -307,7 +300,7 @@ Task 10.5 (perf measurement) cannot be re-run meaningfully until
   workers from the hot path. Also parallelize per-skill rule
   execution in `src/commands/scan.ts:131` (e.g. `Promise.all` with
   a small concurrency cap). Acceptance: `node packages/cli/dist/
-  index.js scan` against `$HOME` (real machine, post-12.7 with full
+  index.js scan` against `$HOME` (real machine, post-12.6 with full
   skill discovery) finishes in < 10s for 500 skills, per
   SPEC.md §4 "Performance budget". Paste timing into commit body.
   After this lands, re-run task 10.5 and check it. Root commit:
@@ -337,7 +330,7 @@ intermediate directory.
     `format: 'skill-md'`.
   - `~/.codex/plugins/<marketplace>/<plugin>/skills/<skill>/SKILL.md`
     — recursive walk, one Skill per leaf SKILL.md / plugin.json /
-    leaf command file (mirror the depth rule from task 12.7 — do
+    leaf command file (mirror the depth rule from task 12.6 — do
     NOT emit one Skill per intermediate directory).
   - `~/.codex/prompts/*.md` — emit one Skill per file,
     `format: 'prompt-md'`.

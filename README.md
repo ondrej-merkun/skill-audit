@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo.svg" width="180" alt="skillaudit logo — red magnifying glass" />
+  <img src="https://vhs.charm.sh/vhs-3QK8f5vcNbljLrgH23trKT.gif" alt="Made with VHS" width="500" />
 </p>
 
 <h1 align="center">skillaudit</h1>
