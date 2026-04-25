@@ -236,7 +236,7 @@ Task 10.5 (perf measurement) cannot be re-run meaningfully until
   grep -iE 'warn|error'` — must emit nothing. See AGENT.md
   "Tech stack" for the canonical shape. Root commit: `c0a6334`.
 
-- [ ] **12.2** **(Issue C)** Fix
+- [x] **12.2** **(Issue C)** Fix
   `packages/cli/test/output.test.ts:358-366` (the
   `renderSummaryCompact > includes compromised count` test): wrap the
   asserted output in `stripAnsi(...)` so the chalk-coloured `2`
