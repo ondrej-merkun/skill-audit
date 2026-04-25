@@ -253,12 +253,12 @@ Task 10.5 (perf measurement) cannot be re-run meaningfully until
   "orphan exception" case from PROMPT.md. Root commit: `68c914e`
   (introduced), `ca6eb4b` (should have removed).
 
-- [ ] **12.4** **(Issue G)** Replace every occurrence of the typo
-  `ondrejmerun` with the correct GitHub handle `ondrejmerkun`.
+- [ ] **12.4** **(Issue G)** Replace every occurrence of the misspelled
+  GitHub handle with the correct GitHub handle `ondrejmerkun`.
   Known sites: 4 places in `README.md` (badges, action `uses:`
   example, repo links) plus the `uses:` line in any
   `.github/workflows/*.yml` example. Run
-  `git grep -n ondrejmerun` after the fix — must return nothing.
+  `git grep -n <misspelled-handle>` after the fix — must return nothing.
   Pull the canonical handle from `CLAUDE.md § Identity`, never from
   filesystem paths. Root commit: `0d6e97a`.
 

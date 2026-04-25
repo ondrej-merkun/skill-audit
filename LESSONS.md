@@ -72,8 +72,8 @@ Source of lessons 1.x – 6.x: `.postmortem/analysis.md` (run 2026-04-23).
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**
-  _Task 10.4 README used `ondrejmerun` (typo of the user's real handle
-  `ondrejmerkun`), deduced from the `/Users/ondra/` path._
+  _Task 10.4 README used the wrong GitHub handle in several URL
+  references, deduced from the `/Users/ondra/` path._
   Identity lives in `CLAUDE.md § Identity`. Pull the handle, package
   name, and byline from there verbatim. If the field doesn't exist
   yet, ask — don't guess from paths or git metadata.

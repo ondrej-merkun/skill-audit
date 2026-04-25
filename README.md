@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/skillaudit"><img src="https://img.shields.io/npm/v/skillaudit" alt="npm version" /></a>
-  <a href="https://github.com/ondrejmerun/skillaudit/actions"><img src="https://img.shields.io/github/actions/workflow/status/ondrejmerun/skillaudit/ci.yml" alt="CI" /></a>
+  <a href="https://github.com/ondrejmerkun/skillaudit/actions"><img src="https://img.shields.io/github/actions/workflow/status/ondrejmerkun/skillaudit/ci.yml" alt="CI" /></a>
 </p>
 
 ---
@@ -179,7 +179,7 @@ Six rule IDs trigger **mandatory FAIL** regardless of score:
 ## Use as a GitHub Action
 
 ```yaml
-- uses: ondrejmerun/skillaudit-action@v1
+- uses: ondrejmerkun/skillaudit-action@v1
   with:
     fail-on: REVIEW   # optional, default: FAIL
 ```
