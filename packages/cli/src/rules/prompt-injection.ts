@@ -5,10 +5,13 @@ import type { Rule } from '../types.js';
 // Instruction-override phrasing — per spec §4 and specs/RULES.md
 // ---------------------------------------------------------------------------
 const overrideIgnorePattern =
-  /\bignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|rules?|prompts?)\b/i;
-const overrideDisregardPattern = /\bdisregard\s+(all\s+)?(previous|above|prior)\b/i;
-const overrideYouAreNowPattern = /\byou\s+are\s+now\s+(a\s+|an\s+)?[A-Za-z]+/i;
-const overrideNewRolePattern = /\bnew\s+(role|identity|persona|system\s+prompt)\b/i;
+  /(?<!["'`])\bignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|rules?|prompts?)\b/i;
+const overrideDisregardPattern =
+  /(?<!["'`])\bdisregard\s+(all\s+)?(previous|above|prior)\s+(context|instructions?|rules?|prompts?)?\b/i;
+const overrideYouAreNowPattern =
+  /\byou\s+are\s+now\s+(?:a\s+|an\s+)?(?:unrestricted|uncensored|unfiltered|unlimited|rule-?free|policy-?free|jailbroken|developer\s+mode)\b/i;
+const overrideNewRolePattern =
+  /\b(?:assume|adopt|switch\s+to|enter|take\s+on)\s+(?:a\s+|an\s+)?new\s+(role|identity|persona|system\s+prompt)\b(?=[\s\S]{0,120}\b(?:ignore|disregard|override|bypass|forget|replace|instead|previous|prior|above|system|developer)\b)/i;
 const overrideForgetPattern = /\bforget\s+(everything|your\s+instructions?)\b/i;
 
 export const PI_OVERRIDE: Rule = {
