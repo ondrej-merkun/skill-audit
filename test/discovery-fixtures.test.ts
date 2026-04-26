@@ -112,6 +112,21 @@ describe('claude-code: fixture skill tree', () => {
     await cp(join(FIXTURES, 'claude-code', 'plugins'), join(tempHome, '.claude', 'plugins'), {
       recursive: true,
     });
+
+    const versionedCacheSkillDir = join(
+      tempHome,
+      '.claude',
+      'plugins',
+      'cache',
+      'claude-code-skills',
+      'skill-security-auditor',
+      '2.2.0'
+    );
+    await mkdir(versionedCacheSkillDir, { recursive: true });
+    await writeFile(
+      join(versionedCacheSkillDir, 'SKILL.md'),
+      '# Skill Security Auditor\n\nAudit installed skills for security issues.\n'
+    );
   });
 
   afterEach(async () => {
@@ -170,6 +185,18 @@ describe('claude-code: fixture skill tree', () => {
     expect(byName.has('compound-engineering/compound-engineering')).toBe(false);
   });
 
+  it('uses the parent directory name for semver plugin cache leaves', async () => {
+    const skills = await claudeCodeDiscovery.discoverSkills();
+    const byName = new Map(skills.map((skill) => [skill.name, skill]));
+
+    expect(byName.get('skill-security-auditor')?.format).toBe('SKILL.md');
+    expect(byName.get('skill-security-auditor')?.path).toContain(
+      join('skill-security-auditor', '2.2.0')
+    );
+    expect(byName.has('2.2.0')).toBe(false);
+    expect(byName.get('git-helper')?.format).toBe('SKILL.md');
+  });
+
   it('fixture skill content is reflected in treeSha256', async () => {
     const skills = await claudeCodeDiscovery.discoverSkills();
     const skill = skills.find((s) => s.name === 'git-helper');
@@ -204,6 +231,20 @@ describe('codex: fixture skill tree', () => {
     await cp(join(FIXTURES, 'codex', 'plugins'), join(tempHome, 'plugins'), {
       recursive: true,
     });
+
+    const versionedCacheSkillDir = join(
+      tempHome,
+      'plugins',
+      'cache',
+      'openai',
+      'enabled-plugin',
+      'v1.2.3-beta.1'
+    );
+    await mkdir(versionedCacheSkillDir, { recursive: true });
+    await writeFile(
+      join(versionedCacheSkillDir, 'SKILL.md'),
+      '# Enabled Plugin\n\nReview active plugin cache payloads.\n'
+    );
 
     const promptsDir = join(tempHome, 'prompts');
     await mkdir(promptsDir, { recursive: true });
@@ -289,6 +330,8 @@ describe('codex: fixture skill tree', () => {
     expect(byName.get('cache-helper')?.format).toBe('SKILL.md');
     expect(byName.get('cache-command')?.format).toBe('prompt-md');
     expect(byName.get('cache-agent')?.format).toBe('agents-md');
+    expect(byName.get('enabled-plugin')?.format).toBe('SKILL.md');
+    expect(byName.get('enabled-plugin')?.path).toContain(join('enabled-plugin', 'v1.2.3-beta.1'));
     expect(byName.get('cache-helper')?.path).toContain(
       join('plugins', 'cache', 'openai', 'enabled-plugin')
     );
@@ -296,6 +339,7 @@ describe('codex: fixture skill tree', () => {
     expect(byName.has('disabled-helper')).toBe(false);
     expect(byName.has('cache-only-helper')).toBe(false);
     expect(byName.has('rev-1')).toBe(false);
+    expect(byName.has('v1.2.3-beta.1')).toBe(false);
   });
 
   it('emits project-local .codex/config.toml as untrusted project config', async () => {

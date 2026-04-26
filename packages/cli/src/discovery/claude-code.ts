@@ -3,6 +3,7 @@ import { readFile, readdir, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, dirname, join, relative } from 'node:path';
 import type { AgentDiscovery, Skill } from '../types.js';
+import { fallbackSkillNameFromDirectory } from './names.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
 const AGENT_ID = 'claude-code';
@@ -39,7 +40,7 @@ async function skillFromDir(
   return {
     id: makeId(dirPath),
     agentId: AGENT_ID,
-    name: basename(dirPath),
+    name: fallbackSkillNameFromDirectory(dirPath),
     path: dirPath,
     manifestPath: manifestFile ? join(dirPath, manifestFile) : null,
     format,
