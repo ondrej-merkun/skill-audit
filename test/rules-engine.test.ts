@@ -123,6 +123,31 @@ describe('runRules', () => {
     expect(findings.length).toBe(1);
   });
 
+  it('does not let parent skill directories inherit nested child skill findings', async () => {
+    await writeFile(join(tmpDir, 'SKILL.md'), '# Parent\n');
+    await writeFile(join(tmpDir, 'notes.md'), 'Parent docs stay in scope.\n');
+
+    const child = join(tmpDir, 'child');
+    await mkdir(child);
+    await writeFile(join(child, 'SKILL.md'), 'key: sk-abcdefghijklmnopqrstuvwxyz\n');
+
+    const parentFindings = await runRules(tmpDir, [TEST_RULE]);
+    expect(parentFindings).toEqual([]);
+
+    const childFindings = await runRules(child, [TEST_RULE]);
+    expect(childFindings.length).toBe(1);
+    expect(childFindings[0]?.file).toBe(join(child, 'SKILL.md'));
+  });
+
+  it('does not enter nested command roots that are scanned as separate targets', async () => {
+    const commands = join(tmpDir, 'commands');
+    await mkdir(commands);
+    await writeFile(join(commands, 'ship.md'), 'key: sk-abcdefghijklmnopqrstuvwxyz\n');
+
+    const findings = await runRules(tmpDir, [TEST_RULE]);
+    expect(findings).toEqual([]);
+  });
+
   it('records correct snippet', async () => {
     await writeFile(join(tmpDir, 'SKILL.md'), 'line one\nkey: sk-abcdefghijklmnopqrstuvwxyz\nline three\n');
     const findings = await runRules(tmpDir, [TEST_RULE]);

@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { type Dirent, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import type { Finding, Rule } from '../types.js';
 
@@ -69,12 +69,50 @@ export function matchesGlob(filename: string, glob: string): boolean {
   return filename.startsWith(prefix) && filename.endsWith(suffix);
 }
 
-/** Recursively collects all file paths under a directory. */
+const NESTED_SCAN_ROOT_MARKERS = new Set([
+  'SKILL.md',
+  'AGENTS.md',
+  'AGENTS.override.md',
+  'CLAUDE.md',
+  'GEMINI.md',
+  'CONVENTIONS.md',
+  '.cursorrules',
+  '.windsurfrules',
+  'plugin.json',
+  'gemini-extension.json',
+]);
+
+function isPromptBearingCommandOrAgentDir(dirName: string, entries: Dirent[]) {
+  if (dirName !== 'commands' && dirName !== 'agents') return false;
+  return entries.some(
+    (entry) =>
+      entry.isFile() &&
+      (entry.name.endsWith('.md') || entry.name.endsWith('.mdc') || entry.name.endsWith('.toml'))
+  );
+}
+
+function isNestedScanRoot(dir: string): boolean {
+  let entries: Dirent[];
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+
+  if (entries.some((entry) => entry.isFile() && NESTED_SCAN_ROOT_MARKERS.has(entry.name))) {
+    return true;
+  }
+
+  return isPromptBearingCommandOrAgentDir(basename(dir), entries);
+}
+
+/** Recursively collects file paths under a scan target without entering child scan roots. */
 function walkDir(dir: string): string[] {
   const results: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
+      if (isNestedScanRoot(full)) continue;
       results.push(...walkDir(full));
     } else {
       results.push(full);
