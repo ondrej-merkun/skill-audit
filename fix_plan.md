@@ -548,7 +548,7 @@ at the bottom and the loop will stop.
   - Keep malicious fixtures for plausible non-placeholder API keys and tokens
     with no example/test context.
 
-- [ ] **21** Add documentation/example context handling for filesystem and
+- [x] **21** Add documentation/example context handling for filesystem and
   network rules.
 
   Real scan output flagged many best-practice examples and test payloads:
