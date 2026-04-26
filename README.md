@@ -20,8 +20,9 @@
 > — [Snyk ToxicSkills study, Feb 2026](https://snyk.io/blog/toxic-skills)
 
 Most scanners demand a cloud account, scan one skill at a time, or only cover Claude.
-`skillaudit` runs locally in two seconds, discovers every skill across Claude Code, Cursor,
-Copilot, Windsurf, Cline, and more, and hands you a colorized verdict table.
+`skillaudit` runs locally in two seconds, discovers every skill across Claude Code,
+OpenAI Codex, GitHub Copilot, Cursor, Gemini CLI, and more, and hands you a
+colorized verdict table.
 
 ```
 npx skillaudit
@@ -37,9 +38,9 @@ npx skillaudit
 | Agent | Global paths | Project-local paths |
 |---|---|---|
 | **Claude Code** | `~/.claude/skills/`, `~/.claude/plugins/`, `~/.claude/agents/`, `~/.claude/commands/`, MCP in `~/.claude.json` | `.claude/`, `.mcp.json`, `.claude-plugin/` |
-| **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, `.cursorrules` |
-| **GitHub Copilot** | `~/.copilot/skills/*/SKILL.md` | `.github/skills/`, `.github/copilot-instructions.md`, `.github/instructions/` |
 | **OpenAI Codex** | `~/.codex/AGENTS.md`, `~/.codex/config.toml`, `~/.codex/skills/`, `~/.codex/plugins/`, `~/.codex/prompts/` | `AGENTS.md`, `AGENTS.override.md`, `.codex/config.toml` |
+| **GitHub Copilot** | `~/.copilot/skills/*/SKILL.md` | `.github/skills/`, `.github/copilot-instructions.md`, `.github/instructions/` |
+| **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, `.cursorrules` |
 | **Gemini CLI** | `~/.gemini/extensions/`, `~/.gemini/commands/`, `~/.gemini/agents/`, `~/.gemini/settings.json` | `.gemini/extensions/`, `.gemini/commands/`, `GEMINI.md` |
 | **Cross-agent sweep** | — | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.windsurfrules`, `CONVENTIONS.md` (walks parents) |
 
