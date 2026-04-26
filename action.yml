@@ -109,7 +109,7 @@ runs:
 
     - name: Upload results artifact
       if: ${{ inputs.upload-results == 'true' && always() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: skill-audit-results
         path: ${{ inputs.path }}/${{ inputs.results-file }}
