@@ -898,7 +898,7 @@ at the bottom and the loop will stop.
   - whether a minimal fixture can be shared
   - impact explanation
 
-- [ ] **47** Add a new-agent-support issue form.
+- [x] **47** Add a new-agent-support issue form.
 
   Add `.github/ISSUE_TEMPLATE/new-agent-support.yml` so users can request
   discovery support for additional agents or skill/plugin locations.
