@@ -846,7 +846,7 @@ at the bottom and the loop will stop.
   and `gh repo edit ondrej-merkun/skill-audit --add-topic ...` fail with
   `error connecting to api.github.com`.
 
-- [ ] **36** Add a repository social preview asset.
+- [x] **36** Add a repository social preview asset.
 
   Create a 1280x640 image under `docs/` that clearly identifies the project and
   shows the CLI output shape. Document the GitHub settings step needed to upload
