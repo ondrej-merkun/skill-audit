@@ -796,6 +796,10 @@ at the bottom and the loop will stop.
   with `error connecting to api.github.com`; `gh auth status` also reports the
   configured token is invalid. Re-run this task in an environment with working
   GitHub API access and valid repository-admin credentials.
+  Reconfirmed (2026-04-27): `tool_search` surfaced no repository-topics
+  endpoint, `gh repo view --json nameWithOwner,repositoryTopics` failed with
+  `error connecting to api.github.com`, and `gh auth status` still reports the
+  local token as invalid.
 
 - [ ] **36** Add a repository social preview asset.
 
