@@ -444,7 +444,7 @@ at the bottom and the loop will stop.
   - Keep malicious fixtures for `font-size:0`, `display:none`, hidden spans,
     and white text on white background.
 
-- [ ] **15** Reduce `OBFS-HOMOGLYPH` false positives for math symbols,
+- [x] **15** Reduce `OBFS-HOMOGLYPH` false positives for math symbols,
   multilingual fixtures, and normal Unicode.
 
   Real scan output flagged Greek statistical notation (alpha, beta, gamma,
