@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 const CLI = fileURLToPath(new URL('../packages/cli/dist/index.js', import.meta.url));
 const PACKAGE_JSON = fileURLToPath(new URL('../packages/cli/package.json', import.meta.url));
 const README = fileURLToPath(new URL('../README.md', import.meta.url));
+const ACTION_YML = fileURLToPath(new URL('../action.yml', import.meta.url));
 const FIXTURES_DIR = fileURLToPath(new URL('fixtures', import.meta.url));
 const MALICIOUS_DIR = join(FIXTURES_DIR, 'malicious');
 const BENIGN_DIR = join(FIXTURES_DIR, 'benign');
@@ -115,6 +116,20 @@ describe('e2e: CLI binary', () => {
     const { stdout, code } = await runCli(['--version']);
     expect(code).toBe(0);
     expect(stdout.trim()).toBe(pkg.version);
+  });
+
+  it('root action uses the published package and current JSON summary shape', async () => {
+    const [action, readme] = await Promise.all([
+      readFile(ACTION_YML, 'utf-8'),
+      readFile(README, 'utf-8'),
+    ]);
+
+    expect(readme).toContain('uses: ondrejmerkun/skillaudit@v1');
+    expect(action).toContain('npx --yes "skill-audit@${SA_VERSION}" scan');
+    expect(action).toContain('--output "$SA_RESULTS_FILE"');
+    expect(action).toContain('.summary.verdict // "PASS"');
+    expect(action).not.toContain('skillaudit@${SA_VERSION}');
+    expect(action).not.toContain('.results[]');
   });
 
   it('--version prints a semver string', async () => {

@@ -1,6 +1,6 @@
 name: 'skillaudit'
 description: 'Scan AI agent skills (Claude Code, Cursor, Copilot, Codex, Gemini, Windsurf, Cline) for prompt injection and malicious code.'
-author: 'skillaudit'
+author: 'Ondrej Merkun'
 
 branding:
   icon: 'shield'
@@ -8,7 +8,7 @@ branding:
 
 inputs:
   version:
-    description: 'skillaudit version to run (e.g. "0.1.0" or "latest")'
+    description: 'skill-audit npm package version to run (e.g. "0.1.0" or "latest")'
     required: false
     default: 'latest'
   path:
@@ -77,16 +77,17 @@ runs:
           OFFLINE_FLAG="--offline"
         fi
 
-        # Run scan and capture JSON output
+        # Run scan and write JSON output to the requested file.
         # SA_ARGS is intentionally word-split here (extra flags from caller).
         # shellcheck disable=SC2086
-        npx --yes "skillaudit@${SA_VERSION}" scan \
+        npx --yes "skill-audit@${SA_VERSION}" scan \
           --json \
+          --output "$SA_RESULTS_FILE" \
           --fail-on "$SA_FAIL_ON" \
           ${AGENT_FLAG:+--agent "$SA_AGENT"} \
           $OFFLINE_FLAG \
           $SA_ARGS \
-          > "$SA_RESULTS_FILE" 2>skillaudit-stderr.txt
+          2>skillaudit-stderr.txt
         EXIT_CODE=$?
 
         # Surface stderr so it shows in the step log
@@ -95,10 +96,10 @@ runs:
           rm skillaudit-stderr.txt
         fi
 
-        # Extract worst verdict for the output variable
+        # Extract worst verdict for the output variable.
         VERDICT="PASS"
         if command -v jq &>/dev/null && [ -f "$SA_RESULTS_FILE" ]; then
-          VERDICT=$(jq -r '[.results[].verdict] | if any(. == "FAIL") then "FAIL" elif any(. == "REVIEW") then "REVIEW" else "PASS" end' "$SA_RESULTS_FILE" 2>/dev/null || echo "PASS")
+          VERDICT=$(jq -r '.summary.verdict // "PASS"' "$SA_RESULTS_FILE" 2>/dev/null || echo "PASS")
         fi
 
         echo "results-file=$SA_RESULTS_FILE" >> "$GITHUB_OUTPUT"

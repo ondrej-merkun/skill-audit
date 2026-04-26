@@ -208,10 +208,26 @@ Six rule IDs trigger **mandatory FAIL** regardless of score:
 
 ## Use as a GitHub Action
 
+The root `action.yml` in this repository is the supported GitHub Action. Pin
+released workflows to a tag such as `v1`; use `@main` only when testing the
+current development branch.
+
 ```yaml
-- uses: ondrejmerkun/skillaudit-action@v1
-  with:
-    fail-on: REVIEW   # optional, default: FAIL
+name: Skill audit
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  scan-skills:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ondrejmerkun/skillaudit@v1
+        with:
+          fail-on: REVIEW
+          offline: true
 ```
 
 ---
