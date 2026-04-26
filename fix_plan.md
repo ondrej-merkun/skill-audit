@@ -375,7 +375,7 @@ at the bottom and the loop will stop.
   - Keep malicious fixtures for "ignore previous instructions", "disregard
     prior context", and unrestricted role-hijack prompts.
 
-- [ ] **11** Tighten `PI-PRIV-ESCALATE-INSTRUCTION` to distinguish security
+- [x] **11** Tighten `PI-PRIV-ESCALATE-INSTRUCTION` to distinguish security
   review text from privilege-escalation directives.
 
   Real scan output flagged checklists and docs such as "could an authenticated
