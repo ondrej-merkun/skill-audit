@@ -316,7 +316,7 @@ describe('runScan flag wiring', () => {
     await runScan({});
 
     expect(enrichAll).toHaveBeenCalledWith(expect.any(Array), {
-      sources: ['skillsSh', 'depsdev'],
+      sources: ['skillsSh', 'github', 'depsdev'],
     });
   });
 
@@ -335,7 +335,7 @@ describe('runScan flag wiring', () => {
     expect(stdout).not.toContain('Scanning skills');
     expect(stderr).toContain('Scanning skills 1/2');
     expect(stderr).toContain('Scanning skills 2/2');
-    expect(stderr).toContain('Enriching with skills.sh, deps.dev');
+    expect(stderr).toContain('Enriching with skills.sh, github, deps.dev');
   });
 
   it('default scan explains when selected enrichment sources find no metadata', async () => {

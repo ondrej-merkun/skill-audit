@@ -111,7 +111,7 @@ For the full security boundary, see [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.m
 | Command or mode | Local reads | Network by default | What may be sent |
 |---|---|---|---|
 | `skill-audit list` | Skill paths and manifests for discovery | No | Nothing |
-| `skill-audit scan` | Skill contents and dependency manifests | `skills.sh`, `deps.dev` when metadata exists | GitHub repository slug for `skills.sh`; dependency package names for `deps.dev` |
+| `skill-audit scan` | Skill contents and dependency manifests | `skills.sh`, GitHub, `deps.dev` when metadata exists | GitHub repository slug, dependency package names; `GITHUB_TOKEN` is used only as an API token if set |
 | `skill-audit scan --summary` | Skill contents | No | Nothing |
 | `skill-audit scan --json` | Skill contents and dependency manifests | `skills.sh`, GitHub, `deps.dev` when metadata exists | GitHub repository slug, dependency package names; `GITHUB_TOKEN` is used only as an API token if set |
 | `skill-audit scan --html <file>` | Skill contents and dependency manifests | `skills.sh`, GitHub, `deps.dev` when metadata exists | GitHub repository slug, dependency package names; `GITHUB_TOKEN` is used only as an API token if set |

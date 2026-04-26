@@ -79,6 +79,14 @@ function enrichmentDetails(skill: ScannedSkill): string {
     parts.push(`Gen=${skillsSh.gen}`, `Socket=${skillsSh.socketAlerts}`, `Snyk=${skillsSh.snyk}`);
   }
 
+  const github = skill.enrichment.github;
+  if (github !== undefined) {
+    const starLabel = github.stars === 1 ? '1 star' : `${github.stars} stars`;
+    const contributorLabel =
+      github.contributors === 1 ? '1 contributor' : `${github.contributors} contributors`;
+    parts.push(`GitHub=${starLabel}`, contributorLabel);
+  }
+
   const depsdev = skill.enrichment.depsdev;
   if (depsdev !== undefined) {
     const advisoryLabel =

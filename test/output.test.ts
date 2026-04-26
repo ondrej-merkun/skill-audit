@@ -342,13 +342,13 @@ describe('renderTableToString', () => {
     expect(out).not.toContain('ENRICHMENT');
   });
 
-  it('does not show GitHub enrichment in the default table enrichment column', () => {
+  it('shows GitHub enrichment in the default table enrichment column', () => {
     const result = makeScanResult({
       skills: [makeSkill({ enrichment: { github: { stars: 10, ageDays: 20, contributors: 3 } } })],
     });
     const out = stripAnsi(renderTableToString(result));
-    expect(out).not.toContain('10 stars');
-    expect(out).not.toContain('contributors');
+    expect(out).toContain('GitHub=10 stars');
+    expect(out).toContain('3 contributors');
   });
 
   it('sorts FAIL rows before REVIEW and PASS', () => {

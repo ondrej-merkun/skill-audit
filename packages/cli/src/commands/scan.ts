@@ -81,7 +81,7 @@ export function selectScanEnrichmentSources(
 ): EnrichmentSource[] {
   if (options.summary) return [];
   if (options.json || options.html !== undefined) return ['skillsSh', 'github', 'depsdev'];
-  return ['skillsSh', 'depsdev'];
+  return ['skillsSh', 'github', 'depsdev'];
 }
 
 function renderScanPayload(
