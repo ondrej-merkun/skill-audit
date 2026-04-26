@@ -804,6 +804,13 @@ at the bottom and the loop will stop.
   `ondrej-merkun/skill-audit` with admin permission, but still exposes no
   repository-topics write endpoint. Local `gh` remains blocked by an invalid
   token and `api.github.com` connection failure.
+  Reconfirmed (2026-04-27): `tool_search` still exposes no repository-topics
+  write endpoint. The GitHub connector can read canonical repo metadata for
+  `ondrej-merkun/skill-audit` with admin permission, but cannot update topics.
+  Local `gh repo view ondrej-merkun/skill-audit --json nameWithOwner,repositoryTopics`
+  and `gh repo edit ondrej-merkun/skill-audit --add-topic ...` both fail with
+  `error connecting to api.github.com`; `gh auth status` still reports the
+  configured `ondrej-merkun` token is invalid.
 
 - [ ] **36** Add a repository social preview asset.
 
