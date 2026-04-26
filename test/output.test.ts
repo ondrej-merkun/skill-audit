@@ -419,6 +419,52 @@ describe('renderSummaryFooter', () => {
     expect(out).toContain('Unique issues');
   });
 
+  it('counts unique issue severity buckets by affected skill', () => {
+    const criticalAndHighSkill = makeSkill({
+      name: 'multi-finding',
+      findings: [
+        { ...makeFinding('critical'), ruleId: 'CRITICAL-RULE' },
+        { ...makeFinding('high'), ruleId: 'HIGH-RULE' },
+      ],
+      summary: {
+        critical: 1,
+        high: 1,
+        medium: 0,
+        low: 0,
+        info: 0,
+        score: 65,
+        verdict: 'REVIEW',
+        mandatoryFail: [],
+        allowlisted: false,
+      },
+    });
+    const mediumSkill = makeSkill({
+      name: 'medium-only',
+      findings: [{ ...makeFinding('medium'), ruleId: 'MEDIUM-RULE' }],
+      summary: {
+        critical: 0,
+        high: 0,
+        medium: 1,
+        low: 0,
+        info: 0,
+        score: 97,
+        verdict: 'PASS',
+        mandatoryFail: [],
+        allowlisted: false,
+      },
+    });
+    const result = makeScanResult({
+      skills: [criticalAndHighSkill, mediumSkill],
+      summary: { skillsScanned: 2, compromised: 0, percentCompromised: 0, verdict: 'REVIEW' },
+    });
+
+    const footer = stripAnsi(renderSummaryFooter(result, result.skills));
+    expect(footer).toContain('Unique issues............. 2  (1 critical, 0 high, 1 medium, 0 low)');
+
+    const compact = stripAnsi(renderSummaryCompact(result));
+    expect(compact).toContain('1 critical · 0 high · 1 medium · 0 low');
+  });
+
   it('shows compromised count when non-zero', () => {
     const failSkill = makeSkill({
       summary: {

@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { formatCompromisedPercent } from '../percent.js';
-import type { ScanResult, ScannedSkill } from '../types.js';
+import type { ScanResult, ScannedSkill, Severity } from '../types.js';
 import { sortScanSkills } from './sort.js';
 
 const C_CRITICAL = chalk.hex('#FF4444');
@@ -9,21 +9,70 @@ const C_MEDIUM = chalk.hex('#FFD700');
 const C_PASS = chalk.hex('#4EC9B0');
 const C_GREY = chalk.hex('#8B8B8B');
 
+const SEVERITY_RANK: Record<Severity, number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+  info: 4,
+};
+
 function findingsStats(skills: ScannedSkill[]): {
-  uniqueRules: number;
+  affectedSkills: number;
   crit: number;
   high: number;
   med: number;
   low: number;
+  info: number;
 } {
-  const allFindings = skills.flatMap((s) => s.findings);
-  return {
-    uniqueRules: new Set(allFindings.map((f) => f.ruleId)).size,
-    crit: allFindings.filter((f) => f.severity === 'critical').length,
-    high: allFindings.filter((f) => f.severity === 'high').length,
-    med: allFindings.filter((f) => f.severity === 'medium').length,
-    low: allFindings.filter((f) => f.severity === 'low').length,
+  const stats = {
+    affectedSkills: 0,
+    crit: 0,
+    high: 0,
+    med: 0,
+    low: 0,
+    info: 0,
   };
+
+  for (const skill of skills) {
+    if (skill.findings.length === 0) continue;
+    stats.affectedSkills += 1;
+    const highestSeverity = skill.findings.reduce<Severity>(
+      (highest, finding) =>
+        SEVERITY_RANK[finding.severity] < SEVERITY_RANK[highest] ? finding.severity : highest,
+      skill.findings[0]?.severity ?? 'info'
+    );
+
+    if (highestSeverity === 'critical') stats.crit += 1;
+    else if (highestSeverity === 'high') stats.high += 1;
+    else if (highestSeverity === 'medium') stats.med += 1;
+    else if (highestSeverity === 'low') stats.low += 1;
+    else stats.info += 1;
+  }
+
+  return stats;
+}
+
+function severityBreakdown(stats: ReturnType<typeof findingsStats>): string {
+  const parts = [
+    C_CRITICAL(`${stats.crit} critical`),
+    C_HIGH(`${stats.high} high`),
+    C_MEDIUM(`${stats.med} medium`),
+    `${stats.low} low`,
+  ];
+  if (stats.info > 0) parts.push(`${stats.info} info`);
+  return parts.join(', ');
+}
+
+function compactSeverityBreakdown(stats: ReturnType<typeof findingsStats>): string {
+  const parts = [
+    C_CRITICAL(`${stats.crit} critical`),
+    C_HIGH(`${stats.high} high`),
+    C_MEDIUM(`${stats.med} medium`),
+    `${stats.low} low`,
+  ];
+  if (stats.info > 0) parts.push(`${stats.info} info`);
+  return parts.join(' · ');
 }
 
 function enrichmentLine(skills: ScannedSkill[]): string | null {
@@ -50,16 +99,14 @@ export function renderSummaryFooter(
 ): string {
   const riskOrderedSkills = sortScanSkills(orderedSkills);
   const { scan, summary } = result;
-  const { uniqueRules, crit, high, med, low } = findingsStats(riskOrderedSkills);
+  const stats = findingsStats(riskOrderedSkills);
   const label = (s: string): string => s.padEnd(26, '.');
   const durationFull = (scan.durationMs / 1000).toFixed(2);
   const lines: string[] = [];
 
   lines.push(`  ── Scan summary ${'─'.repeat(Math.max(0, boxWidth - 18))}`);
   lines.push(`  ${label('Skills scanned')} ${summary.skillsScanned}`);
-  lines.push(
-    `  ${label('Unique issues')} ${uniqueRules}  (${C_CRITICAL(`${crit} critical`)}, ${C_HIGH(`${high} high`)}, ${C_MEDIUM(`${med} medium`)}, ${low} low)`
-  );
+  lines.push(`  ${label('Unique issues')} ${stats.affectedSkills}  (${severityBreakdown(stats)})`);
 
   const compromisedStr =
     summary.compromised > 0
@@ -99,7 +146,7 @@ export function renderSummaryFooter(
  */
 export function renderSummaryCompact(result: ScanResult): string {
   const { scan, summary, skills } = result;
-  const { crit, high, med, low } = findingsStats(skills);
+  const stats = findingsStats(skills);
   const verdictColored =
     summary.verdict === 'FAIL'
       ? C_CRITICAL(summary.verdict)
@@ -114,7 +161,7 @@ export function renderSummaryCompact(result: ScanResult): string {
 
   const lines = [
     `${summary.skillsScanned} skills · ${compromisedPart} · ${verdictColored}`,
-    `${C_CRITICAL(`${crit} critical`)} · ${C_HIGH(`${high} high`)} · ${C_MEDIUM(`${med} medium`)} · ${low} low`,
+    compactSeverityBreakdown(stats),
     `Scanned in ${(scan.durationMs / 1000).toFixed(2)}s`,
   ];
   return `${lines.join('\n')}\n`;
