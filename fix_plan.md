@@ -686,7 +686,7 @@ at the bottom and the loop will stop.
   - Show an actual supported command and current output shape.
   - Verify the referenced file exists before committing the README change.
 
-- [ ] **28** Resolve the GitHub Action packaging and usage path.
+- [x] **28** Resolve the GitHub Action packaging and usage path.
 
   Decide whether the root `action.yml` is the supported action in this
   repository or whether a separate wrapper repository is required. Make the
