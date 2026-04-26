@@ -178,7 +178,7 @@ at the bottom and the loop will stop.
   - Verify the built `node packages/cli/dist/index.js explain <skill>` output
     is readable against a fixture or discovered skill.
 
-- [ ] **8** Add nicer live progress for discovery and scanning.
+- [x] **8** Add nicer live progress for discovery and scanning.
 
   Skill discovery and scan execution should show more real-time, user-friendly
   progress so long runs feel alive and users can tell which phase the CLI is in.
