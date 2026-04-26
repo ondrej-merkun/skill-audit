@@ -327,6 +327,23 @@ describe('e2e: scan flags', () => {
     expect(result.skills.length).toBe(1);
   });
 
+  it('-o writes JSON output to a file without duplicating it to stdout', async () => {
+    await cp(join(BENIGN_DIR, 'date-parser'), join(skillsDir, 'date-parser'), { recursive: true });
+
+    const outputPath = join(tempCwd, 'skillaudit-report.json');
+    const env = { HOME: tempHome, USERPROFILE: tempHome, SKILLAUDIT_CWD: tempCwd };
+    const { stdout, code } = await runCli(
+      ['scan', '--json', '-o', outputPath, '--offline', '--agent', 'claude-code'],
+      env
+    );
+
+    expect(code).toBe(0);
+    expect(stdout).toBe('');
+    const result = JSON.parse(await readFile(outputPath, 'utf-8')) as JsonOutput;
+    expect(result.schema_version).toBe('1.0');
+    expect(result.skills).toHaveLength(1);
+  });
+
   it('--strict is accepted as a flag without tool error', async () => {
     await cp(join(BENIGN_DIR, 'date-parser'), join(skillsDir, 'date-parser'), { recursive: true });
 

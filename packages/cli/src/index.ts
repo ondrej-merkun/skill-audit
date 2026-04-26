@@ -20,6 +20,7 @@ program
   .option('--json', 'emit JSON to stdout instead of TUI table')
   .option('--summary', 'emit compact one-liner summary instead of full table')
   .option('--html <file>', 'write standalone HTML report to <file>')
+  .option('-o, --output <file>', 'write selected non-HTML scan output to <file>')
   .option('--offline', 'skip network enrichment calls')
   .option('--strict', 'treat REVIEW band as FAIL for exit code purposes')
   .option('--agent <id>', 'restrict scan to a single agent (e.g. claude-code, cursor)')
@@ -34,6 +35,7 @@ program
       json: cmdOpts.json === true,
       summary: cmdOpts.summary === true,
       html: typeof cmdOpts.html === 'string' ? cmdOpts.html : undefined,
+      output: typeof cmdOpts.output === 'string' ? cmdOpts.output : undefined,
       offline: cmdOpts.offline === true,
       strict: cmdOpts.strict === true,
       agent: typeof cmdOpts.agent === 'string' ? cmdOpts.agent : undefined,

@@ -1,6 +1,9 @@
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import stripAnsi from './helpers/strip-ansi.js';
-import type { ScannedSkill, Skill } from '../packages/cli/src/types.js';
+import type { Skill } from '../packages/cli/src/types.js';
 
 // Mock discovery and rules engine before importing runScan
 vi.mock('../packages/cli/src/discovery/index.js', () => ({
@@ -31,11 +34,21 @@ function makeSkill(overrides: Partial<Skill> = {}): Skill {
   };
 }
 
+async function withTempDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
+  const dir = await mkdtemp(join(tmpdir(), 'skillaudit-scan-options-'));
+  try {
+    return await fn(dir);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
 describe('runScan flag wiring', () => {
   let stdoutChunks: string[];
   let stderrChunks: string[];
 
   beforeEach(() => {
+    vi.clearAllMocks();
     stdoutChunks = [];
     stderrChunks = [];
     vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
@@ -76,6 +89,72 @@ describe('runScan flag wiring', () => {
     await runScan({ json: true, summary: true });
     const out = stdoutChunks.join('');
     expect(() => JSON.parse(out)).not.toThrow();
+  });
+
+  it('--json --output writes JSON to a file and suppresses stdout payload', async () => {
+    await withTempDir(async (dir) => {
+      vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+      const output = join(dir, 'report.json');
+
+      await runScan({ json: true, output, offline: true });
+
+      expect(stdoutChunks.join('')).toBe('');
+      const json = JSON.parse(await readFile(output, 'utf-8'));
+      expect(json.schema_version).toBe('1.0');
+      expect(json.skills).toHaveLength(1);
+    });
+  });
+
+  it('--summary --output writes compact summary to a file and suppresses stdout payload', async () => {
+    await withTempDir(async (dir) => {
+      vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+      const output = join(dir, 'summary.txt');
+
+      await runScan({ summary: true, output, offline: true });
+
+      expect(stdoutChunks.join('')).toBe('');
+      const out = await readFile(output, 'utf-8');
+      expect(out).toContain('skills');
+      expect(out).toMatch(/PASS|REVIEW|FAIL/);
+      expect(out).not.toMatch(/\u001b\[/);
+    });
+  });
+
+  it('--output writes default table output to a file without ANSI and suppresses stdout payload', async () => {
+    await withTempDir(async (dir) => {
+      vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+      const output = join(dir, 'report.txt');
+
+      await runScan({ output, offline: true });
+
+      expect(stdoutChunks.join('')).toBe('');
+      const out = await readFile(output, 'utf-8');
+      expect(out).toContain('skillaudit');
+      expect(out).toContain('AGENT');
+      expect(out).not.toMatch(/\u001b\[/);
+    });
+  });
+
+  it('--html with --json still writes HTML and emits JSON to stdout', async () => {
+    await withTempDir(async (dir) => {
+      vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+      const html = join(dir, 'report.html');
+
+      await runScan({ html, json: true, offline: true });
+
+      expect(() => JSON.parse(stdoutChunks.join(''))).not.toThrow();
+      expect(await readFile(html, 'utf-8')).toContain('<html');
+    });
+  });
+
+  it('--html plus --output exits 2 with a clear usage error', async () => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as never);
+
+    await runScan({ html: 'report.html', output: 'report.txt' });
+
+    expect(exitSpy).toHaveBeenCalledWith(2);
+    expect(stripAnsi(stderrChunks.join(''))).toContain('cannot combine --html and --output');
+    expect(discoverAll).not.toHaveBeenCalled();
   });
 
   it('--agent filters to matching agent only', async () => {

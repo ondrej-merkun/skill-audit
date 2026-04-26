@@ -65,6 +65,7 @@ skillaudit --version
 
 ```bash
 skillaudit scan               # scan all discovered skills (default)
+skillaudit scan --json -o skillaudit-report.json  # write JSON report to file
 skillaudit list               # list all skills without scanning
 skillaudit explain <name>     # full detail view for one skill
 skillaudit ignore <name>      # add a skill's treeSha256 to your ignore list
@@ -77,6 +78,7 @@ skillaudit ignore <name>      # add a skill's treeSha256 to your ignore list
 | `--json` | Emit machine-readable JSON (schema v1.0) |
 | `--summary` | One-line summary footer only |
 | `--agent <id>` | Restrict to one agent (`claude-code`, `cursor`, `copilot`, `cross-agent`) |
+| `-o, --output <file>` | Write the selected non-HTML scan output to file |
 | `--offline` | Skip enrichment — no network calls at all |
 | `--strict` | Treat REVIEW as FAIL for exit-code purposes |
 | `--fail-on <band>` | Override exit-code threshold (`PASS`, `REVIEW`, `FAIL`) |

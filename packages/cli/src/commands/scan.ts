@@ -1,12 +1,13 @@
 import { writeFile } from 'node:fs/promises';
+import { stripVTControlCharacters } from 'node:util';
 import ora from 'ora';
 import { loadIgnoreList } from '../allowlist/ignore.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
 import { enrichAll } from '../enrich/index.js';
 import { renderHtml } from '../output/html.js';
 import { renderJson } from '../output/json.js';
-import { renderSummary } from '../output/summary.js';
-import { renderTable } from '../output/table.js';
+import { renderSummaryCompact } from '../output/summary.js';
+import { renderTableToString } from '../output/table.js';
 import { runRules } from '../rules/engine.js';
 import { ALL_RULES } from '../rules/index.js';
 import { scoreFindings } from '../score.js';
@@ -32,6 +33,7 @@ export type ScanOptions = {
   json: boolean;
   summary: boolean;
   html: string | undefined;
+  output: string | undefined;
   offline: boolean;
   strict: boolean;
   agent: string | undefined;
@@ -43,6 +45,7 @@ const DEFAULT_OPTIONS: ScanOptions = {
   json: false,
   summary: false,
   html: undefined,
+  output: undefined,
   offline: false,
   strict: false,
   agent: undefined,
@@ -53,6 +56,19 @@ const DEFAULT_OPTIONS: ScanOptions = {
 const DEEP_MODE_MESSAGE =
   'Deep mode coming soon. LLM-assisted semantic analysis will be opt-in and local via Ollama.';
 const SCAN_CONCURRENCY = 8;
+
+function renderScanPayload(
+  result: ScanResult,
+  options: Pick<ScanOptions, 'json' | 'summary'>
+): string {
+  if (options.json) {
+    return `${renderJson(result)}\n`;
+  }
+  if (options.summary) {
+    return renderSummaryCompact(result);
+  }
+  return renderTableToString(result);
+}
 
 async function mapWithConcurrency<T, R>(
   items: T[],
@@ -79,6 +95,14 @@ async function mapWithConcurrency<T, R>(
 
 export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   const options: ScanOptions = { ...DEFAULT_OPTIONS, ...opts };
+
+  if (options.html !== undefined && options.output !== undefined) {
+    process.stderr.write(
+      '[skillaudit] cannot combine --html and --output; choose one destination\n'
+    );
+    process.exit(2);
+    return; // unreachable in production; allows mocked exit in tests
+  }
 
   if (options.deep) {
     process.stderr.write(`${DEEP_MODE_MESSAGE}\n`);
@@ -229,17 +253,15 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     const htmlOut = renderHtml(result);
     await writeFile(options.html, htmlOut, 'utf-8');
     process.stderr.write(`[skillaudit] HTML report written to ${options.html}\n`);
-    // Also render the table to stdout unless --json or --summary
-    if (!options.json && !options.summary) {
-      renderTable(result);
+    process.stdout.write(renderScanPayload(result, options));
+  } else {
+    const payload = renderScanPayload(result, options);
+    if (options.output !== undefined) {
+      await writeFile(options.output, stripVTControlCharacters(payload), 'utf-8');
+      process.stderr.write(`[skillaudit] report written to ${options.output}\n`);
+    } else {
+      process.stdout.write(payload);
     }
-  }
-  if (options.json) {
-    process.stdout.write(`${renderJson(result)}\n`);
-  } else if (options.summary) {
-    renderSummary(result);
-  } else if (options.html === undefined) {
-    renderTable(result);
   }
 
   const exitOpts: { failOn?: string; strict?: boolean } = {};
