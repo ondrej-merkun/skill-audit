@@ -6,6 +6,7 @@ import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/inde
 import { enrichAll } from '../enrich/index.js';
 import { renderHtml } from '../output/html.js';
 import { renderJson } from '../output/json.js';
+import { sortScanSkills } from '../output/sort.js';
 import { renderSummaryCompact } from '../output/summary.js';
 import { renderTableToString } from '../output/table.js';
 import { runRules } from '../rules/engine.js';
@@ -228,7 +229,8 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     skillsScanned: count,
   }));
 
-  const activeSkills = scannedSkills.filter((s) => !s.ignored);
+  const sortedScannedSkills = sortScanSkills(scannedSkills);
+  const activeSkills = sortedScannedSkills.filter((s) => !s.ignored);
   const compromised = activeSkills.filter((s) => s.summary.verdict === 'FAIL').length;
   const overallVerdict = activeSkills.some((s) => s.summary.verdict === 'FAIL')
     ? 'FAIL'
@@ -240,7 +242,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     schemaVersion: '1.0',
     scan: { startedAt, durationMs, toolVersion: TOOL_VERSION },
     agents,
-    skills: scannedSkills,
+    skills: sortedScannedSkills,
     summary: {
       skillsScanned: toScan.length,
       compromised,

@@ -1,6 +1,5 @@
 import type { ScanResult, ScannedSkill } from '../types.js';
-
-const VERDICT_ORDER: Record<string, number> = { FAIL: 0, REVIEW: 1, PASS: 2 };
+import { sortScanSkills } from './sort.js';
 
 function escapeHtml(s: string): string {
   return s
@@ -44,12 +43,7 @@ function redactPaths(skills: ScannedSkill[]): ScannedSkill[] {
 }
 
 export function renderHtml(result: ScanResult): string {
-  const sorted = [...result.skills].sort((a, b) => {
-    const av = VERDICT_ORDER[a.summary.verdict] ?? 3;
-    const bv = VERDICT_ORDER[b.summary.verdict] ?? 3;
-    if (av !== bv) return av - bv;
-    return a.summary.score - b.summary.score;
-  });
+  const sorted = sortScanSkills(result.skills);
 
   const agentIds = [...new Set(result.agents.map((a) => a.id))];
 

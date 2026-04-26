@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
-import type { ScanResult, ScannedSkill, Verdict } from '../types.js';
+import type { ScanResult, ScannedSkill } from '../types.js';
+import { sortScanSkills } from './sort.js';
 import { renderSummaryFooter } from './summary.js';
 
 const C_CRITICAL = chalk.hex('#FF4444');
@@ -70,11 +71,6 @@ function topIssue(skill: ScannedSkill): string {
   return ruleLabel;
 }
 
-function sortedByVerdict(skills: ScannedSkill[]): ScannedSkill[] {
-  const order: Record<Verdict, number> = { FAIL: 0, REVIEW: 1, PASS: 2 };
-  return [...skills].sort((a, b) => order[a.summary.verdict] - order[b.summary.verdict]);
-}
-
 export function renderTableToString(result: ScanResult): string {
   const { skills, scan, agents, summary } = result;
   const agentCount = agents.length;
@@ -105,7 +101,7 @@ export function renderTableToString(result: ScanResult): string {
   ];
 
   // ── Rows ──────────────────────────────────────────────────────────────
-  const ordered = sortedByVerdict(skills);
+  const ordered = sortScanSkills(skills);
   const shown = ordered.slice(0, MAX_ROWS);
   const extra = ordered.length - shown.length;
 

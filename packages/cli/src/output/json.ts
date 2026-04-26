@@ -1,4 +1,5 @@
 import type { Enrichment, Finding, ScanResult, ScannedSkill } from '../types.js';
+import { sortScanSkills } from './sort.js';
 
 function serializeFinding(f: Finding): object {
   return {
@@ -74,7 +75,7 @@ export function renderJson(result: ScanResult): string {
       installed: a.installed,
       skills_scanned: a.skillsScanned,
     })),
-    skills: result.skills.map(serializeSkill),
+    skills: sortScanSkills(result.skills).map(serializeSkill),
     summary: {
       skills_scanned: result.summary.skillsScanned,
       compromised: result.summary.compromised,

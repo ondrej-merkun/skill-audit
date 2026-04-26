@@ -76,6 +76,124 @@ describe('runScan flag wiring', () => {
     expect(Array.isArray(json.skills)).toBe(true);
   });
 
+  it('--json emits scanned skills in risk-first order', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({ id: 'pass-clean', name: 'pass-clean', path: '/tmp/pass-clean' }),
+      makeSkill({ id: 'fail-score-75', name: 'fail-score-75', path: '/tmp/fail-score-75' }),
+      makeSkill({ id: 'review-score-50', name: 'review-score-50', path: '/tmp/review-score-50' }),
+      makeSkill({ id: 'fail-score-0', name: 'fail-score-0', path: '/tmp/fail-score-0' }),
+    ]);
+    vi.mocked(runRules).mockImplementation(async (path) => {
+      if (path === '/tmp/fail-score-0') {
+        return [
+          {
+            ruleId: 'NET-EXFIL-ENV',
+            severity: 'critical',
+            category: 'network-exfil',
+            file: 'SKILL.md',
+            line: 1,
+            column: 1,
+            snippet: 'exfil env',
+            message: 'Env var exfiltrated via network.',
+            fix: 'Remove exfiltration.',
+            cwe: ['CWE-200'],
+          },
+          {
+            ruleId: 'PI-EXFIL-TRIGGER-CLAUSE',
+            severity: 'critical',
+            category: 'prompt-injection',
+            file: 'SKILL.md',
+            line: 2,
+            column: 1,
+            snippet: 'trigger exfil',
+            message: 'Trigger exfiltration.',
+            fix: 'Remove exfiltration.',
+            cwe: ['CWE-200'],
+          },
+          {
+            ruleId: 'OBFS-EVAL-ATOB',
+            severity: 'critical',
+            category: 'obfuscation',
+            file: 'index.js',
+            line: 3,
+            column: 1,
+            snippet: 'eval(atob(x))',
+            message: 'Obfuscated eval.',
+            fix: 'Remove eval.',
+            cwe: ['CWE-94'],
+          },
+          {
+            ruleId: 'SEC-HARDCODED-KEY',
+            severity: 'high',
+            category: 'secrets',
+            file: 'config.py',
+            line: 4,
+            column: 1,
+            snippet: 'key',
+            message: 'Hardcoded key.',
+            fix: 'Use secret storage.',
+            cwe: ['CWE-798'],
+          },
+        ];
+      }
+      if (path === '/tmp/fail-score-75') {
+        return [
+          {
+            ruleId: 'NET-EXFIL-ENV',
+            severity: 'critical',
+            category: 'network-exfil',
+            file: 'SKILL.md',
+            line: 1,
+            column: 1,
+            snippet: 'exfil env',
+            message: 'Env var exfiltrated via network.',
+            fix: 'Remove exfiltration.',
+            cwe: ['CWE-200'],
+          },
+        ];
+      }
+      if (path === '/tmp/review-score-50') {
+        return [
+          {
+            ruleId: 'PI-OVERRIDE',
+            severity: 'critical',
+            category: 'prompt-injection',
+            file: 'SKILL.md',
+            line: 1,
+            column: 1,
+            snippet: 'ignore previous instructions',
+            message: 'Instruction override.',
+            fix: 'Remove override instructions.',
+            cwe: ['CWE-1427'],
+          },
+          {
+            ruleId: 'PI-JAILBREAK',
+            severity: 'critical',
+            category: 'prompt-injection',
+            file: 'SKILL.md',
+            line: 2,
+            column: 1,
+            snippet: 'developer mode',
+            message: 'Jailbreak instruction.',
+            fix: 'Remove jailbreak instructions.',
+            cwe: ['CWE-1427'],
+          },
+        ];
+      }
+      return [];
+    });
+
+    await runScan({ json: true, offline: true });
+
+    const json = JSON.parse(stdoutChunks.join(''));
+    expect(json.skills.map((s: { name: string }) => s.name)).toEqual([
+      'fail-score-0',
+      'review-score-50',
+      'fail-score-75',
+      'pass-clean',
+    ]);
+  });
+
   it('--summary emits compact summary line to stdout', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     await runScan({ summary: true });

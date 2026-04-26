@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import type { ScanResult, ScannedSkill } from '../types.js';
+import { sortScanSkills } from './sort.js';
 
 const C_CRITICAL = chalk.hex('#FF4444');
 const C_HIGH = chalk.hex('#FF8C00');
@@ -36,15 +37,17 @@ function enrichmentLine(skills: ScannedSkill[]): string | null {
 
 /**
  * Renders the detailed scan-summary footer (used by the TUI table and --summary).
- * orderedSkills must be sorted FAIL-first so next-command suggestions pick the worst skill.
+ * orderedSkills may already be sorted by the caller; this function re-sorts with the shared
+ * risk order so next-command suggestions always pick the worst skill.
  */
 export function renderSummaryFooter(
   result: ScanResult,
   orderedSkills: ScannedSkill[],
   boxWidth = 82
 ): string {
+  const riskOrderedSkills = sortScanSkills(orderedSkills);
   const { scan, summary } = result;
-  const { uniqueRules, crit, high, med, low } = findingsStats(orderedSkills);
+  const { uniqueRules, crit, high, med, low } = findingsStats(riskOrderedSkills);
   const label = (s: string): string => s.padEnd(26, '.');
   const durationFull = (scan.durationMs / 1000).toFixed(2);
   const lines: string[] = [];
@@ -61,7 +64,7 @@ export function renderSummaryFooter(
       : '0';
   lines.push(`  ${label('Compromised skills')} ${compromisedStr}`);
 
-  const enrich = enrichmentLine(orderedSkills);
+  const enrich = enrichmentLine(riskOrderedSkills);
   if (enrich) {
     lines.push(`  ${label('Enrichment')} ${enrich}`);
   }
@@ -69,8 +72,8 @@ export function renderSummaryFooter(
   lines.push(`  ${label('Duration')} ${durationFull}s`);
   lines.push('');
 
-  const firstFail = orderedSkills.find((s) => s.summary.verdict === 'FAIL');
-  const firstReview = orderedSkills.find((s) => s.summary.verdict === 'REVIEW');
+  const firstFail = riskOrderedSkills.find((s) => s.summary.verdict === 'FAIL');
+  const firstReview = riskOrderedSkills.find((s) => s.summary.verdict === 'REVIEW');
   const highlight = firstFail ?? firstReview;
   if (highlight) {
     lines.push(`  →  skillaudit explain ${highlight.name}    ${C_GREY('See full findings')}`);

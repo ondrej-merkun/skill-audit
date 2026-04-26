@@ -7,6 +7,7 @@ import {
   renderSummary,
 } from '../packages/cli/src/output/summary.js';
 import { renderJson } from '../packages/cli/src/output/json.js';
+import { sortScanSkills } from '../packages/cli/src/output/sort.js';
 import type { ScanResult, ScannedSkill } from '../packages/cli/src/types.js';
 
 function makeSkill(overrides: Partial<ScannedSkill> = {}): ScannedSkill {
@@ -51,6 +52,78 @@ function makeScanResult(overrides: Partial<ScanResult> = {}): ScanResult {
     ...overrides,
   };
 }
+
+function makeFinding(severity: ScannedSkill['findings'][number]['severity']) {
+  return {
+    ruleId: `RULE-${severity.toUpperCase()}`,
+    severity,
+    category: 'test',
+    file: 'SKILL.md',
+    line: 1,
+    column: 1,
+    snippet: severity,
+    message: `${severity} finding`,
+    fix: 'Fix it.',
+    cwe: [],
+  };
+}
+
+function makeRiskSkill(
+  name: string,
+  score: number,
+  verdict: ScannedSkill['summary']['verdict'],
+  severity?: ScannedSkill['findings'][number]['severity'],
+  agentId = 'claude-code'
+): ScannedSkill {
+  const findings = severity === undefined ? [] : [makeFinding(severity)];
+  return makeSkill({
+    id: name,
+    name,
+    agentId,
+    path: `/tmp/${name}`,
+    findings,
+    summary: {
+      critical: severity === 'critical' ? 1 : 0,
+      high: severity === 'high' ? 1 : 0,
+      medium: severity === 'medium' ? 1 : 0,
+      low: severity === 'low' ? 1 : 0,
+      info: severity === 'info' ? 1 : 0,
+      score,
+      verdict,
+      mandatoryFail: verdict === 'FAIL' ? ['RULE'] : [],
+      allowlisted: false,
+    },
+  });
+}
+
+function riskFixtureSkills(): ScannedSkill[] {
+  return [
+    makeRiskSkill('pass-clean', 100, 'PASS'),
+    makeRiskSkill('fail-score-40', 40, 'FAIL', 'high'),
+    makeRiskSkill('review-score-50', 50, 'REVIEW', 'critical'),
+    makeRiskSkill('fail-score-0', 0, 'FAIL', 'medium'),
+  ];
+}
+
+describe('sortScanSkills', () => {
+  it('orders skills by score, verdict, highest finding severity, then identity', () => {
+    const skills = [
+      makeRiskSkill('zeta', 50, 'REVIEW', 'low', 'cursor'),
+      makeRiskSkill('alpha', 0, 'FAIL', 'medium'),
+      makeRiskSkill('beta-high', 50, 'REVIEW', 'high'),
+      makeRiskSkill('beta-critical', 50, 'REVIEW', 'critical'),
+      makeRiskSkill('agent-a', 50, 'REVIEW', 'critical', 'agents-md'),
+    ];
+
+    expect(sortScanSkills(skills).map((s) => s.name)).toEqual([
+      'alpha',
+      'agent-a',
+      'beta-critical',
+      'beta-high',
+      'zeta',
+    ]);
+  });
+});
 
 describe('renderTableToString', () => {
   it('includes skill count and agent count in header', () => {
@@ -220,6 +293,21 @@ describe('renderTableToString', () => {
     expect(failIdx).toBeLessThan(passIdx);
   });
 
+  it('sorts rows by risk-first score instead of verdict alone', () => {
+    const out = stripAnsi(
+      renderTableToString(
+        makeScanResult({
+          skills: riskFixtureSkills(),
+          summary: { skillsScanned: 4, compromised: 2, percentCompromised: 50, verdict: 'FAIL' },
+        })
+      )
+    );
+
+    expect(out.indexOf('fail-score-0')).toBeLessThan(out.indexOf('fail-score-40'));
+    expect(out.indexOf('fail-score-40')).toBeLessThan(out.indexOf('review-score-50'));
+    expect(out.indexOf('review-score-50')).toBeLessThan(out.indexOf('pass-clean'));
+  });
+
   it('shows compromised count in summary', () => {
     const result = makeScanResult({
       skills: [
@@ -332,6 +420,21 @@ describe('renderSummaryFooter', () => {
     const out = stripAnsi(renderSummaryFooter(result, [failSkill]));
     expect(out).toContain('skillaudit explain risky-skill');
     expect(out).toContain('skillaudit --html report.html');
+  });
+
+  it('uses the highest-risk skill for next-command suggestions', () => {
+    const out = stripAnsi(
+      renderSummaryFooter(
+        makeScanResult({
+          skills: riskFixtureSkills(),
+          summary: { skillsScanned: 4, compromised: 2, percentCompromised: 50, verdict: 'FAIL' },
+        }),
+        riskFixtureSkills()
+      )
+    );
+
+    expect(out).toContain('skillaudit explain fail-score-0');
+    expect(out).not.toContain('skillaudit explain fail-score-40');
   });
 
   it('omits Enrichment line when no enrichment data', () => {
@@ -550,6 +653,40 @@ describe('renderJson', () => {
 
   it('produces valid JSON parseable output', () => {
     expect(() => JSON.parse(renderJson(makeScanResult()))).not.toThrow();
+  });
+
+  it('serializes skills in shared risk-first order', () => {
+    const json = JSON.parse(
+      renderJson(
+        makeScanResult({
+          skills: riskFixtureSkills(),
+          summary: { skillsScanned: 4, compromised: 2, percentCompromised: 50, verdict: 'FAIL' },
+        })
+      )
+    );
+
+    expect(json.skills.map((s: { name: string }) => s.name)).toEqual([
+      'fail-score-0',
+      'fail-score-40',
+      'review-score-50',
+      'pass-clean',
+    ]);
+  });
+});
+
+describe('renderHtml', () => {
+  it('embeds table rows in shared risk-first order', async () => {
+    const { renderHtml } = await import('../packages/cli/src/output/html.js');
+    const html = renderHtml(
+      makeScanResult({
+        skills: riskFixtureSkills(),
+        summary: { skillsScanned: 4, compromised: 2, percentCompromised: 50, verdict: 'FAIL' },
+      })
+    );
+
+    expect(html.indexOf('fail-score-0')).toBeLessThan(html.indexOf('fail-score-40'));
+    expect(html.indexOf('fail-score-40')).toBeLessThan(html.indexOf('review-score-50'));
+    expect(html.indexOf('review-score-50')).toBeLessThan(html.indexOf('pass-clean'));
   });
 });
 
