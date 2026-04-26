@@ -469,7 +469,7 @@ at the bottom and the loop will stop.
     not only unit tests for `runScan({})`.
   - Smoke-test the exact documented bare invocation before committing.
 
-- [ ] **17** Make HTML report agent sidebar entries interactive.
+- [x] **17** Make HTML report agent sidebar entries interactive.
 
   The generated HTML report should let users filter report rows by clicking an
   agent in the left sidebar. Static sidebar markup is not enough; the generated
