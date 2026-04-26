@@ -13,11 +13,11 @@ trusted publisher:
 
 - Publisher: GitHub Actions
 - Organization or user: `ondrej-merkun`
-- Repository: `skillaudit`
+- Repository: `skill-audit`
 - Workflow filename: `release.yml`
 
 The package `repository.url` in `packages/cli/package.json` must continue to
-match `https://github.com/ondrej-merkun/skillaudit` exactly. The release workflow
+match `https://github.com/ondrej-merkun/skill-audit` exactly. The release workflow
 runs on GitHub-hosted Ubuntu with Node 24, grants `id-token: write`, and
 publishes from `packages/cli` with `npm publish --access public`. Trusted
 publishing should provide the provenance metadata for the package release.

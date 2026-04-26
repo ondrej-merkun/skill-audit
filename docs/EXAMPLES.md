@@ -157,7 +157,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ondrej-merkun/skillaudit@v1
+      - uses: ondrej-merkun/skill-audit@v1
         with:
           fail-on: REVIEW
           offline: true

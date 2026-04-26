@@ -53,6 +53,6 @@ confirmation.
 
 ## Source
 
-This skill is part of the [skill-audit](https://github.com/ondrej-merkun/skillaudit)
+This skill is part of the [skill-audit](https://github.com/ondrej-merkun/skill-audit)
 project. The CLI it invokes (`npx skill-audit`) runs entirely locally —
 no skill content is sent to any server unless you opt into enrichment.

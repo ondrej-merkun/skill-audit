@@ -10,7 +10,7 @@ a problem appears.
 - Confirm the release contents are final in [`CHANGELOG.md`](../CHANGELOG.md).
 - Confirm package metadata in
   [`packages/cli/package.json`](../packages/cli/package.json) still points to
-  `https://github.com/ondrej-merkun/skillaudit`.
+  `https://github.com/ondrej-merkun/skill-audit`.
 - Confirm npm trusted publishing is configured as described in
   [`docs/PUBLISHING.md`](PUBLISHING.md).
 - Confirm public docs changed in the release have working local links and image
@@ -90,7 +90,7 @@ Before pushing the release tag, verify:
 - The publish step runs from `packages/cli`.
 - The publish step does not require a long-lived `NPM_TOKEN`.
 - The npm package has a trusted publisher for GitHub Actions configured for
-  repository `ondrej-merkun/skillaudit` and workflow `release.yml`.
+  repository `ondrej-merkun/skill-audit` and workflow `release.yml`.
 
 After the workflow finishes, inspect the npm package version and confirm the
 package page shows provenance or trusted-publishing metadata for the release.

@@ -18,6 +18,7 @@ import stripAnsi from './helpers/strip-ansi.js';
 const CLI = fileURLToPath(new URL('../packages/cli/dist/index.js', import.meta.url));
 const PACKAGE_JSON = fileURLToPath(new URL('../packages/cli/package.json', import.meta.url));
 const README = fileURLToPath(new URL('../README.md', import.meta.url));
+const EXAMPLES_DOC = fileURLToPath(new URL('../docs/EXAMPLES.md', import.meta.url));
 const ACTION_YML = fileURLToPath(new URL('../action.yml', import.meta.url));
 const FIXTURES_DIR = fileURLToPath(new URL('fixtures', import.meta.url));
 const MALICIOUS_DIR = join(FIXTURES_DIR, 'malicious');
@@ -108,12 +109,18 @@ describe('e2e: CLI binary', () => {
       name: string;
       version: string;
       bin: Record<string, string>;
+      homepage: string;
+      repository: { url: string };
+      bugs: { url: string };
     };
     const readme = await readFile(README, 'utf-8');
 
     expect(readme).toContain('npx skill-audit');
     expect(pkg.name).toBe('skill-audit');
     expect(pkg.bin).toEqual({ 'skill-audit': './dist/index.js' });
+    expect(pkg.homepage).toBe('https://github.com/ondrej-merkun/skill-audit#readme');
+    expect(pkg.repository.url).toBe('https://github.com/ondrej-merkun/skill-audit.git');
+    expect(pkg.bugs.url).toBe('https://github.com/ondrej-merkun/skill-audit/issues');
 
     const { stdout, code } = await runCli(['--version']);
     expect(code).toBe(0);
@@ -121,12 +128,18 @@ describe('e2e: CLI binary', () => {
   });
 
   it('root action uses the published package and current JSON summary shape', async () => {
-    const [action, readme] = await Promise.all([
+    const [action, readme, examples] = await Promise.all([
       readFile(ACTION_YML, 'utf-8'),
       readFile(README, 'utf-8'),
+      readFile(EXAMPLES_DOC, 'utf-8'),
     ]);
 
-    expect(readme).toContain('uses: ondrej-merkun/skillaudit@v1');
+    expect(readme).toContain('github.com/ondrej-merkun/skill-audit/actions/workflows/ci.yml');
+    expect(readme).toContain(
+      'img.shields.io/github/actions/workflow/status/ondrej-merkun/skill-audit/ci.yml',
+    );
+    expect(readme).toContain('uses: ondrej-merkun/skill-audit@v1');
+    expect(examples).toContain('uses: ondrej-merkun/skill-audit@v1');
     expect(action).toContain('npx --yes "skill-audit@${SA_VERSION}" scan');
     expect(action).toContain('--output "$SA_RESULTS_FILE"');
     expect(action).toContain('.summary.verdict // "PASS"');

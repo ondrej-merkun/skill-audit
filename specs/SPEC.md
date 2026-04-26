@@ -123,7 +123,7 @@ Tradeoffs: slightly slower startup than Go/Rust; not an issue at MVP scale (hund
 
 ### Distribution
 1. **Primary:** `npm publish` → `npx skill-audit` and `pnpm dlx skill-audit` work instantly.
-2. **GitHub Action wrapper:** `uses: ondrej-merkun/skillaudit@v1` — thin composite action, highest-leverage distribution per the gitleaks playbook.
+2. **GitHub Action wrapper:** `uses: ondrej-merkun/skill-audit@v1` — thin composite action, highest-leverage distribution per the gitleaks playbook.
 
 ### Directory layout
 ```

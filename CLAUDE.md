@@ -16,7 +16,7 @@ from — see the instructions at the top of that file.
 ## Identity
 
 - GitHub handle: `ondrej-merkun`
-- GitHub repository: `https://github.com/ondrej-merkun/skillaudit`
+- GitHub repository: `https://github.com/ondrej-merkun/skill-audit`
 - npm package name: `skill-audit`
 - Author byline (README, blog, HN): "Ondrej Merkun"
 

@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ondrej-merkun/skillaudit/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/ondrej-merkun/skillaudit/ci.yml" alt="CI" /></a>
+  <a href="https://github.com/ondrej-merkun/skill-audit/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/ondrej-merkun/skill-audit/ci.yml" alt="CI" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0" /></a>
 </p>
 
@@ -310,7 +310,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ondrej-merkun/skillaudit@v1
+      - uses: ondrej-merkun/skill-audit@v1
         with:
           fail-on: REVIEW
           offline: true

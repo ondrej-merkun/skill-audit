@@ -28,5 +28,4 @@ skill-audit ignore <name>
 Scanning is local-first. Optional enrichment can contact external services;
 use `--offline` to skip enrichment network calls.
 
-Repository: <https://github.com/ondrej-merkun/skillaudit>
-
+Repository: <https://github.com/ondrej-merkun/skill-audit>
