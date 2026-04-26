@@ -1,0 +1,57 @@
+name: Missed detection
+description: Report risky skill content that skillaudit did not flag.
+title: "Missed detection: "
+labels:
+  - missed-detection
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include real secrets. Redact tokens, private paths, and proprietary skill content.
+  - type: input
+    id: version
+    attributes:
+      label: skillaudit version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command run
+      placeholder: "skillaudit scan --json"
+    validations:
+      required: true
+  - type: textarea
+    id: sample-content
+    attributes:
+      label: Redacted sample content
+      description: Paste the smallest risky snippet that was not flagged, with secrets and private paths redacted.
+      render: markdown
+    validations:
+      required: true
+  - type: input
+    id: expected-risk
+    attributes:
+      label: Expected rule or risk category
+      description: Use a rule ID if you know it, or describe the risk category.
+      placeholder: "PI-OVERRIDE or prompt injection"
+    validations:
+      required: true
+  - type: dropdown
+    id: fixture-shareable
+    attributes:
+      label: Can you share a minimal fixture?
+      options:
+        - "Yes"
+        - "No"
+        - "Not sure"
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact explanation
+      description: Explain what the content could do if trusted by an agent.
+    validations:
+      required: true
