@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { formatCompromisedPercent } from '../percent.js';
 import type { ScanResult, ScannedSkill } from '../types.js';
 import { sortScanSkills } from './sort.js';
 
@@ -62,7 +63,7 @@ export function renderSummaryFooter(
 
   const compromisedStr =
     summary.compromised > 0
-      ? `${C_CRITICAL(String(summary.compromised))}   (${summary.percentCompromised}% of installed)`
+      ? `${C_CRITICAL(String(summary.compromised))}   (${formatCompromisedPercent(summary.percentCompromised)}% of installed)`
       : '0';
   lines.push(`  ${label('Compromised skills')} ${compromisedStr}`);
 
@@ -104,7 +105,7 @@ export function renderSummaryCompact(result: ScanResult): string {
 
   const compromisedPart =
     summary.compromised > 0
-      ? `${C_CRITICAL(String(summary.compromised))} compromised (${summary.percentCompromised}%)`
+      ? `${C_CRITICAL(String(summary.compromised))} compromised (${formatCompromisedPercent(summary.percentCompromised)}%)`
       : '0 compromised';
 
   const lines = [

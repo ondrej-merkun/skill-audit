@@ -8,6 +8,7 @@ import {
 } from '../packages/cli/src/output/summary.js';
 import { renderJson } from '../packages/cli/src/output/json.js';
 import { sortScanSkills } from '../packages/cli/src/output/sort.js';
+import { calculateCompromisedPercent } from '../packages/cli/src/percent.js';
 import type { ScanResult, ScannedSkill } from '../packages/cli/src/types.js';
 
 function makeSkill(overrides: Partial<ScannedSkill> = {}): ScannedSkill {
@@ -434,6 +435,28 @@ describe('renderSummaryFooter', () => {
     expect(out).toContain('100%');
   });
 
+  it('shows nonzero sub-1% compromised percentages with two decimal places', () => {
+    const failSkill = makeSkill({
+      summary: {
+        critical: 1,
+        high: 0,
+        medium: 0,
+        low: 0,
+        info: 0,
+        score: 0,
+        verdict: 'FAIL',
+        mandatoryFail: ['NET-EXFIL-ENV'],
+        allowlisted: false,
+      },
+    });
+    const result = makeScanResult({
+      skills: [failSkill],
+      summary: { skillsScanned: 334, compromised: 1, percentCompromised: 0.3, verdict: 'FAIL' },
+    });
+    const out = stripAnsi(renderSummaryFooter(result, [failSkill]));
+    expect(out).toContain('0.30% of installed');
+  });
+
   it('shows Duration line', () => {
     const out = stripAnsi(renderSummaryFooter(makeScanResult(), [makeSkill()]));
     expect(out).toContain('Duration');
@@ -521,6 +544,17 @@ describe('renderSummaryCompact', () => {
     );
     expect(out).toContain('2 compromised');
     expect(out).toContain('40%');
+  });
+
+  it('shows nonzero sub-1% compromised percentages with two decimal places', () => {
+    const out = stripAnsi(
+      renderSummaryCompact(
+        makeScanResult({
+          summary: { skillsScanned: 334, compromised: 1, percentCompromised: 0.3, verdict: 'FAIL' },
+        })
+      )
+    );
+    expect(out).toContain('1 compromised (0.30%)');
   });
 
   it('includes verdict string', () => {
@@ -712,6 +746,15 @@ describe('renderJson', () => {
     expect(json.summary.percent_compromised).toBe(17.0);
     expect(json.summary.compromised).toBe(8);
     expect(json.summary.verdict).toBe('FAIL');
+  });
+
+  it('serializes sub-1% nonzero compromised percentages as a rounded number', () => {
+    const percentCompromised = calculateCompromisedPercent(1, 334);
+    const result = makeScanResult({
+      summary: { skillsScanned: 334, compromised: 1, percentCompromised, verdict: 'FAIL' },
+    });
+    const json = JSON.parse(renderJson(result));
+    expect(json.summary.percent_compromised).toBe(0.3);
   });
 
   it('field order matches spec: schema_version, scan, agents, skills, summary', () => {

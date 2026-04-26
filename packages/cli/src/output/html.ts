@@ -1,3 +1,4 @@
+import { formatCompromisedPercent } from '../percent.js';
 import type { ScanResult, ScannedSkill } from '../types.js';
 import { sortScanSkills } from './sort.js';
 
@@ -393,7 +394,7 @@ document.getElementById('btn-share').addEventListener('click', function(){
   <h1>skillaudit</h1>
   ${scoreRingSvg(overallScore, overallVerdict)}
   <div>
-    <div class="meta">${result.summary.skillsScanned} skills scanned · ${result.summary.compromised} compromised (${result.summary.percentCompromised}%)</div>
+    <div class="meta">${result.summary.skillsScanned} skills scanned · ${result.summary.compromised} compromised (${formatCompromisedPercent(result.summary.percentCompromised)}%)</div>
     <div class="meta">Scanned ${escapeHtml(result.scan.startedAt)} · ${result.scan.durationMs}ms · v${escapeHtml(result.scan.toolVersion)}</div>
   </div>
 </div>

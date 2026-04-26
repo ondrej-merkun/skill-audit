@@ -232,6 +232,12 @@ without a commit message explaining why it no longer applies.
   attacks, red-team training, scanner docs, and test fixtures; fire on
   operative instructions or executable behavior, not vocabulary alone.
 
+- **L7.4 — "Malicious" fixtures are not automatically compromised.** _Task 2
+  initially used a malicious fixture that produced findings but no FAIL verdict
+  for a compromised-percentage regression._
+  Tests for compromised counts must use a mandatory-fail rule or assert the
+  fixture's verdict before relying on it.
+
 ---
 
 ## How to add a new lesson

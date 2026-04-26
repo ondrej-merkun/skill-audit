@@ -10,6 +10,7 @@ import { renderJson } from '../output/json.js';
 import { sortScanSkills } from '../output/sort.js';
 import { renderSummaryCompact } from '../output/summary.js';
 import { renderTableToString } from '../output/table.js';
+import { calculateCompromisedPercent } from '../percent.js';
 import { runRules } from '../rules/engine.js';
 import { ALL_RULES } from '../rules/index.js';
 import { scoreFindings } from '../score.js';
@@ -246,7 +247,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     summary: {
       skillsScanned: toScan.length,
       compromised,
-      percentCompromised: toScan.length > 0 ? Math.round((compromised / toScan.length) * 100) : 0,
+      percentCompromised: calculateCompromisedPercent(compromised, toScan.length),
       verdict: overallVerdict,
     },
   };
