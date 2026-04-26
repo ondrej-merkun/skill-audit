@@ -669,6 +669,7 @@ describe('renderJson', () => {
           enrichment: {
             skillsSh: { gen: 'Critical', socketAlerts: 7, snyk: 'Critical' },
             github: { stars: 2, ageDays: 4, contributors: 1 },
+            depsdev: { osvAdvisories: 2, scorecardScore: 8.5 },
           },
         }),
       ],
@@ -677,6 +678,21 @@ describe('renderJson', () => {
     const enrich = json.skills[0].enrichment;
     expect(enrich.skills_sh.socket_alerts).toBe(7);
     expect(enrich.github.age_days).toBe(4);
+    expect(enrich.deps_dev.osv_advisories).toBe(2);
+    expect(enrich.deps_dev.scorecard_score).toBe(8.5);
+    expect(Object.keys(enrich)).toEqual(['skills_sh', 'github', 'deps_dev']);
+  });
+
+  it('serializes deps.dev scorecard_score as null when unavailable', () => {
+    const result = makeScanResult({
+      skills: [makeSkill({ enrichment: { depsdev: { osvAdvisories: 0, scorecardScore: null } } })],
+    });
+
+    const json = JSON.parse(renderJson(result));
+    expect(json.skills[0].enrichment.deps_dev).toEqual({
+      osv_advisories: 0,
+      scorecard_score: null,
+    });
   });
 
   it('omits enrichment keys that are absent', () => {
@@ -684,6 +700,7 @@ describe('renderJson', () => {
     const enrich = json.skills[0].enrichment;
     expect(enrich).not.toHaveProperty('skills_sh');
     expect(enrich).not.toHaveProperty('github');
+    expect(enrich).not.toHaveProperty('deps_dev');
   });
 
   it('serializes top-level summary with snake_case keys', () => {

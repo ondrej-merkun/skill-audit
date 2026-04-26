@@ -50,6 +50,10 @@ ship as the hero GIF).
           "stars": 2,
           "age_days": 4,
           "contributors": 1
+        },
+        "deps_dev": {
+          "osv_advisories": 2,
+          "scorecard_score": 8.5
         }
       },
       "summary": {

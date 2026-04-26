@@ -32,6 +32,12 @@ function serializeEnrichment(e: Enrichment): object {
       contributors: e.github.contributors,
     };
   }
+  if (e.depsdev !== undefined) {
+    out.deps_dev = {
+      osv_advisories: e.depsdev.osvAdvisories,
+      scorecard_score: e.depsdev.scorecardScore,
+    };
+  }
   return out;
 }
 
