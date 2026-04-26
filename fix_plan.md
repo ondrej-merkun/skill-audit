@@ -783,16 +783,6 @@ at the bottom and the loop will stop.
   - Do not reference the image from README unless it is useful there too.
   - Verify the image file exists and is under GitHub's size guidance.
 
-- [ ] **37** Configure default-branch protection.
-
-  Set up branch protection or a repository ruleset for the default branch so
-  changes require passing CI before merge.
-
-  Target settings:
-  - Require the existing CI workflow checks.
-  - Require branches to be up to date before merge if practical.
-  - Block force-pushes and deletion on the default branch.
-  - Require conversation resolution for pull requests.
 
 - [ ] **38** Enable repository security settings and dependency automation.
 
