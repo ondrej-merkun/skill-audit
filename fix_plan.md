@@ -1114,3 +1114,11 @@ output and what was attempted.)
   fails with `error connecting to api.github.com`, and
   `gh repo edit ondrej-merkun/skill-audit --add-topic ai-security --add-topic prompt-injection --add-topic agent-skills --add-topic cli --add-topic static-analysis --add-topic supply-chain-security --add-topic claude-code --add-topic cursor --add-topic codex --add-topic copilot`
   fails with the same API connection error.
+
+- **35 still cannot be completed in Codex session** — Rechecked on
+  2026-04-27. `tool_search` still exposes no repository-topics write endpoint.
+  Local `git remote -v` points at `https://github.com/ondrej-merkun/skillaudit.git`,
+  but `gh auth status` reports the configured `ondrej-merkun` token is invalid.
+  `gh repo view ondrej-merkun/skill-audit --json nameWithOwner,repositoryTopics`
+  and `gh repo edit ondrej-merkun/skill-audit --add-topic ai-security --add-topic prompt-injection --add-topic agent-skills --add-topic cli --add-topic static-analysis --add-topic supply-chain-security --add-topic claude-code --add-topic cursor --add-topic codex --add-topic copilot`
+  both fail with `error connecting to api.github.com`.
