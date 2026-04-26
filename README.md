@@ -83,6 +83,24 @@ skillaudit ignore <name>      # add a skill's treeSha256 to your ignore list
 
 ---
 
+## What leaves the machine
+
+Rule scanning is local. Skill contents are read from disk and matched on your
+machine; they are not uploaded by `skillaudit`. Optional enrichment may make
+metadata lookups unless you pass `--offline`.
+
+| Command or mode | Local reads | Network by default | What may be sent |
+|---|---|---|---|
+| `skillaudit list` | Skill paths and manifests for discovery | No | Nothing |
+| `skillaudit scan` | Skill contents and dependency manifests | `skills.sh`, `deps.dev` when metadata exists | GitHub repository slug for `skills.sh`; dependency package names for `deps.dev` |
+| `skillaudit scan --summary` | Skill contents | No | Nothing |
+| `skillaudit scan --json` | Skill contents and dependency manifests | `skills.sh`, GitHub, `deps.dev` when metadata exists | GitHub repository slug, dependency package names; `GITHUB_TOKEN` is used only as an API token if set |
+| `skillaudit scan --html <file>` | Skill contents and dependency manifests | `skills.sh`, GitHub, `deps.dev` when metadata exists | GitHub repository slug, dependency package names; `GITHUB_TOKEN` is used only as an API token if set |
+| `skillaudit explain <name>` | Selected skill contents and dependency manifests | `skills.sh`, GitHub, `deps.dev` when metadata exists | GitHub repository slug, dependency package names; `GITHUB_TOKEN` is used only as an API token if set |
+| Any scan mode with `--offline` | Same local reads as the selected mode | No | Nothing |
+
+---
+
 ## Scoring
 
 Each skill gets a score from 0–100:
