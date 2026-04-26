@@ -321,7 +321,7 @@ at the bottom and the loop will stop.
   - Verify the built `node packages/cli/dist/index.js scan --agent <agent>`
     output against a fixture or temp home with multiple agents.
 
-- [ ] **11** Show per-agent skill counts in the scan overview.
+- [x] **11** Show per-agent skill counts in the scan overview.
 
   The scan overview should show how many skills were scanned for each specific
   agent, not only the total skill count and total number of agents.
