@@ -10,916 +10,390 @@ at the bottom and the loop will stop.
 
 ## Pending tasks
 
-- [x] **0.1** Deduplicate discovery results by non-empty `treeSha256` and
-  preserve duplicate install paths.
+- [ ] **1** Sort `list` output so project-scope skills appear first.
 
-  `skillaudit` currently appends every discovery-plugin result directly to the
-  final discovery list, even when two discovered paths contain identical skill
-  content. The spec requires identical trees to be reported once, with duplicate
-  install locations preserved as annotations. Implement that contract in a
-  focused code task; do not mix it with rule tuning or output sorting.
+  The `list` command should always show skills discovered from the current
+  project at the top, before user/global skills. Preserve deterministic
+  ordering within each scope using the same tie-breakers everywhere.
 
   Target behavior:
-  - `discoverAll()` returns one skill per unique non-empty `treeSha256`.
-  - The first discovered skill remains the primary row so output ordering stays
-    stable before the global risk-sort task runs.
-  - Duplicate paths are preserved on the primary skill as `alsoInstalledAt`
-    sorted lexicographically, excluding the primary `path`.
-  - If duplicate inputs already contain `alsoInstalledAt`, merge those paths
-    too.
-  - Entries with `treeSha256: ''` are not deduped. Those represent synthetic
-    config-derived targets such as individual MCP servers and may legitimately
-    share a config file path.
-  - `list --json` and `scan --json` expose duplicate paths as
-    `also_installed_at` only when present and non-empty.
-
-  Implementation checklist:
-  - Add `alsoInstalledAt?: string[]` to `packages/cli/src/types.ts` `Skill`.
-  - Add a small registry-level helper in
-    `packages/cli/src/discovery/index.ts` and call it once at the end of
-    `discoverAll()`, after all installed plugins have run.
-  - Keep the helper pure and deterministic; clone skill objects rather than
-    mutating plugin-owned values.
-  - Update `packages/cli/src/output/json.ts` and
-    `packages/cli/src/commands/list.ts` to serialize
-    `also_installed_at` after `path` and before `tree_sha256` when present.
-  - Add registry tests proving two plugins returning the same non-empty hash
-    collapse into one skill, duplicate paths are preserved, and empty hashes
-    are not collapsed.
-  - Add JSON/list output tests proving `also_installed_at` appears only for
-    deduped skills.
-  - Run `pnpm test test/discovery-registry.test.ts test/output.test.ts`,
-    `pnpm typecheck`, and the built `node packages/cli/dist/index.js list
-    --json` against a fixture or temp home with duplicate skill content.
-
-- [x] **0.2** Restrict Codex plugin cache discovery to active/exposed payloads.
-
-  `~/.codex/plugins/cache` is a cache, not an authoritative list of skills that
-  Codex currently exposes to agents. Update Codex discovery so cache payloads
-  are only scanned when enabled-plugin metadata proves they are active, for
-  example `[plugins."<plugin>@<marketplace>"] enabled = true` in
-  `~/.codex/config.toml`, or a documented built-in runtime exposure source.
-
-  Target behavior:
-  - Plain cache entries with no active metadata are ignored as scan targets.
-  - Enabled plugin cache entries still emit prompt-bearing leaves such as
-    `SKILL.md`, command files, and agent files.
-  - Intermediate cache directories and manifest-only wrappers are not counted
-    as skills unless their contents can influence agent behavior directly.
-  - If an active plugin's only physical payload is under `plugins/cache`, scan
-    that active payload normally.
-
-  Implementation notes:
-  - Add a small parser for Codex plugin enablement metadata rather than walking
-    every cache subtree unconditionally.
-  - Add fixtures with one enabled plugin cache payload, one disabled plugin
-    cache payload, and one cache-only payload with no config entry. Assert only
-    the enabled payload is discovered.
-  - Keep `$CODEX_HOME` and `SKILLAUDIT_CWD` overrides working in tests.
-  - Update `specs/DISCOVERY.md` if the implementation discovers a more
-    authoritative active-plugin source than the current config metadata.
-
-- [x] **1** Add first-class file output support for `scan` results.
-
-  Implement a destination flag for the `scan` command so users can ask
-  skillaudit to write the rendered scan result directly to a file instead of
-  relying on shell redirection. The preferred interface is
-  `-o, --output <file>` because `-o/--output` is the common CLI convention
-  for "write the selected output to this path", and it keeps output
-  destination separate from output format. Do not make `--json` take an
-  optional file argument; changing a boolean format flag into a sometimes-
-  path flag is surprising, hard to parse, and inconsistent with common Unix
-  CLI practice.
-
-  Target UX:
-  - `skillaudit scan --json --output report.json` writes the JSON schema v1.0
-    payload to `report.json` and does not also print that JSON to stdout.
-  - `skillaudit scan --summary --output summary.txt` writes the compact
-    summary output to the file and does not also print it to stdout.
-  - `skillaudit scan --output report.txt` writes the default table output to
-    the file, preferably without ANSI color codes unless a future explicit
-    `--color` policy says otherwise.
-  - `skillaudit scan -o report.json --json` is equivalent to the long-form
-    example.
-  - Existing shell redirection must continue to work exactly as before when
-    `--output` is omitted.
-  - Existing `--html <file>` behavior must remain backward-compatible. Treat
-    `--html <file>` as the dedicated HTML report destination for now. If both
-    `--html` and `--output` are supplied, fail fast with exit code 2 and a
-    clear message rather than guessing which destination should win.
-
-  Implementation notes:
-  - Extend `ScanOptions` and the commander wiring in
-    `packages/cli/src/index.ts` / `packages/cli/src/commands/scan.ts`.
-  - Refactor renderers as needed so each output mode can return a string
-    before it is written. Avoid duplicating JSON serialization or table
-    rendering logic.
-  - Write files with `node:fs/promises.writeFile(..., 'utf-8')`. Let normal
-    filesystem errors surface through the existing fatal command handler so
-    missing directories, permission errors, and invalid paths exit as tool
-    errors.
-  - Keep progress/status messages on stderr. The final report payload should
-    go either to stdout or to the output file, never both, except for existing
-    `--html` behavior where a human table may still render to stdout when no
-    other output mode is selected.
-  - Preserve existing scan verdict exit-code behavior. A scan that writes a
-    JSON file and finds FAIL results should still set the same nonzero verdict
-    exit code after the file has been flushed.
-  - Add tests covering JSON file output, summary file output, default table
-    file output, no duplicate stdout payload when `--output` is used, the
-    `--html` plus `--output` conflict, and unchanged stdout behavior when
-    `--output` is omitted.
-  - Update README usage/options docs with the new flag and include an example:
-    `skillaudit scan --json -o skillaudit-report.json`.
-
-- [x] **2** Sort scan results consistently by severity score in every output
-  format.
-
-  Make the ordering of scanned skills deterministic and severity-first across
-  all scan outputs: default table, compact summary suggestions, JSON, HTML, and
-  any future file output path. The primary sort key must be
-  `summary.score` ascending, because lower score means worse security posture
-  and the most severe skills should appear first. This should apply no matter
-  which renderer is used, including `skillaudit scan`, `skillaudit scan --json`,
-  `skillaudit scan --summary`, `skillaudit scan --html report.html`, and
-  combinations with the future `--output <file>` flag.
-
-  Target ordering:
-  - Primary: `summary.score` ascending (`0` before `49`, `49` before `75`,
-    `75` before `100`).
-  - Secondary: verdict severity order `FAIL`, then `REVIEW`, then `PASS` for
-    ties or defensive consistency.
-  - Tertiary: highest finding severity present on the skill (`critical`, then
-    `high`, `medium`, `low`, `info`) for skills with the same score/verdict.
-  - Final deterministic ties: `agentId`, then `name`, then `path`, all
+  - Scope order is `project`, then `managed`, then `user`.
+  - Within each scope, sort by `agentId`, then `name`, then `path`,
     lexicographically ascending.
 
   Implementation notes:
-  - Prefer one shared helper, for example in `packages/cli/src/output/sort.ts`
-    or another small existing output utility, rather than duplicating sort
-    logic in table, HTML, JSON, and summary code.
-  - Apply the sort before constructing the final `ScanResult.skills` array if
-    that keeps every renderer naturally consistent. If sorting at that layer
-    creates problems for ignored skills or enrichment ordering, document the
-    decision and ensure every renderer still uses the same helper.
-  - Preserve the association between each skill and its enrichment data. Be
-    careful not to sort `scannedSkills` between enrichment request and response
-    assignment unless the enrichment results are mapped by stable skill id.
-  - JSON array order is part of the machine-readable behavior for consumers;
-    update tests to assert that JSON skills are ordered by lowest score first.
-  - Update the default table and HTML tests/snapshots so they expect lower
-    scores before higher scores within and across verdict groups.
-  - Ensure the summary footer / next-command suggestions pick the first
-    highest-risk skill under the new score ordering.
-  - Add or adjust tests with at least three skills whose verdict order alone
-    would not prove the behavior, such as `FAIL score 40`, `FAIL score 0`,
-    `REVIEW score 50`, and `PASS score 100`.
+  - Apply this to both human and JSON list output if both expose ordered
+    results.
+  - Add regression coverage with at least one project-scope skill and one
+    user/global skill discovered in the opposite order.
+  - Verify the built `node packages/cli/dist/index.js list` output shows
+    project skills first against a fixture or temp project/home setup.
 
-- [x] **3** Surface `skills.sh` and `deps.dev` enrichment in the default
-  scan output.
+- [ ] **2** Show nonzero sub-1% compromised scan percentages with two decimal
+  places.
 
-  The regular human `skillaudit scan` table currently only shows a coarse
-  enrichment footer such as `skills.sh ✓` / `github ✓`, which does not help the
-  user understand the risk or reputation context for each skill. Add visible
-  per-skill enrichment detail to the default output for the enrichment sources
-  that are useful in the table view and do not require showing GitHub metadata:
-  `skills.sh` and `deps.dev`.
-
-  Target UX:
-  - The default table should show `skills.sh` signal for each enriched skill,
-    for example `Gen=Low`, `Socket=0`, `Snyk=Low`, or a compact equivalent that
-    fits the existing table without making it noisy.
-  - The default table should show `deps.dev` signal for each enriched skill,
-    especially OSV advisory count (`0 OSV`, `2 OSV advisories`, etc.).
-  - The default table should not fetch or show GitHub stars/age/contributors as
-    part of this task. GitHub enrichment is handled by the output-aware source
-    selection task below.
-  - Keep the existing summary footer useful, but do not rely on a footer-only
-    `skills.sh ✓` / `deps.dev ✓` indicator as the only visible enrichment.
-  - If no enrichment data exists for a skill, render a compact neutral value
-    such as `-` rather than expanding the row.
-
-  Implementation notes:
-  - Decide whether to add an `ENRICHMENT` column or fold enrichment into the
-    existing `TOP ISSUE`/detail text. Prefer the smallest readable change that
-    keeps the main table scannable.
-  - Update `renderSummaryFooter` / `enrichmentLine` if needed so it reports
-    `deps.dev` presence too, not only `skills.sh` and `github`.
-  - Add table-output tests proving `skills.sh` and `deps.dev` details appear in
-    the default output when present and are omitted/neutral when absent.
-  - Verify output still fits reasonably for long skill names and common terminal
-    widths.
-
-- [x] **4** Make enrichment source execution output-aware, and do not request
-  GitHub enrichment unless the selected output actually displays it.
-
-  Avoid unnecessary network requests by choosing enrichment sources based on the
-  command/output mode. GitHub enrichment should only run for modes where the
-  GitHub data is included in the user-visible or machine-readable output. For
-  example, it should run for `scan --json`, `scan --html <file>` once HTML shows
-  GitHub data, and `explain`, but it should not run for the regular
-  `skillaudit scan` table if that table does not display GitHub stars, age, or
-  contributor count.
+  The `scan` command currently rounds or floors the compromised-skill
+  percentage to `0%` when at least one skill is compromised but the percentage
+  is below 1% (for example, 1 compromised skill out of a large inventory). In
+  that case, keep the count accurate and render the percentage with two decimal
+  places instead of showing `0%`.
 
   Target behavior:
-  - `skillaudit scan` may run `skills.sh` and `deps.dev` enrichment if those are
-    visible in the default table, but must not call GitHub enrichment while
-    GitHub data is not displayed there.
-  - `skillaudit scan --summary` should only run enrichment sources whose data is
-    actually surfaced in summary output. If the summary only shows source
-    availability, prefer either making the displayed value meaningful or
-    skipping enrichment entirely for summary mode.
-  - `skillaudit scan --json` should run all sources serialized in JSON,
-    including GitHub and deps.dev.
-  - `skillaudit scan --html <file>` should run all three sources once HTML
-    visibly displays all three.
-  - `skillaudit explain <skill>` should continue to run all three sources,
-    because the detail view displays all three when present.
-  - `--offline` remains an absolute override: no enrichment source should run.
+  - `0` compromised skills still renders as `0%`.
+  - At least one compromised skill with percentage greater than `0` and less
+    than `1` renders with two decimals, for example `0.30%`.
+  - Percentages of `1%` or greater keep the existing formatting unless the
+    current renderer already requires decimals.
+  - Apply the behavior consistently anywhere scan output exposes the
+    compromised percentage, including human output and JSON
+    `percent_compromised`.
+  - JSON should keep `percent_compromised` numeric, not a string. For sub-1%
+    nonzero values, serialize the numeric percentage rounded to two decimal
+    places, for example `0.3` for `0.30%`.
 
   Implementation notes:
-  - Introduce an explicit source-selection option, for example
-    `enrichAll(skills, { sources: [...] })` / `enrichSkill(skill, { sources:
-    [...] })`, rather than sprinkling command-mode conditionals inside each
-    individual enrichment module.
-  - Add tests that mock the enrichment modules and assert GitHub is not called
-    for regular `scan`, but is called for `scan --json`, `scan --html`, and
-    `explain`.
-  - Keep fail-silent behavior and cache behavior unchanged for the sources that
-    do run.
-  - Update README/docs if the `--offline` description or enrichment behavior
-    explanation needs clarification.
-
-- [x] **5** Include `deps.dev` enrichment in JSON output.
-
-  JSON currently serializes `skills_sh` and `github` enrichment but omits
-  `depsdev`, even though the enrichment pipeline can compute deps.dev advisory
-  information and the `explain` command can display it. Extend the JSON schema
-  output so machine consumers receive the dependency-risk context too.
-
-  Target JSON shape:
-  - Add a `deps_dev` object under each skill's `enrichment` when deps.dev data
-    is present.
-  - Include `osv_advisories` as a number.
-  - Include `scorecard_score` as either a number or `null`, matching the
-    existing internal `scorecardScore` value.
-  - Omit `deps_dev` entirely when deps.dev enrichment is absent, matching the
-    existing optional behavior for `skills_sh` and `github`.
-
-  Implementation notes:
-  - Update `packages/cli/src/output/json.ts` and JSON output tests.
-  - Confirm field ordering remains deterministic.
-  - If this is considered a JSON contract expansion, update `specs/OUTPUT.md`
-    or README examples as appropriate.
-  - Add a regression test proving `deps_dev.osv_advisories` and
-    `deps_dev.scorecard_score` serialize correctly.
-
-- [x] **6** Make all three enrichment sources visible in the HTML report.
-
-  The standalone HTML report should visibly show `skills.sh`, GitHub, and
-  `deps.dev` enrichment where available, not merely embed enrichment in the
-  hidden JSON payload. Users opening the report should be able to inspect the
-  same reputation and dependency context available through JSON and `explain`.
-
-  Target UX:
-  - Each skill row or detail panel should show `skills.sh` values:
-    `gen`, `socket_alerts`, and `snyk`.
-  - Each skill row or detail panel should show GitHub values:
-    `stars`, `age_days`, and `contributors`.
-  - Each skill row or detail panel should show deps.dev values:
-    `osv_advisories` and `scorecard_score` when present.
-  - Missing enrichment should render as an understated neutral state, not as
-    broken/empty UI.
-  - The visible report should remain standalone with no runtime network calls.
-
-  Implementation notes:
-  - Update `packages/cli/src/output/html.ts` and HTML output tests.
-  - Ensure redacted/exported JSON behavior still makes sense for enrichment
-    fields.
-  - Coordinate with the output-aware enrichment task so `scan --html <file>`
-    requests all three sources because the HTML now displays all three.
-  - Add tests that parse or inspect the rendered HTML string and assert all
-    three enrichment sections/fields are visible when present.
-
-- [x] **7** Prevent parent/container skills from inheriting child skill
-  findings.
-
-  Real `report.json` output showed aggregate plugin directories such as
-  `engineering` and `engineering-team` being marked `FAIL` because `runRules()`
-  recursively scanned nested child skills that were also discovered and scanned
-  as separate skills. Fix the scan boundary so a discovered skill directory does
-  not include nested directories that contain their own `SKILL.md`,
-  `AGENTS.md`, command file, agent file, or plugin manifest entry.
-
-  Implementation notes:
-  - Keep each discovered skill responsible for its own files only; do not let
-    container/root skills absorb child skill findings.
-  - Preserve legitimate reference/script scanning inside a normal skill
-    directory.
-  - Add a regression fixture with one parent skill and one nested child skill
-    where only the child contains a critical finding. The parent must remain
-    `PASS`; the child must still report the finding.
-  - Verify JSON output no longer contains duplicate `(file,line,rule_id)`
-    findings for the parent and child.
-
-- [x] **8** Stop counting plugin manifest directories as scan targets when
-  they do not contain prompt-bearing content.
-
-  Real scan output contained 143 entries named `.claude-plugin`,
-  `.codex-plugin`, or `.cursor-plugin`. These inflate `skills_scanned` and make
-  reports harder to read when the directory only wraps `plugin.json` metadata.
-  Treat plugin manifests as discovery metadata unless the plugin directory
-  contains actual prompt-bearing command, agent, or skill files that should be
-  scanned individually.
-
-  Implementation notes:
-  - Keep scanning standalone project plugin manifests only if the manifest text
-    itself can influence agent behavior.
-  - Do not break discovery of skills, commands, and agents declared inside a
-    plugin.
-  - Add tests proving plain `.claude-plugin/plugin.json` and
-    `.codex-plugin/plugin.json` wrappers do not appear as separate skills, while
-    nested skills still do.
-
-- [x] **9** Tighten `PI-JAILBREAK` so topic words and benign product terms do
-  not fire.
-
-  The rule currently flags plain occurrences of `jailbreak`, `developer mode`,
-  and `no restrictions`, causing false positives in AI-security docs, Discord
-  setup instructions, iPhone security docs, SOC2 classification tables, and
-  make error messages like "No rule to make target". Require an actual
-  jailbreak directive or quoted hostile prompt template before firing.
-
-  Implementation notes:
-  - Keep malicious fixtures for DAN mode, developer-mode jailbreak prompts, and
-    no-restrictions roleplay.
-  - Add benign fixtures for "jailbreak assessment", "Enable Developer Mode in
-    Discord", "No restrictions" table labels, "No rule to make target", and
-    iOS jailbreak-detection documentation.
-  - Do not weaken `PI-OVERRIDE`; this task is only for `PI-JAILBREAK`.
-
-- [x] **10** Tighten `PI-OVERRIDE` so normal role descriptions and examples do
-  not fire.
-
-  Real scan output flagged phrases such as "new role with bigger team",
-  "You are now a world-class epic design expert", "Switch roles. You are now a
-  strict IMO grader", and security-auditor examples that document attack
-  strings. The rule should focus on instructions that discard prior/system
-  context or redefine the model into an unrestricted identity.
-
-  Implementation notes:
-  - Require override intent for broad patterns like `new role` and
-    `you are now`, rather than matching those phrases alone.
-  - Add benign fixtures for role-change business docs, skill persona headings,
-    grader-role examples, and quoted detection examples in security docs.
-  - Keep malicious fixtures for "ignore previous instructions", "disregard
-    prior context", and unrestricted role-hijack prompts.
-
-- [x] **11** Tighten `PI-PRIV-ESCALATE-INSTRUCTION` to distinguish security
-  review text from privilege-escalation directives.
-
-  Real scan output flagged checklists and docs such as "could an authenticated
-  user escalate privileges", "Never Run as Root", "Don't run as root", and
-  troubleshooting text saying a user may need root or sudoer access. The rule
-  should catch instructions telling the agent/skill to elevate itself or bypass
-  permissions, not discussion of privilege escalation as a risk.
-
-  Implementation notes:
-  - Add benign fixtures for review checklists, Docker best-practice headings,
-    and troubleshooting notes.
-  - Keep malicious fixtures where the skill tells the agent to bypass file
-    permissions, run as root, or use sudo to read/copy protected files.
-  - Review the `spec` skill's "Bypass Permissions" finding separately and
-    decide whether it should remain high severity or be demoted as a tool-mode
-    recommendation.
-
-- [x] **12** Fix `PI-METADATA-MISMATCH` snippet location and reduce idiomatic
-  phrase false positives.
-
-  Real scan output reports line 1 with snippet `---`, which hides the actual
-  matched secrecy phrase and makes triage poor. It also flags benign phrases
-  like "show, don't tell", "never show deleted records", and user-facing
-  guidance like "Do not mention internal tooling" that are not metadata
-  mismatch attacks.
-
-  Implementation notes:
-  - Report the line/column/snippet for the concealment phrase, not the opening
-    frontmatter delimiter.
-  - Tighten the rule to require concealment of the skill's instructions,
-    behavior, source, or existence from the user.
-  - Add benign fixtures for "show, don't tell", soft-delete docs, and internal
-    tooling disclosure guidance.
-  - Keep malicious fixtures where frontmatter says one thing but the body tells
-    the agent to hide or not reveal the skill's instructions.
-
-- [x] **13** Tighten `PI-HIDDEN-HTML-COMMENT` so ordinary HTML/template
-  comments do not fire.
-
-  Real scan output flagged normal comments such as `<!-- Favicons -->`,
-  `<!-- Core GSAP -->`, `<!-- SECTION WRAPPER -->`, `<!-- CORRECT semantic
-  structure -->`, and YAML safety notes. The rule should catch hidden
-  instruction-bearing comments, not every comment containing words like
-  "must", "always", "never", or "correct".
-
-  Implementation notes:
-  - Require the comment body to contain model/agent-directed instruction
-    language or prompt-injection verbs, not generic documentation words.
-  - Add benign fixtures for HTML section comments, template placeholders,
-    accessibility examples, and YAML safety comments.
-  - Keep malicious fixtures with hidden comments that instruct the model to
-    ignore, override, always follow, or never reveal instructions.
-
-- [x] **14** Fix `PI-WHITE-ON-WHITE` so normal fractional font sizes do not
-  match `font-size: 0`.
-
-  Real scan output flagged `font-size:0.8rem` and similar visible UI styles.
-  The pattern should only match actual invisible text values such as `0`,
-  `0px`, `0rem`, `display:none`, `visibility:hidden`, or `opacity:0`.
-
-  Implementation notes:
-  - Require a numeric boundary after zero so `0.8rem` and `0.875rem` do not
-    match.
-  - Add benign fixtures for `font-size:0.8rem`, `font-size: 0.875rem`, and
-    muted visible text.
-  - Keep malicious fixtures for `font-size:0`, `display:none`, hidden spans,
-    and white text on white background.
-
-- [x] **15** Reduce `OBFS-HOMOGLYPH` false positives for math symbols,
-  multilingual fixtures, and normal Unicode.
-
-  Real scan output flagged Greek statistical notation (alpha, beta, gamma,
-  sigma) and multilingual sample credentials such as the Russian word for
-  "password". The rule should focus on suspicious Unicode lookalikes inside
-  ASCII-like identifiers, commands, URLs, or prompt directives.
-
-  Implementation notes:
-  - Do not flag isolated mathematical notation or ordinary non-Latin words.
-  - Add benign fixtures for statistical formulas, Greek parameter notation, and
-    multilingual test data.
-  - Keep malicious fixtures where homoglyphs are embedded in dangerous ASCII
-    words such as command names, override directives, domains, or file paths.
-
-- [x] **16** Reduce `PI-HIDDEN-UNICODE` false positives for legitimate emoji
-  zero-width joiners.
-
-  Real scan output flagged a family emoji because it contains U+200D zero-width
-  joiners. ZWJ emoji sequences are normal visible Unicode, not hidden prompt
-  injection. Keep detecting invisible/bidi smuggling, but avoid flagging ZWJ
-  when it is part of a recognized emoji sequence.
-
-  Implementation notes:
-  - Add a benign fixture for family-emoji ZWJ sequences such as
-    `U+1F468 U+200D U+1F469 U+200D U+1F467 U+200D U+1F466`.
-  - Keep malicious fixtures for zero-width characters inside instruction text,
-    identifiers, shell commands, and URLs.
-  - If a full emoji parser is too much, implement the smallest defensible
-    context check and document its limitations.
-
-- [x] **17** Make `CODEEXEC-PY-OSSYS` distinguish safe subprocess calls from
-  command-injection risk.
-
-  Real scan output flagged many safe `subprocess.run([...], shell=False)` and
-  test harness calls as critical. This rule should flag shell execution,
-  string commands, interpolation of user input, and direct `os.system` /
-  `os.popen`, while treating list-argument subprocess calls with no shell as
-  low/no risk.
-
-  Implementation notes:
-  - Prefer Python AST parsing for `.py` files if practical; avoid brittle
-    regex-only argument inspection for this rule.
-  - Add benign fixtures for `subprocess.run([sys.executable, script],
-    shell=False)`, git command wrappers with list args, and test harnesses.
-  - Keep malicious fixtures for `os.system`, `os.popen`,
-    `subprocess.run(cmd, shell=True)`, and interpolated string commands.
-  - Preserve findings for genuinely risky benchmark/evaluator scripts that run
-    shell strings.
-
-- [x] **18** Stop code-execution rules from matching explanatory strings and
-  recommendations.
-
-  Real scan output flagged strings like `"Never use eval()"`, `"Use
-  yaml.safe_load() instead of yaml.load()"`, and security-scanner rule tables as
-  if they were executable code. Code execution rules should inspect executable
-  syntax, not quoted documentation embedded inside scanner scripts.
-
-  Implementation notes:
-  - Scope this task to `CODEEXEC-PY-EVAL`, `CODEEXEC-DESERIALIZE`, and
-    `OBFS-EVAL-ATOB`.
-  - Prefer AST-aware matching for Python files so string literals and comments
-    do not fire.
-  - Keep markdown/reference-file behavior unchanged unless the rule explicitly
-    applies to markdown.
-  - Add benign fixtures for scanner rule tables and recommendation strings, and
-    malicious fixtures for actual `eval(...)`, unsafe `yaml.load(...)`, and
-    `exec(base64.b64decode(...))` calls.
-
-- [x] **19** Tighten `DEPS-INLINE-INSTALL` so install instructions and
-  negative statements do not look like runtime installs.
-
-  Real scan output flagged lines such as "No pip install needed", echoed
-  installation instructions, README setup examples, and "For permanent
-  installation: pip install ...". Keep flagging skills that install packages at
-  execution time, but do not flag documentation that tells a human how to set up
-  optional tools.
-
-  Implementation notes:
-  - Add benign fixtures for `echo "pip install ..."`, markdown installation
-    sections, "no pip install needed", and README setup snippets.
-  - Keep malicious fixtures for shell/Python/JS code that actually invokes
-    `pip install`, `npm install`, or `conda install` during skill execution.
-  - Be careful with `SKILL.md`: installation guidance can be benign, while
-    workflow steps that tell the agent to install packages inline should still
-    report.
-
-- [x] **20** Treat well-known placeholder secrets and explicitly bad examples
-  as documentation, not real hardcoded-key findings.
-
-  Real scan output flagged placeholder keys such as `AKIAIOSFODNN7EXAMPLE`,
-  `sk-1234567890abcdef...`, and examples marked `NEVER DO THIS`. Those are
-  useful educational examples, but they should not score like real leaked
-  credentials.
-
-  Implementation notes:
-  - Add a small denylist of canonical placeholder/test secret values and
-    patterns from provider docs.
-  - Demote or suppress findings when the same line or nearby heading clearly
-    labels the value as `BAD`, `WRONG`, `NEVER DO THIS`, `example`, `fixture`,
-    or test data.
-  - Keep malicious fixtures for plausible non-placeholder API keys and tokens
-    with no example/test context.
-
-- [x] **21** Add documentation/example context handling for filesystem and
-  network rules.
-
-  Real scan output flagged many best-practice examples and test payloads:
-  `/etc/passwd` in path traversal docs, `~/.ssh/id_rsa` in threat-model tables,
-  OpenGraph.xyz links, `.xyz` informational links, raw sockets in tests, and
-  sample payment processor assets. These should not all be critical runtime
-  findings.
-
-  Implementation notes:
-  - Scope this to `FS-CREDSTORE`, `FS-BOUNDARY-ESCAPE`,
-    `NET-OUTBOUND-NONLOCAL`, `NET-DNS-UNUSUAL-TLD`, and `NET-RAW-SOCKET`.
-  - Add context rules for docs, references, tests, fixtures, and assets/sample
-    code. Prefer demotion to `info` or `low` when the example remains useful to
-    show, and suppression only when it is clearly noise.
-  - Keep malicious fixtures for active code that reads credential stores,
-    traverses outside the skill boundary, or sends data to hardcoded external
-    endpoints.
-
-- [x] **22** Restore a real exact-hash allowlist for bundled/official trusted
-  skills.
-
-  Real scan output showed every skill as `allowlisted=false`, including
-  official/bundled plugin paths. The current `anthropic-skills.json` allowlist
-  contains placeholder zero hashes, so trusted-skill demotion cannot work.
-
-  Implementation notes:
-  - Regenerate exact tree hashes for the intended allowlisted vendor skills.
-  - Keep allowlisting exact-hash based; do not trust a skill by name or path
-    alone.
-  - Add tests proving allowlisted PI-* findings are demoted as intended and
-    non-PI critical findings still surface.
-  - Document how to refresh the allowlist and make the output clearly show when
-    a skill was allowlisted.
-
-- [x] **23** Remove public-facing mentions of v0.2, roadmap, and future
-  features.
-
-  Clean up docs and package-facing text so the project presents only what the
-  CLI supports today. Remove or rewrite references to `v0.2`, `v.02`,
-  roadmaps, "coming soon" feature lists, and speculative future capabilities
-  from README, package docs, specs excerpts, skill wrapper docs, and CLI help or
-  output text.
-
-  Implementation notes:
-  - Search for `v0.2`, `v.02`, `roadmap`, `future`, `coming soon`, `planned`,
-    and similar phrasing across markdown, source help text, package metadata,
-    and docs.
-  - Keep internal task-planning references in `fix_plan.md`, `LESSONS.md`, and
-    post-mortem files only when they are necessary for contributor workflow.
-  - Do not delete documentation for implemented commands or behavior.
-  - Add or adjust tests if any CLI help/output snapshot changes.
-
-- [x] **24** Align public package identity and install commands everywhere.
-
-  Pick one canonical package/install story and make README, badges, npm
-  metadata, CLI examples, skill wrapper docs, action docs, and release workflow
-  references agree. The current repo mixes `npx skillaudit`,
-  `@skillaudit/cli`, and `skill-audit`; resolve that before any package-facing
-  documentation is treated as final.
-
-  Implementation notes:
-  - Confirm the actual npm package name, package scope, and executable name.
-  - Update `README.md`, `packages/cli/package.json`, package docs, and
-    workflows so the install command and badge URLs point to the package that
-    will actually be published.
-  - Add or update a smoke check proving the documented one-line command invokes
-    the expected binary.
-
-- [x] **24.1** Add npm metadata and packed package docs.
-
-  The CLI package currently has minimal package metadata and the npm tarball
-  dry-run includes only `dist/*` plus `package.json`. Before public publishing,
-  the npm package page and installed package should include enough trust and
-  discovery context for users to understand what they are installing.
+  - Add a regression test with a large enough skill count to produce a nonzero
+    percentage below 1%.
+  - Verify the built `node packages/cli/dist/index.js scan` output for that
+    fixture shows a nonzero percentage.
+
+- [ ] **3** Explain missing or unavailable enrichment briefly in user-facing
+  output.
+
+  When enrichment fails, is disabled, is skipped for the selected output mode,
+  or has no displayable data, the user-facing output should include a compact
+  explanation rather than appearing silently absent. Keep the text brief and
+  avoid making normal offline or timeout cases look like scanner failures.
 
   Target behavior:
-  - `packages/cli/package.json` includes public-facing `license`, `repository`,
-    `homepage`, `bugs`, `author`, and `keywords` fields.
-  - Metadata uses the canonical package identity from task 24 and the canonical
-    author/repository identity from `CLAUDE.md`.
-  - The packed npm artifact includes the package README, license text, and
-    changelog/release notes, not only compiled `dist/` files.
-  - The package tarball does not include internal loop-driver files such as
-    `fix_plan.md`, `PROMPT.md`, `AGENT.md`, or test fixtures unless they are
-    intentionally part of the package.
+  - In `--offline` mode, do not display the `ENRICHMENT` table column at all in
+    the default human scan output, and show the existing compact stderr notice
+    that enrichment was skipped because offline mode is active.
+  - When an output mode intentionally does not run enrichment, such as
+    `scan --summary`, do not add an enrichment message unless that output
+    already has an enrichment area.
+  - When selected enrichment sources run but no displayable metadata is found,
+    show a compact neutral message such as `Enrichment: no metadata found.`
+  - When enrichment fails at the aggregate lookup level, show a compact neutral
+    message such as `Enrichment unavailable: lookup failed or timed out.`
+  - Do not attempt source-level diagnostics in this task. Exact distinctions
+    like no repository slug, per-source timeout, and stale-cache fallback belong
+    in a future enrichment diagnostics task.
 
   Implementation notes:
-  - Coordinate with task 25 for `LICENSE` and `CHANGELOG.md`; if those files do
-    not exist yet, either complete task 25 first or document the dependency
-    clearly.
-  - Decide whether to copy root docs into `packages/cli/` or include them via
-    package `files`/release staging; keep the approach simple and reproducible.
-  - Add a verification step using `pnpm --filter <canonical-package> pack
-    --dry-run` and confirm the tarball contents include `dist`, `package.json`,
-    README, LICENSE, and CHANGELOG.
+  - Cover the relevant human outputs that already mention or display
+    enrichment, especially `scan` and `explain`.
+  - Keep JSON schema compatibility; this task is about user-facing pretty
+    output only.
+  - Add tests for offline output with no `ENRICHMENT` column, one failed or
+    unavailable enrichment state, and one output mode where enrichment is
+    intentionally not displayed.
 
-- [x] **25** Add missing repository trust and contribution files.
+- [ ] **4** Make scan summary issue counts internally consistent.
 
-  Add the standard top-level files that a security-sensitive open source CLI
-  should have before broad use: `LICENSE`, `SECURITY.md`, `CONTRIBUTING.md`,
-  `CHANGELOG.md`, `.github/CODEOWNERS`, `.github/dependabot.yml`,
-  `.github/ISSUE_TEMPLATE/config.yml`, issue templates, and
-  `.github/PULL_REQUEST_TEMPLATE.md`.
-
-  Implementation notes:
-  - Use the license named by project policy; if no license is documented, ask
-    before choosing one.
-  - Keep contribution instructions short and aligned with `AGENT.md`.
-  - Link `SECURITY.md` from README once the file exists.
-  - Verify every new markdown link resolves on disk.
-
-- [x] **26** Tighten README claims and privacy wording.
-
-  Audit README language so every public claim is supported by implemented
-  behavior. The README should state the local-first behavior precisely, explain
-  what optional enrichment can contact, and point users to `--offline` when
-  they want no network requests.
-
-  Implementation notes:
-  - Remove unsupported phrases such as future commands, future modes, or
-    unmeasured performance claims.
-  - Add a concise privacy note that distinguishes local scanning from optional
-    enrichment lookups.
-  - If the README cites an external statistic, keep attribution explicit and do
-    not phrase it as this project's own finding.
-
-- [x] **27** Replace the README hero placeholder with a local demo asset.
-
-  Create a small local demo GIF or terminal recording asset and reference it
-  from README instead of using a remote placeholder or commented-out image.
-
-  Implementation notes:
-  - Store the asset under `docs/` and keep it reasonably small for GitHub and
-    npm rendering.
-  - Show an actual supported command and current output shape.
-  - Verify the referenced file exists before committing the README change.
-
-- [x] **28** Resolve the GitHub Action packaging and usage path.
-
-  Decide whether the root `action.yml` is the supported action in this
-  repository or whether a separate wrapper repository is required. Make the
-  README usage example, action metadata, action name, versioning guidance, and
-  workflow behavior match that decision.
-
-  Implementation notes:
-  - Verify the action command invokes the published package name from task 24.
-  - Fix the action output parsing if the JSON shape differs from what
-    `action.yml` currently expects.
-  - Add a minimal workflow/example that exercises the action path without
-    depending on undocumented behavior.
-
-- [x] **29** Add a README table explaining what leaves the machine.
-
-  Add a small table that distinguishes local scanning from optional enrichment
-  requests. Users should be able to tell which modes read local skill content,
-  which modes make network requests, and what `--offline` disables.
-
-  Implementation notes:
-  - Keep the table factual and tied to implemented behavior.
-  - Mention `skills.sh`, GitHub, and `deps.dev` only if the CLI currently uses
-    them.
-  - Do not imply skill contents are uploaded unless the implementation actually
-    sends contents.
-
-- [x] **30** Add a README limitations section.
-
-  Add a concise limitations section that explains the scanner's detection model,
-  expected false-positive classes, and why a PASS verdict is not a guarantee
-  that a skill is safe.
-
-  Implementation notes:
-  - Keep the language practical and non-alarmist.
-  - Point to `ignore` / allowlist behavior where relevant.
-  - Avoid unsupported recall or false-positive percentages unless measured or
-    already backed by project evidence.
-
-- [x] **31** Add verified CI usage documentation.
-
-  Document a working CI setup for `skillaudit`, including the supported command,
-  exit-code behavior, JSON output, and action usage once task 28 settles the
-  action path.
-
-  Implementation notes:
-  - Include one npm/npx command example and one GitHub Actions example.
-  - Ensure examples use the canonical package name from task 24.
-  - Mention `--fail-on` behavior using the exact implemented flag values.
-
-- [x] **32** Add README example findings.
-
-  Add compact examples that show how common findings appear and what a user
-  should do next. Include at least one prompt-injection example, one
-  exfiltration example, and one benign/example-code case that demonstrates
-  allowlist or ignore handling.
-
-  Implementation notes:
-  - Keep examples short enough that the README remains scannable.
-  - Use current rule IDs and current output field names.
-  - Do not include live-looking secrets; use clearly synthetic fixture values.
-
-- [x] **33** Add a README comparison table for adjacent tools.
-
-  Add a neutral comparison table that explains where this CLI fits beside
-  adjacent scanners. Focus on implemented behavior such as local execution,
-  account requirements, supported agent discovery, output formats, and
-  rule/model approach.
-
-  Implementation notes:
-  - Keep competitor descriptions factual and sourced where possible.
-  - Avoid claims of superiority that are not directly supported by behavior.
-  - Re-check external tool details before finalizing if the task is implemented
-    in a later session.
-
-- [x] **34** Keep README badges minimal and verified.
-
-  Review README badges and ensure each one points to a real package, workflow,
-  or file. Keep only high-signal badges such as package version, CI, and
-  license.
-
-  Implementation notes:
-  - Remove badges whose target does not exist yet.
-  - Add a license badge only after `LICENSE` exists.
-  - Verify badge links and referenced workflow names match the repo.
-
-- [x] **36** Add a repository social preview asset.
-
-  Create a 1280x640 image under `docs/` that clearly identifies the project and
-  shows the CLI output shape. Document the GitHub settings step needed to upload
-  it as the repository social preview.
-
-  Implementation notes:
-  - Keep the image readable in light and dark contexts.
-  - Do not reference the image from README unless it is useful there too.
-  - Verify the image file exists and is under GitHub's size guidance.
-
-- [x] **40** Use npm trusted publishing and provenance for package releases.
-
-  Update the package release workflow to use npm trusted publishing where
-  available, or otherwise publish with provenance from GitHub Actions. Document
-  the required npm package settings so releases do not depend on long-lived
-  write tokens when trusted publishing is available.
-
-  Implementation notes:
-  - Ensure `repository` metadata in `packages/cli/package.json` exactly matches
-    the GitHub repository.
-  - Use an npm version and Node version that support the chosen publishing
-    method.
-  - Remove `NPM_TOKEN` dependency from the workflow only after trusted
-    publishing is configured and verified.
-
-- [x] **40.1** Harden release workflow verification before npm publish.
-
-  The release workflow currently grants `id-token: write` but still publishes
-  with `NPM_TOKEN`, and it verifies only build/test before publishing. Public
-  releases should run the same quality gate contributors are required to run
-  locally, then publish with trusted publishing/provenance once configured.
+  The scan summary can currently render a line like
+  `Unique issues............. 21  (54 critical, 44 high, 66 medium, 0 low)`.
+  That reads as contradictory because the unique issue count is lower than the
+  severity counts shown in parentheses.
 
   Target behavior:
-  - Release workflow runs `pnpm build`, `pnpm test`, `pnpm lint`,
-    `pnpm typecheck`, and the clean build-warning check before publishing.
-  - Release workflow runs a real CLI smoke command against the built binary
-    before publishing.
-  - Release workflow verifies npm package contents with `pnpm --filter
-    <canonical-package> pack --dry-run` before publishing.
-  - Publishing uses npm trusted publishing where available, or
-    `npm publish --provenance` / equivalent provenance support as the fallback.
-  - Long-lived `NPM_TOKEN` use is removed once trusted publishing is configured
-    and verified.
+  - In this summary line, define `Unique issues` as the number of unique skills
+    with at least one finding.
+  - The severity breakdown must count the same unique skill set. Each affected
+    skill contributes to exactly one severity bucket using the highest severity
+    finding on that skill.
+  - If the severity breakdown intentionally counts finding instances instead,
+    rename or restructure the line so the distinction is obvious.
+  - Apply the fix consistently to human scan summary output anywhere this count
+    appears.
 
   Implementation notes:
-  - Keep the package name, working directory, and publish command aligned with
-    the canonical package identity from task 24.
-  - Do not publish unless every verification step passes.
-  - Document any required npm-side trusted publishing settings in
-    `docs/RELEASE_CHECKLIST.md` once that file exists.
+  - Add a regression test where one skill has multiple findings and another
+    skill has one finding, proving the line counts affected skills rather than
+    raw finding instances or unique rule IDs.
+  - Verify the built `node packages/cli/dist/index.js scan` output no longer
+    shows a smaller unique total beside larger unlabeled severity totals.
 
-- [x] **41** Add `docs/THREAT_MODEL.md`.
+- [ ] **5** Derive skill names correctly for nested plugin version
+  directories.
 
-  Write a focused threat model for the CLI, covering what skillaudit scans,
-  what it intentionally does not trust, what optional enrichment can contact,
-  and how false positives/false negatives are handled.
-
-  Implementation notes:
-  - Include local skill contents, environment variables, network enrichment,
-    rule updates, allowlists, and GitHub Action execution as explicit sections.
-  - Link from README and `SECURITY.md` once the file exists.
-
-- [x] **42** Add `docs/RELEASE_CHECKLIST.md`.
-
-  Create a release checklist that captures the project-specific verification
-  steps before publishing a package or action version.
-
-  Required checks:
-  - `pnpm build`
-  - `pnpm test`
-  - `pnpm lint`
-  - `pnpm typecheck`
-  - clean build-warning check
-  - real CLI smoke run
-  - markdown link/path verification
-  - package provenance/trusted-publishing verification
-
-- [x] **43** Add `docs/EXAMPLES.md`.
-
-  Create a examples document with realistic command-line workflows for local
-  scanning, JSON output, file output once available, HTML reports, CI, offline
-  scanning, and explaining a single skill.
+  In plugin cache layouts such as
+  `.claude/plugins/cache/claude-code-skills/skill-security-auditor/2.2.0/SKILL.md`,
+  discovery can display the skill name as `2.2.0`. The displayed skill name
+  should be `skill-security-auditor`, not the semantic-version directory.
 
   Implementation notes:
-  - Use only implemented commands and flags.
-  - Keep command outputs short and current.
-  - Link from README without duplicating the whole document there.
+  - Add smart path/name normalization for version-directory layouts.
+  - Treat a directory basename as version-like when it matches
+    `/^v?\d+\.\d+\.\d+(?:[-+].*)?$/`.
+  - When `SKILL.md` lives in a version-like directory, use the parent directory
+    name as the fallback skill name instead of the version directory name.
+  - Prefer metadata from `SKILL.md` or plugin manifests when available; fall
+    back to the parent directory before a version-looking leaf directory.
+  - Add discovery tests for at least one semver nested directory and one normal
+    non-version skill directory so regular names are unchanged.
 
-- [x] **44** Add `docs/ROADMAP.md`.
+- [ ] **6** Prefer non-cache paths as the primary path when deduping skills.
 
-  Create a restrained maintainer roadmap that separates committed near-term
-  work from ideas. The README should not depend on speculative items, but a
-  separate roadmap can help contributors find appropriate next tasks.
+  When identical skill content is discovered both in a regular plugin/skills
+  location and in an agent plugin cache, deduplication correctly collapses the
+  duplicate, but the cache path can incorrectly become the primary `path` while
+  the real install location is only shown in `also_installed_at`.
 
-  Implementation notes:
-  - Keep each item tied to an issue or `fix_plan.md` task when possible.
-  - Clearly label anything not committed.
-  - Do not promise dates.
-
-- [x] **45** Add a false-positive issue form.
-
-  Add `.github/ISSUE_TEMPLATE/false-positive.yml` so users can report noisy
-  findings with enough structured information for rule tuning.
-
-  Required fields:
-  - skillaudit version
-  - command run
-  - rule ID
-  - redacted finding output
-  - why the content is benign
-  - whether the file is documentation, test fixture, or runtime code
-
-- [x] **46** Add a missed-detection issue form.
-
-  Add `.github/ISSUE_TEMPLATE/missed-detection.yml` so users can report cases
-  where risky skill content was not flagged.
-
-  Required fields:
-  - skillaudit version
-  - command run
-  - redacted sample content
-  - expected rule or risk category
-  - whether a minimal fixture can be shared
-  - impact explanation
-
-- [x] **47** Add a new-agent-support issue form.
-
-  Add `.github/ISSUE_TEMPLATE/new-agent-support.yml` so users can request
-  discovery support for additional agents or skill/plugin locations.
-
-  Required fields:
-  - agent/tool name
-  - operating system
-  - global paths
-  - project-local paths
-  - file formats
-  - example redacted directory tree
-
-- [x] **48** Add a pull request template.
-
-  Add `.github/PULL_REQUEST_TEMPLATE.md` that asks contributors for scope,
-  linked issue/task, tests run, CLI smoke output when relevant, and markdown
-  link verification when docs are touched.
+  Target behavior:
+  - If any non-cache path exists for a deduped skill, use a non-cache path as
+    the primary `path`.
+  - Preserve cache paths in `alsoInstalledAt` / `also_installed_at` when they
+    are duplicate install locations.
+  - Keep ordering deterministic when multiple non-cache paths exist.
+  - Treat a normalized path as a cache path when it contains adjacent
+    `plugins/cache` path segments, such as `.claude/plugins/cache/...` or
+    `.codex/plugins/cache/...`.
+  - Do not treat `marketplaces`, `skills/cache`, or a skill named `cache` as a
+    cache path unless it is under `plugins/cache`.
+  - If all duplicate paths are cache paths, pick the primary path
+    deterministically by lexicographic order.
 
   Implementation notes:
-  - Keep the template short enough that contributors will actually fill it out.
-  - Align required checks with `AGENT.md` and `docs/RELEASE_CHECKLIST.md`.
+  - Keep this normalization in the shared discovery dedupe layer rather than in
+    one agent-specific plugin.
+  - Put the cache-path predicate in one shared helper so future cache roots can
+    be added deliberately.
+  - Add tests with Claude and Codex `plugins/cache` examples plus one regular
+    plugin path for the same `treeSha256`.
+
+- [ ] **7** Add clear labels to `explain` finding detail lines.
+
+  The remediation line in `explain` output does not start with a label such as
+  `Fix:`, so users have to infer what the line means. Other finding-detail lines
+  should also be labeled clearly enough to scan.
+
+  Target behavior:
+  - The remediation line starts with `Fix:` or an equivalent clear label.
+  - Other finding-detail lines use clear labels for their content.
+  - JSON output remains unchanged unless the task explicitly updates the schema.
+
+  Implementation notes:
+  - Add or update tests for the human `explain` output.
+  - Verify the built `node packages/cli/dist/index.js explain <skill>` output
+    is readable against a fixture or discovered skill.
+
+- [ ] **8** Add nicer live progress for discovery and scanning.
+
+  Skill discovery and scan execution should show more real-time, user-friendly
+  progress so long runs feel alive and users can tell which phase the CLI is in.
+  Make the default progress feel playful and memorable without making a security
+  scanner look unserious: one live status line, clear counts, restrained motion,
+  and no extra stdout noise.
+
+  Recommended UX:
+  - Use a "Skill Sleuth" discovery animation for interactive pretty output. The
+    visual metaphor is a detective/investigator moving across a short rail while
+    the text names the current discovery phase or agent.
+
+    ```text
+    🕵️··········  Opening the case file...
+    ··🕵️········  Checking claude-code...
+    ····🕵️······  Checking cursor...
+    ······🕵️····  Checking codex...
+    ✓ Found 12 skills across 3 agents
+    ```
+
+  - Use a counted "scanner sweep" for rule execution because scan work has a
+    known total once discovery is complete.
+
+    ```text
+    🔎 [██████░░░░] 7/12  Scanning aws-helper
+    ✓ Scan complete: 12 skills checked
+    ```
+
+  - Use a compact enrichment checklist because enrichment is source-based, not a
+    full per-skill progress story.
+
+    ```text
+    ⠋ Enriching with skills.sh, deps.dev
+    ✓ Enrichment complete: skills.sh ✓  deps.dev ✓
+    ```
+
+  - Provide ASCII fallbacks for terminals where emoji or Unicode width is risky:
+    `>··········` or `[..>.......]` for discovery, `[#.....] 7/12` for scan,
+    and plain `Enriching with skills.sh, deps.dev` for enrichment.
+
+  Target behavior:
+  - Progress/status output stays on stderr. It must never corrupt stdout
+    payloads for JSON, summary, or file-output modes.
+  - Pretty interactive `scan`, `list`, and `explain` use the shared progress
+    reporter with `ora` or equivalent stderr status updates.
+  - Discovery success text includes both total skills and agent count, for
+    example `Found 12 skills across 3 agents`.
+  - Scan progress updates as skills complete, for example
+    `Scanning skills 7/12`.
+  - Enrichment progress names the selected sources, for example
+    `Enriching with skills.sh, deps.dev`.
+  - Machine-readable and redirected/file-output modes do not animate. JSON,
+    summary, and file payloads must stay clean; existing stderr warnings/notices
+    remain allowed.
+  - Disable animation in non-TTY, CI, and `TERM=dumb` environments. Prefer no
+    progress line over a noisy or broken one.
+  - Keep the final report ordering and output payloads unchanged except for
+    additional stderr progress text in interactive pretty modes.
+
+  Implementation notes:
+  - Add a small internal progress reporter rather than duplicating spinner logic
+    in each command. Keep it dependency-light and use the existing `ora`
+    package; do not add Ink, React, or another TUI framework.
+  - Extend discovery with optional progress callbacks so `discoverAll()` can
+    report "checking agent", "agent done", and final deduped totals without
+    changing behavior for tests or non-interactive callers.
+  - Update scan concurrency so each completed skill increments the live
+    `Scanning skills X/Y` status while preserving the current result ordering.
+  - Keep enrichment progress source-aware by deriving display names from the
+    selected enrichment sources.
+  - Treat the exact playful copy as implementation detail, but preserve these
+    concepts: detective/investigation for discovery, counted scanner sweep for
+    rules, checklist for enrichment, and clear phase labels throughout.
+  - Keep the animation related to the operation. Do not add mini-games,
+    interactive prompts, or extra screens that could distract from scan results.
+
+  Testing notes:
+  - Unit-test progress mode selection: animated only for interactive human
+    output; silent/plain for JSON, summary, file output, CI, non-TTY, and
+    `TERM=dumb`.
+  - Add command tests proving stdout remains valid JSON/text payload while
+    progress writes only to stderr.
+  - Add scan progress coverage that forces progress enabled and verifies
+    `Scanning skills 1/N` through `N/N`.
+  - Add discovery callback tests proving final totals use deduped skills and
+    unique agent counts.
+  - Smoke-test the built CLI against a temp fixture and inspect the first screen
+    for readable progress and clean final output.
+
+  Research notes:
+  - Nielsen Norman Group guidance: give progress feedback for operations over
+    roughly one second; looped indicators fit short waits, while counted or
+    percent-done progress is better once work units are known.
+  - `ora` already supports custom spinner frames, stderr output, TTY detection,
+    text updates, and completion symbols, which is enough for this task.
+  - `cli-spinners` and Charm `gum spin` show that playful/custom spinner styles
+    are common in modern CLIs, but this repo should keep the implementation
+    local and avoid a new dependency for v1.
+
+- [ ] **9** Render human-readable agent names in pretty outputs.
+
+  Human-facing output should render technical agent identifiers such as
+  `claude-code` and `cross-agent` as nicer names like `Claude Code`.
+
+  Target behavior:
+  - Apply the friendly names to every human/pretty output that displays agent
+    names, including `list`, regular human `scan` output, `explain` output, and
+    HTML output.
+  - Do not change JSON output; programmatic agent identifiers are part of the
+    machine-readable contract.
+  - Keep a shared mapping/helper so renderers do not drift.
+
+  Implementation notes:
+  - Add tests for at least one CLI pretty output and the HTML renderer.
+  - Include fallback behavior for unknown agent ids.
+
+- [ ] **10** Apply `scan --agent` filtering during discovery.
+
+  When `scan` is run with `--agent <agent>`, the CLI currently filters by agent
+  after discovering and scanning across all agents. Discovery should apply the
+  selected agent filter up front so the command avoids unnecessary work and
+  reports the correct selected-agent skill count.
+
+  Target behavior:
+  - Supported built-in scan agent ids are `claude-code`, `cursor`, `copilot`,
+    `codex`, `gemini`, and `cross-agent`.
+  - Only the selected agent's discovery plugin(s) run for `scan --agent`.
+  - The scan phase only scans skills for the selected agent.
+  - Output skill counts reflect the selected agent, not the full machine.
+  - Unknown or unsupported agent filters exit `2` with a clear usage-style
+    error.
+  - Supported agents that are not installed or have no discovered skills exit
+    `0` with a clear no-skills message.
+
+  Implementation notes:
+  - Prefer a registry-level API such as `discoverAll({ agent })` or equivalent
+    so filtering happens before plugin execution.
+  - Reuse existing agent filter semantics from related commands if available.
+  - Add tests proving unselected agent discovery plugins are not invoked.
+  - Verify the built `node packages/cli/dist/index.js scan --agent <agent>`
+    output against a fixture or temp home with multiple agents.
+
+- [ ] **11** Show per-agent skill counts in the scan overview.
+
+  The scan overview should show how many skills were scanned for each specific
+  agent, not only the total skill count and total number of agents.
+
+  Implementation notes:
+  - Apply this to human scan overview output.
+  - Define the displayed per-agent count as `result.agents[].skillsScanned`.
+  - Include ignored skills in the per-agent count because ignored skills still
+    appear in scan output.
+  - Exclude skills skipped due to scan errors from the per-agent count because
+    those results are incomplete rather than scanned.
+  - Use friendly agent names if task 9 has already landed; otherwise keep the
+    output easy to update when that mapping exists.
+  - Make `scan --agent <agent>` show a single selected-agent count without
+    implying other agents were scanned.
+  - Add regression coverage for multi-agent scan results.
+
+- [ ] **12** Rename `skillaudit` product, CLI, and user-facing references to
+  `skill-audit` carefully.
+
+  Across the project, the canonical package/product/CLI identity should be
+  `skill-audit` rather than `skillaudit`. This includes README text, CLI output,
+  docs, package-facing examples, repository URLs, config/cache paths, and the
+  executable binary name.
+
+  Target behavior:
+  - The CLI binary exposed by the npm package is `skill-audit` only.
+  - Do not keep a `skillaudit` binary alias.
+  - Public docs and examples use `skill-audit`.
+  - CLI output, fatal prefixes, report titles, generated filenames, and
+    next-step commands use `skill-audit`.
+  - Config/cache directories use `skill-audit` for new paths.
+  - GitHub URLs use the current moved repository URL.
+
+  Implementation notes:
+  - Search across the entire repo for `skillaudit`.
+  - This is an intentional breaking CLI rename; update tests and docs rather
+    than preserving old command compatibility.
+  - Be careful with internal names, env vars, historical notes, test temp
+    prefixes, fixtures, and prior lessons. Change them only when they are part
+    of current user-facing behavior or package identity.
+  - If the old config/cache directory may contain existing user data, add a
+    migration or read-fallback for the old path rather than silently losing
+    ignored skills or cached enrichment.
+  - Add or update tests for any CLI help/output text that changes.
+  - Verify markdown links and package-facing commands still resolve/work.
+
+- [ ] **13** Include skill modification dates in scan results.
+
+  Scan results should include when a skill was last modified, using filesystem
+  modification timestamps where available. Do not attempt to expose install or
+  creation time in this task because filesystem creation/birth time is not
+  reliable across platforms, archives, and copied directories. Modification
+  dates help users prioritize recently changed or suspicious skills during
+  review.
+
+  Target behavior:
+  - Add `modifiedAt?: string` to the internal skill/result model as an ISO 8601
+    timestamp.
+  - For directory skills, prefer the manifest file mtime (`manifestPath`,
+    `SKILL.md`, `AGENTS.md`, etc.) when available.
+  - For file skills, use the file mtime.
+  - If the relevant filesystem stat fails, omit the field and continue scanning.
+  - JSON output includes `modified_at` as an ISO string when present, near the
+    existing path/hash identity fields.
+  - Human pretty outputs may show the modification date where it helps review,
+    but must keep tables readable.
+
+  Implementation notes:
+  - Update `specs/OUTPUT.md` because this intentionally expands the JSON schema.
+  - Add the field to discovery output paths where skills are constructed.
+  - Add tests with controlled fixture timestamps where feasible.
 
 ## Dependencies added
 
@@ -948,11 +422,6 @@ at the bottom and the loop will stop.
   in code-execution.ts uses RegExp constructor with split strings to avoid
   triggering the same hook on the pattern for JS dynamic code detection.
 
-- **13.1: Codex registration timing** — Registered `codex` in
-  `initDefaultPlugins()` during task 13.1 because that task explicitly requires
-  validating `node packages/cli/dist/index.js list` against real Codex paths.
-  Task 13.3 now only needs to register Gemini.
-
 - **22: exact allowlist sources** — Replaced zero-hash placeholders with only
   trusted skill payloads whose exact trees are available to the repo-local
   generator: bundled OpenAI-curated Codex skills and the skillaudit wrapper
@@ -962,80 +431,3 @@ at the bottom and the loop will stop.
 
 (If Ralph hits something it cannot proceed past, document here with error
 output and what was attempted.)
-
-- **0.1 commit blocked in Codex session** — Implementation and verification
-  completed, but `git commit` failed with `fatal: Unable to create
-  '/home/linuxuser/skillaudit/.git/index.lock': Read-only file system`.
-  `mount` shows `/home/linuxuser/skillaudit` is writable but
-  `/home/linuxuser/skillaudit/.git` is mounted read-only, so this session cannot
-  stage, commit, or check off the task.
-
-- **0.1 commit still blocked in Codex session** — A narrow follow-up fix for
-  empty-hash annotation cloning passed verification, but
-  `git commit -m "fix(discovery): preserve empty-hash install annotations"`
-  failed with `fatal: Unable to create
-  '/home/linuxuser/skillaudit/.git/index.lock': Read-only file system`.
-  `mount` again shows `/home/linuxuser/skillaudit` as `rw` and
-  `/home/linuxuser/skillaudit/.git` as `ro`; current uncommitted files are
-  `packages/cli/src/discovery/index.ts`, `test/discovery-registry.test.ts`, and
-  this blocker note.
-
-- **35 blocked in Codex session** — Repository topic configuration requires a
-  GitHub topics update API. The available GitHub connector can read repository
-  metadata for `ondrej-merkun/skill-audit` with admin permissions but does not
-  expose topic updates, and local `gh` cannot reach GitHub from this sandbox.
-  Attempted:
-  `gh repo edit ondrej-merkun/skill-audit --add-topic ai-security --add-topic prompt-injection --add-topic agent-skills --add-topic cli --add-topic static-analysis --add-topic supply-chain-security --add-topic claude-code --add-topic cursor --add-topic codex --add-topic copilot`.
-  It failed with `error connecting to api.github.com`.
-
-- **35 still blocked in Codex session** — Rechecked `tool_search`, the GitHub
-  connector, and local `gh`. `tool_search` exposes no repository-topics write
-  endpoint; `_get_repo` confirms admin access to `ondrej-merkun/skill-audit`
-  but has no topics field or update action; `gh auth status` reports the
-  configured `ondrej-merkun` token is invalid; and both
-  `gh repo view ondrej-merkun/skill-audit --json nameWithOwner,repositoryTopics`
-  and `gh repo edit ondrej-merkun/skill-audit --add-topic ...` fail with
-  `error connecting to api.github.com`.
-
-- **35 remains blocked in Codex session** — Rechecked the GitHub plugin and
-  local CLI on 2026-04-27. `tool_search` still exposes only repository/issue/PR/
-  file tools, not repository topic updates. `_get_repo` confirms admin access to
-  `ondrej-merkun/skill-audit`, but the connector has no topics field or write
-  action. `gh auth status` still reports the configured `ondrej-merkun` token is
-  invalid, `gh repo view ondrej-merkun/skill-audit --json nameWithOwner,repositoryTopics`
-  fails with `error connecting to api.github.com`, and
-  `gh repo edit ondrej-merkun/skill-audit --add-topic ai-security --add-topic prompt-injection --add-topic agent-skills --add-topic cli --add-topic static-analysis --add-topic supply-chain-security --add-topic claude-code --add-topic cursor --add-topic codex --add-topic copilot`
-  fails with the same API connection error.
-
-- **35 still cannot be completed in Codex session** — Rechecked on
-  2026-04-27. `tool_search` still exposes no repository-topics write endpoint.
-  Local `git remote -v` points at `https://github.com/ondrej-merkun/skillaudit.git`,
-  but `gh auth status` reports the configured `ondrej-merkun` token is invalid.
-  `gh repo view ondrej-merkun/skill-audit --json nameWithOwner,repositoryTopics`
-  and `gh repo edit ondrej-merkun/skill-audit --add-topic ai-security --add-topic prompt-injection --add-topic agent-skills --add-topic cli --add-topic static-analysis --add-topic supply-chain-security --add-topic claude-code --add-topic cursor --add-topic codex --add-topic copilot`
-  both fail with `error connecting to api.github.com`.
-
-- **37 blocked in Codex session** — Default-branch protection and repository
-  rulesets are GitHub repository settings, not tracked files in this repo.
-  Rechecked on 2026-04-27. `tool_search` exposes GitHub PR, branch, and file
-  tools but no branch-protection or ruleset write endpoint. Local
-  `gh auth status` reports the configured `ondrej-merkun` token is invalid, and
-  `gh repo view --json nameWithOwner,defaultBranchRef,isPrivate` fails with
-  `error connecting to api.github.com`. Without an authenticated GitHub settings
-  API, this session cannot require CI checks, up-to-date branches, force-push
-  and deletion blocks, or conversation resolution on the default branch.
-
-- **38 blocked in Codex session** — Repository security settings are hosted
-  GitHub settings, not fully tracked files. Rechecked on 2026-04-27. The
-  tracked `.github/dependabot.yml` already exists for npm and GitHub Actions,
-  but Dependabot alerts, secret scanning, and push protection still require an
-  authenticated GitHub settings API. `tool_search` exposes no security-settings
-  write endpoint. The GitHub connector can read
-  `ondrej-merkun/skill-audit` and reports admin permission, but exposes no
-  Dependabot-alerts, secret-scanning, or push-protection mutation. Local
-  `gh auth status` reports the configured `ondrej-merkun` token is invalid,
-  `gh repo view ondrej-merkun/skillaudit --json nameWithOwner,securityAndAnalysis`
-  fails because `securityAndAnalysis` is not an available `gh repo view` field,
-  and `gh api repos/ondrej-merkun/skillaudit --method PATCH ...` fails with
-  `error connecting to api.github.com`. Without an authenticated GitHub settings
-  API, this session cannot enable or verify those repository security features.
