@@ -459,7 +459,7 @@ at the bottom and the loop will stop.
   - Keep malicious fixtures where homoglyphs are embedded in dangerous ASCII
     words such as command names, override directives, domains, or file paths.
 
-- [ ] **16** Reduce `PI-HIDDEN-UNICODE` false positives for legitimate emoji
+- [x] **16** Reduce `PI-HIDDEN-UNICODE` false positives for legitimate emoji
   zero-width joiners.
 
   Real scan output flagged a family emoji because it contains U+200D zero-width
