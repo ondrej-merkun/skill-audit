@@ -700,7 +700,7 @@ at the bottom and the loop will stop.
   - Add a minimal workflow/example that exercises the action path without
     depending on undocumented behavior.
 
-- [ ] **29** Add a README table explaining what leaves the machine.
+- [x] **29** Add a README table explaining what leaves the machine.
 
   Add a small table that distinguishes local scanning from optional enrichment
   requests. Users should be able to tell which modes read local skill content,
