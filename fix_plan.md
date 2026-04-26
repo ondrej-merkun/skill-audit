@@ -341,7 +341,7 @@ at the bottom and the loop will stop.
     `.codex-plugin/plugin.json` wrappers do not appear as separate skills, while
     nested skills still do.
 
-- [ ] **9** Tighten `PI-JAILBREAK` so topic words and benign product terms do
+- [x] **9** Tighten `PI-JAILBREAK` so topic words and benign product terms do
   not fire.
 
   The rule currently flags plain occurrences of `jailbreak`, `developer mode`,
