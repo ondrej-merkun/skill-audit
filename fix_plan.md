@@ -132,7 +132,7 @@ at the bottom and the loop will stop.
   - Update README usage/options docs with the new flag and include an example:
     `skillaudit scan --json -o skillaudit-report.json`.
 
-- [ ] **2** Sort scan results consistently by severity score in every output
+- [x] **2** Sort scan results consistently by severity score in every output
   format.
 
   Make the ordering of scanned skills deterministic and severity-first across
