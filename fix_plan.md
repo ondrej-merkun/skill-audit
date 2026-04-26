@@ -89,7 +89,7 @@ at the bottom and the loop will stop.
     unavailable enrichment state, and one output mode where enrichment is
     intentionally not displayed.
 
-- [ ] **4** Make scan summary issue counts internally consistent.
+- [x] **4** Make scan summary issue counts internally consistent.
 
   The scan summary can currently render a line like
   `Unique issues............. 21  (54 critical, 44 high, 66 medium, 0 low)`.
