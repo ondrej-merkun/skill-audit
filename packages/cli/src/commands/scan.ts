@@ -14,7 +14,15 @@ import { calculateCompromisedPercent } from '../percent.js';
 import { runRules } from '../rules/engine.js';
 import { ALL_RULES } from '../rules/index.js';
 import { scoreFindings } from '../score.js';
-import type { AgentInfo, ScanResult, ScannedSkill, Skill, Verdict } from '../types.js';
+import type {
+  AgentInfo,
+  Enrichment,
+  EnrichmentStatus,
+  ScanResult,
+  ScannedSkill,
+  Skill,
+  Verdict,
+} from '../types.js';
 
 const TOOL_VERSION = '0.1.0';
 
@@ -75,6 +83,14 @@ function renderScanPayload(
     return renderSummaryCompact(result);
   }
   return renderTableToString(result);
+}
+
+function hasEnrichmentData(enrichment: Enrichment): boolean {
+  return (
+    enrichment.skillsSh !== undefined ||
+    enrichment.github !== undefined ||
+    enrichment.depsdev !== undefined
+  );
 }
 
 async function mapWithConcurrency<T, R>(
@@ -205,19 +221,24 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   scanSpinner.succeed('Scan complete');
 
   const enrichmentSources = selectScanEnrichmentSources(options);
+  let enrichmentStatus: EnrichmentStatus = options.offline ? 'skipped-offline' : 'not-run';
   if (!options.offline && scannedSkills.length > 0 && enrichmentSources.length > 0) {
     const enrichSpinner = ora('Enriching…').start();
     try {
       const enrichments = await enrichAll(scannedSkills, { sources: enrichmentSources });
+      let foundMetadata = false;
       for (let i = 0; i < scannedSkills.length; i++) {
         const s = scannedSkills[i];
         const e = enrichments[i];
         if (s !== undefined && e !== undefined) {
           scannedSkills[i] = { ...s, enrichment: e };
+          if (hasEnrichmentData(e)) foundMetadata = true;
         }
       }
+      enrichmentStatus = foundMetadata ? 'found' : 'no-metadata';
       enrichSpinner.succeed('Enrichment complete');
     } catch {
+      enrichmentStatus = 'unavailable';
       enrichSpinner.warn('Enrichment failed (continuing)');
     }
   }
@@ -250,6 +271,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
       percentCompromised: calculateCompromisedPercent(compromised, toScan.length),
       verdict: overallVerdict,
     },
+    enrichmentStatus,
   };
 
   if (options.html !== undefined) {

@@ -232,6 +232,32 @@ describe('runExplain', () => {
     });
   });
 
+  it('explains when enrichment runs but finds no metadata', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+    vi.mocked(runRules).mockResolvedValue([]);
+    vi.mocked(scoreFindings).mockReturnValue(makeSummary());
+    vi.mocked(enrichSkill).mockResolvedValue({});
+
+    await runExplain('test-skill', {});
+
+    const out = stripAnsi(stdoutChunks.join(''));
+    expect(out).toContain('Enrichment');
+    expect(out).toContain('no metadata found');
+  });
+
+  it('explains when enrichment lookup is unavailable', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+    vi.mocked(runRules).mockResolvedValue([]);
+    vi.mocked(scoreFindings).mockReturnValue(makeSummary());
+    vi.mocked(enrichSkill).mockRejectedValue(new Error('timeout'));
+
+    await runExplain('test-skill', {});
+
+    const out = stripAnsi(stdoutChunks.join(''));
+    expect(out).toContain('Enrichment unavailable');
+    expect(out).toContain('lookup failed or timed out');
+  });
+
   it('skips enrichment when --offline is set', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     vi.mocked(runRules).mockResolvedValue([]);
@@ -239,6 +265,8 @@ describe('runExplain', () => {
 
     await runExplain('test-skill', { offline: true });
 
+    const out = stripAnsi(stdoutChunks.join(''));
+    expect(out).toContain('offline mode is active');
     expect(enrichSkill).not.toHaveBeenCalled();
   });
 

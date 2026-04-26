@@ -83,6 +83,13 @@ export type Enrichment = {
   depsdev?: DepsDevEnrichment;
 };
 
+export type EnrichmentStatus =
+  | 'not-run'
+  | 'skipped-offline'
+  | 'unavailable'
+  | 'no-metadata'
+  | 'found';
+
 export type SkillSummary = {
   critical: number;
   high: number;
@@ -128,4 +135,5 @@ export type ScanResult = {
   agents: AgentInfo[];
   skills: ScannedSkill[];
   summary: ScanSummary;
+  enrichmentStatus?: EnrichmentStatus;
 };

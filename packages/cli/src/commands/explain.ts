@@ -6,7 +6,15 @@ import { renderJson } from '../output/json.js';
 import { runRules } from '../rules/engine.js';
 import { ALL_RULES } from '../rules/index.js';
 import { scoreFindings } from '../score.js';
-import type { Enrichment, Finding, ScannedSkill, Severity, Skill, Verdict } from '../types.js';
+import type {
+  Enrichment,
+  EnrichmentStatus,
+  Finding,
+  ScannedSkill,
+  Severity,
+  Skill,
+  Verdict,
+} from '../types.js';
 
 const SEVERITY_DOT: Record<Severity, string> = {
   critical: chalk.red('🔴 CRITICAL'),
@@ -44,12 +52,23 @@ function renderFinding(f: Finding): void {
   }
 }
 
-function renderEnrichment(e: Enrichment): void {
+function renderEnrichment(e: Enrichment, status: EnrichmentStatus): void {
   const hasAny = e.skillsSh !== undefined || e.github !== undefined || e.depsdev !== undefined;
-  if (!hasAny) return;
+  if (!hasAny && status === 'not-run') return;
 
   process.stdout.write(`\n  ${chalk.bold('Enrichment')}\n`);
   process.stdout.write(`  ${'─'.repeat(40)}\n`);
+
+  if (!hasAny) {
+    const message =
+      status === 'skipped-offline'
+        ? 'Enrichment skipped: offline mode is active.'
+        : status === 'unavailable'
+          ? 'Enrichment unavailable: lookup failed or timed out.'
+          : 'Enrichment: no metadata found.';
+    process.stdout.write(`  ${chalk.dim(message)}\n`);
+    return;
+  }
 
   if (e.skillsSh !== undefined) {
     const s = e.skillsSh;
@@ -77,7 +96,7 @@ function renderEnrichment(e: Enrichment): void {
   }
 }
 
-function renderDetail(skill: ScannedSkill): void {
+function renderDetail(skill: ScannedSkill, enrichmentStatus: EnrichmentStatus): void {
   const { summary } = skill;
   const shortPath = shortenPath(skill.path);
 
@@ -107,7 +126,7 @@ function renderDetail(skill: ScannedSkill): void {
     }
   }
 
-  renderEnrichment(skill.enrichment);
+  renderEnrichment(skill.enrichment, enrichmentStatus);
 
   process.stdout.write(`\n  ${chalk.bold('Next steps')}\n`);
   process.stdout.write(`  ${'─'.repeat(40)}\n`);
@@ -170,12 +189,20 @@ export async function runExplain(
   const summary = scoreFindings(findings, target.treeSha256);
 
   let enrichment: Enrichment = {};
+  let enrichmentStatus: EnrichmentStatus = options.offline ? 'skipped-offline' : 'not-run';
   if (!options.offline) {
     const enrichSpinner = ora('Enriching…').start();
     try {
       enrichment = await enrichSkill(target, { sources: ['skillsSh', 'github', 'depsdev'] });
+      enrichmentStatus =
+        enrichment.skillsSh !== undefined ||
+        enrichment.github !== undefined ||
+        enrichment.depsdev !== undefined
+          ? 'found'
+          : 'no-metadata';
       enrichSpinner.succeed('Enrichment complete');
     } catch {
+      enrichmentStatus = 'unavailable';
       enrichSpinner.warn('Enrichment failed (continuing)');
     }
   }
@@ -200,7 +227,7 @@ export async function runExplain(
     return;
   }
 
-  renderDetail(scannedSkill);
+  renderDetail(scannedSkill, enrichmentStatus);
 
   if (summary.verdict === 'FAIL') {
     process.exit(1);

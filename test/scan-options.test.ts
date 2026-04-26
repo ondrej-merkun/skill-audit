@@ -206,6 +206,7 @@ describe('runScan flag wiring', () => {
     const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('skills');
     expect(out).toMatch(/PASS|REVIEW|FAIL/);
+    expect(out).not.toContain('Enrichment');
     expect(enrichAll).not.toHaveBeenCalled();
   });
 
@@ -224,6 +225,28 @@ describe('runScan flag wiring', () => {
     expect(enrichAll).toHaveBeenCalledWith(expect.any(Array), {
       sources: ['skillsSh', 'depsdev'],
     });
+  });
+
+  it('default scan explains when selected enrichment sources find no metadata', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+    vi.mocked(enrichAll).mockResolvedValue([{}]);
+
+    await runScan({});
+
+    const out = stripAnsi(stdoutChunks.join(''));
+    expect(out).toContain('Enrichment');
+    expect(out).toContain('no metadata found');
+  });
+
+  it('default scan explains when aggregate enrichment lookup fails', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+    vi.mocked(enrichAll).mockRejectedValue(new Error('timeout'));
+
+    await runScan({});
+
+    const out = stripAnsi(stdoutChunks.join(''));
+    expect(out).toContain('Enrichment');
+    expect(out).toContain('lookup failed or timed out');
   });
 
   it('--json requests all enrichment sources for machine output', async () => {
@@ -342,7 +365,9 @@ describe('runScan flag wiring', () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     await runScan({ offline: true });
     const errOut = stripAnsi(stderrChunks.join(''));
+    const out = stripAnsi(stdoutChunks.join(''));
     expect(errOut).toContain('offline mode');
+    expect(out).not.toContain('ENRICHMENT');
   });
 
   it('default (no flags) renders table output without throwing', async () => {

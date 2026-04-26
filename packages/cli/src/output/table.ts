@@ -94,6 +94,7 @@ function enrichmentDetails(skill: ScannedSkill): string {
 
 export function renderTableToString(result: ScanResult): string {
   const { skills, scan, agents, summary } = result;
+  const showEnrichmentColumn = result.enrichmentStatus !== 'skipped-offline';
   const agentCount = agents.length;
   const durationS = (scan.durationMs / 1000).toFixed(1);
   const lines: string[] = [];
@@ -118,9 +119,11 @@ export function renderTableToString(result: ScanResult): string {
     chalk.bold('SKILL'),
     chalk.bold('VERDICT'),
     chalk.bold('SCORE'),
-    chalk.bold('ENRICHMENT'),
     chalk.bold('TOP ISSUE'),
   ];
+  if (showEnrichmentColumn) {
+    head.splice(4, 0, chalk.bold('ENRICHMENT'));
+  }
 
   // ── Rows ──────────────────────────────────────────────────────────────
   const ordered = sortScanSkills(skills);
@@ -135,14 +138,17 @@ export function renderTableToString(result: ScanResult): string {
   });
 
   for (const skill of shown) {
-    table.push([
+    const row = [
       skill.agentId,
       `${verdictDot(skill)} ${skill.name}`,
       colorVerdict(skill),
       colorScore(skill),
-      enrichmentDetails(skill),
       topIssue(skill),
-    ]);
+    ];
+    if (showEnrichmentColumn) {
+      row.splice(4, 0, enrichmentDetails(skill));
+    }
+    table.push(row);
   }
 
   lines.push(table.toString());

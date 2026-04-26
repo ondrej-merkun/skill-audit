@@ -285,6 +285,13 @@ describe('renderTableToString', () => {
     expect(out).toContain(' - ');
   });
 
+  it('omits the enrichment column when enrichment was skipped for offline mode', () => {
+    const out = stripAnsi(
+      renderTableToString(makeScanResult({ enrichmentStatus: 'skipped-offline' }))
+    );
+    expect(out).not.toContain('ENRICHMENT');
+  });
+
   it('does not show GitHub enrichment in the default table enrichment column', () => {
     const result = makeScanResult({
       skills: [makeSkill({ enrichment: { github: { stars: 10, ageDays: 20, contributors: 3 } } })],
@@ -505,6 +512,20 @@ describe('renderSummaryFooter', () => {
   it('omits Enrichment line when no enrichment data', () => {
     const out = stripAnsi(renderSummaryFooter(makeScanResult(), [makeSkill()]));
     expect(out).not.toContain('Enrichment');
+  });
+
+  it('explains when enrichment ran but found no metadata', () => {
+    const result = makeScanResult({ enrichmentStatus: 'no-metadata' });
+    const out = stripAnsi(renderSummaryFooter(result, result.skills));
+    expect(out).toContain('Enrichment');
+    expect(out).toContain('no metadata found');
+  });
+
+  it('explains when enrichment lookup is unavailable', () => {
+    const result = makeScanResult({ enrichmentStatus: 'unavailable' });
+    const out = stripAnsi(renderSummaryFooter(result, result.skills));
+    expect(out).toContain('Enrichment');
+    expect(out).toContain('lookup failed or timed out');
   });
 
   it('shows Enrichment line when skills.sh data is present', () => {

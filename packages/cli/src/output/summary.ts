@@ -70,6 +70,10 @@ export function renderSummaryFooter(
   const enrich = enrichmentLine(riskOrderedSkills);
   if (enrich) {
     lines.push(`  ${label('Enrichment')} ${enrich}`);
+  } else if (result.enrichmentStatus === 'no-metadata') {
+    lines.push(`  ${label('Enrichment')} no metadata found`);
+  } else if (result.enrichmentStatus === 'unavailable') {
+    lines.push(`  ${label('Enrichment')} lookup failed or timed out`);
   }
 
   lines.push(`  ${label('Duration')} ${durationFull}s`);
