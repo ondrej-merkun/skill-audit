@@ -30,6 +30,41 @@ function scoreRingSvg(score: number, verdict: string): string {
 </svg>`;
 }
 
+function renderEnrichmentCells(skill: ScannedSkill): string {
+  const rows: string[] = [];
+  const { skillsSh, github, depsdev } = skill.enrichment;
+
+  if (skillsSh !== undefined) {
+    rows.push(
+      `<div><span>skills.sh</span> Gen=${escapeHtml(skillsSh.gen)} · Socket=${skillsSh.socketAlerts} · Snyk=${escapeHtml(skillsSh.snyk)}</div>`
+    );
+  } else {
+    rows.push('<div class="enrichment-missing"><span>skills.sh</span> —</div>');
+  }
+
+  if (github !== undefined) {
+    rows.push(
+      `<div><span>GitHub</span> ${github.stars} stars · ${github.ageDays} days old · ${github.contributors} contributors</div>`
+    );
+  } else {
+    rows.push('<div class="enrichment-missing"><span>GitHub</span> —</div>');
+  }
+
+  if (depsdev !== undefined) {
+    const score =
+      depsdev.scorecardScore === null
+        ? 'scorecard unavailable'
+        : `scorecard ${depsdev.scorecardScore}`;
+    rows.push(
+      `<div><span>deps.dev</span> ${depsdev.osvAdvisories} OSV advisories · ${escapeHtml(score)}</div>`
+    );
+  } else {
+    rows.push('<div class="enrichment-missing"><span>deps.dev</span> —</div>');
+  }
+
+  return rows.join('');
+}
+
 function redactPaths(skills: ScannedSkill[]): ScannedSkill[] {
   return skills.map((s) => ({
     ...s,
@@ -74,6 +109,7 @@ export function renderHtml(result: ScanResult): string {
       <td>${escapeHtml(sk.agentId)}</td>
       <td style="font-weight:600;color:${color}">${sk.summary.score}</td>
       <td>${sk.summary.critical}C ${sk.summary.high}H ${sk.summary.medium}M ${sk.summary.low}L</td>
+      <td class="enrichment-cell">${renderEnrichmentCells(sk)}</td>
       <td class="top-issue">${escapeHtml(topIssue)}</td>
     </tr>`;
     })
@@ -114,6 +150,9 @@ tbody tr.selected{background:#eff6ff}
 td{padding:10px 12px;vertical-align:middle}
 .verdict-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
 .top-issue{font-family:monospace;font-size:12px;color:#6b7280}
+.enrichment-cell{font-size:12px;line-height:1.45;color:#374151;min-width:230px}
+.enrichment-cell span{display:inline-block;min-width:54px;color:#6b7280}
+.enrichment-missing{color:#9ca3af}
 .tag-ignored,.tag-allow{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;margin-left:6px;vertical-align:middle}
 .tag-ignored{background:#fef3c7;color:#92400e}
 .tag-allow{background:#d1fae5;color:#065f46}
@@ -137,6 +176,7 @@ td{padding:10px 12px;vertical-align:middle}
 .enrichment{border-top:1px solid #e5e7eb;margin-top:14px;padding-top:14px}
 .enrichment h3{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;margin-bottom:8px}
 .enrichment-row{font-size:13px;margin-bottom:6px;color:#374151}
+.enrichment-row.missing{color:#9ca3af}
 .enrichment-source{display:inline-block;min-width:72px;color:#6b7280}
 #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.15);z-index:199}
 #overlay.visible{display:block}
@@ -207,7 +247,6 @@ function makeFindingEl(f){
 
 function makeEnrichmentEl(enrichment){
   var e = enrichment || {};
-  if(!e.skillsSh && !e.github && !e.depsdev) return null;
 
   var wrap = document.createElement('div');
   wrap.className = 'enrichment';
@@ -216,9 +255,9 @@ function makeEnrichmentEl(enrichment){
   title.textContent = 'Enrichment';
   wrap.appendChild(title);
 
-  function addRow(source, text){
+  function addRow(source, text, missing){
     var row = document.createElement('div');
-    row.className = 'enrichment-row';
+    row.className = missing ? 'enrichment-row missing' : 'enrichment-row';
     var label = document.createElement('span');
     label.className = 'enrichment-source';
     label.textContent = source;
@@ -228,14 +267,20 @@ function makeEnrichmentEl(enrichment){
   }
 
   if(e.skillsSh){
-    addRow('skills.sh', 'Gen=' + e.skillsSh.gen + ' · Socket=' + e.skillsSh.socketAlerts + ' · Snyk=' + e.skillsSh.snyk);
+    addRow('skills.sh', 'Gen=' + e.skillsSh.gen + ' · Socket=' + e.skillsSh.socketAlerts + ' · Snyk=' + e.skillsSh.snyk, false);
+  } else {
+    addRow('skills.sh', '—', true);
   }
   if(e.github){
-    addRow('GitHub', e.github.stars + ' stars · ' + e.github.ageDays + ' days old · ' + e.github.contributors + ' contributors');
+    addRow('GitHub', e.github.stars + ' stars · ' + e.github.ageDays + ' days old · ' + e.github.contributors + ' contributors', false);
+  } else {
+    addRow('GitHub', '—', true);
   }
   if(e.depsdev){
     var score = e.depsdev.scorecardScore === null ? 'scorecard unavailable' : 'scorecard ' + e.depsdev.scorecardScore;
-    addRow('deps.dev', e.depsdev.osvAdvisories + ' OSV advisories · ' + score);
+    addRow('deps.dev', e.depsdev.osvAdvisories + ' OSV advisories · ' + score, false);
+  } else {
+    addRow('deps.dev', '—', true);
   }
 
   return wrap;
@@ -375,6 +420,7 @@ document.getElementById('btn-share').addEventListener('click', function(){
           <th>Agent</th>
           <th>Score</th>
           <th>Findings</th>
+          <th>Enrichment</th>
           <th>Top Issue</th>
         </tr>
       </thead>

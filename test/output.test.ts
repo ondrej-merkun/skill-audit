@@ -758,14 +758,14 @@ describe('renderHtml', () => {
     expect(html.indexOf('review-score-50')).toBeLessThan(html.indexOf('pass-clean'));
   });
 
-  it('renders all enrichment sources in the detail panel script', async () => {
+  it('renders all enrichment sources visibly in the report table and detail panel script', async () => {
     const { renderHtml } = await import('../packages/cli/src/output/html.js');
     const html = renderHtml(
       makeScanResult({
         skills: [
           makeSkill({
             enrichment: {
-              skillsSh: { gen: 'Low', socketAlerts: 0, snyk: 'Low' },
+              skillsSh: { gen: 'Critical', socketAlerts: 7, snyk: 'High' },
               github: { stars: 12, ageDays: 34, contributors: 2 },
               depsdev: { scorecardScore: 8.5, osvAdvisories: 1 },
             },
@@ -778,7 +778,25 @@ describe('renderHtml', () => {
     expect(html).toContain('skills.sh');
     expect(html).toContain('GitHub');
     expect(html).toContain('deps.dev');
-    expect(html).toContain('stars');
+    expect(html).toContain('Gen=Critical');
+    expect(html).toContain('Socket=7');
+    expect(html).toContain('Snyk=High');
+    expect(html).toContain('12 stars');
+    expect(html).toContain('34 days old');
+    expect(html).toContain('2 contributors');
+    expect(html).toContain('1 OSV advisories');
+    expect(html).toContain('scorecard 8.5');
+  });
+
+  it('renders neutral HTML enrichment states when sources are missing', async () => {
+    const { renderHtml } = await import('../packages/cli/src/output/html.js');
+    const html = renderHtml(makeScanResult({ skills: [makeSkill({ enrichment: {} })] }));
+
+    expect(html).toContain('<th>Enrichment</th>');
+    expect(html).toContain('<span>skills.sh</span> —');
+    expect(html).toContain('<span>GitHub</span> —');
+    expect(html).toContain('<span>deps.dev</span> —');
+    expect(html).toContain("addRow('skills.sh', '—', true)");
     expect(html).toContain('OSV advisories');
   });
 });
