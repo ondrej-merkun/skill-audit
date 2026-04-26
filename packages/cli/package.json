@@ -1,5 +1,5 @@
 {
-  "name": "@skillaudit/cli",
+  "name": "skill-audit",
   "version": "0.1.0",
   "description": "Scan AI agent skills for prompt injection and malicious code",
   "type": "module",

@@ -36,7 +36,7 @@ jobs:
       - name: Test
         run: pnpm test
 
-      - name: Publish @skillaudit/cli
+      - name: Publish skill-audit
         run: pnpm publish --access public --no-git-checks
         working-directory: packages/cli
         env:

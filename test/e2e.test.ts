@@ -15,6 +15,8 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const CLI = fileURLToPath(new URL('../packages/cli/dist/index.js', import.meta.url));
+const PACKAGE_JSON = fileURLToPath(new URL('../packages/cli/package.json', import.meta.url));
+const README = fileURLToPath(new URL('../README.md', import.meta.url));
 const FIXTURES_DIR = fileURLToPath(new URL('fixtures', import.meta.url));
 const MALICIOUS_DIR = join(FIXTURES_DIR, 'malicious');
 const BENIGN_DIR = join(FIXTURES_DIR, 'benign');
@@ -98,6 +100,23 @@ type JsonOutput = {
 };
 
 describe('e2e: CLI binary', () => {
+  it('package metadata supports the documented npx command', async () => {
+    const pkg = JSON.parse(await readFile(PACKAGE_JSON, 'utf-8')) as {
+      name: string;
+      version: string;
+      bin: Record<string, string>;
+    };
+    const readme = await readFile(README, 'utf-8');
+
+    expect(readme).toContain('npx skill-audit');
+    expect(pkg.name).toBe('skill-audit');
+    expect(pkg.bin).toEqual({ skillaudit: './dist/index.js' });
+
+    const { stdout, code } = await runCli(['--version']);
+    expect(code).toBe(0);
+    expect(stdout.trim()).toBe(pkg.version);
+  });
+
   it('--version prints a semver string', async () => {
     const { stdout, code } = await runCli(['--version']);
     expect(code).toBe(0);

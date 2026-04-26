@@ -1,6 +1,6 @@
 # skillaudit — Claude Code Skill
 
-Lets Claude Code run `npx skillaudit` on your behalf to audit installed
+Lets Claude Code run `npx skill-audit` on your behalf to audit installed
 agent skills for prompt injection, exfiltration, and malicious code.
 
 ## Install
@@ -26,7 +26,7 @@ After installing, ask Claude Code:
 > "Check my skills for anything suspicious"
 > "Run skillaudit on my Cursor rules"
 
-Claude will run `npx skillaudit@latest scan --json`, parse the output,
+Claude will run `npx skill-audit@latest scan --json`, parse the output,
 and summarize compromised skills with one-line remediations.
 
 To audit a specific skill:
@@ -35,7 +35,7 @@ To audit a specific skill:
 
 ## What it does
 
-Invokes `npx skillaudit` (no install required — runs via npx) and
+Invokes `npx skill-audit` (no install required — runs via npx) and
 interprets the structured JSON output. Claude will:
 
 1. Report total skills scanned and how many are compromised
@@ -48,11 +48,11 @@ confirmation.
 ## Requirements
 
 - Node.js 18+ (for `npx`)
-- Internet access for `npx skillaudit@latest` on first run (cached
+- Internet access for `npx skill-audit@latest` on first run (cached
   afterward by npm)
 
 ## Source
 
-This skill is part of the [skillaudit](https://github.com/skillaudit/skillaudit)
-project. The CLI it invokes (`npx skillaudit`) runs entirely locally —
+This skill is part of the [skillaudit](https://github.com/ondrejmerkun/skillaudit)
+project. The CLI it invokes (`npx skill-audit`) runs entirely locally —
 no skill content is sent to any server unless you opt into enrichment.

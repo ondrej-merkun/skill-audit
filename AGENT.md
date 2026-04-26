@@ -49,7 +49,7 @@ dependency (`node-gyp`).
 ```
 skillaudit/
 ├── packages/
-│   ├── cli/                      @skillaudit/cli — the npm package
+│   ├── cli/                      skill-audit — npm package, skillaudit bin
 │   │   ├── src/
 │   │   │   ├── index.ts          shebang + commander setup
 │   │   │   ├── commands/         scan, list, explain, ignore

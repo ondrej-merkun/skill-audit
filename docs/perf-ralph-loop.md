@@ -34,7 +34,7 @@ They don't need a spawned binary to prove anything; they assert JSON shape and v
 `vitest.config.ts` → `projects: [unit, e2e]`, `pool: 'threads'`, `isolate: false` on unit (file I/O tests already use `mkdtemp`). e2e keeps isolate. One `pnpm test` still runs both.
 
 ### 3. Disable `dts` in the dev build — saves ~700 ms per loop
-The package is a **bin**, nobody imports `@skillaudit/cli` as a library. Two options:
+The package is a **bin**, nobody imports `skill-audit` as a library. Two options:
 - Keep one build: set `dts: false` in `tsup.config.ts`, drop `"types"` from `package.json`.
 - Two builds: `pnpm build` = runtime only (no dts); `pnpm build:release` = with dts for npm publish.
 
@@ -47,7 +47,7 @@ In `packages/cli/tsconfig.json`:
 Add `.tsbuildinfo` to `.gitignore`. Typical re-run drops to ~150 ms.
 
 ### 5. Skip the `pnpm -r` wrapper on single-package scripts — saves ~1 s per loop
-At the repo root, change `lint`/`typecheck`/`build` to call the package script directly (`pnpm --filter @skillaudit/cli lint`, or even just `cd packages/cli && biome check src`). `pnpm -r` is paying recursive-plan overhead to run one script.
+At the repo root, change `lint`/`typecheck`/`build` to call the package script directly (`pnpm --filter skill-audit lint`, or even just `cd packages/cli && biome check src`). `pnpm -r` is paying recursive-plan overhead to run one script.
 
 ### 6. Parallel verify script — collapses the remaining three steps
 `"verify": "run-p -l build lint typecheck"` (or `concurrently`). Build/lint/typecheck are independent; serial ~5 s → parallel ~2 s on 8 cores.

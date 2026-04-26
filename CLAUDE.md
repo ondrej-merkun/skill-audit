@@ -2,7 +2,7 @@
 
 A CLI that scans installed AI agent skills (Claude Code, Cursor, Copilot,
 Codex, Gemini, Windsurf, Cline) for prompt injection and malicious code.
-Local-first, zero-auth, published as `npx skillaudit`.
+Local-first, zero-auth, published as `skill-audit` with the `skillaudit` bin.
 
 Full spec: **`specs/SPEC.md`**. Ralph loop protocol: **`PROMPT.md`**.
 Workflow conventions: **`AGENT.md`**. Task list / progress: **`fix_plan.md`**.
@@ -48,7 +48,7 @@ test runners or split the test command.
 ## Directory map
 
 ```
-packages/cli/          @skillaudit/cli — the npm package that becomes `npx skillaudit`
+packages/cli/          skill-audit — npm package, exposes the `skillaudit` bin
   src/commands/        scan, list, explain, ignore
   src/discovery/       per-agent plugins (claude-code, cursor, copilot, agents-md-sweep)
   src/rules/           27 rules grouped by category (pure regex)

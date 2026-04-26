@@ -12,7 +12,7 @@ allowed-tools: [Bash]
 When invoked, run:
 
 ```bash
-npx skillaudit@latest scan --json
+npx skill-audit@latest scan --json
 ```
 
 Parse the JSON output and summarize:
@@ -22,7 +22,7 @@ Parse the JSON output and summarize:
 
 If the user asks to audit a specific skill, run:
 ```bash
-npx skillaudit@latest explain <skill-name> --json
+npx skill-audit@latest explain <skill-name> --json
 ```
 
 Do not recommend rm/delete commands without explicit user confirmation.

@@ -6,7 +6,7 @@ import { cacheGet, cacheSet } from './cache.js';
 const SOURCE = 'github';
 const API_BASE = 'https://api.github.com';
 const TIMEOUT_MS = 5_000;
-const USER_AGENT = 'skillaudit/0.1.0 (+github.com/ondrejsevcik/skillaudit)';
+const USER_AGENT = 'skillaudit/0.1.0 (+github.com/ondrejmerkun/skillaudit)';
 
 async function resolveSlug(skill: Skill): Promise<string | null> {
   const pkgPath = join(skill.path, 'package.json');

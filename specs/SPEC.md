@@ -80,13 +80,15 @@ The pattern is consistent across **npm audit, snyk, trivy, gitleaks, semgrep, np
 ### Name: **`skillaudit`**
 Parallels the strongest existing cross-ecosystem pattern: **`npm audit`, `bundle-audit`, `pip-audit`, `cargo audit`**. Tells anyone reading an HN title what the tool does in one second. Verified available on npm and as a GitHub repo slug as of research date.
 
+The executable is `skillaudit`; the npm package is `skill-audit`, so one-off runs use `npx skill-audit`.
+
 Backup picks if `skillaudit` is taken at publish time: `skillprobe`, `agentscan` (conflicts with Snyk's binary — skip), `skillsleuth`, `skylint`. The user's past affinity for `vibe-check` works here but doesn't signal "security" strongly enough — reserve for a related tool.
 
 ### Tagline
 **"Scan every AI agent skill on your machine for prompt injection and malicious code. Local, fast, zero-config."**
 
 ### Elevator pitch (README lede)
-> Agent skills are the new npm. Snyk's ToxicSkills study (Feb 2026) found **36% of agent skills ship with a security flaw**, 13% with a critical one. Most existing scanners demand a cloud account, scan one skill at a time, or only cover Claude. `skillaudit` runs locally in two seconds, discovers skills across Claude Code, Cursor, Codex, Gemini CLI, Copilot, and cross-agent project instruction files, and hands you a colorized verdict table. `npx skillaudit` is the whole install.
+> Agent skills are the new npm. Snyk's ToxicSkills study (Feb 2026) found **36% of agent skills ship with a security flaw**, 13% with a critical one. Most existing scanners demand a cloud account, scan one skill at a time, or only cover Claude. `skillaudit` runs locally in two seconds, discovers skills across Claude Code, Cursor, Codex, Gemini CLI, Copilot, and cross-agent project instruction files, and hands you a colorized verdict table. `npx skill-audit` is the whole install.
 
 ### Target audience
 - **Primary:** individual developers who've pasted 5–50 skills into `~/.claude/skills/` and `~/.codex/` and have no idea what any of them do.
@@ -97,7 +99,7 @@ Backup picks if `skillaudit` is taken at publish time: `skillprobe`, `agentscan`
 
 ### Language: **TypeScript on Node.js 20+**
 Justification, in order of weight:
-1. **`npx skillaudit` is the single most-important distribution channel.** Every Claude Code / Cursor / Codex user already has Node. Zero onboarding.
+1. **`npx skill-audit` is the single most-important distribution channel.** Every Claude Code / Cursor / Codex user already has Node. Zero onboarding.
 2. User is most proficient in TS/Node — weekend scope demands it.
 3. Excellent TUI ecosystem (`ink`, `chalk`, `cli-table3`, `listr2`, `ora`) in a single runtime.
 4. Single `package.json` publish; no cross-compiled binaries.
@@ -120,14 +122,14 @@ Tradeoffs: slightly slower startup than Go/Rust; not an issue at MVP scale (hund
 - **Lint/format:** `biome` (faster than eslint+prettier, single config).
 
 ### Distribution
-1. **Primary:** `npm publish` → `npx skillaudit` and `pnpm dlx skillaudit` work instantly.
-2. **GitHub Action wrapper:** `uses: you/skillaudit-action@v1` — thin composite action, highest-leverage distribution per the gitleaks playbook.
+1. **Primary:** `npm publish` → `npx skill-audit` and `pnpm dlx skill-audit` work instantly.
+2. **GitHub Action wrapper:** `uses: ondrejmerkun/skillaudit-action@v1` — thin composite action, highest-leverage distribution per the gitleaks playbook.
 
 ### Directory layout
 ```
 skillaudit/
 ├── packages/
-│   ├── cli/                        # the @skillaudit/cli npm package
+│   ├── cli/                        # skill-audit npm package, skillaudit bin
 │   │   ├── src/
 │   │   │   ├── index.ts            # shebang + commander setup
 │   │   │   ├── commands/
@@ -581,7 +583,7 @@ allowed-tools: [Bash]
 When invoked, run:
 
 ```bash
-npx skillaudit@latest scan --json
+npx skill-audit@latest scan --json
 ```
 
 Parse the JSON output and summarize:
@@ -591,7 +593,7 @@ Parse the JSON output and summarize:
 
 If the user asks to audit a specific skill, run:
 ```bash
-npx skillaudit@latest explain <skill-name> --json
+npx skill-audit@latest explain <skill-name> --json
 ```
 
 Do not recommend rm/delete commands without explicit user confirmation.
@@ -610,7 +612,7 @@ Follow the **ripgrep + bun** template:
 3. One-line tagline directly under.
 4. Badges: npm version, CI, license. No badge overkill.
 5. The Snyk 36% stat in a blockquote with proper attribution + link.
-6. **`npx skillaudit`** one-liner above the fold.
+6. **`npx skill-audit`** one-liner above the fold.
 7. The hero GIF immediately after install.
 8. "What it scans" table listing supported agents.
 9. Example `--json` output (folded in a `<details>`).
@@ -623,7 +625,7 @@ Keep it under 400 lines. Rich Harris's degit README is the spiritual template �
 Record with `vhs` or `asciinema+agg` — `.gif`, max 800kb, dark terminal.
 
 - **0.0s** Clean `$` prompt.
-- **0.3s** Type `npx skillaudit` and hit Enter.
+- **0.3s** Type `npx skill-audit` and hit Enter.
 - **0.8s** Spinner: `⠋ Scanning 47 skills across 4 agents...`
 - **1.5s** Table renders row-by-row (not all at once — looks faster).
 - **3.0s** Summary footer lands: `8 of 47 skills compromised (17%)` in red.
@@ -716,14 +718,14 @@ Highest-probability failure mode. The `PI-*` rules trigger on security-education
 Mitigations:
 1. Ship rules **in the npm bundle, not from a remote repo.** Regex rules work offline, forever.
 2. Allowlist is a **static JSON file regenerated manually per release.** No runtime fetches.
-3. The Claude Code skill calls `npx skillaudit@latest` — always pulls the current version; zero skill-file maintenance.
+3. The Claude Code skill calls `npx skill-audit@latest` — always pulls the current version; zero skill-file maintenance.
 4. Batch issue triage — weekly, not daily.
 5. Pin CI to a known-good Node 20 + a quarterly bump.
 
 ### Competitive risk
 What if Anthropic ships native skill scanning next month?
 - **Their scope will be Anthropic-only.** `skillaudit`'s cross-agent coverage still matters.
-- **Their UX will be dashboard-first, not CLI-first.** `npx skillaudit` in a Makefile and in CI remains useful.
+- **Their UX will be dashboard-first, not CLI-first.** `npx skill-audit` in a Makefile and in CI remains useful.
 - **Pre-install review is different from periodic audit.** A persistent gap.
 
 What if Snyk open-sources a local-only mode?

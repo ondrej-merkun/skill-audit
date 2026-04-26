@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/skillaudit"><img src="https://img.shields.io/npm/v/skillaudit" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/skill-audit"><img src="https://img.shields.io/npm/v/skill-audit" alt="npm version" /></a>
   <a href="https://github.com/ondrejmerkun/skillaudit/actions"><img src="https://img.shields.io/github/actions/workflow/status/ondrejmerkun/skillaudit/ci.yml" alt="CI" /></a>
 </p>
 
@@ -25,7 +25,7 @@ OpenAI Codex, GitHub Copilot, Cursor, Gemini CLI, and more, and hands you a
 colorized verdict table.
 
 ```
-npx skillaudit
+npx skill-audit
 ```
 
 <!-- hero GIF — record with `vhs` or `asciinema+agg`, max 800 KB, dark terminal -->
@@ -50,10 +50,10 @@ npx skillaudit
 
 ```bash
 # One-off scan — no install required
-npx skillaudit
+npx skill-audit
 
 # Or install globally
-npm install -g skillaudit
+npm install -g skill-audit
 skillaudit --version
 ```
 

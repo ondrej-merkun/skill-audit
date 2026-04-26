@@ -176,6 +176,12 @@ without a commit message explaining why it no longer applies.
   Use plausible non-placeholder values in malicious fixtures; reserve canonical
   docs/test values for benign placeholder coverage.
 
+- **L7.2 — Do not rewrite benign rule fixtures as package-facing docs.** _Task
+  24 changed a benign `DEPS-INLINE-INSTALL` install example and made the fixture
+  look like runtime skill installation._
+  Keep fixture wording tied to the rule scenario unless the task is explicitly
+  changing that rule.
+
 ---
 
 ## How to add a new lesson

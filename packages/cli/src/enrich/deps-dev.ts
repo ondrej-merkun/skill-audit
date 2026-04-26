@@ -6,7 +6,7 @@ import { cacheGet, cacheSet } from './cache.js';
 const SOURCE = 'depsdev';
 const API_BASE = 'https://api.deps.dev/v3alpha';
 const TIMEOUT_MS = 5_000;
-const USER_AGENT = 'skillaudit/0.1.0 (+github.com/ondrejsevcik/skillaudit)';
+const USER_AGENT = 'skillaudit/0.1.0 (+github.com/ondrejmerkun/skillaudit)';
 const MAX_DEPS = 20;
 
 type DepsDevVersion = {
