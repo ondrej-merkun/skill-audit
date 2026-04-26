@@ -800,6 +800,10 @@ at the bottom and the loop will stop.
   endpoint, `gh repo view --json nameWithOwner,repositoryTopics` failed with
   `error connecting to api.github.com`, and `gh auth status` still reports the
   local token as invalid.
+  Reconfirmed (2026-04-27): the GitHub connector can read
+  `ondrej-merkun/skill-audit` with admin permission, but still exposes no
+  repository-topics write endpoint. Local `gh` remains blocked by an invalid
+  token and `api.github.com` connection failure.
 
 - [ ] **36** Add a repository social preview asset.
 
