@@ -274,7 +274,7 @@ at the bottom and the loop will stop.
   - Add a regression test proving `deps_dev.osv_advisories` and
     `deps_dev.scorecard_score` serialize correctly.
 
-- [ ] **6** Make all three enrichment sources visible in the HTML report.
+- [x] **6** Make all three enrichment sources visible in the HTML report.
 
   The standalone HTML report should visibly show `skills.sh`, GitHub, and
   `deps.dev` enrichment where available, not merely embed enrichment in the
