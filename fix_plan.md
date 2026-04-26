@@ -295,7 +295,7 @@ at the bottom and the loop will stop.
   - Add tests for at least one CLI pretty output and the HTML renderer.
   - Include fallback behavior for unknown agent ids.
 
-- [ ] **10** Apply `scan --agent` filtering during discovery.
+- [x] **10** Apply `scan --agent` filtering during discovery.
 
   When `scan` is run with `--agent <agent>`, the CLI currently filters by agent
   after discovering and scanning across all agents. Discovery should apply the
