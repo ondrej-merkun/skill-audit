@@ -475,7 +475,7 @@ at the bottom and the loop will stop.
   - If a full emoji parser is too much, implement the smallest defensible
     context check and document its limitations.
 
-- [ ] **17** Make `CODEEXEC-PY-OSSYS` distinguish safe subprocess calls from
+- [x] **17** Make `CODEEXEC-PY-OSSYS` distinguish safe subprocess calls from
   command-injection risk.
 
   Real scan output flagged many safe `subprocess.run([...], shell=False)` and
