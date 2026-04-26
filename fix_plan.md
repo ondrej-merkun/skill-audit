@@ -831,6 +831,13 @@ at the bottom and the loop will stop.
   `gh repo view --json nameWithOwner,repositoryTopics` and
   `gh repo edit ... --add-topic ...` fail with `error connecting to
   api.github.com`.
+  Reconfirmed (2026-04-27): `tool_search` exposes GitHub issue, PR, commit,
+  and file APIs only; no repository-topics write endpoint is available.
+  `GH_TOKEN` and `GITHUB_TOKEN` are unset, `gh auth status` reports the
+  configured `ondrej-merkun` token is invalid, and both
+  `gh repo view ondrej-merkun/skill-audit --json nameWithOwner,repositoryTopics`
+  and `gh repo edit ondrej-merkun/skill-audit --add-topic ...` fail with
+  `error connecting to api.github.com`.
 
 - [ ] **36** Add a repository social preview asset.
 
