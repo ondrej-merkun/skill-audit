@@ -531,7 +531,7 @@ at the bottom and the loop will stop.
     workflow steps that tell the agent to install packages inline should still
     report.
 
-- [ ] **20** Treat well-known placeholder secrets and explicitly bad examples
+- [x] **20** Treat well-known placeholder secrets and explicitly bad examples
   as documentation, not real hardcoded-key findings.
 
   Real scan output flagged placeholder keys such as `AKIAIOSFODNN7EXAMPLE`,
