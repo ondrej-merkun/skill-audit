@@ -1,4 +1,5 @@
 import type { Rule } from '../types.js';
+import { maskMarkdownSecurityEducationContext } from './code-context.js';
 
 const SKILL_FILES = [
   '*.md',
@@ -84,6 +85,7 @@ export const SKILL_DISABLE_SAFETY: Rule = {
     ignoreContentPolicyPattern,
     turnOffSafetyPattern,
   ],
+  prepareContent: maskMarkdownSecurityEducationContext,
   message: 'Instruction to disable or bypass LLM safety controls detected.',
   fix: 'Remove directives that ask the model to disable safety features. Legitimate skills do not need to override safety controls.',
   cwe: ['CWE-1427'],

@@ -1,4 +1,5 @@
 import type { Rule } from '../types.js';
+import { maskMarkdownSecurityEducationContext } from './code-context.js';
 
 // ---------------------------------------------------------------------------
 // PI-OVERRIDE (Critical)
@@ -26,6 +27,7 @@ export const PI_OVERRIDE: Rule = {
     overrideNewRolePattern,
     overrideForgetPattern,
   ],
+  prepareContent: maskMarkdownSecurityEducationContext,
   message: 'Instruction-override phrasing detected.',
   fix: 'Remove instructions that ask the model to disregard prior context.',
   cwe: ['CWE-1427'],
@@ -58,6 +60,7 @@ export const PI_JAILBREAK: Rule = {
     noRestrictionsPattern,
     actAsIfPattern,
   ],
+  prepareContent: maskMarkdownSecurityEducationContext,
   message: 'Jailbreak or bypass phrasing detected.',
   fix: 'Remove DAN-mode, developer-mode, or no-restrictions instructions.',
   cwe: ['CWE-1427'],
@@ -98,6 +101,7 @@ export const PI_HIDDEN_UNICODE: Rule = {
     zwnbspPattern,
     tagCharsPattern,
   ],
+  prepareContent: maskMarkdownSecurityEducationContext,
   message:
     'Invisible or bidi-control unicode character detected — may smuggle hidden instructions.',
   fix: 'Remove hidden unicode: U+200B-200F, U+202A-202E, U+2060-2064, U+FEFF, U+E0020-E007F.',
@@ -128,6 +132,7 @@ export const PI_HIDDEN_HTML_COMMENT: Rule = {
     htmlCommentAgentDirectivePattern,
     htmlCommentHiddenInstructionPattern,
   ],
+  prepareContent: maskMarkdownSecurityEducationContext,
   message: 'HTML comment containing instruction-like directives detected.',
   fix: 'Remove HTML comments that carry hidden model instructions.',
   cwe: ['CWE-1427'],
@@ -149,6 +154,7 @@ export const PI_WHITE_ON_WHITE: Rule = {
   severity: 'medium',
   appliesTo: ['*.md', '*.mdc', 'SKILL.md', 'AGENTS.md', '*.html'],
   patterns: [whiteOnWhiteSpanPattern, fontSizeZeroPattern, colorWhiteOnWhitePattern],
+  prepareContent: maskMarkdownSecurityEducationContext,
   message: 'Invisible/white-on-white CSS styling detected — may hide injected instructions.',
   fix: 'Remove styled HTML elements that render text invisible to users.',
   cwe: ['CWE-1425'],
@@ -172,6 +178,7 @@ export const PI_METADATA_MISMATCH: Rule = {
   severity: 'medium',
   appliesTo: ['SKILL.md', 'AGENTS.md'],
   patterns: [frontmatterSecrecyPattern],
+  prepareContent: maskMarkdownSecurityEducationContext,
   message:
     'Skill metadata present but body contains secrecy/concealment instructions — possible metadata mismatch attack.',
   fix: 'Remove instructions that tell the model to hide its behavior from the user.',
@@ -197,6 +204,7 @@ export const PI_EXFIL_TRIGGER_CLAUSE: Rule = {
   severity: 'critical',
   appliesTo: ['*.md', '*.mdc', 'SKILL.md', 'AGENTS.md'],
   patterns: [exfilTriggerPattern],
+  prepareContent: maskMarkdownSecurityEducationContext,
   message:
     'Trigger-clause exfiltration pattern detected — conditional instruction to leak secrets.',
   fix: 'Remove any instruction that conditionally appends secret/env data to responses.',
@@ -229,6 +237,7 @@ export const PI_PRIV_ESCALATE_INSTRUCTION: Rule = {
     bypassPermissionsPattern,
     runAsRootPattern,
   ],
+  prepareContent: maskMarkdownSecurityEducationContext,
   message: 'Privilege-escalation instruction detected.',
   fix: 'Remove instructions directing the agent to run as root, use sudo, or bypass permissions.',
   cwe: ['CWE-250'],

@@ -1,5 +1,5 @@
 import type { Rule } from '../types.js';
-import { maskDocumentationExampleContext } from './code-context.js';
+import { maskDocumentationExampleContext, maskDocumentationTextInCode } from './code-context.js';
 
 // Patterns are split to avoid triggering static-analysis hooks on this detector file itself.
 // These rules detect env-exfil and network calls in scanned skills, not in this codebase.
@@ -22,6 +22,7 @@ export const NET_EXFIL_ENV: Rule = {
   severity: 'critical',
   appliesTo: ['*.py', '*.sh', '*.bash', '*.js', '*.ts', '*.mjs'],
   patterns: [pyEnvPostPattern, jsEnvStringifyPattern, shellCurlEnvPattern, shellCurlEnvDataPattern],
+  prepareContent: maskDocumentationTextInCode,
   message: 'Environment variables transmitted over outbound HTTP — credential exfiltration.',
   fix: 'Remove code that sends os.environ / process.env to external endpoints.',
   cwe: ['CWE-200'],

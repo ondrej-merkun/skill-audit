@@ -35,6 +35,14 @@ const ALL_RULES = [
   ...SECRETS_RULES,
 ];
 
+const HIGH_CONFIDENCE_SECURITY_EDUCATION_CATEGORIES = new Set([
+  'prompt-injection',
+  'code-execution',
+  'network-exfil',
+  'filesystem',
+  'skill-specific',
+]);
+
 describe('rule fixtures', () => {
   for (const rule of ALL_RULES) {
     const ruleDir = join(FIXTURES_DIR, rule.id);
@@ -89,5 +97,37 @@ describe('DEPS-INLINE-INSTALL runtime contexts', () => {
       'installer.py',
       'setup.sh',
     ]);
+  });
+});
+
+describe('security education fixtures', () => {
+  it('does not treat scanner and tester examples as active malicious instructions', async () => {
+    const fixtureDirs = [
+      join(FIXTURES_DIR, 'benign', 'security-auditor'),
+      join(FIXTURES_DIR, 'benign', 'skill-tester'),
+    ];
+
+    for (const fixtureDir of fixtureDirs) {
+      const findings = await runRules(fixtureDir, ALL_RULES);
+      const highConfidenceFindings = findings.filter(
+        (finding) =>
+          (finding.severity === 'critical' || finding.severity === 'high') &&
+          HIGH_CONFIDENCE_SECURITY_EDUCATION_CATEGORIES.has(finding.category)
+      );
+
+      expect(highConfidenceFindings).toEqual([]);
+    }
+  });
+
+  it('still detects operative security-auditor instructions outside examples', async () => {
+    const findings = await runRules(
+      join(FIXTURES_DIR, 'malicious', 'security-auditor-override'),
+      ALL_RULES
+    );
+    const ruleIds = new Set(findings.map((finding) => finding.ruleId));
+
+    expect(ruleIds).toContain('PI-OVERRIDE');
+    expect(ruleIds).toContain('PI-EXFIL-TRIGGER-CLAUSE');
+    expect(ruleIds).toContain('SKILL-DISABLE-SAFETY');
   });
 });

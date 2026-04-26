@@ -244,6 +244,12 @@ without a commit message explaining why it no longer applies.
   Tests for compromised counts must use a mandatory-fail rule or assert the
   fixture's verdict before relying on it.
 
+- **L7.5 — Fenced markdown in `SKILL.md` can be active instructions.** _Task 15
+  initially masked all fenced blocks and silenced the malicious pipe-to-shell
+  fixture._
+  Only suppress fenced content for rules where fenced examples are truly inert;
+  command snippets in skill instructions may still be intended to run.
+
 ---
 
 ## How to add a new lesson
