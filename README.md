@@ -191,6 +191,9 @@ Six rule IDs trigger **mandatory FAIL** regardless of score:
 
 ## FAQ
 
+**How do I report a security issue?**
+Please use private vulnerability reporting. See [SECURITY.md](SECURITY.md).
+
 **Why local-only?**
 Your skills contain your custom instructions, tool configs, and potentially secrets.
 Sending them to a cloud service to scan them is the threat model we're trying to prevent.

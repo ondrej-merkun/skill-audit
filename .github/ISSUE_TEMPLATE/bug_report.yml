@@ -1,0 +1,48 @@
+name: Bug report
+description: Report incorrect behavior in the CLI.
+title: "Bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include real secrets. Use redacted paths, tokens, and skill content.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the command, output, and why it was wrong.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Include the smallest command and fixture layout that reproduces it.
+      placeholder: |
+        1. Run `skillaudit scan ...`
+        2. Observe ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: skillaudit version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      placeholder: "20.14.0"
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - Other
