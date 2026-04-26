@@ -137,7 +137,7 @@ function renderDetail(skill: ScannedSkill, enrichmentStatus: EnrichmentStatus): 
       `  ${chalk.cyan('→')}  ${chalk.dim(`rm -rf ${shortPath}`)}     ${chalk.dim('# remove now')}\n`
     );
   }
-  process.stdout.write(`  ${chalk.cyan('→')}  skillaudit scan --agent ${skill.agentId} --json\n`);
+  process.stdout.write(`  ${chalk.cyan('→')}  skill-audit scan --agent ${skill.agentId} --json\n`);
   process.stdout.write('\n');
 }
 
@@ -163,7 +163,7 @@ export async function runExplain(
     skills = await discoverAll({ onProgress: progress.onDiscoveryProgress });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    process.stderr.write(`[skillaudit] ${msg}\n`);
+    process.stderr.write(`[skill-audit] ${msg}\n`);
     process.exit(2);
   }
 
@@ -176,7 +176,7 @@ export async function runExplain(
 
   if (target === undefined) {
     process.stderr.write(
-      `[skillaudit] no skill matching "${nameOrId}" found. Run \`skillaudit list\` to see installed skills.\n`
+      `[skill-audit] no skill matching "${nameOrId}" found. Run \`skill-audit list\` to see installed skills.\n`
     );
     process.exit(1);
   }
@@ -189,7 +189,7 @@ export async function runExplain(
   } catch (err) {
     progress.failScan();
     const msg = err instanceof Error ? err.message : String(err);
-    process.stderr.write(`[skillaudit] ${msg}\n`);
+    process.stderr.write(`[skill-audit] ${msg}\n`);
     process.exit(2);
   }
   progress.succeedScan(1);

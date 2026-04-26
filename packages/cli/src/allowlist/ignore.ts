@@ -2,21 +2,37 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 
+function getConfigDir(): string {
+  return process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config');
+}
+
 function getIgnoreListPath(): string {
+  return join(getConfigDir(), 'skill-audit', 'ignore.yaml');
+}
+
+function getLegacyIgnoreListPath(): string {
   const configDir = process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config');
   return join(configDir, 'skillaudit', 'ignore.yaml');
+}
+
+async function readIgnoreListContent(): Promise<string | null> {
+  try {
+    return await readFile(getIgnoreListPath(), 'utf-8');
+  } catch {
+    try {
+      return await readFile(getLegacyIgnoreListPath(), 'utf-8');
+    } catch {
+      return null;
+    }
+  }
 }
 
 // Parse minimal YAML list: lines starting with "  - " hold sha256 hashes.
 // Comments after "  - <hash>  # ..." are stripped.
 export async function loadIgnoreList(): Promise<Set<string>> {
-  const path = getIgnoreListPath();
-  let content: string;
-  try {
-    content = await readFile(path, 'utf-8');
-  } catch {
-    return new Set();
-  }
+  const content = await readIgnoreListContent();
+  if (content === null) return new Set();
+
   const hashes = new Set<string>();
   for (const line of content.split('\n')) {
     if (line.startsWith('  - ')) {
@@ -31,12 +47,9 @@ export async function appendToIgnoreList(treeSha256: string, skillName: string):
   const path = getIgnoreListPath();
   await mkdir(dirname(path), { recursive: true });
 
-  let content: string;
-  try {
-    content = await readFile(path, 'utf-8');
-  } catch {
-    content = '# skillaudit ignore list — managed by `skillaudit ignore`\nignored:\n';
-  }
+  let content =
+    (await readIgnoreListContent()) ??
+    '# skill-audit ignore list - managed by `skill-audit ignore`\nignored:\n';
 
   if (content.includes(treeSha256)) return;
 

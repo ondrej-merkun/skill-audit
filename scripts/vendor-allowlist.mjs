@@ -51,9 +51,9 @@ const sources = [
     source: join(codexHome, 'vendor_imports/skills/skills/.curated/yeet'),
   },
   {
-    name: 'skillaudit',
-    vendor: 'skillaudit',
-    path: 'skillaudit/packages/skill',
+    name: 'skill-audit',
+    vendor: 'skill-audit',
+    path: 'skill-audit/packages/skill',
     source: join(repoRoot, 'packages/skill'),
   },
 ];

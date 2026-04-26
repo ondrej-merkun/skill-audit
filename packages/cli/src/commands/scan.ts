@@ -143,7 +143,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
 
   if (options.html !== undefined && options.output !== undefined) {
     process.stderr.write(
-      '[skillaudit] cannot combine --html and --output; choose one destination\n'
+      '[skill-audit] cannot combine --html and --output; choose one destination\n'
     );
     process.exit(2);
     return; // unreachable in production; allows mocked exit in tests
@@ -151,7 +151,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
 
   if (options.agent !== undefined && !SUPPORTED_SCAN_AGENTS.has(options.agent)) {
     process.stderr.write(
-      `[skillaudit] unsupported agent "${options.agent}". Supported agents: ${[...SUPPORTED_SCAN_AGENTS].join(', ')}\n`
+      `[skill-audit] unsupported agent "${options.agent}". Supported agents: ${[...SUPPORTED_SCAN_AGENTS].join(', ')}\n`
     );
     process.exit(2);
     return; // unreachable in production; allows mocked exit in tests
@@ -179,12 +179,12 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    process.stderr.write(`[skillaudit] ${msg}\n`);
+    process.stderr.write(`[skill-audit] ${msg}\n`);
     process.exit(2);
   }
 
   if (options.offline) {
-    process.stderr.write('[skillaudit] offline mode — enrichment skipped\n');
+    process.stderr.write('[skill-audit] offline mode — enrichment skipped\n');
   }
 
   if (skills.length === 0) {
@@ -203,7 +203,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
 
   if (ignoredSkills.length > 0) {
     process.stderr.write(
-      `[skillaudit] ignoring ${ignoredSkills.length} skill${ignoredSkills.length === 1 ? '' : 's'} (run with --all to include)\n`
+      `[skill-audit] ignoring ${ignoredSkills.length} skill${ignoredSkills.length === 1 ? '' : 's'} (run with --all to include)\n`
     );
   }
 
@@ -246,7 +246,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
       agentMap.set(outcome.skill.agentId, (agentMap.get(outcome.skill.agentId) ?? 0) + 1);
     } else {
       incompleteCount++;
-      process.stderr.write(`[skillaudit] skipping "${outcome.skill.name}": ${outcome.error}\n`);
+      process.stderr.write(`[skill-audit] skipping "${outcome.skill.name}": ${outcome.error}\n`);
     }
   }
 
@@ -311,13 +311,13 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   if (options.html !== undefined) {
     const htmlOut = renderHtml(result);
     await writeFile(options.html, htmlOut, 'utf-8');
-    process.stderr.write(`[skillaudit] HTML report written to ${options.html}\n`);
+    process.stderr.write(`[skill-audit] HTML report written to ${options.html}\n`);
     process.stdout.write(renderScanPayload(result, options));
   } else {
     const payload = renderScanPayload(result, options);
     if (options.output !== undefined) {
       await writeFile(options.output, stripVTControlCharacters(payload), 'utf-8');
-      process.stderr.write(`[skillaudit] report written to ${options.output}\n`);
+      process.stderr.write(`[skill-audit] report written to ${options.output}\n`);
     } else {
       process.stdout.write(payload);
     }

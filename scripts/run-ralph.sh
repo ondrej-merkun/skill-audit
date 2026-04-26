@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ralph Wiggum loop for skillaudit — TIME-BOUNDED edition.
+# Ralph Wiggum loop for skill-audit — TIME-BOUNDED edition.
 # Runs until MAX_HOURS (or MAX_MINUTES) of wall-clock time has elapsed.
 # Checks budget at the top of each iteration. Never kills mid-iteration.
 #

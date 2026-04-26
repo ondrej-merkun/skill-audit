@@ -1,4 +1,4 @@
-# skillaudit — Claude Code Skill
+# skill-audit — Claude Code Skill
 
 Lets Claude Code run `npx skill-audit` on your behalf to audit installed
 agent skills for prompt injection, exfiltration, and malicious code.
@@ -8,14 +8,14 @@ agent skills for prompt injection, exfiltration, and malicious code.
 **Option A — manual copy (works now):**
 
 ```bash
-mkdir -p ~/.claude/skills/skillaudit
-cp SKILL.md ~/.claude/skills/skillaudit/
+mkdir -p ~/.claude/skills/skill-audit
+cp SKILL.md ~/.claude/skills/skill-audit/
 ```
 
 **Option B — via `skills.sh` (once published):**
 
 ```bash
-npx skills.sh install skillaudit
+npx skills.sh install skill-audit
 ```
 
 ## Usage
@@ -24,7 +24,7 @@ After installing, ask Claude Code:
 
 > "Audit my installed skills"
 > "Check my skills for anything suspicious"
-> "Run skillaudit on my Cursor rules"
+> "Run skill-audit on my Cursor rules"
 
 Claude will run `npx skill-audit@latest scan --json`, parse the output,
 and summarize compromised skills with one-line remediations.
@@ -40,7 +40,7 @@ interprets the structured JSON output. Claude will:
 
 1. Report total skills scanned and how many are compromised
 2. List FAIL-verdict skills with their top issue and remediation
-3. Offer to deep-dive any flagged skill with `skillaudit explain`
+3. Offer to deep-dive any flagged skill with `skill-audit explain`
 
 Claude will never suggest deleting a skill without your explicit
 confirmation.
@@ -53,6 +53,6 @@ confirmation.
 
 ## Source
 
-This skill is part of the [skillaudit](https://github.com/ondrejmerkun/skillaudit)
+This skill is part of the [skill-audit](https://github.com/ondrej-merkun/skillaudit)
 project. The CLI it invokes (`npx skill-audit`) runs entirely locally —
 no skill content is sent to any server unless you opt into enrichment.

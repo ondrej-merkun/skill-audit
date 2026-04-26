@@ -9,7 +9,7 @@ let tempConfigDir: string;
 beforeEach(async () => {
   tempConfigDir = join(
     tmpdir(),
-    `skillaudit-ignore-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    `skill-audit-ignore-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
   );
   await mkdir(tempConfigDir, { recursive: true });
   process.env.XDG_CONFIG_HOME = tempConfigDir;
@@ -27,11 +27,11 @@ describe('loadIgnoreList', () => {
   });
 
   it('should parse sha256 entries from YAML list', async () => {
-    const skillauditDir = join(tempConfigDir, 'skillaudit');
-    await mkdir(skillauditDir, { recursive: true });
+    const skillAuditDir = join(tempConfigDir, 'skill-audit');
+    await mkdir(skillAuditDir, { recursive: true });
     await writeFile(
-      join(skillauditDir, 'ignore.yaml'),
-      '# skillaudit ignore list\nignored:\n  - abc123  # my-skill\n  - def456  # other-skill\n',
+      join(skillAuditDir, 'ignore.yaml'),
+      '# skill-audit ignore list\nignored:\n  - abc123  # my-skill\n  - def456  # other-skill\n',
       'utf-8'
     );
     const result = await loadIgnoreList();
@@ -41,16 +41,29 @@ describe('loadIgnoreList', () => {
   });
 
   it('should strip inline comments from entries', async () => {
-    const skillauditDir = join(tempConfigDir, 'skillaudit');
-    await mkdir(skillauditDir, { recursive: true });
+    const skillAuditDir = join(tempConfigDir, 'skill-audit');
+    await mkdir(skillAuditDir, { recursive: true });
     await writeFile(
-      join(skillauditDir, 'ignore.yaml'),
+      join(skillAuditDir, 'ignore.yaml'),
       'ignored:\n  - sha256withcomment  # comment here\n',
       'utf-8'
     );
     const result = await loadIgnoreList();
     expect(result.has('sha256withcomment')).toBe(true);
     expect(result.has('sha256withcomment  # comment here')).toBe(false);
+  });
+
+  it('should read legacy skillaudit ignore lists when the new path is absent', async () => {
+    const legacyDir = join(tempConfigDir, 'skillaudit');
+    await mkdir(legacyDir, { recursive: true });
+    await writeFile(
+      join(legacyDir, 'ignore.yaml'),
+      '# legacy skillaudit ignore list\nignored:\n  - legacyhash  # old-skill\n',
+      'utf-8'
+    );
+
+    const result = await loadIgnoreList();
+    expect(result.has('legacyhash')).toBe(true);
   });
 });
 
@@ -76,5 +89,21 @@ describe('appendToIgnoreList', () => {
     const result = await loadIgnoreList();
     expect(result.has('dupehash')).toBe(true);
     expect(result.size).toBe(1);
+  });
+
+  it('should migrate legacy entries when appending to the new path', async () => {
+    const legacyDir = join(tempConfigDir, 'skillaudit');
+    await mkdir(legacyDir, { recursive: true });
+    await writeFile(
+      join(legacyDir, 'ignore.yaml'),
+      '# legacy skillaudit ignore list\nignored:\n  - legacyhash  # old-skill\n',
+      'utf-8'
+    );
+
+    await appendToIgnoreList('newhash', 'new-skill');
+
+    const result = await loadIgnoreList();
+    expect(result.has('legacyhash')).toBe(true);
+    expect(result.has('newhash')).toBe(true);
   });
 });

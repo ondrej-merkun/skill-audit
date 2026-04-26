@@ -363,7 +363,7 @@ document.getElementById('btn-copy-json').addEventListener('click', function(){
 });
 
 document.getElementById('btn-copy-md').addEventListener('click', function(){
-  var lines = ['# skillaudit report', '', '| Skill | Verdict | Score |', '|---|---|---|'];
+  var lines = ['# skill-audit report', '', '| Skill | Verdict | Score |', '|---|---|---|'];
   skills.forEach(function(s){ lines.push('| '+s.name+' | '+s.summary.verdict+' | '+s.summary.score+' |'); });
   navigator.clipboard.writeText(lines.join('\\n'));
 });
@@ -372,7 +372,7 @@ document.getElementById('btn-download').addEventListener('click', function(){
   var blob = new Blob([JSON.stringify(DATA.result, null, 2)], {type:'application/json'});
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'skillaudit-report.json';
+  a.download = 'skill-audit-report.json';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -382,7 +382,7 @@ document.getElementById('btn-share').addEventListener('click', function(){
   var blob = new Blob([JSON.stringify(REDACTED.result, null, 2)], {type:'application/json'});
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'skillaudit-report-redacted.json';
+  a.download = 'skill-audit-report-redacted.json';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -395,12 +395,12 @@ document.getElementById('btn-share').addEventListener('click', function(){
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>skillaudit report — ${escapeHtml(result.scan.startedAt)}</title>
+<title>skill-audit report — ${escapeHtml(result.scan.startedAt)}</title>
 <style>${css}</style>
 </head>
 <body>
 <div id="header">
-  <h1>skillaudit</h1>
+  <h1>skill-audit</h1>
   ${scoreRingSvg(overallScore, overallVerdict)}
   <div>
     <div class="meta">${result.summary.skillsScanned} skills scanned · ${result.summary.compromised} compromised (${formatCompromisedPercent(result.summary.percentCompromised)}%)</div>

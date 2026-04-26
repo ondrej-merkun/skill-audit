@@ -1,4 +1,4 @@
-# AGENT.md — conventions for the `skillaudit` repo
+# AGENT.md — conventions for the `skill-audit` repo
 
 This file tells Ralph (and any future contributor) how to build, test,
 and structure code in this repo. Keep it short and keep it accurate.
@@ -47,9 +47,9 @@ dependency (`node-gyp`).
 ## Repo layout
 
 ```
-skillaudit/
+skill-audit/
 ├── packages/
-│   ├── cli/                      skill-audit — npm package, skillaudit bin
+│   ├── cli/                      skill-audit — npm package, skill-audit bin
 │   │   ├── src/
 │   │   │   ├── index.ts          shebang + commander setup
 │   │   │   ├── commands/         scan, list, explain, ignore
@@ -125,8 +125,8 @@ commands.
   a user would: worst result first, clear next action, no duplicate
   payloads, normal save/export ergonomics, and every documented
   invocation behaving as documented. If the spec or README says bare
-  `skillaudit` is valid, smoke-test the bare binary, not only
-  `skillaudit scan`.
+  `skill-audit` is valid, smoke-test the bare binary, not only
+  `skill-audit scan`.
 - A visible report column, footer line, detail panel, or enrichment
   section needs coverage for the populated path and the empty,
   unavailable, skipped, or offline path. Renderer-only tests with

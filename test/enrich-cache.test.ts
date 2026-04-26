@@ -1,10 +1,11 @@
-import { mkdir, rm } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // We need to override homedir so the cache writes to a temp dir
-const testHome = join(tmpdir(), 'skillaudit-cache-test-' + process.pid);
+const testHome = join(tmpdir(), 'skill-audit-cache-test-' + process.pid);
 
 vi.mock('node:os', async (importOriginal) => {
   const orig = await importOriginal<typeof import('node:os')>();
@@ -60,6 +61,22 @@ describe('cache', () => {
 
     const result = await cacheGet('github', key);
     expect(result?.etag).toBe('"abc123"');
+  });
+
+  it('reads legacy skillaudit cache entries when the new cache path is empty', async () => {
+    const key = 'legacy-key';
+    const filename = `${createHash('sha256').update(key).digest('hex')}.json`;
+    const legacyDir = join(testHome, '.cache', 'skillaudit', 'github');
+    await mkdir(legacyDir, { recursive: true });
+    await writeFile(
+      join(legacyDir, filename),
+      JSON.stringify({ data: { stars: 12 }, cachedAt: Date.now() }),
+      'utf-8'
+    );
+
+    const result = await cacheGet<{ stars: number }>('github', key);
+    expect(result?.data.stars).toBe(12);
+    expect(result?.stale).toBe(false);
   });
 
   it('isolates different sources under separate namespaces', async () => {

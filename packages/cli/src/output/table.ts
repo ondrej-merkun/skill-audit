@@ -101,7 +101,7 @@ export function renderTableToString(result: ScanResult): string {
   const lines: string[] = [];
 
   // ── Header box ──────────────────────────────────────────────────────
-  const headerContent = `  skillaudit  scanned ${summary.skillsScanned} skill${summary.skillsScanned !== 1 ? 's' : ''} across ${agentCount} agent${agentCount !== 1 ? 's' : ''} in ${durationS}s`;
+  const headerContent = `  skill-audit  scanned ${summary.skillsScanned} skill${summary.skillsScanned !== 1 ? 's' : ''} across ${agentCount} agent${agentCount !== 1 ? 's' : ''} in ${durationS}s`;
   const boxWidth = Math.max(82, headerContent.length + 4);
   lines.push(`┌${'─'.repeat(boxWidth - 2)}┐`);
   lines.push(`│${headerContent}${' '.repeat(boxWidth - 2 - headerContent.length)}│`);

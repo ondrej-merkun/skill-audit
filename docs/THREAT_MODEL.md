@@ -1,12 +1,12 @@
 # Threat Model
 
-This document describes the security boundaries for `skillaudit`: what the CLI
+This document describes the security boundaries for `skill-audit`: what the CLI
 reads, what it trusts, what may leave the machine, and how users should treat
 scan results.
 
 ## Scope
 
-`skillaudit` inventories and scans local AI agent instructions, skills,
+`skill-audit` inventories and scans local AI agent instructions, skills,
 commands, plugin payloads, MCP configuration, and project-level agent guidance
 that supported agents may expose to a coding assistant.
 
@@ -16,7 +16,7 @@ execute, quarantine, uninstall, or prove runtime behavior.
 
 ## Local Skill Contents
 
-Skill and instruction files are untrusted input. `skillaudit` reads them from
+Skill and instruction files are untrusted input. `skill-audit` reads them from
 disk and applies local deterministic rules to their text and nearby dependency
 manifests.
 
@@ -29,7 +29,7 @@ service, or hide behavior behind inputs the static scanner cannot see.
 
 The CLI inherits the user's process environment like any local command. Rules
 look for patterns that read or exfiltrate environment variables, but
-`skillaudit` should not print environment variable values as part of findings.
+`skill-audit` should not print environment variable values as part of findings.
 
 `GITHUB_TOKEN`, when present, may be used only as an API token for optional
 GitHub metadata enrichment. It is not sent to skills, written into reports, or
@@ -71,7 +71,7 @@ why findings were suppressed.
 
 ## GitHub Action Execution
 
-The GitHub Action runs `skillaudit` in CI against repository content and any
+The GitHub Action runs `skill-audit` in CI against repository content and any
 agent files present in the checked-out workspace. It should use the same local
 rule engine and optional enrichment boundaries as the CLI.
 
@@ -101,5 +101,5 @@ guarantee that the skill is safe.
 The scanner can miss novel prompt-injection phrasing, split-string or encoded
 payloads below rule thresholds, behavior fetched at runtime, malicious services
 called by otherwise normal code, and risks introduced after a scan. Treat
-`skillaudit` as a fast local first pass, not a replacement for code review,
+`skill-audit` as a fast local first pass, not a replacement for code review,
 runtime isolation, provenance checks, or dependency review.

@@ -79,7 +79,7 @@ without a commit message explaining why it no longer applies.
   the data it produces.
 
 - **L1.12 — Smoke-test the exact documented CLI invocation.** _Post-mortem
-  issue: the spec said bare `skillaudit` was equivalent to `skillaudit scan`,
+  issue: the spec said bare `skill-audit` was equivalent to `skill-audit scan`,
   but Commander had no root action and the binary did nothing._
   If a command table, README, action, or example documents an invocation, run
   that exact built binary invocation before calling the task done.

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Skill } from '../packages/cli/src/types.js';
 
-const testHome = join(tmpdir(), 'skillaudit-skills-sh-test-' + process.pid);
+const testHome = join(tmpdir(), 'skill-audit-skills-sh-test-' + process.pid);
 
 vi.mock('node:os', async (importOriginal) => {
   const orig = await importOriginal<typeof import('node:os')>();
@@ -167,6 +167,6 @@ describe('enrichSkillsSh', () => {
 
     await enrichSkillsSh(makeSkill());
     const headers = (vi.mocked(fetch).mock.calls[0]![1] as RequestInit).headers as Record<string, string>;
-    expect(headers['User-Agent']).toMatch(/^skillaudit\//);
+    expect(headers['User-Agent']).toMatch(/^skill-audit\//);
   });
 });

@@ -141,10 +141,10 @@ export function renderSummaryFooter(
   const firstReview = riskOrderedSkills.find((s) => s.summary.verdict === 'REVIEW');
   const highlight = firstFail ?? firstReview;
   if (highlight) {
-    lines.push(`  →  skillaudit explain ${highlight.name}    ${C_GREY('See full findings')}`);
+    lines.push(`  →  skill-audit explain ${highlight.name}    ${C_GREY('See full findings')}`);
   }
-  lines.push(`  →  skillaudit ignore <skill>    ${C_GREY('Allowlist a false positive')}`);
-  lines.push(`  →  skillaudit --html report.html    ${C_GREY('Generate shareable HTML')}`);
+  lines.push(`  →  skill-audit ignore <skill>    ${C_GREY('Allowlist a false positive')}`);
+  lines.push(`  →  skill-audit --html report.html    ${C_GREY('Generate shareable HTML')}`);
   lines.push('');
 
   return lines.join('\n');

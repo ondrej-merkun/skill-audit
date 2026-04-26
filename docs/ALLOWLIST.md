@@ -1,6 +1,6 @@
 # Allowlist Maintenance
 
-`skillaudit` uses exact `treeSha256` matches for trusted bundled skills. An
+`skill-audit` uses exact `treeSha256` matches for trusted bundled skills. An
 allowlist match only demotes `PI-*` findings to `info`; non-PI findings and
 mandatory-fail rules still report normally.
 

@@ -1,4 +1,4 @@
-name: 'skillaudit'
+name: 'skill-audit'
 description: 'Scan AI agent skills (Claude Code, Cursor, Copilot, Codex, Gemini, Windsurf, Cline) for prompt injection and malicious code.'
 author: 'Ondrej Merkun'
 
@@ -16,7 +16,7 @@ inputs:
     required: false
     default: '.'
   args:
-    description: 'Additional arguments passed verbatim to `skillaudit scan`'
+    description: 'Additional arguments passed verbatim to `skill-audit scan`'
     required: false
     default: ''
   fail-on:
@@ -38,7 +38,7 @@ inputs:
   results-file:
     description: 'Path where the JSON results file is written'
     required: false
-    default: 'skillaudit-results.json'
+    default: 'skill-audit-results.json'
 
 outputs:
   results-file:
@@ -87,13 +87,13 @@ runs:
           ${AGENT_FLAG:+--agent "$SA_AGENT"} \
           $OFFLINE_FLAG \
           $SA_ARGS \
-          2>skillaudit-stderr.txt
+          2>skill-audit-stderr.txt
         EXIT_CODE=$?
 
         # Surface stderr so it shows in the step log
-        if [ -s skillaudit-stderr.txt ]; then
-          cat skillaudit-stderr.txt >&2
-          rm skillaudit-stderr.txt
+        if [ -s skill-audit-stderr.txt ]; then
+          cat skill-audit-stderr.txt >&2
+          rm skill-audit-stderr.txt
         fi
 
         # Extract worst verdict for the output variable.
@@ -111,6 +111,6 @@ runs:
       if: ${{ inputs.upload-results == 'true' && always() }}
       uses: actions/upload-artifact@v4
       with:
-        name: skillaudit-results
+        name: skill-audit-results
         path: ${{ inputs.path }}/${{ inputs.results-file }}
         if-no-files-found: warn

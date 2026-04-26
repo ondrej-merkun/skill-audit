@@ -111,8 +111,8 @@ helper.
 
 ## Command invocation contract
 
-Documented command strings are output contracts too. `skillaudit` with no
-subcommand must behave like the default `skillaudit scan` flow unless the spec
+Documented command strings are output contracts too. `skill-audit` with no
+subcommand must behave like the default `skill-audit scan` flow unless the spec
 is explicitly changed. Every documented command-table row, README example,
 GitHub Action invocation, and shorthand alias needs a built-binary smoke test
 using that exact invocation; calling the command function directly is not enough
@@ -139,10 +139,10 @@ or could not be displayed.
 
 `scan` supports `-o, --output <file>` for non-HTML output modes:
 
-- `skillaudit scan --json --output report.json` writes only JSON to the file.
-- `skillaudit scan --summary --output summary.txt` writes only compact summary
+- `skill-audit scan --json --output report.json` writes only JSON to the file.
+- `skill-audit scan --summary --output summary.txt` writes only compact summary
   text to the file.
-- `skillaudit scan --output report.txt` writes the default table output to the
+- `skill-audit scan --output report.txt` writes the default table output to the
   file without duplicating the payload on stdout.
 - `--html <file>` remains the dedicated HTML report destination. Supplying both
   `--html` and `--output` is a usage error with exit code 2.
@@ -156,7 +156,7 @@ README and into the hero GIF. Column widths are fixed.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────┐
-│  skillaudit  scanned 47 skills across 4 agents in 1.3s                         │
+│  skill-audit  scanned 47 skills across 4 agents in 1.3s                         │
 └────────────────────────────────────────────────────────────────────────────────┘
 
   AGENT           SKILL                         VERDICT   SCORE   TOP ISSUE
@@ -177,11 +177,11 @@ README and into the hero GIF. Column widths are fixed.
   Enrichment ................ skills.sh ✓  github ✓  deps.dev ✓
   Duration .................. 1.32s
 
-  →  skillaudit explain polymarket-trader    See full findings
-  →  skillaudit ignore aws-helper            Allowlist a false positive
-  →  skillaudit --html report.html           Generate shareable HTML
+  →  skill-audit explain polymarket-trader    See full findings
+  →  skill-audit ignore aws-helper            Allowlist a false positive
+  →  skill-audit --html report.html           Generate shareable HTML
 
-  Want the details? https://skillaudit.dev/rules
+  Want the details? https://skill-audit.dev/rules
 ```
 
 Palette (hex, use chalk.hex):
@@ -214,7 +214,7 @@ Text must not clip, overlap, spill beyond the terminal frame, or show stale
 columns/commands. Prefer generating the asset from real built CLI output; if it
 is hand-authored, check text widths after every output-column change.
 
-## Detail view — `skillaudit explain <skill>`
+## Detail view — `skill-audit explain <skill>`
 
 ```
 polymarket-trader
@@ -243,7 +243,7 @@ polymarket-trader
   Next steps
   ──────────
   →  rm -rf ~/.claude/skills/polymarket-trader     # remove now
-  →  skillaudit report --skill polymarket-trader   # full forensic JSON
+  →  skill-audit report --skill polymarket-trader   # full forensic JSON
 ```
 
 Snippet lines are prefixed with `│ ` (U+2502 + space). Each finding

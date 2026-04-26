@@ -26,7 +26,7 @@ const BENIGN_DIR = join(FIXTURES_DIR, 'benign');
 type CliResult = { stdout: string; stderr: string; code: number };
 
 async function runCli(args: string[], extraEnv: Record<string, string> = {}): Promise<CliResult> {
-  const captureDir = await mkdtemp(join(tmpdir(), 'skillaudit-cli-capture-'));
+  const captureDir = await mkdtemp(join(tmpdir(), 'skill-audit-cli-capture-'));
   const stdoutPath = join(captureDir, 'stdout');
   const stderrPath = join(captureDir, 'stderr');
   let stdoutHandle: FileHandle | undefined = await open(stdoutPath, 'w');
@@ -112,7 +112,7 @@ describe('e2e: CLI binary', () => {
 
     expect(readme).toContain('npx skill-audit');
     expect(pkg.name).toBe('skill-audit');
-    expect(pkg.bin).toEqual({ skillaudit: './dist/index.js' });
+    expect(pkg.bin).toEqual({ 'skill-audit': './dist/index.js' });
 
     const { stdout, code } = await runCli(['--version']);
     expect(code).toBe(0);
@@ -125,7 +125,7 @@ describe('e2e: CLI binary', () => {
       readFile(README, 'utf-8'),
     ]);
 
-    expect(readme).toContain('uses: ondrejmerkun/skillaudit@v1');
+    expect(readme).toContain('uses: ondrej-merkun/skillaudit@v1');
     expect(action).toContain('npx --yes "skill-audit@${SA_VERSION}" scan');
     expect(action).toContain('--output "$SA_RESULTS_FILE"');
     expect(action).toContain('.summary.verdict // "PASS"');
@@ -152,8 +152,8 @@ describe('e2e: scan malicious fixtures', () => {
   let skillsDir: string;
 
   beforeEach(async () => {
-    tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-e2e-home-'));
-    tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-e2e-cwd-'));
+    tempHome = await mkdtemp(join(tmpdir(), 'skill-audit-e2e-home-'));
+    tempCwd = await mkdtemp(join(tmpdir(), 'skill-audit-e2e-cwd-'));
     skillsDir = join(tempHome, '.claude', 'skills');
     await mkdir(skillsDir, { recursive: true });
   });
@@ -331,8 +331,8 @@ describe('e2e: scan benign fixtures', () => {
   let skillsDir: string;
 
   beforeEach(async () => {
-    tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-e2e-home-'));
-    tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-e2e-cwd-'));
+    tempHome = await mkdtemp(join(tmpdir(), 'skill-audit-e2e-home-'));
+    tempCwd = await mkdtemp(join(tmpdir(), 'skill-audit-e2e-cwd-'));
     skillsDir = join(tempHome, '.claude', 'skills');
     await mkdir(skillsDir, { recursive: true });
   });
@@ -402,8 +402,8 @@ describe('e2e: scan flags', () => {
   let skillsDir: string;
 
   beforeEach(async () => {
-    tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-e2e-home-'));
-    tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-e2e-cwd-'));
+    tempHome = await mkdtemp(join(tmpdir(), 'skill-audit-e2e-home-'));
+    tempCwd = await mkdtemp(join(tmpdir(), 'skill-audit-e2e-cwd-'));
     skillsDir = join(tempHome, '.claude', 'skills');
     await mkdir(skillsDir, { recursive: true });
   });
@@ -495,7 +495,7 @@ describe('e2e: scan flags', () => {
   it('-o writes JSON output to a file without duplicating it to stdout', async () => {
     await cp(join(BENIGN_DIR, 'date-parser'), join(skillsDir, 'date-parser'), { recursive: true });
 
-    const outputPath = join(tempCwd, 'skillaudit-report.json');
+    const outputPath = join(tempCwd, 'skill-audit-report.json');
     const env = { HOME: tempHome, USERPROFILE: tempHome, SKILLAUDIT_CWD: tempCwd };
     const { stdout, code } = await runCli(
       ['scan', '--json', '-o', outputPath, '--offline', '--agent', 'claude-code'],

@@ -40,7 +40,7 @@ function makeSkill(overrides: Partial<Skill> = {}): Skill {
 }
 
 async function withTempDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
-  const dir = await mkdtemp(join(tmpdir(), 'skillaudit-scan-options-'));
+  const dir = await mkdtemp(join(tmpdir(), 'skill-audit-scan-options-'));
   try {
     return await fn(dir);
   } finally {
@@ -331,7 +331,7 @@ describe('runScan flag wiring', () => {
 
     const stdout = stripAnsi(stdoutChunks.join(''));
     const stderr = stripAnsi(stderrChunks.join(''));
-    expect(stdout).toContain('skillaudit');
+    expect(stdout).toContain('skill-audit');
     expect(stdout).not.toContain('Scanning skills');
     expect(stderr).toContain('Scanning skills 1/2');
     expect(stderr).toContain('Scanning skills 2/2');
@@ -421,7 +421,7 @@ describe('runScan flag wiring', () => {
 
       expect(stdoutChunks.join('')).toBe('');
       const out = await readFile(output, 'utf-8');
-      expect(out).toContain('skillaudit');
+      expect(out).toContain('skill-audit');
       expect(out).toContain('AGENT');
       expect(out).not.toMatch(/\u001b\[/);
     });
@@ -467,11 +467,11 @@ describe('runScan flag wiring', () => {
   it('reports per-agent counts for ignored and successfully scanned skills only', async () => {
     await withTempDir(async (dir) => {
       process.env['XDG_CONFIG_HOME'] = dir;
-      const ignoreDir = join(dir, 'skillaudit');
+      const ignoreDir = join(dir, 'skill-audit');
       await mkdir(ignoreDir, { recursive: true });
       await writeFile(
         join(ignoreDir, 'ignore.yaml'),
-        '# skillaudit ignore list\nignored:\n  - ignored-hash  # ignored-skill\n',
+        '# skill-audit ignore list\nignored:\n  - ignored-hash  # ignored-skill\n',
         'utf-8'
       );
 

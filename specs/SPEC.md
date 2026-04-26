@@ -1,6 +1,6 @@
 # Skillaudit: a weekend plan for a local-first agent-skill scanner
 
-**Bottom line up front.** Build it, ship it this weekend, and name it **`skillaudit`** (or `skill-audit` on npm). The market has a real gap: Snyk's `agent-scan` is the only production-grade tool that auto-discovers skills across multiple agents in one command, but it requires a cloud token, transmits skill contents to Snyk, and is closed to contributions. Every other existing tool handles one skill or one directory at a time. A local-first, zero-auth, multi-agent CLI with a polished TUI and a credible 36%-of-skills-are-vulnerable launch hook (Snyk ToxicSkills, Feb 2026) is a genuinely open slot. The full spec below is ready to code from.
+**Bottom line up front.** Build it, ship it this weekend, and name it **`skill-audit`** (or `skill-audit` on npm). The market has a real gap: Snyk's `agent-scan` is the only production-grade tool that auto-discovers skills across multiple agents in one command, but it requires a cloud token, transmits skill contents to Snyk, and is closed to contributions. Every other existing tool handles one skill or one directory at a time. A local-first, zero-auth, multi-agent CLI with a polished TUI and a credible 36%-of-skills-are-vulnerable launch hook (Snyk ToxicSkills, Feb 2026) is a genuinely open slot. The full spec below is ready to code from.
 
 ---
 
@@ -77,18 +77,18 @@ The pattern is consistent across **npm audit, snyk, trivy, gitleaks, semgrep, np
 
 ## 1. Name and positioning
 
-### Name: **`skillaudit`**
+### Name: **`skill-audit`**
 Parallels the strongest existing cross-ecosystem pattern: **`npm audit`, `bundle-audit`, `pip-audit`, `cargo audit`**. Tells anyone reading an HN title what the tool does in one second. Verified available on npm and as a GitHub repo slug as of research date.
 
-The executable is `skillaudit`; the npm package is `skill-audit`, so one-off runs use `npx skill-audit`.
+The executable is `skill-audit`; the npm package is `skill-audit`, so one-off runs use `npx skill-audit`.
 
-Backup picks if `skillaudit` is taken at publish time: `skillprobe`, `agentscan` (conflicts with Snyk's binary — skip), `skillsleuth`, `skylint`. The user's past affinity for `vibe-check` works here but doesn't signal "security" strongly enough — reserve for a related tool.
+Backup picks if `skill-audit` is taken at publish time: `skillprobe`, `agentscan` (conflicts with Snyk's binary — skip), `skillsleuth`, `skylint`. The user's past affinity for `vibe-check` works here but doesn't signal "security" strongly enough — reserve for a related tool.
 
 ### Tagline
 **"Scan every AI agent skill on your machine for prompt injection and malicious code. Local, fast, zero-config."**
 
 ### Elevator pitch (README lede)
-> Agent skills are the new npm. Snyk's ToxicSkills study (Feb 2026) found **36% of agent skills ship with a security flaw**, 13% with a critical one. Most existing scanners demand a cloud account, scan one skill at a time, or only cover Claude. `skillaudit` runs locally in two seconds, discovers skills across Claude Code, Cursor, Codex, Gemini CLI, Copilot, and cross-agent project instruction files, and hands you a colorized verdict table. `npx skill-audit` is the whole install.
+> Agent skills are the new npm. Snyk's ToxicSkills study (Feb 2026) found **36% of agent skills ship with a security flaw**, 13% with a critical one. Most existing scanners demand a cloud account, scan one skill at a time, or only cover Claude. `skill-audit` runs locally in two seconds, discovers skills across Claude Code, Cursor, Codex, Gemini CLI, Copilot, and cross-agent project instruction files, and hands you a colorized verdict table. `npx skill-audit` is the whole install.
 
 ### Target audience
 - **Primary:** individual developers who've pasted 5–50 skills into `~/.claude/skills/` and `~/.codex/` and have no idea what any of them do.
@@ -123,13 +123,13 @@ Tradeoffs: slightly slower startup than Go/Rust; not an issue at MVP scale (hund
 
 ### Distribution
 1. **Primary:** `npm publish` → `npx skill-audit` and `pnpm dlx skill-audit` work instantly.
-2. **GitHub Action wrapper:** `uses: ondrejmerkun/skillaudit-action@v1` — thin composite action, highest-leverage distribution per the gitleaks playbook.
+2. **GitHub Action wrapper:** `uses: ondrej-merkun/skillaudit@v1` — thin composite action, highest-leverage distribution per the gitleaks playbook.
 
 ### Directory layout
 ```
-skillaudit/
+skill-audit/
 ├── packages/
-│   ├── cli/                        # skill-audit npm package, skillaudit bin
+│   ├── cli/                        # skill-audit npm package, skill-audit bin
 │   │   ├── src/
 │   │   │   ├── index.ts            # shebang + commander setup
 │   │   │   ├── commands/
@@ -355,7 +355,7 @@ unzip\s+-P\s+["']?\S+["']?\s+\S+\.zip
 
 ### Performance budget (enforced)
 
-`skillaudit scan` against 500 skills must finish in < 10 s on a
+`skill-audit scan` against 500 skills must finish in < 10 s on a
 warm cache on a 2020-era laptop. If a design choice pushes past
 this, redesign before shipping. Worker-thread-per-regex is NOT
 acceptable at this scale — batch regex execution per file, or
@@ -378,7 +378,7 @@ Response shape (reverse-engineered from `alonw0/secure-skills` fork):
 ```
 Merge into the finding pipeline as three Info-level enrichment signals; if any returns Critical, bump display priority. Fallback: HTML scrape `https://skills.sh/<owner>/<repo>/<skill>` if JSON endpoint 404s.
 
-**GitHub API.** Unauthenticated by default (60/hr). Fetch `GET /repos/{owner}/{repo}` once per unique repo (stars, age, archived, pushed_at). ETag cache everything in `~/.cache/skillaudit/github/`. Prompt for `GITHUB_TOKEN` or `gh auth token` opportunistically if rate-limited; never require.
+**GitHub API.** Unauthenticated by default (60/hr). Fetch `GET /repos/{owner}/{repo}` once per unique repo (stars, age, archived, pushed_at). ETag cache everything in `~/.cache/skill-audit/github/`. Prompt for `GITHUB_TOKEN` or `gh auth token` opportunistically if rate-limited; never require.
 
 **deps.dev.** For bundled dependencies from `package.json` / `requirements.txt`, one call per unique dep returns OSSF Scorecard + OSV vulns. No auth, generous rate limit.
 
@@ -388,7 +388,7 @@ Merge into the finding pipeline as three Info-level enrichment signals; if any r
 
 ### Caching strategy
 ```
-~/.cache/skillaudit/
+~/.cache/skill-audit/
 ├── github/<owner>__<repo>.json       # 24h TTL, ETag validation
 ├── skills-sh/<slug>.json             # 24h TTL
 ├── depsdev/<ecosystem>__<name>.json  # 24h TTL
@@ -403,7 +403,7 @@ All caches include `fetched_at`. TTL stale-cache is served when enrichment API f
 - Zero enrichment is always a complete scan — the local analyzer is the product; cloud is the garnish.
 
 ### ToS posture
-- **skills.sh endpoint** — undocumented but consumed by Vercel's own CLI and forks. Courtesy caching + User-Agent (`skillaudit/0.1.0 (+github.com/you/skillaudit)`). Reasonable.
+- **skills.sh endpoint** — undocumented but consumed by Vercel's own CLI and forks. Courtesy caching + User-Agent (`skill-audit/0.1.0 (+github.com/you/skill-audit)`). Reasonable.
 - **agentskill.sh** — README explicitly states "No API key required. The learn skill uses the public API." — clean.
 - **GitHub** — documented, explicit rate limits, identify via User-Agent.
 - **deps.dev / OSV / npm / PyPI** — explicitly designed for automated consumption.
@@ -416,7 +416,7 @@ Hand-tune everything below to look good in a 720p Twitter card.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────┐
-│  skillaudit  scanned 47 skills across 4 agents in 1.3s                         │
+│  skill-audit  scanned 47 skills across 4 agents in 1.3s                         │
 └────────────────────────────────────────────────────────────────────────────────┘
 
   AGENT           SKILL                         VERDICT   SCORE   TOP ISSUE
@@ -437,11 +437,11 @@ Hand-tune everything below to look good in a 720p Twitter card.
   Enrichment ................ skills.sh ✓  github ✓  deps.dev ✓
   Duration .................. 1.32s
 
-  →  skillaudit explain polymarket-trader    See full findings
-  →  skillaudit ignore aws-helper            Allowlist a false positive
-  →  skillaudit --html report.html           Generate shareable HTML
+  →  skill-audit explain polymarket-trader    See full findings
+  →  skill-audit ignore aws-helper            Allowlist a false positive
+  →  skill-audit --html report.html           Generate shareable HTML
 
-  Want the details? https://skillaudit.dev/rules
+  Want the details? https://skill-audit.dev/rules
 ```
 
 **Design notes.**
@@ -451,7 +451,7 @@ Hand-tune everything below to look good in a 720p Twitter card.
 - Always end with 2-3 arrow-prefixed next-commands. This is the single most-copied footer pattern across `snyk test`, `semgrep scan`, `npm audit`, `trivy image`.
 - Include the percentage ("17% of installed") — it's the screenshot-bait stat.
 
-### Detail view — `skillaudit explain <skill>`
+### Detail view — `skill-audit explain <skill>`
 
 ```
 polymarket-trader
@@ -490,7 +490,7 @@ polymarket-trader
   Next steps
   ──────────
   →  rm -rf ~/.claude/skills/polymarket-trader     # remove now
-  →  skillaudit report --skill polymarket-trader   # full forensic JSON
+  →  skill-audit report --skill polymarket-trader   # full forensic JSON
 ```
 
 ### HTML report — `--html out.html`
@@ -546,15 +546,15 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 
 | Command | Purpose |
 |---|---|
-| `skillaudit` / `skillaudit scan` | Default — discover and scan all agents, TUI output |
-| `skillaudit scan --agent claude-code` | Restrict to one agent |
-| `skillaudit scan <path>` | Scan a single skill directory |
-| `skillaudit scan --json` / `--html <file>` / `--summary` | Output formats |
-| `skillaudit scan --offline` | Skip all enrichment |
-| `skillaudit scan --strict` | REVIEW becomes FAIL; exit non-zero |
-| `skillaudit list` | List discovered skills without scanning (fast inventory) |
-| `skillaudit explain <skill-name-or-id>` | Detail view (mockup above) |
-| `skillaudit ignore <skill-name>` | Append skill's tree sha256 to `~/.config/skillaudit/ignore.yaml` |
+| `skill-audit` / `skill-audit scan` | Default — discover and scan all agents, TUI output |
+| `skill-audit scan --agent claude-code` | Restrict to one agent |
+| `skill-audit scan <path>` | Scan a single skill directory |
+| `skill-audit scan --json` / `--html <file>` / `--summary` | Output formats |
+| `skill-audit scan --offline` | Skip all enrichment |
+| `skill-audit scan --strict` | REVIEW becomes FAIL; exit non-zero |
+| `skill-audit list` | List discovered skills without scanning (fast inventory) |
+| `skill-audit explain <skill-name-or-id>` | Detail view (mockup above) |
+| `skill-audit ignore <skill-name>` | Append skill's tree sha256 to `~/.config/skill-audit/ignore.yaml` |
 
 **Exit codes** (CI-friendly):
 - `0` — all PASS
@@ -570,7 +570,7 @@ Minimal — a thin `SKILL.md` that invokes the CLI. The whole point is to be the
 
 ```markdown
 ---
-name: skillaudit
+name: skill-audit
 description: Scan installed agent skills for prompt injection, exfiltration,
   and malicious code. Use when the user asks to audit, check, review, or
   verify their installed skills or plugins across Claude Code, Cursor,
@@ -578,7 +578,7 @@ description: Scan installed agent skills for prompt injection, exfiltration,
 allowed-tools: [Bash]
 ---
 
-# skillaudit
+# skill-audit
 
 When invoked, run:
 
@@ -589,7 +589,7 @@ npx skill-audit@latest scan --json
 Parse the JSON output and summarize:
 1. Total skills scanned and compromised count
 2. List of FAIL-verdict skills with their top issue and a one-line remediation
-3. Offer to run `skillaudit explain <skill>` for any flagged skill
+3. Offer to run `skill-audit explain <skill>` for any flagged skill
 
 If the user asks to audit a specific skill, run:
 ```bash
@@ -597,7 +597,7 @@ npx skill-audit@latest explain <skill-name> --json
 ```
 
 Do not recommend rm/delete commands without explicit user confirmation.
-Always show the skillaudit summary table verbatim in a code block before
+Always show the skill-audit summary table verbatim in a code block before
 your interpretation.
 ```
 
@@ -608,7 +608,7 @@ This skill file ships inside the repo at `packages/skill/SKILL.md` and is copy-p
 ### README design
 Follow the **ripgrep + bun** template:
 1. Centered 180px logo (red magnifying glass icon).
-2. `# skillaudit` in H1.
+2. `# skill-audit` in H1.
 3. One-line tagline directly under.
 4. Badges: npm version, CI, license. No badge overkill.
 5. The Snyk 36% stat in a blockquote with proper attribution + link.
@@ -629,7 +629,7 @@ Record with `vhs` or `asciinema+agg` — `.gif`, max 800kb, dark terminal.
 - **0.8s** Spinner: `⠋ Scanning 47 skills across 4 agents...`
 - **1.5s** Table renders row-by-row (not all at once — looks faster).
 - **3.0s** Summary footer lands: `8 of 47 skills compromised (17%)` in red.
-- **4.0s** Last line: `→ skillaudit explain polymarket-trader`
+- **4.0s** Last line: `→ skill-audit explain polymarket-trader`
 - **4.8s** Hold, loop.
 
 The **17% personal stat** is the viral hook. People screenshot their own result.
@@ -666,7 +666,7 @@ The "now I own a product" trap is real. Pre-commit these to yourself:
 2. **Issues triaged in weekly batches, not daily.** Auto-responder: "Thanks — I batch-review Sundays."
 3. **No contributor CLA. Apache-2.0.** Zero process friction for PRs.
 4. **No telemetry, ever.** Say it explicitly in the README. This is a feature.
-5. **No landing page V1.** The GitHub README + a `skillaudit.dev` redirect is enough for the first month.
+5. **No landing page V1.** The GitHub README + a `skill-audit.dev` redirect is enough for the first month.
 
 ## 10. MVP scope
 
@@ -708,9 +708,9 @@ custom rule formats, or plugin autoloading from the internet without a new spec.
 
 ### False-positive risk
 Highest-probability failure mode. The `PI-*` rules trigger on security-education skills (Trail of Bits, OWASP, ironically many skill-security-auditor skills themselves). Snyk's own blog mocks a competitor that flagged its own rule files. Mitigations baked into MVP:
-1. Tree-sha256 allowlist for official Anthropic + Trail of Bits + Snyk + skillaudit-itself skills.
+1. Tree-sha256 allowlist for official Anthropic + Trail of Bits + Snyk + skill-audit-itself skills.
 2. `PI-*` rules demote to Info inside the allowlist.
-3. `skillaudit ignore <skill>` for local exceptions, stored in `~/.config/skillaudit/ignore.yaml`.
+3. `skill-audit ignore <skill>` for local exceptions, stored in `~/.config/skill-audit/ignore.yaml`.
 4. `--no-prompt-injection-rules` escape hatch for power users.
 5. README explicitly documents expected FPR of ~5-10% on legitimate security skills before allowlist, ~2% after. Honesty is the only defense.
 
@@ -724,7 +724,7 @@ Mitigations:
 
 ### Competitive risk
 What if Anthropic ships native skill scanning next month?
-- **Their scope will be Anthropic-only.** `skillaudit`'s cross-agent coverage still matters.
+- **Their scope will be Anthropic-only.** `skill-audit`'s cross-agent coverage still matters.
 - **Their UX will be dashboard-first, not CLI-first.** `npx skill-audit` in a Makefile and in CI remains useful.
 - **Pre-install review is different from periodic audit.** A persistent gap.
 
@@ -737,14 +737,14 @@ What if Snyk open-sources a local-only mode?
 - **Repello** — do NOT automate. Link out only.
 - **Snyk** — use `mcp-scan` OSS directly if you ever want to shell out, never the authenticated Snyk REST.
 - **GitHub API** — fully documented, identify with User-Agent, respect rate limits via ETag. Zero risk.
-- **Trademark.** Avoid product names containing "Snyk", "Claude", "Anthropic", "Cursor", "GitHub", or "Copilot" in the binary name. `skillaudit` is safely generic.
+- **Trademark.** Avoid product names containing "Snyk", "Claude", "Anthropic", "Cursor", "GitHub", or "Copilot" in the binary name. `skill-audit` is safely generic.
 - **Published rules reference CVE/CWE IDs** — public-domain, unlimited reuse.
 
 ---
 
 # Final call-to-action checklist
 
-- [ ] Claim `skillaudit` on npm + GitHub repo slug before writing code
+- [ ] Claim `skill-audit` on npm + GitHub repo slug before writing code
 - [ ] Scaffold: pnpm + tsup + commander + biome + vitest
 - [ ] Implement discovery for Claude Code + Cursor + AGENTS.md sweep + Copilot
 - [ ] Implement 27-rule regex engine + scoring + allowlist

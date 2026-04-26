@@ -116,7 +116,7 @@ const writeToCursorConfigPattern = /(?:write|append|echo|printf|cat\s+>>?)\s+[^#
 const appendContextFilePattern =
   /\bappend\b[^#\n]*\b(?:CLAUDE\.md|AGENTS\.md|\.cursorrules|\.windsurfrules|GEMINI\.md)\b/i;
 const fsWriteConfigPattern =
-  /(?:fs\.writeFile|fs\.appendFile|open\s*\([^)]+,\s*["'][wa]["'])\s*[^)]*(?:\.claude|\.cursor|\.config[/\\]skillaudit)/;
+  /(?:fs\.writeFile|fs\.appendFile|open\s*\([^)]+,\s*["'][wa]["'])\s*[^)]*(?:\.claude|\.cursor|\.config[/\\](?:skill-audit|skillaudit))/;
 
 export const SKILL_MEMORY_WRITE: Rule = {
   id: 'SKILL-MEMORY-WRITE',

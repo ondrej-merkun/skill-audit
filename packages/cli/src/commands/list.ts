@@ -83,7 +83,7 @@ export async function runList(opts: Partial<ListOptions> = {}): Promise<void> {
     skills = await discoverAll({ onProgress: progress.onDiscoveryProgress });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    process.stderr.write(`[skillaudit] error: ${msg}\n`);
+    process.stderr.write(`[skill-audit] error: ${msg}\n`);
     process.exit(2);
   }
 

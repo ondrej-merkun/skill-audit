@@ -1,7 +1,7 @@
 # specs/ — source of truth
 
 `SPEC.md` in this folder is the authoritative specification for the
-`skillaudit` MVP. Ralph references it directly by section number when
+`skill-audit` MVP. Ralph references it directly by section number when
 implementing tasks from `fix_plan.md`.
 
 **Before starting this kit, copy your spec file into this folder:**

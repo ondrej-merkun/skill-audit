@@ -10,7 +10,7 @@ import type { ScanOptions } from './commands/scan.js';
 const program = new Command();
 
 program
-  .name('skillaudit')
+  .name('skill-audit')
   .description('Scan AI agent skills for prompt injection and malicious code')
   .version('0.1.0');
 
@@ -42,7 +42,7 @@ program
     };
     runScan(options).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
-      process.stderr.write(`[skillaudit] fatal: ${msg}\n`);
+      process.stderr.write(`[skill-audit] fatal: ${msg}\n`);
       process.exit(2);
     });
   });
@@ -59,7 +59,7 @@ program
     };
     runList(options).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
-      process.stderr.write(`[skillaudit] fatal: ${msg}\n`);
+      process.stderr.write(`[skill-audit] fatal: ${msg}\n`);
       process.exit(2);
     });
   });
@@ -76,7 +76,7 @@ program
     };
     runExplain(nameOrId, options).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
-      process.stderr.write(`[skillaudit] fatal: ${msg}\n`);
+      process.stderr.write(`[skill-audit] fatal: ${msg}\n`);
       process.exit(2);
     });
   });
@@ -87,7 +87,7 @@ program
   .action((nameOrId: string) => {
     runIgnore(nameOrId).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
-      process.stderr.write(`[skillaudit] fatal: ${msg}\n`);
+      process.stderr.write(`[skill-audit] fatal: ${msg}\n`);
       process.exit(2);
     });
   });

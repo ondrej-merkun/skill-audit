@@ -12,6 +12,10 @@ type CacheEntry<T> = {
 };
 
 function cacheDir(source: string): string {
+  return join(homedir(), '.cache', 'skill-audit', source);
+}
+
+function legacyCacheDir(source: string): string {
   return join(homedir(), '.cache', 'skillaudit', source);
 }
 
@@ -32,19 +36,22 @@ export type CacheGetResult<T> = {
  * if no entry exists at all.
  */
 export async function cacheGet<T>(source: string, key: string): Promise<CacheGetResult<T> | null> {
-  const filePath = join(cacheDir(source), cacheKey(key));
-  try {
-    const raw = await readFile(filePath, 'utf8');
-    const entry: CacheEntry<T> = JSON.parse(raw) as CacheEntry<T>;
-    const stale = Date.now() - entry.cachedAt > TTL_MS;
-    return {
-      data: entry.data,
-      stale,
-      ...(entry.etag !== undefined ? { etag: entry.etag } : {}),
-    };
-  } catch {
-    return null;
+  const filename = cacheKey(key);
+  for (const dir of [cacheDir(source), legacyCacheDir(source)]) {
+    try {
+      const raw = await readFile(join(dir, filename), 'utf8');
+      const entry: CacheEntry<T> = JSON.parse(raw) as CacheEntry<T>;
+      const stale = Date.now() - entry.cachedAt > TTL_MS;
+      return {
+        data: entry.data,
+        stale,
+        ...(entry.etag !== undefined ? { etag: entry.etag } : {}),
+      };
+    } catch {
+      // Try the next cache location.
+    }
   }
+  return null;
 }
 
 /**

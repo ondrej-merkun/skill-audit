@@ -14,7 +14,7 @@ export async function runIgnore(skillNameOrId: string): Promise<void> {
   } catch (err) {
     spinner.fail('Discovery failed');
     const msg = err instanceof Error ? err.message : String(err);
-    process.stderr.write(`[skillaudit] error: ${msg}\n`);
+    process.stderr.write(`[skill-audit] error: ${msg}\n`);
     process.exit(2);
   }
   spinner.stop();
@@ -24,9 +24,9 @@ export async function runIgnore(skillNameOrId: string): Promise<void> {
   );
 
   if (!match) {
-    process.stderr.write(`[skillaudit] no skill found matching "${skillNameOrId}"\n`);
+    process.stderr.write(`[skill-audit] no skill found matching "${skillNameOrId}"\n`);
     process.stderr.write(
-      chalk.dim(`Run ${chalk.bold('skillaudit list')} to see installed skills.\n`)
+      chalk.dim(`Run ${chalk.bold('skill-audit list')} to see installed skills.\n`)
     );
     process.exit(1);
   }

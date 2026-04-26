@@ -1,8 +1,8 @@
-# skillaudit
+# skill-audit
 
 A CLI that scans installed AI agent skills (Claude Code, Cursor, Copilot,
 Codex, Gemini, Windsurf, Cline) for prompt injection and malicious code.
-Local-first, zero-auth, published as `skill-audit` with the `skillaudit` bin.
+Local-first, zero-auth, published as `skill-audit` with the `skill-audit` bin.
 
 Full spec: **`specs/SPEC.md`**. Ralph loop protocol: **`PROMPT.md`**.
 Workflow conventions: **`AGENT.md`**. Task list / progress: **`fix_plan.md`**.
@@ -15,7 +15,8 @@ from — see the instructions at the top of that file.
 
 ## Identity
 
-- GitHub handle: `ondrejmerkun`
+- GitHub handle: `ondrej-merkun`
+- GitHub repository: `https://github.com/ondrej-merkun/skillaudit`
 - npm package name: `skill-audit`
 - Author byline (README, blog, HN): "Ondrej Merkun"
 
@@ -52,7 +53,7 @@ test runners or split the test command.
 ## Directory map
 
 ```
-packages/cli/          skill-audit — npm package, exposes the `skillaudit` bin
+packages/cli/          skill-audit — npm package, exposes the `skill-audit` bin
   src/commands/        scan, list, explain, ignore
   src/discovery/       per-agent plugins (claude-code, cursor, copilot, agents-md-sweep)
   src/rules/           27 rules grouped by category (pure regex)
@@ -60,7 +61,7 @@ packages/cli/          skill-audit — npm package, exposes the `skillaudit` bin
   src/output/          table (TUI), json, html, summary
   src/score.ts         scoring + verdict bands + mandatory-fail overrides
   src/allowlist/       anthropic-skills.json tree-hash allowlist
-packages/skill/        SKILL.md wrapper (meta: skillaudit's own Claude Code skill)
+packages/skill/        SKILL.md wrapper (meta: skill-audit's own Claude Code skill)
 test/fixtures/         malicious-* and benign-* skill trees (one pair per rule)
 specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DISCOVERY)
 ```
@@ -100,7 +101,7 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
   file output must agree on risk-first ordering and should make the next
   action obvious from the first screen.
 - **Documented invocations are contracts.** If the spec, README, examples,
-  or action says `skillaudit` works without a subcommand, or documents any
+  or action says `skill-audit` works without a subcommand, or documents any
   other exact command string, the built binary must be smoke-tested with that
   exact invocation.
 - **Generated HTML must be tested as an interactive file.** Sidebar filters,

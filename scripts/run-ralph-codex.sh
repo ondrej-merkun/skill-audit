@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ralph Wiggum loop for skillaudit — CODEX edition, time-bounded.
+# Ralph Wiggum loop for skill-audit — CODEX edition, time-bounded.
 # Mirror of scripts/run-ralph.sh but invokes Codex CLI instead of Claude.
 # Runs until MAX_HOURS (or MAX_MINUTES) of wall-clock time has elapsed.
 # Checks budget at the top of each iteration. Never kills mid-iteration.

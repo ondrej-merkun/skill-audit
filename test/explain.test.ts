@@ -157,7 +157,7 @@ describe('runExplain', () => {
     expect(processExitSpy).toHaveBeenCalledWith(1);
     const err = stripAnsi(stderrChunks.join(''));
     expect(err).toContain('nonexistent');
-    expect(err).toContain('skillaudit list');
+    expect(err).toContain('skill-audit list');
   });
 
   it('shows "No issues found" when findings are empty and verdict is PASS', async () => {

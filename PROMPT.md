@@ -1,6 +1,6 @@
-# Ralph Loop Prompt — `skillaudit` MVP
+# Ralph Loop Prompt — `skill-audit` MVP
 
-You are a staff software engineer implementing the `skillaudit` CLI per
+You are a staff software engineer implementing the `skill-audit` CLI per
 the specification in `specs/SPEC.md`. This is ONE iteration of a Ralph
 loop. You will be invoked many times in fresh context windows. Each
 iteration you do ONE task, commit it, and exit.
@@ -106,7 +106,7 @@ obvious, the next action should be clear, and file/output modes should not
 duplicate payloads.
 
 Run the exact invocation documented by the task, spec, README, examples, or
-action metadata. If bare `skillaudit` is documented as the default scan, run the
+action metadata. If bare `skill-audit` is documented as the default scan, run the
 built binary with no subcommand. If an HTML report is involved, open or execute
 the generated file and verify at least one interactive control. If README
 screenshots, SVGs, badges, or visual assets changed, render them at their

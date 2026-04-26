@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-`skillaudit` is pre-1.0. Security fixes are released on the latest published
+`skill-audit` is pre-1.0. Security fixes are released on the latest published
 version only.
 
 ## Reporting a Vulnerability
@@ -23,7 +23,7 @@ support requests can be filed as regular GitHub issues.
 
 ## Scanner Scope
 
-`skillaudit` is a local scanner. It reports suspicious skill content and exits
+`skill-audit` is a local scanner. It reports suspicious skill content and exits
 with a verdict code; it does not quarantine files or guarantee that a skill is
 safe.
 

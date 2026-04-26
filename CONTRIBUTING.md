@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve `skillaudit`.
+Thanks for helping improve `skill-audit`.
 
 ## Development
 

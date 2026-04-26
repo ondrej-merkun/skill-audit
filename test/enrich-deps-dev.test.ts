@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Skill } from '../packages/cli/src/types.js';
 
-const testHome = join(tmpdir(), 'skillaudit-depsdev-test-' + process.pid);
+const testHome = join(tmpdir(), 'skill-audit-depsdev-test-' + process.pid);
 
 vi.mock('node:os', async (importOriginal) => {
   const orig = await importOriginal<typeof import('node:os')>();

@@ -45,10 +45,10 @@
       "sha256_tree": "549195eddf0c2cac77c4731665646153b27d4c4e6e3a2921c7d6c1cebff40fe1"
     },
     {
-      "name": "skillaudit",
-      "vendor": "skillaudit",
-      "path": "skillaudit/packages/skill",
-      "sha256_tree": "6693621fdf076e6700f4f1ee37cba9606a801677be41f7a898c6040afd8d8e57"
+      "name": "skill-audit",
+      "vendor": "skill-audit",
+      "path": "skill-audit/packages/skill",
+      "sha256_tree": "e8f6b95423ae7121dd56edd57bd667e35b14ed30fab8d9f08df1d29212bf245f"
     }
   ]
 }

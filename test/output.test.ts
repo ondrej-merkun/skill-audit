@@ -452,8 +452,8 @@ describe('renderTableToString', () => {
       summary: { skillsScanned: 1, compromised: 1, percentCompromised: 100, verdict: 'FAIL' },
     });
     const out = stripAnsi(renderTableToString(result));
-    expect(out).toContain('skillaudit explain bad-skill');
-    expect(out).toContain('skillaudit --html report.html');
+    expect(out).toContain('skill-audit explain bad-skill');
+    expect(out).toContain('skill-audit --html report.html');
   });
 });
 
@@ -586,8 +586,8 @@ describe('renderSummaryFooter', () => {
       summary: { skillsScanned: 1, compromised: 1, percentCompromised: 100, verdict: 'FAIL' },
     });
     const out = stripAnsi(renderSummaryFooter(result, [failSkill]));
-    expect(out).toContain('skillaudit explain risky-skill');
-    expect(out).toContain('skillaudit --html report.html');
+    expect(out).toContain('skill-audit explain risky-skill');
+    expect(out).toContain('skill-audit --html report.html');
   });
 
   it('uses the highest-risk skill for next-command suggestions', () => {
@@ -601,8 +601,8 @@ describe('renderSummaryFooter', () => {
       )
     );
 
-    expect(out).toContain('skillaudit explain fail-score-0');
-    expect(out).not.toContain('skillaudit explain fail-score-40');
+    expect(out).toContain('skill-audit explain fail-score-0');
+    expect(out).not.toContain('skill-audit explain fail-score-40');
   });
 
   it('omits Enrichment line when no enrichment data', () => {

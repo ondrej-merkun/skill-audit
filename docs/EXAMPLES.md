@@ -1,7 +1,7 @@
 # Examples
 
 These examples use the published package name, `skill-audit`, and the installed
-binary, `skillaudit`. Use `npx skill-audit` for one-off runs, or `skillaudit`
+binary, `skill-audit`. Use `npx skill-audit` for one-off runs, or `skill-audit`
 after a global install.
 
 ## Local Scan
@@ -26,9 +26,9 @@ Restrict discovery to one agent when you already know where the change came
 from:
 
 ```bash
-skillaudit scan --agent claude-code
-skillaudit scan --agent codex
-skillaudit scan --agent cursor
+skill-audit scan --agent claude-code
+skill-audit scan --agent codex
+skill-audit scan --agent cursor
 ```
 
 ## JSON Output
@@ -36,13 +36,13 @@ skillaudit scan --agent cursor
 Emit schema-versioned JSON to stdout for another tool to consume:
 
 ```bash
-skillaudit scan --json
+skill-audit scan --json
 ```
 
 For review in a shell, combine it with `jq`:
 
 ```bash
-skillaudit scan --json --offline | jq '.summary'
+skill-audit scan --json --offline | jq '.summary'
 ```
 
 Example summary shape:
@@ -62,9 +62,9 @@ Write the selected non-HTML output mode directly to a file with
 `-o, --output`:
 
 ```bash
-skillaudit scan --json -o skillaudit-report.json
-skillaudit scan --summary -o skillaudit-summary.txt
-skillaudit scan -o skillaudit-report.txt
+skill-audit scan --json -o skill-audit-report.json
+skill-audit scan --summary -o skill-audit-summary.txt
+skill-audit scan -o skill-audit-report.txt
 ```
 
 When `--output` is present, the report payload is written to the file and is not
@@ -76,7 +76,7 @@ flushed, so a FAIL result can still exit nonzero.
 Use the dedicated HTML destination flag for a standalone report:
 
 ```bash
-skillaudit scan --html skillaudit-report.html
+skill-audit scan --html skill-audit-report.html
 ```
 
 Open the generated file in a browser or upload it as a CI artifact. `--html`
@@ -88,8 +88,8 @@ command.
 Pass `--offline` when a scan must not perform optional enrichment lookups:
 
 ```bash
-skillaudit scan --offline
-skillaudit scan --json --offline -o skillaudit-report.json
+skill-audit scan --offline
+skill-audit scan --json --offline -o skill-audit-report.json
 ```
 
 Offline mode still reads local skill contents and dependency manifests, but it
@@ -100,7 +100,7 @@ skips `skills.sh`, GitHub, and `deps.dev` network calls.
 Use `explain` when a table row needs investigation:
 
 ```bash
-skillaudit explain obfuscated-eval-skill --offline
+skill-audit explain obfuscated-eval-skill --offline
 ```
 
 Shortened output:
@@ -119,13 +119,13 @@ obfuscated-eval-skill
   Next steps
   ────────────────────────────────────────
   →  rm -rf ~/.claude/skills/obfuscated-eval-skill     # remove now
-  →  skillaudit scan --agent claude-code --json
+  →  skill-audit scan --agent claude-code --json
 ```
 
 Machine-readable detail is also available:
 
 ```bash
-skillaudit explain obfuscated-eval-skill --json --offline
+skill-audit explain obfuscated-eval-skill --json --offline
 ```
 
 ## CI
@@ -136,7 +136,7 @@ should fail the job:
 ```bash
 npx --yes skill-audit@latest scan \
   --json \
-  --output skillaudit-results.json \
+  --output skill-audit-results.json \
   --fail-on REVIEW
 ```
 
@@ -157,9 +157,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ondrejmerkun/skillaudit@v1
+      - uses: ondrej-merkun/skillaudit@v1
         with:
           fail-on: REVIEW
           offline: true
-          results-file: skillaudit-results.json
+          results-file: skill-audit-results.json
 ```

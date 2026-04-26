@@ -168,7 +168,7 @@ export async function discoverAll(options: DiscoverAllOptions = {}): Promise<Ski
     } catch (err) {
       // Fail-silent: one broken plugin must not abort the entire scan
       const msg = err instanceof Error ? err.message : String(err);
-      process.stderr.write(`[skillaudit] discovery plugin "${plugin.id}" failed: ${msg}\n`);
+      process.stderr.write(`[skill-audit] discovery plugin "${plugin.id}" failed: ${msg}\n`);
     }
   }
 

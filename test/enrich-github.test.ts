@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Skill } from '../packages/cli/src/types.js';
 
-const testHome = join(tmpdir(), 'skillaudit-github-test-' + process.pid);
+const testHome = join(tmpdir(), 'skill-audit-github-test-' + process.pid);
 
 vi.mock('node:os', async (importOriginal) => {
   const orig = await importOriginal<typeof import('node:os')>();
@@ -198,7 +198,7 @@ describe('enrichGitHub', () => {
 
     await enrichGitHub(makeSkill());
     const headers = vi.mocked(fetch).mock.calls[0]![1] as RequestInit & { headers: Record<string, string> };
-    expect(headers.headers['User-Agent']).toMatch(/^skillaudit\//);
+    expect(headers.headers['User-Agent']).toMatch(/^skill-audit\//);
   });
 
   it('succeeds even when contributor fetch fails', async () => {

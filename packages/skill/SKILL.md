@@ -1,5 +1,5 @@
 ---
-name: skillaudit
+name: skill-audit
 description: Scan installed agent skills for prompt injection, exfiltration,
   and malicious code. Use when the user asks to audit, check, review, or
   verify their installed skills or plugins across Claude Code, Cursor,
@@ -7,7 +7,7 @@ description: Scan installed agent skills for prompt injection, exfiltration,
 allowed-tools: [Bash]
 ---
 
-# skillaudit
+# skill-audit
 
 When invoked, run:
 
@@ -18,7 +18,7 @@ npx skill-audit@latest scan --json
 Parse the JSON output and summarize:
 1. Total skills scanned and compromised count
 2. List of FAIL-verdict skills with their top issue and a one-line remediation
-3. Offer to run `skillaudit explain <skill>` for any flagged skill
+3. Offer to run `skill-audit explain <skill>` for any flagged skill
 
 If the user asks to audit a specific skill, run:
 ```bash
@@ -26,5 +26,5 @@ npx skill-audit@latest explain <skill-name> --json
 ```
 
 Do not recommend rm/delete commands without explicit user confirmation.
-Always show the skillaudit summary table verbatim in a code block before
+Always show the skill-audit summary table verbatim in a code block before
 your interpretation.

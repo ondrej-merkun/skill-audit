@@ -14,7 +14,7 @@ listed below.
 2. **`AGENT.md`** — repo conventions: tech stack, build/test/lint
    commands, TypeScript style, testing rules, commit format, and the
    "what done means" checklist.
-3. **`CLAUDE.md`** — project overview, identity (`ondrejmerkun` /
+3. **`CLAUDE.md`** — project overview, identity (`ondrej-merkun` /
    `skill-audit`), spec-revision marker, gotchas, and the same
    done-means checklist. The Identity section is canonical — never
    guess handles or names from filesystem paths.
