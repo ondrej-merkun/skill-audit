@@ -3,9 +3,11 @@
 Ralph consults this when implementing discovery plugins. These paths
 were verified against official docs as of April 2026 per `SPEC.md` §3.
 
-## MVP discovery shortlist (do these; skip rest)
+## Implemented discovery set (keep this accurate)
 
-Covers ~85% of user value. Other agents land in v0.2.
+Covers the high-value local install surfaces. When a new agent lands in code,
+move it here in the same task; do not leave implemented behavior documented as
+"deferred".
 
 ### 1. Claude Code
 
@@ -66,14 +68,48 @@ Amp, and Factory. Walk cwd and parents up to repo root; collect:
 Report each as a `Skill` with `agentId: "cross-agent"` and
 `format: "agents-md"`.
 
+### 5. OpenAI Codex
+
+**User-global:**
+- `~/.codex/AGENTS.md`
+- `~/.codex/AGENTS.override.md`
+- `~/.codex/config.toml` (`[mcp_servers.*]` only)
+- `~/.codex/skills/**/SKILL.md`
+- `~/.codex/prompts/*.md`
+- `$CODEX_HOME` override for all user-global Codex paths
+
+**Project-local:**
+- `AGENTS.md` / `AGENTS.override.md` are handled by the cross-agent sweep.
+- `.codex/config.toml` may be emitted as untrusted project config.
+
+**Plugin cache rule:**
+- Do not scan `~/.codex/plugins/cache` wholesale. Cache payloads are only scan
+  targets when Codex metadata proves they are enabled/exposed to the agent, for
+  example an enabled `[plugins."<plugin>@<marketplace>"]` entry in
+  `~/.codex/config.toml`, or a documented built-in runtime exposure source.
+- A cache entry with no active metadata is inventory, not an installed skill.
+- When a cache entry is active, walk it recursively and emit prompt-bearing
+  leaves (`SKILL.md`, command/agent files) rather than intermediate cache
+  directories.
+
+### 6. Gemini CLI
+
+**User-global:**
+- `~/.gemini/extensions/**/gemini-extension.json`
+- `~/.gemini/commands/**/*.toml`
+- `~/.gemini/agents/**/*.md`
+- `~/.gemini/settings.json` (`mcpServers` only)
+
+**Project-local:**
+- `.gemini/extensions/`
+- `.gemini/commands/`
+- `GEMINI.md` is handled by the cross-agent sweep.
+
 ## Deferred to v0.2 (do not implement now)
 
 - Claude Desktop MCP config (the three-OS JSON at
   `~/Library/Application Support/Claude/claude_desktop_config.json`
   etc.) — this is the headline differentiator vs Snyk for v0.2.
-- OpenAI Codex full discovery (`~/.codex/`, `$CODEX_HOME`, AGENTS.md
-  walking, config.toml)
-- Gemini CLI extensions
 - Continue.dev
 - Windsurf memories/global_rules.md (caught by AGENTS.md sweep
   anyway via `.windsurfrules` — the full Windsurf scheme waits)
@@ -86,7 +122,10 @@ Report each as a `Skill` with `agentId: "cross-agent"` and
    `project`).
 2. Dedupe by `treeSha256` — if two discovered paths have identical
    content hash, report once with all paths in an `alsoInstalledAt`
-   array.
+   array. This is a registry-level invariant owned by `discoverAll()`,
+   because duplicates can come from different agents/plugins.
+   Do not dedupe entries whose `treeSha256` is empty; those are synthetic
+   config-derived scan targets such as individual MCP servers.
 3. When a project's `.claude/` directory contains a symlink to a
    user-global skill, follow the symlink and mark the skill with
    `isSymlink: true` in output.
@@ -115,3 +154,9 @@ Each discovery plugin must have tests that:
    - A skill tree with a missing manifest (should be skipped).
    - A skill tree with a symlink escape attempt (should be refused).
    - Both user-scope and project-scope placements where applicable.
+3. Include registry-level tests for cross-plugin invariants:
+   - Duplicate non-empty `treeSha256` values collapse into one skill.
+   - Duplicate paths are preserved in `alsoInstalledAt`.
+   - Empty `treeSha256` entries are not deduped.
+4. For plugin cache discovery, include fixtures for active and inactive
+   cache entries. Inactive cache-only payloads must not be scan targets.

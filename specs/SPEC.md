@@ -213,6 +213,7 @@ interface Skill {
     | 'gemini-agent-md';
   scope: 'user' | 'project' | 'managed';
   treeSha256: string;                // for allowlist matching
+  alsoInstalledAt?: string[];         // duplicate paths for same content hash
   metadata?: Record<string, unknown>; // agent-specific manifest details
 }
 ```
@@ -239,6 +240,12 @@ SKILL.md / plugin.json / command .md, not one Skill per intermediate
 directory. On a machine with a marketplace installed, this produces
 hundreds of skills, not tens.
 
+**Active cache rule.** Plugin cache directories are inventory until an
+enabled plugin/config/source proves the cached payload is exposed to an
+agent. For Codex, do not scan `~/.codex/plugins/cache` wholesale; resolve
+enabled plugins from `~/.codex/config.toml` or documented built-in runtime
+metadata, then walk only those active payload roots.
+
 **MVP discovery shortlist** (covers ~85% of user value):
 1. Claude Code (skills, plugins, agents, commands, all MCP sources)
 2. Cursor (MCP + rules)
@@ -250,7 +257,7 @@ hundreds of skills, not tens.
 v0.2 adds: Continue.dev and Claude Desktop MCP.
 
 ### Disambiguation
-When a skill appears at both user scope and project scope, list both rows in the table and mark `scope` column. Dedupe by `treeSha256` (same tree hash → identical content, report once with all path annotations). When a skill appears in a project's `.claude/` AND is symlinked from `~/.claude/`, follow the symlink and mark `link`.
+When a skill appears at both user scope and project scope, list both rows in the table and mark `scope` column unless the content hash proves it is the same installed payload. Dedupe non-empty `treeSha256` values in the discovery registry (same tree hash → identical content, report once with duplicate paths in `alsoInstalledAt`). Do not dedupe empty hashes used for synthetic config-derived entries. When a skill appears in a project's `.claude/` AND is symlinked from `~/.claude/`, follow the symlink and mark `link`.
 
 ## 4. Local static analysis layer
 

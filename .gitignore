@@ -35,3 +35,4 @@ coverage/
 !test/fixtures/**/.env
 
 .postmortem
+.codex

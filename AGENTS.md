@@ -13,7 +13,7 @@ listed below.
    instructions at the top of that file).
 2. **`AGENT.md`** — repo conventions: tech stack, build/test/lint
    commands, TypeScript style, testing rules, commit format, and the
-   "what done means" checklist (10 steps).
+   "what done means" checklist.
 3. **`CLAUDE.md`** — project overview, identity (`ondrejmerkun` /
    `skill-audit`), spec-revision marker, gotchas, and the same
    done-means checklist. The Identity section is canonical — never
@@ -26,10 +26,9 @@ listed below.
 
 ## Spec & task references
 
-- Full spec: `specs/SPEC.md` (current rev: 2026-04-25 post-mortem v1).
-- Post-mortem of the prior run: `.postmortem/analysis.md`.
-- Phase 12 of `fix_plan.md` contains the post-mortem fix tasks
-  (`12.1` through `12.8`) ordered by implementation dependency.
+- Full spec: `specs/SPEC.md` (current rev: 2026-04-26 post-mortem v2).
+- `fix_plan.md` contains the current post-mortem fix queue ordered by
+  implementation dependency.
 
 ## Build / test / lint commands (verbatim)
 

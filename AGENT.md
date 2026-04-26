@@ -102,6 +102,29 @@ commands.
 - One rule = one entry in a category file in `src/rules/`. Rule id is
   SCREAMING-KEBAB-CASE and matches the spec's rule catalog exactly.
 
+## Discovery and output invariants
+
+- Cross-plugin discovery normalization belongs in
+  `src/discovery/index.ts`, not in individual plugins. `discoverAll()`
+  must dedupe discovered skills by non-empty `treeSha256` and preserve
+  duplicate install paths in `alsoInstalledAt`. Do not dedupe synthetic
+  config-derived entries with an empty tree hash.
+- Discovery plugins must distinguish active/exposed skills from cached
+  inventory. A plugin cache directory is metadata until an enabled
+  plugin/config/source proves the payload is currently exposed to an
+  agent.
+- If the spec adds a discovery field or invariant, update
+  `src/types.ts`, the JSON/list output contract if user-visible, and a
+  registry-level or e2e test in the same task.
+- Scan/report outputs are product behavior. Keep ordering consistent
+  across table, summary, JSON, HTML, and file output. The shared
+  ordering contract is risk-first: lower `summary.score`, then worse
+  verdict, then highest finding severity, then deterministic identity
+  fields.
+- For user-facing command changes, inspect the built command output as
+  a user would: worst result first, clear next action, no duplicate
+  payloads, and normal save/export ergonomics.
+
 ## Rule authoring conventions
 
 Each rule is an object:
@@ -160,10 +183,13 @@ A task is done when:
    warnings count as failures — fix them before committing.
 7. For any task that ships a user-facing command or artefact: execute it
    against a real input. Paste observed output into the commit message.
-8. For any task that adds a file reference to a markdown file: verify the
+8. For scanner/reporting output changes: verify product behavior, not
+   just rendering. Check ordering, prioritization, file/export
+   ergonomics, and consistency across human and machine formats.
+9. For any task that adds a file reference to a markdown file: verify the
    path resolves on disk. Broken links block the commit.
-9. You've updated `fix_plan.md` checkbox.
-10. You've committed both the feature and the checkbox change.
+10. You've updated `fix_plan.md` checkbox.
+11. You've committed both the feature and the checkbox change.
 
 ## When the spec and AGENT.md disagree
 

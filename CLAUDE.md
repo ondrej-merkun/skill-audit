@@ -10,9 +10,8 @@ Workflow conventions: **`AGENT.md`**. Task list / progress: **`fix_plan.md`**.
 bullet there whenever a task teaches something a future run would benefit
 from — see the instructions at the top of that file.
 
-> **Spec rev: 2026-04-25 (post-mortem v1)** — done criteria expanded (6→10
-> steps), Identity section added, exports-field rule added, discovery depth
-> clarified, performance budget added. See `.postmortem/analysis.md`.
+> **Spec rev: 2026-04-26 (post-mortem v2)** — discovery dedupe contract,
+> Codex active-cache guardrail, and output product-sanity criteria added.
 
 ## Identity
 
@@ -81,10 +80,21 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
   regenerated manually** per release via `scripts/vendor-allowlist.ts`.
   Do not fetch it at runtime. Do not edit entries by hand except to add
   new allowlisted vendors.
+- **Discovery dedupes by content, not by path.** `discoverAll()` owns
+  cross-plugin normalization: non-empty `treeSha256` duplicates collapse
+  into one skill, with duplicate paths preserved in `alsoInstalledAt`.
+  Empty hashes are config-derived entries and must stay separate.
+- **Plugin caches are not automatically active skills.** Do not scan a
+  cache subtree just because it exists. Codex and other plugin discovery
+  must prove a cached payload is enabled/exposed before treating it as a
+  scan target.
 - **Enrichment always fails silently with stale-cache fallback.** Network
   timeouts are 5 seconds, never blocking. Offline is a first-class mode.
 - **JSON output is a contract** — schema version 1.0, deterministic field
   order, see `specs/OUTPUT.md`. Do not add, rename, or reorder fields.
+- **Scan output is product behavior.** Table, summary, JSON, HTML, and
+  file output must agree on risk-first ordering and should make the next
+  action obvious from the first screen.
 
 ## What "done" means for any task
 
@@ -99,11 +109,14 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
    against a real input (`node packages/cli/dist/index.js scan` against
    `$HOME`, or open the generated HTML / README / action.yml). Paste the
    observed output into the commit message or reject the task.
-8. For any task that adds a file reference (image, link, badge) to a
+8. For scanner/reporting output changes: verify product behavior, not
+   just rendering. Check ordering, prioritization, file/export
+   ergonomics, and consistency across human and machine formats.
+9. For any task that adds a file reference (image, link, badge) to a
    markdown file: verify the referenced path resolves on disk. Broken
    links block the commit.
-9. `fix_plan.md` checkbox flipped to `- [x]`.
-10. Two conventional commits: one for the feature, one for the checkbox.
+10. `fix_plan.md` checkbox flipped to `- [x]`.
+11. Two conventional commits: one for the feature, one for the checkbox.
 
 ## Never
 

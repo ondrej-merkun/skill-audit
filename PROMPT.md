@@ -11,12 +11,13 @@ iteration you do ONE task, commit it, and exit.
 
 Read, in this order:
 
-1. `AGENT.md` — how to build, test, and commit in this repo.
-2. `LESSONS.md` — hard-won lessons from prior runs. Skimming this
+1. `LESSONS.md` — hard-won lessons from prior runs. Skimming this
    is mandatory — past Ralph has already hit the pothole you're
    about to step in.
-3. `fix_plan.md` — the prioritized task list with checkboxes.
-4. `git log --oneline -20` — what past iterations have already done.
+2. `AGENT.md` — how to build, test, and commit in this repo.
+3. `CLAUDE.md` — project identity, spec revision, and gotchas.
+4. `fix_plan.md` — the prioritized task list with checkboxes.
+5. `git log --oneline -20` — what past iterations have already done.
 
 ### 2. Pick ONE task
 
@@ -28,6 +29,10 @@ task even if it seems easier — the plan is prioritized for a reason
 If the task references a spec file (e.g. "per `specs/02-rules.md`"),
 read that file now. Do not read spec files you don't need. Token economy
 matters — each iteration costs real usage against the weekly limit.
+
+If the task changes discovery, read `specs/DISCOVERY.md`. If it changes
+scan/report output, read `specs/OUTPUT.md`. Those files hold cross-cutting
+contracts that individual task text may not restate.
 
 If there are zero unchecked tasks, append the exact string
 `ALL TASKS COMPLETE` as a new line at the end of `fix_plan.md`, commit
@@ -54,6 +59,12 @@ Rules for implementation:
 - Write tests for every new rule, every new discovery plugin, and every
   new command. Put them in `test/fixtures/` with clear benign vs
   malicious naming.
+- For discovery changes, make spec invariants executable: update
+  `src/types.ts`, JSON/list output contracts where user-visible, and a
+  registry-level or e2e test when the invariant crosses plugin boundaries.
+- For output changes, test product behavior across all affected renderers,
+  not only snapshots: risk-first ordering, first-screen prioritization,
+  file/export ergonomics, and consistency between human and machine output.
 - Do not add dependencies beyond those listed in `AGENT.md` without a
   compelling reason. If you do add one, note it in `fix_plan.md` under
   "Dependencies added".
@@ -70,12 +81,19 @@ pnpm install         # only if you changed package.json
 pnpm build           # must succeed
 pnpm test            # must pass
 pnpm lint            # must pass (or warn only — not error)
+pnpm typecheck       # must pass
+pnpm build 2>&1 | grep -iE 'warn|error'  # must emit nothing
 ```
 
 If any fail, fix them before committing. Do not commit broken builds.
 If you genuinely can't fix (e.g. a dependency install is failing for
 infra reasons), document the exact failure in `fix_plan.md` as a
 blocker and exit without committing code changes.
+
+For user-facing command or report tasks, run the built command against real
+input and inspect the first screen as a user: the worst result should be
+obvious, the next action should be clear, and file/output modes should not
+duplicate payloads.
 
 ### 4b. Capture any new lesson
 

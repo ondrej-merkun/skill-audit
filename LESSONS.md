@@ -13,8 +13,6 @@ terse, with the concrete rule + the incident that proved it.
 New lessons go at the bottom of the relevant section. Never delete a lesson
 without a commit message explaining why it no longer applies.
 
-Source of lessons 1.x – 6.x: `.postmortem/analysis.md` (run 2026-04-23).
-
 ---
 
 ## 1. Verification — "tests pass" is not "it works"
@@ -85,6 +83,14 @@ Source of lessons 1.x – 6.x: `.postmortem/analysis.md` (run 2026-04-23).
   (b) pick the more thorough interpretation AND log the choice under
   "Decisions made during implementation" in `fix_plan.md`.
 
+- **L2.3 — Spec invariants must become types and cross-boundary tests.** _Post-mortem
+  issue 1: dedupe by `treeSha256` lived in `specs/DISCOVERY.md`, but
+  `Skill` had no `alsoInstalledAt` field and `discoverAll()` only concatenated
+  plugin output._
+  When a spec says "always" or "must", update the shared type/output contract
+  and add a test at the layer that owns the invariant, not only per-plugin
+  fixture tests.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**
@@ -142,6 +148,13 @@ Source of lessons 1.x – 6.x: `.postmortem/analysis.md` (run 2026-04-23).
   Run CI equivalents locally (`act` if feasible, or at minimum the
   exact commands CI runs: `pnpm install && pnpm build && pnpm test &&
   pnpm lint && pnpm typecheck`) before pushing.
+
+- **L6.3 — Output is product behavior, not renderer text.** _Post-mortem issue
+  2: table, JSON, and HTML scan outputs used different ordering semantics, and
+  non-HTML formats had no first-class file destination._
+  For user-facing command/output tasks, check whether the first screen tells
+  users what to fix first, whether machine and human outputs agree, and whether
+  users can save/share the result through normal CLI affordances.
 
 ---
 

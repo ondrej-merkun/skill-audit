@@ -23,6 +23,7 @@ ship as the hero GIF).
       "agent_id": "claude-code",
       "name": "polymarket-trader",
       "path": "/Users/.../skills/polymarket-trader",
+      "also_installed_at": ["/Users/.../.agents/skills/polymarket-trader"],
       "tree_sha256": "...",
       "allowlisted": false,
       "findings": [
@@ -81,9 +82,42 @@ Field notes:
 - `tool_version` matches `package.json` version.
 - `tree_sha256` is the deterministic hash described in
   `discovery/tree-hash.ts`.
+- `also_installed_at` is present only when discovery collapsed duplicate
+  non-empty `treeSha256` values. It contains the other absolute install paths
+  that point at identical content.
 
 Do not add fields. Do not rename fields. Do not reorder in the source
 JSON stringifier (use a deterministic serializer).
+
+## Global scan ordering contract
+
+Every scan renderer must show the same risk-first skill order unless a command
+explicitly documents a different sort. This applies to the default table,
+compact summary suggestions, JSON, HTML, and any file-output path.
+
+1. Primary: `summary.score` ascending; lower means worse.
+2. Secondary: verdict severity `FAIL`, then `REVIEW`, then `PASS`.
+3. Tertiary: highest finding severity on the skill: `critical`, `high`,
+   `medium`, `low`, `info`.
+4. Final ties: `agentId`, then `name`, then `path`, lexicographically.
+
+Implement this once in a shared output helper or before constructing
+`ScanResult.skills`. Renderer-local sorts are a bug unless they call the same
+helper.
+
+## File output contract
+
+`scan` supports `-o, --output <file>` for non-HTML output modes:
+
+- `skillaudit scan --json --output report.json` writes only JSON to the file.
+- `skillaudit scan --summary --output summary.txt` writes only compact summary
+  text to the file.
+- `skillaudit scan --output report.txt` writes the default table output to the
+  file without duplicating the payload on stdout.
+- `--html <file>` remains the dedicated HTML report destination. Supplying both
+  `--html` and `--output` is a usage error with exit code 2.
+
+Verdict exit codes are unchanged and must be set only after file writes flush.
 
 ## TUI hero table (brand asset)
 
