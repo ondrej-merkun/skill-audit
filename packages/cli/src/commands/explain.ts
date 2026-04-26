@@ -42,13 +42,14 @@ function shortenPath(p: string): string {
 
 function renderFinding(f: Finding): void {
   process.stdout.write(`\n  ${SEVERITY_DOT[f.severity]}  ${f.ruleId}\n`);
-  process.stdout.write(`     ${chalk.dim(`${f.file}:${f.line}`)}\n`);
+  process.stdout.write(`     ${chalk.dim('Location:')} ${f.file}:${f.line}\n`);
+  process.stdout.write(`     ${chalk.dim('Evidence:')}\n`);
   for (const line of f.snippet.split('\n')) {
     process.stdout.write(`     ${chalk.dim('│')} ${line}\n`);
   }
-  process.stdout.write(`     ${chalk.cyan('→')} ${f.message}\n`);
+  process.stdout.write(`     ${chalk.dim('Issue:')} ${f.message}\n`);
   if (f.fix) {
-    process.stdout.write(`       ${chalk.dim(f.fix)}\n`);
+    process.stdout.write(`     ${chalk.dim('Fix:')} ${f.fix}\n`);
   }
 }
 

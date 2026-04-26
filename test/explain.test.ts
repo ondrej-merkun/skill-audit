@@ -284,4 +284,19 @@ describe('runExplain', () => {
     expect(out).toContain('line one');
     expect(out).toContain('line two');
   });
+
+  it('labels finding detail lines in human output', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+    vi.mocked(runRules).mockResolvedValue([makeFinding()]);
+    vi.mocked(scoreFindings).mockReturnValue(makeSummary({ critical: 1, score: 75, verdict: 'REVIEW' }));
+    vi.mocked(enrichSkill).mockResolvedValue({});
+
+    await runExplain('test-skill', { offline: true });
+
+    const out = stripAnsi(stdoutChunks.join(''));
+    expect(out).toContain('Location: SKILL.md:14');
+    expect(out).toContain('Evidence:');
+    expect(out).toContain('Issue: Outbound HTTP transmission of os.environ.');
+    expect(out).toContain('Fix: Remove credential exfiltration.');
+  });
 });
