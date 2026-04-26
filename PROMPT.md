@@ -65,6 +65,16 @@ Rules for implementation:
 - For output changes, test product behavior across all affected renderers,
   not only snapshots: risk-first ordering, first-screen prioritization,
   file/export ergonomics, and consistency between human and machine output.
+- For visible output data such as enrichment columns, summary lines, or
+  detail panels, cover both the realistic populated path and the clear
+  empty/skipped/offline/unavailable path. A renderer test with synthetic data
+  does not prove the command can populate the UI.
+- For generated HTML reports, test interactive behavior in a DOM/browser
+  environment. Clicking agent filters, rows, and toolbar buttons must change
+  the visible state without relying on network access.
+- For rule changes, include benign fixtures that represent security education,
+  scanner/tester packages, quoted hostile prompts, fenced examples, and rule
+  documentation whenever the pattern could otherwise match attack vocabulary.
 - Do not add dependencies beyond those listed in `AGENT.md` without a
   compelling reason. If you do add one, note it in `fix_plan.md` under
   "Dependencies added".
@@ -94,6 +104,14 @@ For user-facing command or report tasks, run the built command against real
 input and inspect the first screen as a user: the worst result should be
 obvious, the next action should be clear, and file/output modes should not
 duplicate payloads.
+
+Run the exact invocation documented by the task, spec, README, examples, or
+action metadata. If bare `skillaudit` is documented as the default scan, run the
+built binary with no subcommand. If an HTML report is involved, open or execute
+the generated file and verify at least one interactive control. If README
+screenshots, SVGs, badges, or visual assets changed, render them at their
+embedded size and inspect for clipping, overlap, broken targets, and stale
+output.
 
 ### 4b. Capture any new lesson
 

@@ -22,10 +22,16 @@ previous work.
 ## Pull Requests
 
 - Keep PRs focused on one behavior change.
-- Add malicious and benign fixtures for every new rule.
+- Add malicious and benign fixtures for every new rule. If the rule can match
+  security docs, scanner/tester packages, quoted hostile prompts, or examples,
+  include those benign cases explicitly.
 - Do not weaken a rule just to make a test pass.
 - Do not commit secrets. Redacted or synthetic fixtures belong under
   `test/fixtures/`.
+- Smoke-test the exact documented CLI invocation for command changes.
+- For generated HTML reports, test at least one click/keyboard interaction.
+- For README screenshots, SVGs, badges, or action examples, render or verify
+  the changed target rather than only checking that the file exists.
 - Run the verification commands above before requesting review.
 
 No contributor license agreement is required. Contributions are accepted under

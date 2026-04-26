@@ -78,6 +78,24 @@ without a commit message explaining why it no longer applies.
   Run any command you document for regenerating shipped data before committing
   the data it produces.
 
+- **L1.12 — Smoke-test the exact documented CLI invocation.** _Post-mortem
+  issue: the spec said bare `skillaudit` was equivalent to `skillaudit scan`,
+  but Commander had no root action and the binary did nothing._
+  If a command table, README, action, or example documents an invocation, run
+  that exact built binary invocation before calling the task done.
+
+- **L1.13 — String checks do not prove HTML interactions work.** _Post-mortem
+  issue: the HTML report had agent-sidebar links, but clicking them did not
+  filter the report for the user._
+  For generated HTML controls, execute the page script in a browser/DOM smoke
+  test and assert the visible state changes after click/keyboard events.
+
+- **L1.14 — README images need rendered proof, not just existing paths.** _Post-mortem
+  issue: `docs/demo.svg` existed, but the embedded terminal text overflowed and
+  covered itself in the README hero._
+  Render changed docs images at their embedded README dimensions and inspect
+  for clipping, overlap, and stale output before committing.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task
@@ -111,6 +129,13 @@ without a commit message explaining why it no longer applies.
   Identity lives in `CLAUDE.md § Identity`. Pull the handle, package
   name, and byline from there verbatim. If the field doesn't exist
   yet, ask — don't guess from paths or git metadata.
+
+- **L3.2 — External GitHub URLs need repository verification, not string assembly.**
+  _Post-mortem issue: the README CI badge linked to a GitHub Actions URL that
+  returned 404._
+  Treat badges, action examples, repository URLs, and npm trusted-publisher
+  settings as external contracts. Verify the exact owner/repo/workflow target
+  before changing them; if the canonical slug is missing from `CLAUDE.md`, ask.
 
 ## 4. Architecture & performance — think before locking in
 
@@ -173,6 +198,19 @@ without a commit message explaining why it no longer applies.
   release job._
   Verify the current registry docs before editing OIDC/provenance release steps.
 
+- **L6.5 — A visible output column needs a real populated-path test.** _Post-mortem
+  issue: the default scan table shipped an enrichment column that was empty in
+  real output while renderer tests used synthetic enrichment objects._
+  For any new column, footer, or panel, test a realistic end-to-end populated
+  path and a clear empty/unavailable path, not only the renderer helper.
+
+- **L6.6 — The README first screen has a budget.** _Post-mortem issue: repeated
+  docs tasks made the README accurate but too long and table-heavy for a first
+  impression._
+  Put concise install, scan, and interpretation content above the fold; move
+  deep comparisons, privacy detail, and examples into `docs/` unless they earn
+  their space on the front page.
+
 ## 7. Rule fixtures
 
 - **L7.1 — Malicious secret fixtures must not use provider placeholder keys.** _Task
@@ -186,6 +224,13 @@ without a commit message explaining why it no longer applies.
   look like runtime skill installation._
   Keep fixture wording tied to the rule scenario unless the task is explicitly
   changing that rule.
+
+- **L7.3 — Security education is a first-class benign corpus.** _Post-mortem
+  issue: security-auditor and skill-testing packages triggered strong false
+  positives because rules matched attack vocabulary in explanations/examples._
+  Prompt-injection and code-risk rules must include benign fixtures for quoted
+  attacks, red-team training, scanner docs, and test fixtures; fire on
+  operative instructions or executable behavior, not vocabulary alone.
 
 ---
 

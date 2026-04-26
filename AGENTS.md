@@ -51,6 +51,10 @@ pnpm typecheck        # tsc --noEmit — must pass on every package
   intentionally look like secrets — those are expected.
 - **Never push to `main` without `pnpm typecheck` passing locally.**
   CI runs it on Node 20 + 22; you should too.
+- **External docs targets must be verified.** Badges, GitHub Action
+  examples, repository URLs, trusted-publishing settings, and README demo
+  assets are product surface. Do not assemble URLs from partial identity
+  fields; verify the exact target and render changed visual assets.
 
 ## Loop driver scripts
 

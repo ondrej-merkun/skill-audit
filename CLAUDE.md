@@ -20,8 +20,12 @@ from — see the instructions at the top of that file.
 - Author byline (README, blog, HN): "Ondrej Merkun"
 
 Never guess these from paths, filesystem layout, or commit metadata.
-If a task needs a URL like `github.com/<handle>/skillaudit`, pull
-the handle from this section verbatim.
+If a task needs a personal handle, package name, or byline, pull it
+from this section verbatim.
+Repository URLs, badges, action examples, and trusted-publishing settings
+need the exact public owner/repo/workflow target, not just a handle and
+package name. If that target is not explicitly present here, verify it
+against the actual GitHub repository before editing those docs, or ask.
 
 ## Tech stack
 
@@ -95,6 +99,19 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
 - **Scan output is product behavior.** Table, summary, JSON, HTML, and
   file output must agree on risk-first ordering and should make the next
   action obvious from the first screen.
+- **Documented invocations are contracts.** If the spec, README, examples,
+  or action says `skillaudit` works without a subcommand, or documents any
+  other exact command string, the built binary must be smoke-tested with that
+  exact invocation.
+- **Generated HTML must be tested as an interactive file.** Sidebar filters,
+  toolbar buttons, copy/download actions, and detail panels need DOM/browser
+  verification; string containment only proves markup exists.
+- **Rule fixtures need security-education benign cases.** Scanner docs,
+  red-team examples, quoted attacks, and test fixtures often contain hostile
+  vocabulary without being hostile instructions.
+- **README visuals are product surface.** SVGs, screenshots, badges, and demo
+  assets must be rendered at their embedded size and checked for clipping,
+  overlap, and broken external targets.
 
 ## What "done" means for any task
 
@@ -106,17 +123,25 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
 6. `pnpm build 2>&1 | grep -iE 'warn|error'` emits nothing. Build
    warnings count as failures — fix them before committing.
 7. For any task that ships a user-facing command or artefact: execute it
-   against a real input (`node packages/cli/dist/index.js scan` against
-   `$HOME`, or open the generated HTML / README / action.yml). Paste the
-   observed output into the commit message or reject the task.
+   against a real input using the exact documented invocation (`node
+   packages/cli/dist/index.js`, `node packages/cli/dist/index.js scan`
+   against `$HOME`, or open the generated HTML / README / action.yml).
+   Paste the observed output into the commit message or reject the task.
 8. For scanner/reporting output changes: verify product behavior, not
    just rendering. Check ordering, prioritization, file/export
    ergonomics, and consistency across human and machine formats.
 9. For any task that adds a file reference (image, link, badge) to a
    markdown file: verify the referenced path resolves on disk. Broken
    links block the commit.
-10. `fix_plan.md` checkbox flipped to `- [x]`.
-11. Two conventional commits: one for the feature, one for the checkbox.
+10. For any task that changes external links, badges, action examples,
+    package metadata, or trusted-publishing settings: verify the external
+    target exists and matches the canonical repository/package target.
+11. For any task that changes README screenshots, SVGs, or visual docs
+    assets: render them at their embedded size and inspect for overflow.
+12. For any task that changes generated HTML interactions: verify a
+    click/keyboard interaction in a DOM/browser environment.
+13. `fix_plan.md` checkbox flipped to `- [x]`.
+14. Two conventional commits: one for the feature, one for the checkbox.
 
 ## Never
 

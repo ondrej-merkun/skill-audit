@@ -123,7 +123,19 @@ commands.
   fields.
 - For user-facing command changes, inspect the built command output as
   a user would: worst result first, clear next action, no duplicate
-  payloads, and normal save/export ergonomics.
+  payloads, normal save/export ergonomics, and every documented
+  invocation behaving as documented. If the spec or README says bare
+  `skillaudit` is valid, smoke-test the bare binary, not only
+  `skillaudit scan`.
+- A visible report column, footer line, detail panel, or enrichment
+  section needs coverage for the populated path and the empty,
+  unavailable, skipped, or offline path. Renderer-only tests with
+  hand-built data are not enough; add at least one realistic pipeline
+  or command-level test for the data source that should populate it.
+- Generated HTML reports are interactive products, not static strings.
+  For filters, sidebars, toolbar buttons, downloads, copy actions, or
+  detail panels, execute the page script in a DOM/browser smoke test and
+  assert the user-visible state changes.
 
 ## Rule authoring conventions
 
@@ -148,6 +160,12 @@ export const PI_OVERRIDE: Rule = {
 fire) and one benign (must not fire). File them under
 `test/fixtures/<rule-id>/malicious/` and `test/fixtures/<rule-id>/benign/`.
 The test harness (`test/rules.test.ts`) walks these automatically.
+
+Prompt-injection and code-risk rules must distinguish operative behavior
+from documentation about that behavior. Add benign fixtures for security
+training, scanner/tester packages, quoted hostile prompts, fenced examples,
+and rule documentation whenever the pattern could match attack vocabulary
+without the file actually instructing the agent to perform the attack.
 
 ## Testing conventions
 
@@ -182,14 +200,26 @@ A task is done when:
 6. `pnpm build 2>&1 | grep -iE 'warn|error'` emits nothing. Build
    warnings count as failures — fix them before committing.
 7. For any task that ships a user-facing command or artefact: execute it
-   against a real input. Paste observed output into the commit message.
+   against a real input using the exact invocation documented in the spec,
+   README, action, or examples. Paste observed output into the commit
+   message.
 8. For scanner/reporting output changes: verify product behavior, not
    just rendering. Check ordering, prioritization, file/export
    ergonomics, and consistency across human and machine formats.
 9. For any task that adds a file reference to a markdown file: verify the
    path resolves on disk. Broken links block the commit.
-10. You've updated `fix_plan.md` checkbox.
-11. You've committed both the feature and the checkbox change.
+10. For any task that changes generated HTML controls: verify at least
+    one interaction by clicking or dispatching the relevant event in a
+    DOM/browser environment.
+11. For any task that changes README screenshots, SVGs, badges, or other
+    visual assets: render the asset at the size used by README/GitHub and
+    check for overlap, clipping, stale output, and unreadable text.
+12. For any task that changes external links, badges, action examples,
+    package metadata, or trusted-publishing settings: verify the external
+    owner/repo/workflow/package target exists. Do not assemble GitHub URLs
+    from partial identity fields.
+13. You've updated `fix_plan.md` checkbox.
+14. You've committed both the feature and the checkbox change.
 
 ## When the spec and AGENT.md disagree
 

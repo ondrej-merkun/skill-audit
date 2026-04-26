@@ -15,6 +15,9 @@ a problem appears.
   [`docs/PUBLISHING.md`](PUBLISHING.md).
 - Confirm public docs changed in the release have working local links and image
   paths.
+- Confirm changed README screenshots, SVGs, and badges render at their embedded
+  GitHub dimensions without clipping, overlap, stale output, or broken external
+  targets.
 
 ## Local Verification
 
@@ -72,6 +75,11 @@ resolve:
 
 External links can be checked manually. Do not publish with broken local
 references.
+
+For badges, GitHub Action examples, trusted-publishing settings, and repository
+metadata links, verify the exact public owner/repo/workflow/package target
+exists. Do not rely on locally present workflow files or string-assembled
+repository URLs as proof.
 
 ## Trusted Publishing And Provenance
 

@@ -8,6 +8,26 @@ The full catalog is 27 rules across 9 categories. Only the highest-
 signal patterns are reproduced here in full; others are summarized.
 When in doubt, read `SPEC.md` §4.
 
+## Rule intent and false-positive guardrails
+
+Regexes are detection hypotheses, not permission to flag every occurrence of
+risky vocabulary. A rule should fire when the scanned file is likely to make an
+agent perform the risky behavior, execute the risky code path, or expose the
+secret. Documentation that quotes, teaches, tests, or analyzes an attack must
+be represented in benign fixtures before the rule lands.
+
+For prompt-injection rules, require an operative instruction to the assistant,
+model, agent, skill, or tool. Benign fixtures must cover security-auditor
+skills, red-team training material, scanner documentation, fenced or quoted
+hostile prompts, product settings such as "developer mode", and test fixtures
+that intentionally contain attack strings as data.
+
+For code-execution, filesystem, dependency, network, and secrets rules, include
+benign examples where the string appears in documentation, sample data, or
+test-only context. Do not weaken a real malicious detection to pass those
+fixtures; add context masking or a narrower operative pattern when the current
+regex cannot tell explanation from behavior.
+
 ## Severity → weight
 
 | Severity | Weight | Verdict-band contribution (count of distinct rule IDs) |

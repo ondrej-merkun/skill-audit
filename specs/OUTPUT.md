@@ -109,6 +109,32 @@ Implement this once in a shared output helper or before constructing
 `ScanResult.skills`. Renderer-local sorts are a bug unless they call the same
 helper.
 
+## Command invocation contract
+
+Documented command strings are output contracts too. `skillaudit` with no
+subcommand must behave like the default `skillaudit scan` flow unless the spec
+is explicitly changed. Every documented command-table row, README example,
+GitHub Action invocation, and shorthand alias needs a built-binary smoke test
+using that exact invocation; calling the command function directly is not enough
+for CLI parser behavior.
+
+## Visible data contract
+
+If a human output adds a visible column, footer line, panel field, badge, or
+enrichment section, it must define and test:
+
+- one realistic populated path through discovery/scan/enrichment into the
+  renderer;
+- one empty or unavailable state that tells the user whether data was absent,
+  skipped by mode, disabled by `--offline`, or unavailable after a lookup;
+- consistency with JSON/HTML/summary behavior when the same information appears
+  in multiple renderers.
+
+Do not ship visible columns that are usually blank without a compact reason.
+Fail-silent enrichment is acceptable for scanner correctness, but the user
+should still understand whether enrichment was not requested, had no metadata,
+or could not be displayed.
+
 ## File output contract
 
 `scan` supports `-o, --output <file>` for non-HTML output modes:
@@ -182,6 +208,12 @@ Always end with 2-3 arrow-prefixed next-commands. This is the pattern
 across `snyk test`, `semgrep scan`, `npm audit`, `trivy image`. Never
 skip it.
 
+README screenshots, SVG demos, and terminal recordings derived from this output
+must be rendered at the embedded README/GitHub dimensions before committing.
+Text must not clip, overlap, spill beyond the terminal frame, or show stale
+columns/commands. Prefer generating the asset from real built CLI output; if it
+is hand-authored, check text widths after every output-column change.
+
 ## Detail view — `skillaudit explain <skill>`
 
 ```
@@ -226,3 +258,13 @@ block is separated by exactly one blank line.
 - No `fetch()`, no `XMLHttpRequest`. Must open from `file://` fully
   functional.
 - Self-contained under 100kb gzipped.
+- Left-rail agent links filter visible rows to that agent, and "All agents"
+  restores the full table.
+- Row clicks and keyboard activation open the detail panel for the matching
+  skill.
+- Toolbar actions such as copy/download/share must be wired or omitted; do not
+  render inert controls.
+- Tests must execute the generated page script in a DOM/browser environment and
+  assert at least one interaction changes visible state. String containment
+  tests are useful for escaping/schema checks, but they do not prove the report
+  works.
