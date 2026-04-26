@@ -1,3 +1,4 @@
+import { formatAgentName } from '../agent-names.js';
 import { formatCompromisedPercent } from '../percent.js';
 import type { ScanResult, ScannedSkill } from '../types.js';
 import { sortScanSkills } from './sort.js';
@@ -82,6 +83,12 @@ export function renderHtml(result: ScanResult): string {
   const sorted = sortScanSkills(result.skills);
 
   const agentIds = [...new Set(result.agents.map((a) => a.id))];
+  const agentNames = Object.fromEntries(
+    [...new Set([...agentIds, ...sorted.map((skill) => skill.agentId)])].map((id) => [
+      id,
+      formatAgentName(id),
+    ])
+  );
 
   const overallScore =
     sorted.length > 0
@@ -107,7 +114,7 @@ export function renderHtml(result: ScanResult): string {
       return `<tr class="skill-row" data-idx="${i}" data-agent="${escapeHtml(sk.agentId)}" tabindex="0">
       <td><span class="verdict-dot" style="background:${color}"></span> <strong style="color:${color}">${escapeHtml(v)}</strong></td>
       <td>${escapeHtml(sk.name)}${ignoredTag}${allowlistedTag}</td>
-      <td>${escapeHtml(sk.agentId)}</td>
+      <td>${escapeHtml(formatAgentName(sk.agentId))}</td>
       <td style="font-weight:600;color:${color}">${sk.summary.score}</td>
       <td>${sk.summary.critical}C ${sk.summary.high}H ${sk.summary.medium}M ${sk.summary.low}L</td>
       <td class="enrichment-cell">${renderEnrichmentCells(sk)}</td>
@@ -119,7 +126,7 @@ export function renderHtml(result: ScanResult): string {
   const agentFilters = agentIds
     .map(
       (id) =>
-        `<li><a href="#" class="agent-link" data-agent="${escapeHtml(id)}">${escapeHtml(id)}</a></li>`
+        `<li><a href="#" class="agent-link" data-agent="${escapeHtml(id)}">${escapeHtml(formatAgentName(id))}</a></li>`
     )
     .join('\n');
 
@@ -190,10 +197,12 @@ td{padding:10px 12px;vertical-align:middle}
 (function(){
 var DATA = ${jsonData};
 var REDACTED = ${redactedJson};
+var AGENT_NAMES = ${JSON.stringify(agentNames)};
 var skills = DATA.result.skills;
 var activeAgent = null;
 
 function verdictColor(v){return v==='FAIL'?'#dc2626':v==='REVIEW'?'#d97706':'#16a34a';}
+function agentName(id){return AGENT_NAMES[id] || id;}
 
 function filterRows(){
   document.querySelectorAll('.skill-row').forEach(function(tr){
@@ -300,7 +309,7 @@ function openPanel(idx){
 
   var metaEl = document.getElementById('panel-meta');
   metaEl.textContent = v + ' · Score: ' + sk.summary.score
-    + ' · ' + sk.agentId
+    + ' · ' + agentName(sk.agentId)
     + ' · ' + sk.summary.critical + 'C ' + sk.summary.high + 'H '
     + sk.summary.medium + 'M ' + sk.summary.low + 'L';
   metaEl.style.color = color;

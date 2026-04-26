@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { formatAgentName } from '../agent-names.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
 import { enrichSkill } from '../enrich/index.js';
 import { renderJson } from '../output/json.js';
@@ -103,7 +104,7 @@ function renderDetail(skill: ScannedSkill, enrichmentStatus: EnrichmentStatus): 
 
   process.stdout.write(`\n${chalk.bold(skill.name)}\n`);
   process.stdout.write(`${'─'.repeat(Math.max(skill.name.length + 2, 18))}\n`);
-  process.stdout.write(`  ${chalk.dim('Agent:')}     ${skill.agentId}\n`);
+  process.stdout.write(`  ${chalk.dim('Agent:')}     ${formatAgentName(skill.agentId)}\n`);
   process.stdout.write(`  ${chalk.dim('Path:')}      ${shortPath}\n`);
 
   const mandatoryNote =

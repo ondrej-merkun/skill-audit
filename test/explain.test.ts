@@ -116,7 +116,7 @@ describe('runExplain', () => {
 
     const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('test-skill');
-    expect(out).toContain('claude-code');
+    expect(out).toContain('Agent:     Claude Code');
     expect(out).toContain('PASS');
   });
 

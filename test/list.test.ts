@@ -50,7 +50,7 @@ describe('runList', () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     await runList({});
     const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).toContain('claude-code');
+    expect(out).toContain('Claude Code');
     expect(out).toContain('test-skill');
     expect(out).toContain('user');
   });

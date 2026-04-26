@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
+import { formatAgentName } from '../agent-names.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
 import { createProgressReporter, selectProgressMode } from '../progress.js';
 import type { Skill } from '../types.js';
@@ -126,7 +127,7 @@ export async function runList(opts: Partial<ListOptions> = {}): Promise<void> {
   for (const skill of skills) {
     const colorScope = SCOPE_COLOR[skill.scope] ?? chalk.white;
     table.push([
-      chalk.dim(skill.agentId),
+      chalk.dim(formatAgentName(skill.agentId)),
       skill.name,
       chalk.grey(shortenPath(skill.path)),
       colorScope(skill.scope),

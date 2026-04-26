@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
+import { formatAgentName } from '../agent-names.js';
 import type { ScanResult, ScannedSkill } from '../types.js';
 import { sortScanSkills } from './sort.js';
 import { renderSummaryFooter } from './summary.js';
@@ -139,7 +140,7 @@ export function renderTableToString(result: ScanResult): string {
 
   for (const skill of shown) {
     const row = [
-      skill.agentId,
+      formatAgentName(skill.agentId),
       `${verdictDot(skill)} ${skill.name}`,
       colorVerdict(skill),
       colorScore(skill),

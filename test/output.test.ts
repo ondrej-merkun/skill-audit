@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import stripAnsi from './helpers/strip-ansi.js';
+import { formatAgentName } from '../packages/cli/src/agent-names.js';
 import { renderTable, renderTableToString } from '../packages/cli/src/output/table.js';
 import {
   renderSummaryFooter,
@@ -126,12 +127,26 @@ describe('sortScanSkills', () => {
   });
 });
 
+describe('formatAgentName', () => {
+  it('renders friendly names for known agents and preserves unknown ids', () => {
+    expect(formatAgentName('claude-code')).toBe('Claude Code');
+    expect(formatAgentName('cross-agent')).toBe('Cross-agent');
+    expect(formatAgentName('unknown-agent')).toBe('unknown-agent');
+  });
+});
+
 describe('renderTableToString', () => {
   it('includes skill count and agent count in header', () => {
     const result = makeScanResult();
     const out = stripAnsi(renderTableToString(result));
     expect(out).toContain('scanned 1 skill');
     expect(out).toContain('1 agent');
+  });
+
+  it('renders friendly agent names in the human scan table', () => {
+    const out = stripAnsi(renderTableToString(makeScanResult()));
+    expect(out).toContain('Claude Code');
+    expect(out).not.toContain(' claude-code ');
   });
 
   it('shows 🟢 dot and PASS for a clean skill', () => {
@@ -908,6 +923,33 @@ describe('renderHtml', () => {
     expect(html).toContain('<span>deps.dev</span> —');
     expect(html).toContain("addRow('skills.sh', '—', true)");
     expect(html).toContain('OSV advisories');
+  });
+
+  it('renders friendly agent names in visible HTML while keeping raw filter ids', async () => {
+    const { renderHtml } = await import('../packages/cli/src/output/html.js');
+    const html = renderHtml(
+      makeScanResult({
+        agents: [
+          { id: 'claude-code', installed: true, skillsScanned: 1 },
+          { id: 'unknown-agent', installed: true, skillsScanned: 1 },
+        ],
+        skills: [
+          makeSkill(),
+          makeSkill({
+            id: 'unknown-skill',
+            agentId: 'unknown-agent',
+            name: 'unknown-skill',
+            path: '/tmp/unknown-skill',
+          }),
+        ],
+      })
+    );
+
+    expect(html).toContain('>Claude Code</td>');
+    expect(html).toContain('data-agent="claude-code"');
+    expect(html).toContain('>Claude Code</a>');
+    expect(html).toContain('"claude-code":"Claude Code"');
+    expect(html).toContain('>unknown-agent</td>');
   });
 });
 

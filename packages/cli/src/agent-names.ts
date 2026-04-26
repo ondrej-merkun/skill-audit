@@ -1,0 +1,12 @@
+const AGENT_DISPLAY_NAMES: Record<string, string> = {
+  'claude-code': 'Claude Code',
+  cursor: 'Cursor',
+  copilot: 'GitHub Copilot',
+  codex: 'OpenAI Codex',
+  gemini: 'Gemini CLI',
+  'cross-agent': 'Cross-agent',
+};
+
+export function formatAgentName(agentId: string): string {
+  return AGENT_DISPLAY_NAMES[agentId] ?? agentId;
+}
