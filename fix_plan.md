@@ -850,7 +850,7 @@ at the bottom and the loop will stop.
   - markdown link/path verification
   - package provenance/trusted-publishing verification
 
-- [ ] **43** Add `docs/EXAMPLES.md`.
+- [x] **43** Add `docs/EXAMPLES.md`.
 
   Create a examples document with realistic command-line workflows for local
   scanning, JSON output, file output once available, HTML reports, CI, offline
