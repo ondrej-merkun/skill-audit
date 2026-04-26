@@ -369,7 +369,7 @@ at the bottom and the loop will stop.
   - Add or update tests for any CLI help/output text that changes.
   - Verify markdown links and package-facing commands still resolve/work.
 
-- [ ] **13** Include skill modification dates in scan results.
+- [x] **13** Include skill modification dates in scan results.
 
   Scan results should include when a skill was last modified, using filesystem
   modification timestamps where available. Do not attempt to expose install or
