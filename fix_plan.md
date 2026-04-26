@@ -162,7 +162,7 @@ at the bottom and the loop will stop.
   - Add tests with Claude and Codex `plugins/cache` examples plus one regular
     plugin path for the same `treeSha256`.
 
-- [ ] **7** Add clear labels to `explain` finding detail lines.
+- [x] **7** Add clear labels to `explain` finding detail lines.
 
   The remediation line in `explain` output does not start with a label such as
   `Fix:`, so users have to infer what the line means. Other finding-detail lines
