@@ -78,7 +78,7 @@ skillaudit ignore <name>      # add a skill's treeSha256 to your ignore list
 | `-o, --output <file>` | Write the selected non-HTML scan output to file |
 | `--offline` | Skip optional enrichment lookups to `skills.sh`, GitHub, and `deps.dev` |
 | `--strict` | Treat REVIEW as FAIL for exit-code purposes |
-| `--fail-on <band>` | Override exit-code threshold (`PASS`, `REVIEW`, `FAIL`) |
+| `--fail-on <band>` | Override exit-code threshold (`REVIEW` or `FAIL`) |
 | `--html <file>` | Write standalone HTML report to file |
 
 ---
@@ -243,11 +243,28 @@ Six rule IDs trigger **mandatory FAIL** regardless of score:
 
 ---
 
-## Use as a GitHub Action
+## Use in CI
+
+For CI, write JSON to a file and choose the verdict threshold that should fail
+the job:
+
+```bash
+npx --yes skill-audit@latest scan \
+  --json \
+  --output skillaudit-results.json \
+  --fail-on REVIEW
+```
+
+`--fail-on FAIL` exits 1 only when the overall verdict is FAIL. `--fail-on
+REVIEW` exits 1 for REVIEW or FAIL. If no threshold is met, the command exits 0;
+an incomplete scan exits 3 unless a threshold failure already made it exit 1.
+
+### GitHub Action
 
 The root `action.yml` in this repository is the supported GitHub Action. Pin
 released workflows to a tag such as `v1`; use `@main` only when testing the
-current development branch.
+current development branch. The action runs `skill-audit`, writes JSON results
+to `skillaudit-results.json`, and uploads that file as an artifact by default.
 
 ```yaml
 name: Skill audit
@@ -265,6 +282,7 @@ jobs:
         with:
           fail-on: REVIEW
           offline: true
+          results-file: skillaudit-results.json
 ```
 
 ---
