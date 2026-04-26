@@ -57,7 +57,7 @@ at the bottom and the loop will stop.
   - Verify the built `node packages/cli/dist/index.js scan` output for that
     fixture shows a nonzero percentage.
 
-- [ ] **3** Explain missing or unavailable enrichment briefly in user-facing
+- [x] **3** Explain missing or unavailable enrichment briefly in user-facing
   output.
 
   When enrichment fails, is disabled, is skipped for the selected output mode,
