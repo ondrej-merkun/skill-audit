@@ -1030,3 +1030,11 @@ output and what was attempted.)
   `/home/linuxuser/skillaudit/.git` as `ro`; current uncommitted files are
   `packages/cli/src/discovery/index.ts`, `test/discovery-registry.test.ts`, and
   this blocker note.
+
+- **35 blocked in Codex session** — Repository topic configuration requires a
+  GitHub topics update API. The available GitHub connector can read repository
+  metadata for `ondrej-merkun/skill-audit` with admin permissions but does not
+  expose topic updates, and local `gh` cannot reach GitHub from this sandbox.
+  Attempted:
+  `gh repo edit ondrej-merkun/skill-audit --add-topic ai-security --add-topic prompt-injection --add-topic agent-skills --add-topic cli --add-topic static-analysis --add-topic supply-chain-security --add-topic claude-code --add-topic cursor --add-topic codex --add-topic copilot`.
+  It failed with `error connecting to api.github.com`.
