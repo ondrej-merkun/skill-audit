@@ -761,7 +761,7 @@ at the bottom and the loop will stop.
   - Re-check external tool details before finalizing if the task is implemented
     in a later session.
 
-- [ ] **34** Keep README badges minimal and verified.
+- [x] **34** Keep README badges minimal and verified.
 
   Review README badges and ensure each one points to a real package, workflow,
   or file. Keep only high-signal badges such as package version, CI, and
