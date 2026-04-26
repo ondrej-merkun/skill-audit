@@ -617,6 +617,34 @@ at the bottom and the loop will stop.
   - Add or update a smoke check proving the documented one-line command invokes
     the expected binary.
 
+- [ ] **24.1** Add npm metadata and packed package docs.
+
+  The CLI package currently has minimal package metadata and the npm tarball
+  dry-run includes only `dist/*` plus `package.json`. Before public publishing,
+  the npm package page and installed package should include enough trust and
+  discovery context for users to understand what they are installing.
+
+  Target behavior:
+  - `packages/cli/package.json` includes public-facing `license`, `repository`,
+    `homepage`, `bugs`, `author`, and `keywords` fields.
+  - Metadata uses the canonical package identity from task 24 and the canonical
+    author/repository identity from `CLAUDE.md`.
+  - The packed npm artifact includes the package README, license text, and
+    changelog/release notes, not only compiled `dist/` files.
+  - The package tarball does not include internal loop-driver files such as
+    `fix_plan.md`, `PROMPT.md`, `AGENT.md`, or test fixtures unless they are
+    intentionally part of the package.
+
+  Implementation notes:
+  - Coordinate with task 25 for `LICENSE` and `CHANGELOG.md`; if those files do
+    not exist yet, either complete task 25 first or document the dependency
+    clearly.
+  - Decide whether to copy root docs into `packages/cli/` or include them via
+    package `files`/release staging; keep the approach simple and reproducible.
+  - Add a verification step using `pnpm --filter <canonical-package> pack
+    --dry-run` and confirm the tarball contents include `dist`, `package.json`,
+    README, LICENSE, and CHANGELOG.
+
 - [ ] **25** Add missing repository trust and contribution files.
 
   Add the standard top-level files that a security-sensitive open source CLI
@@ -820,6 +848,32 @@ at the bottom and the loop will stop.
     method.
   - Remove `NPM_TOKEN` dependency from the workflow only after trusted
     publishing is configured and verified.
+
+- [ ] **40.1** Harden release workflow verification before npm publish.
+
+  The release workflow currently grants `id-token: write` but still publishes
+  with `NPM_TOKEN`, and it verifies only build/test before publishing. Public
+  releases should run the same quality gate contributors are required to run
+  locally, then publish with trusted publishing/provenance once configured.
+
+  Target behavior:
+  - Release workflow runs `pnpm build`, `pnpm test`, `pnpm lint`,
+    `pnpm typecheck`, and the clean build-warning check before publishing.
+  - Release workflow runs a real CLI smoke command against the built binary
+    before publishing.
+  - Release workflow verifies npm package contents with `pnpm --filter
+    <canonical-package> pack --dry-run` before publishing.
+  - Publishing uses npm trusted publishing where available, or
+    `npm publish --provenance` / equivalent provenance support as the fallback.
+  - Long-lived `NPM_TOKEN` use is removed once trusted publishing is configured
+    and verified.
+
+  Implementation notes:
+  - Keep the package name, working directory, and publish command aligned with
+    the canonical package identity from task 24.
+  - Do not publish unless every verification step passes.
+  - Document any required npm-side trusted publishing settings in
+    `docs/RELEASE_CHECKLIST.md` once that file exists.
 
 - [ ] **41** Add `docs/THREAT_MODEL.md`.
 
