@@ -250,7 +250,7 @@ at the bottom and the loop will stop.
   - Update README/docs if the `--offline` description or enrichment behavior
     explanation needs clarification.
 
-- [ ] **5** Include `deps.dev` enrichment in JSON output.
+- [x] **5** Include `deps.dev` enrichment in JSON output.
 
   JSON currently serializes `skills_sh` and `github` enrichment but omits
   `depsdev`, even though the enrichment pipeline can compute deps.dev advisory
