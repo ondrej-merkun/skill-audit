@@ -6,15 +6,13 @@
  * In CI, the workflow runs build before test.
  */
 
-import { execFile } from 'node:child_process';
-import { cp, mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { cp, mkdir, mkdtemp, open, readFile, rm } from 'node:fs/promises';
+import type { FileHandle } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-
-const execFileAsync = promisify(execFile);
 
 const CLI = fileURLToPath(new URL('../packages/cli/dist/index.js', import.meta.url));
 const FIXTURES_DIR = fileURLToPath(new URL('fixtures', import.meta.url));
@@ -24,15 +22,38 @@ const BENIGN_DIR = join(FIXTURES_DIR, 'benign');
 type CliResult = { stdout: string; stderr: string; code: number };
 
 async function runCli(args: string[], extraEnv: Record<string, string> = {}): Promise<CliResult> {
+  const captureDir = await mkdtemp(join(tmpdir(), 'skillaudit-cli-capture-'));
+  const stdoutPath = join(captureDir, 'stdout');
+  const stderrPath = join(captureDir, 'stderr');
+  let stdoutHandle: FileHandle | undefined = await open(stdoutPath, 'w');
+  let stderrHandle: FileHandle | undefined = await open(stderrPath, 'w');
+
   try {
-    const { stdout, stderr } = await execFileAsync('node', [CLI, ...args], {
+    const result = spawnSync('node', [CLI, ...args], {
       env: { ...process.env, ...extraEnv },
       timeout: 60_000,
+      stdio: ['ignore', stdoutHandle.fd, stderrHandle.fd],
     });
-    return { stdout, stderr, code: 0 };
-  } catch (err: unknown) {
-    const e = err as NodeJS.ErrnoException & { stdout?: string; stderr?: string; code?: number };
-    return { stdout: e.stdout ?? '', stderr: e.stderr ?? '', code: e.code ?? 1 };
+
+    await stdoutHandle.close();
+    await stderrHandle.close();
+    stdoutHandle = undefined;
+    stderrHandle = undefined;
+
+    const [stdout, stderr] = await Promise.all([
+      readFile(stdoutPath, 'utf-8'),
+      readFile(stderrPath, 'utf-8'),
+    ]);
+
+    return {
+      stdout,
+      stderr: result.error === undefined ? stderr : `${stderr}${result.error.message}`,
+      code: result.status ?? 1,
+    };
+  } finally {
+    await stdoutHandle?.close().catch(() => undefined);
+    await stderrHandle?.close().catch(() => undefined);
+    await rm(captureDir, { recursive: true, force: true });
   }
 }
 
@@ -50,6 +71,7 @@ type JsonSkill = {
   agent_id: string;
   name: string;
   path: string;
+  also_installed_at?: string[];
   tree_sha256: string;
   findings: JsonFinding[];
   summary: {

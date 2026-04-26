@@ -40,6 +40,9 @@ function serializeSkill(s: ScannedSkill): object {
     agent_id: s.agentId,
     name: s.name,
     path: s.path,
+    ...(s.alsoInstalledAt !== undefined && s.alsoInstalledAt.length > 0
+      ? { also_installed_at: s.alsoInstalledAt }
+      : {}),
     tree_sha256: s.treeSha256,
     allowlisted: s.summary.allowlisted,
     ignored: s.ignored === true,

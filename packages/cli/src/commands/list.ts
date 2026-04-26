@@ -68,9 +68,12 @@ export async function runList(opts: Partial<ListOptions> = {}): Promise<void> {
           agent: s.agentId,
           name: s.name,
           path: s.path,
+          ...(s.alsoInstalledAt !== undefined && s.alsoInstalledAt.length > 0
+            ? { also_installed_at: s.alsoInstalledAt }
+            : {}),
+          tree_sha256: s.treeSha256,
           scope: s.scope,
           format: s.format,
-          tree_sha256: s.treeSha256,
         })),
         null,
         2

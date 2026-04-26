@@ -48,7 +48,7 @@ describe('discoverAll', () => {
 
   it('collects skills from installed plugins', async () => {
     const skill1 = makeSkill({ id: 'skill-1', name: 'Skill One' });
-    const skill2 = makeSkill({ id: 'skill-2', name: 'Skill Two' });
+    const skill2 = makeSkill({ id: 'skill-2', name: 'Skill Two', treeSha256: 'def456' });
 
     registerPlugin({
       id: 'plugin-a',
@@ -67,6 +67,100 @@ describe('discoverAll', () => {
     expect(skills).toHaveLength(2);
     expect(skills).toContainEqual(skill1);
     expect(skills).toContainEqual(skill2);
+  });
+
+  it('deduplicates non-empty tree hashes and preserves duplicate paths', async () => {
+    const primary = makeSkill({
+      id: 'primary-skill',
+      path: '/tmp/skills/b-primary',
+      treeSha256: 'same-tree',
+    });
+    const duplicate = makeSkill({
+      id: 'duplicate-skill',
+      agentId: 'cursor',
+      path: '/tmp/skills/a-duplicate',
+      treeSha256: 'same-tree',
+    });
+
+    registerPlugin({
+      id: 'plugin-a',
+      displayName: 'Plugin A',
+      isInstalled: async () => true,
+      discoverSkills: async () => [primary],
+    });
+    registerPlugin({
+      id: 'plugin-b',
+      displayName: 'Plugin B',
+      isInstalled: async () => true,
+      discoverSkills: async () => [duplicate],
+    });
+
+    const skills = await discoverAll();
+    expect(skills).toEqual([
+      {
+        ...primary,
+        alsoInstalledAt: ['/tmp/skills/a-duplicate'],
+      },
+    ]);
+    expect(skills[0]).not.toBe(primary);
+    expect(primary).not.toHaveProperty('alsoInstalledAt');
+  });
+
+  it('merges preexisting duplicate install paths lexicographically', async () => {
+    const primary = makeSkill({
+      id: 'primary-skill',
+      path: '/tmp/skills/primary',
+      treeSha256: 'same-tree',
+      alsoInstalledAt: ['/tmp/skills/z-existing', '/tmp/skills/primary'],
+    });
+    const duplicate = makeSkill({
+      id: 'duplicate-skill',
+      path: '/tmp/skills/duplicate',
+      treeSha256: 'same-tree',
+      alsoInstalledAt: ['/tmp/skills/a-existing', '/tmp/skills/z-existing'],
+    });
+
+    registerPlugin({
+      id: 'plugin-a',
+      displayName: 'Plugin A',
+      isInstalled: async () => true,
+      discoverSkills: async () => [primary],
+    });
+    registerPlugin({
+      id: 'plugin-b',
+      displayName: 'Plugin B',
+      isInstalled: async () => true,
+      discoverSkills: async () => [duplicate],
+    });
+
+    const skills = await discoverAll();
+    expect(skills).toHaveLength(1);
+    expect(skills[0]?.alsoInstalledAt).toEqual([
+      '/tmp/skills/a-existing',
+      '/tmp/skills/duplicate',
+      '/tmp/skills/z-existing',
+    ]);
+  });
+
+  it('does not deduplicate empty tree hashes', async () => {
+    const skill1 = makeSkill({ id: 'config-a', path: '/tmp/config-a', treeSha256: '' });
+    const skill2 = makeSkill({ id: 'config-b', path: '/tmp/config-b', treeSha256: '' });
+
+    registerPlugin({
+      id: 'plugin-a',
+      displayName: 'Plugin A',
+      isInstalled: async () => true,
+      discoverSkills: async () => [skill1],
+    });
+    registerPlugin({
+      id: 'plugin-b',
+      displayName: 'Plugin B',
+      isInstalled: async () => true,
+      discoverSkills: async () => [skill2],
+    });
+
+    const skills = await discoverAll();
+    expect(skills).toEqual([skill1, skill2]);
   });
 
   it('is fail-silent when isInstalled() throws', async () => {

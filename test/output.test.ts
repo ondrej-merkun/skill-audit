@@ -421,6 +421,27 @@ describe('renderJson', () => {
     expect(skill.allowlisted).toBe(false);
   });
 
+  it('serializes also_installed_at only when duplicate paths are present', () => {
+    const result = makeScanResult({
+      skills: [
+        makeSkill({ alsoInstalledAt: ['/tmp/copy-a', '/tmp/copy-b'] }),
+        makeSkill({ id: 'unique-skill', name: 'unique-skill', path: '/tmp/unique-skill' }),
+      ],
+    });
+
+    const json = JSON.parse(renderJson(result));
+    expect(json.skills[0].also_installed_at).toEqual(['/tmp/copy-a', '/tmp/copy-b']);
+    expect(json.skills[1]).not.toHaveProperty('also_installed_at');
+    expect(Object.keys(json.skills[0]).slice(0, 6)).toEqual([
+      'id',
+      'agent_id',
+      'name',
+      'path',
+      'also_installed_at',
+      'tree_sha256',
+    ]);
+  });
+
   it('serializes finding fields with snake_case keys', () => {
     const result = makeScanResult({
       skills: [

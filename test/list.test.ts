@@ -90,6 +90,29 @@ describe('runList', () => {
     expect(arr[0].tree_sha256).toBe('deadbeef');
   });
 
+  it('--json emits also_installed_at only when duplicate paths are present', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({
+        id: 'deduped',
+        alsoInstalledAt: ['/home/user/.cursor/rules/test-skill'],
+      }),
+      makeSkill({ id: 'unique', name: 'unique-skill', path: '/home/user/.claude/skills/unique' }),
+    ]);
+
+    await runList({ json: true });
+    const arr = JSON.parse(stdoutChunks.join(''));
+
+    expect(arr[0].also_installed_at).toEqual(['/home/user/.cursor/rules/test-skill']);
+    expect(arr[1]).not.toHaveProperty('also_installed_at');
+    expect(Object.keys(arr[0]).slice(0, 5)).toEqual([
+      'agent',
+      'name',
+      'path',
+      'also_installed_at',
+      'tree_sha256',
+    ]);
+  });
+
   it('--agent filters to matching agent only', async () => {
     vi.mocked(discoverAll).mockResolvedValue([
       makeSkill({ id: 'cc', agentId: 'claude-code' }),

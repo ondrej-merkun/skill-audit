@@ -10,6 +10,48 @@ import geminiDiscovery from './gemini.js';
 // Call initDefaultPlugins() from the CLI entry point to register built-ins.
 const PLUGINS: AgentDiscovery[] = [];
 
+function cloneSkill(skill: Skill): Skill {
+  const { alsoInstalledAt: _alsoInstalledAt, ...rest } = skill;
+  return rest;
+}
+
+export function dedupeDiscoveredSkills(skills: Skill[]): Skill[] {
+  const output: Skill[] = [];
+  const byTreeHash = new Map<string, { primary: Skill; paths: Set<string> }>();
+
+  for (const skill of skills) {
+    const clonedSkill = cloneSkill(skill);
+
+    if (clonedSkill.treeSha256 === '') {
+      output.push(clonedSkill);
+      continue;
+    }
+
+    const paths = [skill.path, ...(skill.alsoInstalledAt ?? [])];
+    const existing = byTreeHash.get(clonedSkill.treeSha256);
+
+    if (existing === undefined) {
+      const pathSet = new Set(paths);
+      byTreeHash.set(clonedSkill.treeSha256, { primary: clonedSkill, paths: pathSet });
+      output.push(clonedSkill);
+      continue;
+    }
+
+    for (const path of paths) {
+      existing.paths.add(path);
+    }
+  }
+
+  for (const { primary, paths } of byTreeHash.values()) {
+    const alsoInstalledAt = [...paths].filter((path) => path !== primary.path).sort();
+    if (alsoInstalledAt.length > 0) {
+      primary.alsoInstalledAt = alsoInstalledAt;
+    }
+  }
+
+  return output;
+}
+
 /**
  * Register all built-in discovery plugins.
  * Called once from the CLI entry point — NOT at module load time, so tests
@@ -55,7 +97,7 @@ export async function discoverAll(): Promise<Skill[]> {
     }
   }
 
-  return results;
+  return dedupeDiscoveredSkills(results);
 }
 
 /**

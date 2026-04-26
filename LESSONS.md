@@ -66,6 +66,10 @@ without a commit message explaining why it no longer applies.
   executing the built binary._
   Run build and test as separate sequential verification steps.
 
+- **L1.9 — Capture built-CLI e2e output through files when Node pipe stdio is unreliable.** _Task 0.1 saw `execFile('node', ...)` exit 0 with empty stdout/stderr under the local sandbox while file-backed stdio captured the real output._
+  Keep e2e helpers executing the built binary, but avoid depending on piped
+  Node child stdout when the environment drops it.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

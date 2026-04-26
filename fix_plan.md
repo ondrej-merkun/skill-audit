@@ -1008,3 +1008,10 @@ at the bottom and the loop will stop.
 
 (If Ralph hits something it cannot proceed past, document here with error
 output and what was attempted.)
+
+- **0.1 commit blocked in Codex session** — Implementation and verification
+  completed, but `git commit` failed with `fatal: Unable to create
+  '/home/linuxuser/skillaudit/.git/index.lock': Read-only file system`.
+  `mount` shows `/home/linuxuser/skillaudit` is writable but
+  `/home/linuxuser/skillaudit/.git` is mounted read-only, so this session cannot
+  stage, commit, or check off the task.

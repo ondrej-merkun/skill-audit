@@ -15,6 +15,7 @@ export type Skill = {
   agentId: string;
   name: string;
   path: string; // absolute dir or file path
+  alsoInstalledAt?: string[];
   manifestPath: string | null;
   format:
     | 'SKILL.md'
