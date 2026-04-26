@@ -101,6 +101,25 @@ metadata lookups unless you pass `--offline`.
 
 ---
 
+## Limitations
+
+`skillaudit` is a local, rule-based scanner. It matches known prompt-injection,
+filesystem, network, code-execution, dependency, and obfuscation patterns; it
+does not run an LLM review or prove intent.
+
+Expect some false positives around security training material, red-team demos,
+sample exploit strings, and documentation that quotes risky commands without
+asking an agent to execute them. Trusted bundled skills can be exact-hash
+allowlisted, and local findings you have reviewed can be suppressed with
+`skillaudit ignore <name>`.
+
+A PASS verdict means no shipped rule fired on the scanned content. It is not a
+guarantee that a skill is safe, current, or well-maintained, and it can miss
+novel jailbreaks, split-string obfuscation, behavior hidden behind fetched code,
+or risks in services the skill calls at runtime.
+
+---
+
 ## Scoring
 
 Each skill gets a score from 0–100:
