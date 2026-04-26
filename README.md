@@ -83,6 +83,7 @@ skillaudit ignore <name>      # add a skill's treeSha256 to your ignore list
 ```
 
 More workflows: [`docs/EXAMPLES.md`](docs/EXAMPLES.md).
+Maintainer roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ### Flags
 
