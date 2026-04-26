@@ -447,7 +447,7 @@ at the bottom and the loop will stop.
   - Verify `node packages/cli/dist/index.js explain <fixture>` reads as benign
     for the new security-education fixtures.
 
-- [ ] **16** Make the no-subcommand CLI invocation run the default scan.
+- [x] **16** Make the no-subcommand CLI invocation run the default scan.
 
   Invoking the canonical binary with no subcommand should behave like the
   default `scan` command. The current `skillaudit` binary can produce no output
