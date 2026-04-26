@@ -422,7 +422,7 @@ at the bottom and the loop will stop.
   - Also cover the clear empty/unavailable path so the populated-path fix does
     not make normal offline use look broken.
 
-- [ ] **15** Reduce false positives on security-auditor and tester skills.
+- [x] **15** Reduce false positives on security-auditor and tester skills.
 
   Skills and packages that discuss prompt injection, jailbreaks, suspicious
   code, hardcoded keys, or exfiltration as security education or scanner test
