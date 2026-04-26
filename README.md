@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://vhs.charm.sh/vhs-3QK8f5vcNbljLrgH23trKT.gif" alt="Made with VHS" width="500" />
+  <img src="docs/demo.svg" alt="skillaudit terminal demo showing scan results" width="800" />
 </p>
 
 <h1 align="center">skillaudit</h1>
@@ -29,9 +29,6 @@ lookup.
 ```
 npx skill-audit
 ```
-
-<!-- hero GIF — record with `vhs` or `asciinema+agg`, max 800 KB, dark terminal -->
-<!-- ![skillaudit demo](docs/demo.gif) -->
 
 ---
 

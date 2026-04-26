@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="470" viewBox="0 0 900 470" role="img" aria-labelledby="title desc">
+  <title id="title">skillaudit terminal demo</title>
+  <desc id="desc">A terminal screenshot showing skillaudit scan --offline and the current verdict table output.</desc>
+  <defs>
+    <linearGradient id="screen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111827"/>
+      <stop offset="1" stop-color="#1f2937"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#020617" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <rect width="900" height="470" fill="#f8fafc"/>
+  <g filter="url(#shadow)">
+    <rect x="45" y="34" width="810" height="402" rx="14" fill="url(#screen)"/>
+    <rect x="45" y="34" width="810" height="42" rx="14" fill="#0f172a"/>
+    <rect x="45" y="62" width="810" height="14" fill="#0f172a"/>
+    <circle cx="75" cy="55" r="6" fill="#ef4444"/>
+    <circle cx="96" cy="55" r="6" fill="#f59e0b"/>
+    <circle cx="117" cy="55" r="6" fill="#22c55e"/>
+    <text x="450" y="60" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#94a3b8">skillaudit</text>
+  </g>
+
+  <g font-family="SFMono-Regular, Consolas, 'Liberation Mono', monospace" font-size="16">
+    <text x="78" y="108" fill="#22c55e">$</text>
+    <text x="100" y="108" fill="#e5e7eb">skillaudit scan --offline</text>
+
+    <rect x="78" y="132" width="744" height="54" rx="6" fill="#020617" stroke="#334155"/>
+    <text x="100" y="165" fill="#e5e7eb">skillaudit  scanned 4 skills across 3 agents in 1.2s</text>
+
+    <text x="94" y="224" fill="#93c5fd" font-weight="700">AGENT</text>
+    <text x="208" y="224" fill="#93c5fd" font-weight="700">SKILL</text>
+    <text x="398" y="224" fill="#93c5fd" font-weight="700">VERDICT</text>
+    <text x="505" y="224" fill="#93c5fd" font-weight="700">SCORE</text>
+    <text x="590" y="224" fill="#93c5fd" font-weight="700">ENRICHMENT</text>
+    <text x="710" y="224" fill="#93c5fd" font-weight="700">TOP ISSUE</text>
+    <line x1="90" y1="238" x2="810" y2="238" stroke="#334155"/>
+
+    <text x="94" y="270" fill="#cbd5e1">claude-code</text>
+    <text x="208" y="270" fill="#fca5a5">polymarket-trader</text>
+    <text x="398" y="270" fill="#f87171" font-weight="700">FAIL</text>
+    <text x="505" y="270" fill="#f87171" font-weight="700">0</text>
+    <text x="590" y="270" fill="#94a3b8">-</text>
+    <text x="710" y="270" fill="#fca5a5">net-exfil-env</text>
+
+    <text x="94" y="306" fill="#cbd5e1">codex</text>
+    <text x="208" y="306" fill="#fed7aa">agent-ops</text>
+    <text x="398" y="306" fill="#fb923c" font-weight="700">REVIEW</text>
+    <text x="505" y="306" fill="#fb923c" font-weight="700">67</text>
+    <text x="590" y="306" fill="#94a3b8">-</text>
+    <text x="710" y="306" fill="#fed7aa">deps-inline-install</text>
+
+    <text x="94" y="342" fill="#cbd5e1">cursor</text>
+    <text x="208" y="342" fill="#86efac">docs-helper</text>
+    <text x="398" y="342" fill="#4ade80" font-weight="700">PASS</text>
+    <text x="505" y="342" fill="#4ade80" font-weight="700">100</text>
+    <text x="590" y="342" fill="#94a3b8">-</text>
+    <text x="710" y="342" fill="#94a3b8">-</text>
+
+    <line x1="90" y1="366" x2="810" y2="366" stroke="#334155"/>
+    <text x="94" y="398" fill="#e5e7eb">FAIL: 1 compromised skill. Run</text>
+    <text x="370" y="398" fill="#bfdbfe">skillaudit explain polymarket-trader</text>
+    <text x="678" y="398" fill="#e5e7eb">for details.</text>
+  </g>
+</svg>
