@@ -10,7 +10,7 @@ at the bottom and the loop will stop.
 
 ## Pending tasks
 
-- [ ] **1** Sort `list` output so project-scope skills appear first.
+- [x] **1** Sort `list` output so project-scope skills appear first.
 
   The `list` command should always show skills discovered from the current
   project at the top, before user/global skills. Preserve deterministic
