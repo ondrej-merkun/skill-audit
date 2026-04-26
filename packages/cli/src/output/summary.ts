@@ -28,10 +28,12 @@ function findingsStats(skills: ScannedSkill[]): {
 function enrichmentLine(skills: ScannedSkill[]): string | null {
   const hasSkillsSh = skills.some((s) => s.enrichment.skillsSh != null);
   const hasGithub = skills.some((s) => s.enrichment.github != null);
-  if (!hasSkillsSh && !hasGithub) return null;
+  const hasDepsDev = skills.some((s) => s.enrichment.depsdev != null);
+  if (!hasSkillsSh && !hasGithub && !hasDepsDev) return null;
   const parts: string[] = [];
   if (hasSkillsSh) parts.push(`skills.sh ${C_PASS('✓')}`);
   if (hasGithub) parts.push(`github ${C_PASS('✓')}`);
+  if (hasDepsDev) parts.push(`deps.dev ${C_PASS('✓')}`);
   return parts.join('  ');
 }
 

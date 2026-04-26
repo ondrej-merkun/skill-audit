@@ -251,6 +251,48 @@ describe('renderTableToString', () => {
     expect(out).toContain('—');
   });
 
+  it('shows skills.sh and deps.dev enrichment details per skill', () => {
+    const result = makeScanResult({
+      skills: [
+        makeSkill({
+          enrichment: {
+            skillsSh: { gen: 'Low', socketAlerts: 0, snyk: 'Low' },
+            depsdev: { scorecardScore: 8.5, osvAdvisories: 2 },
+          },
+        }),
+      ],
+    });
+    const out = stripAnsi(renderTableToString(result));
+    expect(out).toContain('ENRICHMENT');
+    expect(out).toContain('Gen=Low');
+    expect(out).toContain('Socket=0');
+    expect(out).toContain('Snyk=Low');
+    expect(out).toContain('2 OSV advisories');
+  });
+
+  it('renders zero deps.dev advisories compactly', () => {
+    const result = makeScanResult({
+      skills: [makeSkill({ enrichment: { depsdev: { scorecardScore: null, osvAdvisories: 0 } } })],
+    });
+    const out = stripAnsi(renderTableToString(result));
+    expect(out).toContain('0 OSV');
+  });
+
+  it('renders neutral enrichment when no table enrichment data exists', () => {
+    const out = stripAnsi(renderTableToString(makeScanResult()));
+    expect(out).toContain('ENRICHMENT');
+    expect(out).toContain(' - ');
+  });
+
+  it('does not show GitHub enrichment in the default table enrichment column', () => {
+    const result = makeScanResult({
+      skills: [makeSkill({ enrichment: { github: { stars: 10, ageDays: 20, contributors: 3 } } })],
+    });
+    const out = stripAnsi(renderTableToString(result));
+    expect(out).not.toContain('10 stars');
+    expect(out).not.toContain('contributors');
+  });
+
   it('sorts FAIL rows before REVIEW and PASS', () => {
     const result = makeScanResult({
       skills: [
@@ -450,6 +492,16 @@ describe('renderSummaryFooter', () => {
     const out = stripAnsi(renderSummaryFooter(result, [enrichedSkill]));
     expect(out).toContain('Enrichment');
     expect(out).toContain('skills.sh');
+  });
+
+  it('shows Enrichment line when deps.dev data is present', () => {
+    const enrichedSkill = makeSkill({
+      enrichment: { depsdev: { scorecardScore: null, osvAdvisories: 0 } },
+    });
+    const result = makeScanResult({ skills: [enrichedSkill] });
+    const out = stripAnsi(renderSummaryFooter(result, [enrichedSkill]));
+    expect(out).toContain('Enrichment');
+    expect(out).toContain('deps.dev');
   });
 });
 

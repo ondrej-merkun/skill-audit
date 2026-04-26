@@ -71,6 +71,27 @@ function topIssue(skill: ScannedSkill): string {
   return ruleLabel;
 }
 
+function enrichmentDetails(skill: ScannedSkill): string {
+  const parts: string[] = [];
+  const skillsSh = skill.enrichment.skillsSh;
+  if (skillsSh !== undefined) {
+    parts.push(`Gen=${skillsSh.gen}`, `Socket=${skillsSh.socketAlerts}`, `Snyk=${skillsSh.snyk}`);
+  }
+
+  const depsdev = skill.enrichment.depsdev;
+  if (depsdev !== undefined) {
+    const advisoryLabel =
+      depsdev.osvAdvisories === 0
+        ? '0 OSV'
+        : depsdev.osvAdvisories === 1
+          ? '1 OSV advisory'
+          : `${depsdev.osvAdvisories} OSV advisories`;
+    parts.push(advisoryLabel);
+  }
+
+  return parts.length > 0 ? parts.join('  ') : C_GREY('-');
+}
+
 export function renderTableToString(result: ScanResult): string {
   const { skills, scan, agents, summary } = result;
   const agentCount = agents.length;
@@ -97,6 +118,7 @@ export function renderTableToString(result: ScanResult): string {
     chalk.bold('SKILL'),
     chalk.bold('VERDICT'),
     chalk.bold('SCORE'),
+    chalk.bold('ENRICHMENT'),
     chalk.bold('TOP ISSUE'),
   ];
 
@@ -118,6 +140,7 @@ export function renderTableToString(result: ScanResult): string {
       `${verdictDot(skill)} ${skill.name}`,
       colorVerdict(skill),
       colorScore(skill),
+      enrichmentDetails(skill),
       topIssue(skill),
     ]);
   }
