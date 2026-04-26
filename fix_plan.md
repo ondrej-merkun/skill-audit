@@ -52,7 +52,7 @@ at the bottom and the loop will stop.
     `pnpm typecheck`, and the built `node packages/cli/dist/index.js list
     --json` against a fixture or temp home with duplicate skill content.
 
-- [ ] **0.2** Restrict Codex plugin cache discovery to active/exposed payloads.
+- [x] **0.2** Restrict Codex plugin cache discovery to active/exposed payloads.
 
   `~/.codex/plugins/cache` is a cache, not an authoritative list of skills that
   Codex currently exposes to agents. Update Codex discovery so cache payloads
