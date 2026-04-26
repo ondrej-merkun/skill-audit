@@ -2,6 +2,29 @@
   "name": "skill-audit",
   "version": "0.1.0",
   "description": "Scan AI agent skills for prompt injection and malicious code",
+  "license": "Apache-2.0",
+  "author": "Ondrej Merkun",
+  "homepage": "https://github.com/ondrejmerkun/skillaudit#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ondrejmerkun/skillaudit.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/ondrejmerkun/skillaudit/issues"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "skills",
+    "security",
+    "prompt-injection",
+    "scanner",
+    "cli",
+    "claude-code",
+    "codex",
+    "cursor"
+  ],
   "type": "module",
   "bin": {
     "skillaudit": "./dist/index.js"
@@ -17,7 +40,10 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup",
