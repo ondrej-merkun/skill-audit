@@ -1,0 +1,78 @@
+name: New agent support
+description: Request discovery support for another agent, tool, or skill location.
+title: "New agent support: "
+labels:
+  - enhancement
+  - discovery
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include real secrets. Redact private paths, tokens, and proprietary skill content.
+  - type: input
+    id: agent-tool-name
+    attributes:
+      label: Agent/tool name
+      description: Name the agent, IDE, CLI, or plugin system that should be discovered.
+      placeholder: "ExampleAgent"
+    validations:
+      required: true
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: global-paths
+    attributes:
+      label: Global paths
+      description: List user-level install or cache paths, with usernames and private directories redacted.
+      placeholder: |
+        ~/.example-agent/skills/
+        ~/.config/example-agent/plugins/
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: project-local-paths
+    attributes:
+      label: Project-local paths
+      description: List repository-local paths that can expose skills, prompts, plugins, or agents.
+      placeholder: |
+        .example-agent/
+        .example/agents/
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: file-formats
+    attributes:
+      label: File formats
+      description: List the files skillaudit should scan and note which ones are active versus cache-only.
+      placeholder: |
+        SKILL.md
+        agent.json
+        commands/*.md
+    validations:
+      required: true
+  - type: textarea
+    id: directory-tree
+    attributes:
+      label: Example redacted directory tree
+      description: Include the smallest representative tree with private names and content redacted.
+      placeholder: |
+        ~/.example-agent/
+        `-- skills/
+            `-- redacted-skill/
+                |-- SKILL.md
+                `-- commands/
+                    `-- run.md
+      render: shell
+    validations:
+      required: true
