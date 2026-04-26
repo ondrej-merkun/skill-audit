@@ -531,7 +531,7 @@ at the bottom and the loop will stop.
   - If content moves to docs, add or update the destination document in the same
     task rather than dropping useful material.
 
-- [ ] **20** Repair or replace the README header screenshot.
+- [x] **20** Repair or replace the README header screenshot.
 
   The README header image currently has overflowing and overlapping terminal
   text. The visual should be readable at the size GitHub renders it and should
