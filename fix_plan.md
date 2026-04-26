@@ -490,7 +490,7 @@ at the bottom and the loop will stop.
   - Keep the report self-contained and file-mode friendly; do not require
     network access or a dev server for sidebar filtering.
 
-- [ ] **18** Fix the README CI badge link so it targets a real workflow.
+- [x] **18** Fix the README CI badge link so it targets a real workflow.
 
   The README CI badge currently links to a GitHub "page not found" target. Badges
   are product surface and should point at the exact public repository and
