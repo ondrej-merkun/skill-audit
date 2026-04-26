@@ -660,7 +660,7 @@ at the bottom and the loop will stop.
   - Link `SECURITY.md` from README once the file exists.
   - Verify every new markdown link resolves on disk.
 
-- [ ] **26** Tighten README claims and privacy wording.
+- [x] **26** Tighten README claims and privacy wording.
 
   Audit README language so every public claim is supported by implemented
   behavior. The README should state the local-first behavior precisely, explain
