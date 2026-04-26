@@ -210,7 +210,7 @@ at the bottom and the loop will stop.
   - Verify output still fits reasonably for long skill names and common terminal
     widths.
 
-- [ ] **4** Make enrichment source execution output-aware, and do not request
+- [x] **4** Make enrichment source execution output-aware, and do not request
   GitHub enrichment unless the selected output actually displays it.
 
   Avoid unnecessary network requests by choosing enrichment sources based on the
