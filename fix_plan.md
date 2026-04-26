@@ -885,7 +885,7 @@ at the bottom and the loop will stop.
   - why the content is benign
   - whether the file is documentation, test fixture, or runtime code
 
-- [ ] **46** Add a missed-detection issue form.
+- [x] **46** Add a missed-detection issue form.
 
   Add `.github/ISSUE_TEMPLATE/missed-detection.yml` so users can report cases
   where risky skill content was not flagged.
