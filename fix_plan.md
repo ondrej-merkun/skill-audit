@@ -601,7 +601,7 @@ at the bottom and the loop will stop.
   - Do not delete documentation for implemented commands or behavior.
   - Add or adjust tests if any CLI help/output snapshot changes.
 
-- [ ] **24** Align public package identity and install commands everywhere.
+- [x] **24** Align public package identity and install commands everywhere.
 
   Pick one canonical package/install story and make README, badges, npm
   metadata, CLI examples, skill wrapper docs, action docs, and release workflow
