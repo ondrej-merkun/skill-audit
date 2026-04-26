@@ -509,7 +509,7 @@ at the bottom and the loop will stop.
   - If the canonical repository slug or workflow name is ambiguous, document the
     verified value near the identity/docs source that future README edits use.
 
-- [ ] **19** Tighten the README first screen and move dense material to docs.
+- [x] **19** Tighten the README first screen and move dense material to docs.
 
   The README has become too long and table-heavy for a first impression. It
   should quickly explain what the tool does, how to install it, how to run a
