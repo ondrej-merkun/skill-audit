@@ -339,7 +339,7 @@ at the bottom and the loop will stop.
     implying other agents were scanned.
   - Add regression coverage for multi-agent scan results.
 
-- [ ] **12** Rename `skillaudit` product, CLI, and user-facing references to
+- [x] **12** Rename `skillaudit` product, CLI, and user-facing references to
   `skill-audit` carefully.
 
   Across the project, the canonical package/product/CLI identity should be
