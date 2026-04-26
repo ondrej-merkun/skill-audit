@@ -645,7 +645,7 @@ at the bottom and the loop will stop.
     --dry-run` and confirm the tarball contents include `dist`, `package.json`,
     README, LICENSE, and CHANGELOG.
 
-- [ ] **25** Add missing repository trust and contribution files.
+- [x] **25** Add missing repository trust and contribution files.
 
   Add the standard top-level files that a security-sensitive open source CLI
   should have before broad use: `LICENSE`, `SECURITY.md`, `CONTRIBUTING.md`,
