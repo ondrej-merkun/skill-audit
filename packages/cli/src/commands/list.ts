@@ -28,10 +28,35 @@ const SCOPE_COLOR: Record<Skill['scope'], (s: string) => string> = {
   managed: chalk.magenta,
 };
 
+const SCOPE_RANK: Record<Skill['scope'], number> = {
+  project: 0,
+  managed: 1,
+  user: 2,
+};
+
 export type ListOptions = {
   agent: string | undefined;
   json: boolean;
 };
+
+function compareString(a: string, b: string): number {
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+}
+
+export function sortListSkills(skills: Skill[]): Skill[] {
+  return [...skills].sort((a, b) => {
+    const scopeDelta = SCOPE_RANK[a.scope] - SCOPE_RANK[b.scope];
+    if (scopeDelta !== 0) return scopeDelta;
+
+    return (
+      compareString(a.agentId, b.agentId) ||
+      compareString(a.name, b.name) ||
+      compareString(a.path, b.path)
+    );
+  });
+}
 
 function shortenPath(p: string): string {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '';
@@ -60,6 +85,7 @@ export async function runList(opts: Partial<ListOptions> = {}): Promise<void> {
   if (options.agent) {
     skills = skills.filter((s) => s.agentId === options.agent);
   }
+  skills = sortListSkills(skills);
 
   if (options.json) {
     process.stdout.write(

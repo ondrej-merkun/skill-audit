@@ -81,6 +81,89 @@ describe('runList', () => {
     expect(arr[0].scope).toBe('user');
   });
 
+  it('sorts human output by scope before agent, name, and path', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({
+        id: 'user-a',
+        agentId: 'claude-code',
+        name: 'alpha-user',
+        path: '/home/user/.claude/skills/alpha-user',
+        scope: 'user',
+      }),
+      makeSkill({
+        id: 'project-z',
+        agentId: 'cursor',
+        name: 'zeta-project',
+        path: '/repo/.cursor/rules/zeta-project.mdc',
+        scope: 'project',
+      }),
+      makeSkill({
+        id: 'managed-a',
+        agentId: 'codex',
+        name: 'alpha-managed',
+        path: '/home/user/.codex/plugins/alpha-managed',
+        scope: 'managed',
+      }),
+      makeSkill({
+        id: 'project-a',
+        agentId: 'claude-code',
+        name: 'alpha-project',
+        path: '/repo/.claude/skills/alpha-project',
+        scope: 'project',
+      }),
+    ]);
+
+    await runList({});
+    const out = stripAnsi(stdoutChunks.join(''));
+
+    expect(out.indexOf('alpha-project')).toBeLessThan(out.indexOf('zeta-project'));
+    expect(out.indexOf('zeta-project')).toBeLessThan(out.indexOf('alpha-managed'));
+    expect(out.indexOf('alpha-managed')).toBeLessThan(out.indexOf('alpha-user'));
+  });
+
+  it('sorts JSON output by scope before agent, name, and path', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({
+        id: 'user-a',
+        agentId: 'claude-code',
+        name: 'alpha-user',
+        path: '/home/user/.claude/skills/alpha-user',
+        scope: 'user',
+      }),
+      makeSkill({
+        id: 'managed-a',
+        agentId: 'codex',
+        name: 'alpha-managed',
+        path: '/home/user/.codex/plugins/alpha-managed',
+        scope: 'managed',
+      }),
+      makeSkill({
+        id: 'project-z',
+        agentId: 'cursor',
+        name: 'zeta-project',
+        path: '/repo/.cursor/rules/zeta-project.mdc',
+        scope: 'project',
+      }),
+      makeSkill({
+        id: 'project-a',
+        agentId: 'claude-code',
+        name: 'alpha-project',
+        path: '/repo/.claude/skills/alpha-project',
+        scope: 'project',
+      }),
+    ]);
+
+    await runList({ json: true });
+    const arr = JSON.parse(stdoutChunks.join(''));
+
+    expect(arr.map((skill: { name: string }) => skill.name)).toEqual([
+      'alpha-project',
+      'zeta-project',
+      'alpha-managed',
+      'alpha-user',
+    ]);
+  });
+
   it('--json output includes path and format fields', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     await runList({ json: true });
