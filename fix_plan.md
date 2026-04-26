@@ -567,7 +567,7 @@ at the bottom and the loop will stop.
     traverses outside the skill boundary, or sends data to hardcoded external
     endpoints.
 
-- [ ] **22** Restore a real exact-hash allowlist for bundled/official trusted
+- [x] **22** Restore a real exact-hash allowlist for bundled/official trusted
   skills.
 
   Real scan output showed every skill as `allowlisted=false`, including
