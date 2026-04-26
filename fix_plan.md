@@ -807,7 +807,7 @@ at the bottom and the loop will stop.
   - Document when to use a private advisory instead of a public issue.
   - Keep the policy consistent with GitHub Security Advisories.
 
-- [ ] **40** Use npm trusted publishing and provenance for package releases.
+- [x] **40** Use npm trusted publishing and provenance for package releases.
 
   Update the package release workflow to use npm trusted publishing where
   available, or otherwise publish with provenance from GitHub Actions. Document
