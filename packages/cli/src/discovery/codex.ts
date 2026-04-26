@@ -144,8 +144,6 @@ async function discoverPluginTree(dir: string, scope: Skill['scope']): Promise<S
 
     if (name === 'SKILL.md') {
       skills.push(await skillFromDir(dirname(file), 'SKILL.md', scope, 'SKILL.md'));
-    } else if (name === 'plugin.json') {
-      skills.push(await skillFromDir(dirname(file), 'plugin.json', scope, 'plugin.json'));
     } else if (name.endsWith('.md') && segments.includes('commands')) {
       skills.push(await skillFromFile(file, basename(file, '.md'), 'prompt-md', scope));
     }
@@ -321,6 +319,7 @@ const codexDiscovery: AgentDiscovery = {
       ...(await discoverEnabledPluginCaches(codexHome, join(codexHome, 'config.toml'), 'user'))
     );
     skills.push(...(await discoverPromptFiles(join(codexHome, 'prompts'))));
+    skills.push(...(await discoverActivePluginPayloadTree(join(cwd, '.codex-plugin'), 'project')));
     skills.push(...(await discoverUntrustedProjectConfig(join(cwd, '.codex', 'config.toml'))));
 
     return skills;

@@ -115,8 +115,6 @@ async function discoverPluginTree(dir: string, scope: Skill['scope']): Promise<S
 
     if (name === 'SKILL.md') {
       skills.push(await skillFromDir(dirname(file), 'SKILL.md', scope, 'SKILL.md'));
-    } else if (name === 'plugin.json') {
-      skills.push(await skillFromDir(dirname(file), 'plugin.json', scope, 'plugin.json'));
     } else if (name.endsWith('.md') && segments.includes('commands')) {
       skills.push(await skillFromFile(file, 'SKILL.md', scope));
     } else if (name.endsWith('.md') && segments.includes('agents')) {
@@ -263,19 +261,7 @@ const claudeCodeDiscovery: AgentDiscovery = {
 
     // Project-scoped: .claude-plugin/plugin.json
     const claudePluginDir = join(cwd, '.claude-plugin');
-    const claudePluginManifest = join(claudePluginDir, 'plugin.json');
-    if (await pathExists(claudePluginManifest)) {
-      skills.push({
-        id: makeId(claudePluginDir),
-        agentId: AGENT_ID,
-        name: basename(cwd),
-        path: claudePluginDir,
-        manifestPath: claudePluginManifest,
-        format: 'plugin.json',
-        scope: 'project',
-        treeSha256: await computeTreeSha256(claudePluginDir),
-      });
-    }
+    skills.push(...(await discoverPluginTree(claudePluginDir, 'project')));
 
     return skills;
   },

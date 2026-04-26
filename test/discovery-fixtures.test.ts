@@ -162,7 +162,7 @@ describe('claude-code: fixture skill tree', () => {
       expect(byName.get(skillName)?.scope).toBe('user');
     }
 
-    expect(byName.get('compound-engineering')?.format).toBe('plugin.json');
+    expect(byName.has('compound-engineering')).toBe(false);
     expect(byName.get('polish')?.format).toBe('SKILL.md');
     expect(byName.get('reviewer')?.format).toBe('agents-md');
 
@@ -258,12 +258,28 @@ describe('codex: fixture skill tree', () => {
 
     expect(byName.get('review-helper')?.format).toBe('SKILL.md');
     expect(byName.get('audit-helper')?.format).toBe('SKILL.md');
-    expect(byName.get('examples')?.format).toBe('plugin.json');
     expect(byName.get('quick-check')?.format).toBe('prompt-md');
     expect(byName.get('ship')?.format).toBe('prompt-md');
 
+    expect(byName.has('examples')).toBe(false);
     expect(byName.has('plugins')).toBe(false);
     expect(byName.has('openai')).toBe(false);
+  });
+
+  it('does not count plain .codex-plugin/plugin.json and still discovers nested leaves', async () => {
+    const pluginDir = join(tempCwd, '.codex-plugin');
+    const skillDir = join(pluginDir, 'skills', 'project-helper');
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(join(pluginDir, 'plugin.json'), '{"name":"project-plugin"}');
+    await writeFile(join(skillDir, 'SKILL.md'), '# Project Helper');
+
+    const skills = await codexDiscovery.discoverSkills();
+    const byName = new Map(skills.map((skill) => [skill.name, skill]));
+
+    expect(byName.has('.codex-plugin')).toBe(false);
+    expect(byName.has('project-plugin')).toBe(false);
+    expect(byName.get('project-helper')?.format).toBe('SKILL.md');
+    expect(byName.get('project-helper')?.scope).toBe('project');
   });
 
   it('discovers only enabled Codex plugin cache payload leaves', async () => {

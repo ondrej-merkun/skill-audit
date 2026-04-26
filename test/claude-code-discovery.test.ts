@@ -62,18 +62,14 @@ describe('claude-code discovery plugin', () => {
     expect(skill?.manifestPath).toMatch(/SKILL\.md$/);
   });
 
-  it('discovers plugins from ~/.claude/plugins/', async () => {
+  it('does not count plain plugin manifests from ~/.claude/plugins/ as skills', async () => {
     const pluginDir = join(tempHome, '.claude', 'plugins', 'my-plugin');
     await mkdir(pluginDir, { recursive: true });
     await writeFile(join(pluginDir, 'plugin.json'), '{"name":"my-plugin"}');
 
     const skills = await claudeCodeDiscovery.discoverSkills();
-    const skill = skills.find((s) => s.name === 'my-plugin');
 
-    expect(skill).toBeDefined();
-    expect(skill?.format).toBe('plugin.json');
-    expect(skill?.scope).toBe('user');
-    expect(skill?.manifestPath).toMatch(/plugin\.json$/);
+    expect(skills.find((s) => s.name === 'my-plugin')).toBeUndefined();
   });
 
   it('discovers nested plugin skills as leaf skills, not marketplace directories', async () => {
@@ -207,16 +203,28 @@ describe('claude-code discovery plugin', () => {
     expect(skill?.scope).toBe('project');
   });
 
-  it('discovers .claude-plugin/plugin.json', async () => {
+  it('does not count plain .claude-plugin/plugin.json as a skill', async () => {
     const claudePluginDir = join(tempCwd, '.claude-plugin');
     await mkdir(claudePluginDir, { recursive: true });
     await writeFile(join(claudePluginDir, 'plugin.json'), '{"name":"plugin"}');
 
     const skills = await claudeCodeDiscovery.discoverSkills();
-    const skill = skills.find((s) => s.format === 'plugin.json' && s.scope === 'project');
 
-    expect(skill).toBeDefined();
-    expect(skill?.manifestPath).toMatch(/plugin\.json$/);
+    expect(skills.find((s) => s.path === claudePluginDir)).toBeUndefined();
+    expect(skills.find((s) => s.format === 'plugin.json' && s.scope === 'project')).toBeUndefined();
+  });
+
+  it('discovers nested skills inside .claude-plugin wrappers', async () => {
+    const skillDir = join(tempCwd, '.claude-plugin', 'skills', 'wrapped-review');
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(join(tempCwd, '.claude-plugin', 'plugin.json'), '{"name":"plugin"}');
+    await writeFile(join(skillDir, 'SKILL.md'), '# Wrapped Review');
+
+    const skills = await claudeCodeDiscovery.discoverSkills();
+    const skill = skills.find((s) => s.name === 'wrapped-review');
+
+    expect(skill?.format).toBe('SKILL.md');
+    expect(skill?.scope).toBe('project');
   });
 
   // --- IDs and structure ---
