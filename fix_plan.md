@@ -412,7 +412,7 @@ at the bottom and the loop will stop.
   - Keep malicious fixtures where frontmatter says one thing but the body tells
     the agent to hide or not reveal the skill's instructions.
 
-- [ ] **13** Tighten `PI-HIDDEN-HTML-COMMENT` so ordinary HTML/template
+- [x] **13** Tighten `PI-HIDDEN-HTML-COMMENT` so ordinary HTML/template
   comments do not fire.
 
   Real scan output flagged normal comments such as `<!-- Favicons -->`,
