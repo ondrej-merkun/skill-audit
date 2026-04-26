@@ -1,6 +1,7 @@
 import chalk from 'chalk';
+import { formatAgentName } from '../agent-names.js';
 import { formatCompromisedPercent } from '../percent.js';
-import type { ScanResult, ScannedSkill, Severity } from '../types.js';
+import type { AgentInfo, ScanResult, ScannedSkill, Severity } from '../types.js';
 import { sortScanSkills } from './sort.js';
 
 const C_CRITICAL = chalk.hex('#FF4444');
@@ -87,6 +88,13 @@ function enrichmentLine(skills: ScannedSkill[]): string | null {
   return parts.join('  ');
 }
 
+function agentCountsLine(agents: AgentInfo[]): string {
+  return [...agents]
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map((agent) => `${formatAgentName(agent.id)}: ${agent.skillsScanned}`)
+    .join(', ');
+}
+
 /**
  * Renders the detailed scan-summary footer (used by the TUI table and --summary).
  * orderedSkills may already be sorted by the caller; this function re-sorts with the shared
@@ -106,6 +114,9 @@ export function renderSummaryFooter(
 
   lines.push(`  ── Scan summary ${'─'.repeat(Math.max(0, boxWidth - 18))}`);
   lines.push(`  ${label('Skills scanned')} ${summary.skillsScanned}`);
+  if (result.agents.length > 0) {
+    lines.push(`  ${label('Agents scanned')} ${agentCountsLine(result.agents)}`);
+  }
   lines.push(`  ${label('Unique issues')} ${stats.affectedSkills}  (${severityBreakdown(stats)})`);
 
   const compromisedStr =

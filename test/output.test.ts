@@ -143,6 +143,41 @@ describe('renderTableToString', () => {
     expect(out).toContain('1 agent');
   });
 
+  it('shows friendly per-agent skill counts in the scan overview', () => {
+    const result = makeScanResult({
+      agents: [
+        { id: 'cursor', installed: true, skillsScanned: 1 },
+        { id: 'claude-code', installed: true, skillsScanned: 2 },
+      ],
+      skills: [
+        makeSkill({ id: 'cc-one', name: 'cc-one', agentId: 'claude-code' }),
+        makeSkill({ id: 'cc-two', name: 'cc-two', agentId: 'claude-code' }),
+        makeSkill({ id: 'cursor-one', name: 'cursor-one', agentId: 'cursor' }),
+      ],
+      summary: { skillsScanned: 3, compromised: 0, percentCompromised: 0, verdict: 'PASS' },
+    });
+
+    const out = stripAnsi(renderTableToString(result));
+
+    expect(out).toContain('Agents scanned............ Claude Code: 2, Cursor: 1');
+  });
+
+  it('shows a single selected-agent count without implying other agents were scanned', () => {
+    const result = makeScanResult({
+      agents: [{ id: 'cursor', installed: true, skillsScanned: 2 }],
+      skills: [
+        makeSkill({ id: 'cursor-one', name: 'cursor-one', agentId: 'cursor' }),
+        makeSkill({ id: 'cursor-two', name: 'cursor-two', agentId: 'cursor' }),
+      ],
+      summary: { skillsScanned: 2, compromised: 0, percentCompromised: 0, verdict: 'PASS' },
+    });
+
+    const out = stripAnsi(renderTableToString(result));
+
+    expect(out).toContain('Agents scanned............ Cursor: 2');
+    expect(out).not.toContain('Claude Code:');
+  });
+
   it('renders friendly agent names in the human scan table', () => {
     const out = stripAnsi(renderTableToString(makeScanResult()));
     expect(out).toContain('Claude Code');

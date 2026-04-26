@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -59,6 +59,7 @@ describe('runScan flag wiring', () => {
   let ttyOverridden = false;
   const originalCi = process.env['CI'];
   const originalTerm = process.env['TERM'];
+  const originalXdgConfigHome = process.env['XDG_CONFIG_HOME'];
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -79,6 +80,7 @@ describe('runScan flag wiring', () => {
   afterEach(() => {
     restoreTTY();
     restoreProgressEnv();
+    process.exitCode = undefined;
     vi.restoreAllMocks();
   });
 
@@ -144,6 +146,11 @@ describe('runScan flag wiring', () => {
       delete process.env['TERM'];
     } else {
       process.env['TERM'] = originalTerm;
+    }
+    if (originalXdgConfigHome === undefined) {
+      delete process.env['XDG_CONFIG_HOME'];
+    } else {
+      process.env['XDG_CONFIG_HOME'] = originalXdgConfigHome;
     }
   }
 
@@ -454,6 +461,58 @@ describe('runScan flag wiring', () => {
     expect(discoverAll).toHaveBeenCalledWith({
       agent: 'claude-code',
       onProgress: expect.any(Function),
+    });
+  });
+
+  it('reports per-agent counts for ignored and successfully scanned skills only', async () => {
+    await withTempDir(async (dir) => {
+      process.env['XDG_CONFIG_HOME'] = dir;
+      const ignoreDir = join(dir, 'skillaudit');
+      await mkdir(ignoreDir, { recursive: true });
+      await writeFile(
+        join(ignoreDir, 'ignore.yaml'),
+        '# skillaudit ignore list\nignored:\n  - ignored-hash  # ignored-skill\n',
+        'utf-8'
+      );
+
+      vi.mocked(discoverAll).mockResolvedValue([
+        makeSkill({
+          id: 'ignored',
+          agentId: 'claude-code',
+          name: 'ignored-skill',
+          path: '/tmp/ignored',
+          treeSha256: 'ignored-hash',
+        }),
+        makeSkill({
+          id: 'scanned',
+          agentId: 'claude-code',
+          name: 'scanned-skill',
+          path: '/tmp/scanned',
+          treeSha256: 'scanned-hash',
+        }),
+        makeSkill({
+          id: 'errored',
+          agentId: 'cursor',
+          name: 'errored-skill',
+          path: '/tmp/errored',
+          treeSha256: 'errored-hash',
+        }),
+      ]);
+      vi.mocked(runRules).mockImplementation(async (path) => {
+        if (path === '/tmp/errored') throw new Error('cannot scan');
+        return [];
+      });
+
+      await runScan({ json: true, offline: true });
+
+      const json = JSON.parse(stdoutChunks.join(''));
+      expect(json.agents).toEqual([{ id: 'claude-code', installed: true, skills_scanned: 2 }]);
+      expect(json.skills.map((skill: { name: string }) => skill.name).sort()).toEqual([
+        'ignored-skill',
+        'scanned-skill',
+      ]);
+      expect(stripAnsi(stderrChunks.join(''))).toContain('skipping "errored-skill"');
+      expect(process.exitCode).toBe(3);
     });
   });
 

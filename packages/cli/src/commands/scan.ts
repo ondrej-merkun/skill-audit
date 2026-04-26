@@ -243,11 +243,11 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   for (const outcome of scanOutcomes) {
     if (outcome.scannedSkill !== undefined) {
       scannedSkills.push(outcome.scannedSkill);
+      agentMap.set(outcome.skill.agentId, (agentMap.get(outcome.skill.agentId) ?? 0) + 1);
     } else {
       incompleteCount++;
       process.stderr.write(`[skillaudit] skipping "${outcome.skill.name}": ${outcome.error}\n`);
     }
-    agentMap.set(outcome.skill.agentId, (agentMap.get(outcome.skill.agentId) ?? 0) + 1);
   }
 
   progress.succeedScan(toScan.length);
@@ -277,11 +277,13 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
 
   const durationMs = Date.now() - start;
 
-  const agents: AgentInfo[] = [...agentMap.entries()].map(([id, count]) => ({
-    id,
-    installed: true,
-    skillsScanned: count,
-  }));
+  const agents: AgentInfo[] = [...agentMap.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([id, count]) => ({
+      id,
+      installed: true,
+      skillsScanned: count,
+    }));
 
   const sortedScannedSkills = sortScanSkills(scannedSkills);
   const activeSkills = sortedScannedSkills.filter((s) => !s.ignored);
