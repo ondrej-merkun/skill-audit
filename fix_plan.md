@@ -395,7 +395,7 @@ at the bottom and the loop will stop.
   - Add the field to discovery output paths where skills are constructed.
   - Add tests with controlled fixture timestamps where feasible.
 
-- [ ] **14** Populate the CLI scan enrichment column from realistic metadata.
+- [x] **14** Populate the CLI scan enrichment column from realistic metadata.
 
   The default human scan table can show an `ENRICHMENT` column that is always
   empty in real output, even when selected enrichment sources should be able to
