@@ -3,11 +3,27 @@ import { enrichDepsDev } from './deps-dev.js';
 import { enrichGitHub } from './github.js';
 import { enrichSkillsSh } from './skills-sh.js';
 
-export async function enrichSkill(skill: Skill): Promise<Enrichment> {
+export type EnrichmentSource = 'skillsSh' | 'github' | 'depsdev';
+
+const ALL_SOURCES: EnrichmentSource[] = ['skillsSh', 'github', 'depsdev'];
+
+export type EnrichmentOptions = {
+  sources?: EnrichmentSource[];
+};
+
+function hasSource(sources: EnrichmentSource[], source: EnrichmentSource): boolean {
+  return sources.includes(source);
+}
+
+export async function enrichSkill(
+  skill: Skill,
+  options: EnrichmentOptions = {}
+): Promise<Enrichment> {
+  const sources = options.sources ?? ALL_SOURCES;
   const [skillsSh, github, depsdev] = await Promise.all([
-    enrichSkillsSh(skill).catch(() => null),
-    enrichGitHub(skill).catch(() => null),
-    enrichDepsDev(skill).catch(() => null),
+    hasSource(sources, 'skillsSh') ? enrichSkillsSh(skill).catch(() => null) : null,
+    hasSource(sources, 'github') ? enrichGitHub(skill).catch(() => null) : null,
+    hasSource(sources, 'depsdev') ? enrichDepsDev(skill).catch(() => null) : null,
   ]);
 
   const enrichment: Enrichment = {};
@@ -17,6 +33,9 @@ export async function enrichSkill(skill: Skill): Promise<Enrichment> {
   return enrichment;
 }
 
-export async function enrichAll(skills: Skill[]): Promise<Enrichment[]> {
-  return Promise.all(skills.map((s) => enrichSkill(s)));
+export async function enrichAll(
+  skills: Skill[],
+  options: EnrichmentOptions = {}
+): Promise<Enrichment[]> {
+  return Promise.all(skills.map((s) => enrichSkill(s, options)));
 }

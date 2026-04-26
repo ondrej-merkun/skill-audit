@@ -740,6 +740,30 @@ describe('renderHtml', () => {
     expect(html.indexOf('fail-score-40')).toBeLessThan(html.indexOf('review-score-50'));
     expect(html.indexOf('review-score-50')).toBeLessThan(html.indexOf('pass-clean'));
   });
+
+  it('renders all enrichment sources in the detail panel script', async () => {
+    const { renderHtml } = await import('../packages/cli/src/output/html.js');
+    const html = renderHtml(
+      makeScanResult({
+        skills: [
+          makeSkill({
+            enrichment: {
+              skillsSh: { gen: 'Low', socketAlerts: 0, snyk: 'Low' },
+              github: { stars: 12, ageDays: 34, contributors: 2 },
+              depsdev: { scorecardScore: 8.5, osvAdvisories: 1 },
+            },
+          }),
+        ],
+      })
+    );
+
+    expect(html).toContain('Enrichment');
+    expect(html).toContain('skills.sh');
+    expect(html).toContain('GitHub');
+    expect(html).toContain('deps.dev');
+    expect(html).toContain('stars');
+    expect(html).toContain('OSV advisories');
+  });
 });
 
 describe('renderTable', () => {

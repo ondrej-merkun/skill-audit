@@ -173,7 +173,7 @@ export async function runExplain(
   if (!options.offline) {
     const enrichSpinner = ora('Enriching…').start();
     try {
-      enrichment = await enrichSkill(target);
+      enrichment = await enrichSkill(target, { sources: ['skillsSh', 'github', 'depsdev'] });
       enrichSpinner.succeed('Enrichment complete');
     } catch {
       enrichSpinner.warn('Enrichment failed (continuing)');

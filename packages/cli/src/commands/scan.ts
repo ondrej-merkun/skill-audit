@@ -4,6 +4,7 @@ import ora from 'ora';
 import { loadIgnoreList } from '../allowlist/ignore.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
 import { enrichAll } from '../enrich/index.js';
+import type { EnrichmentSource } from '../enrich/index.js';
 import { renderHtml } from '../output/html.js';
 import { renderJson } from '../output/json.js';
 import { sortScanSkills } from '../output/sort.js';
@@ -57,6 +58,14 @@ const DEFAULT_OPTIONS: ScanOptions = {
 const DEEP_MODE_MESSAGE =
   'Deep mode coming soon. LLM-assisted semantic analysis will be opt-in and local via Ollama.';
 const SCAN_CONCURRENCY = 8;
+
+export function selectScanEnrichmentSources(
+  options: Pick<ScanOptions, 'json' | 'summary' | 'html'>
+): EnrichmentSource[] {
+  if (options.summary) return [];
+  if (options.json || options.html !== undefined) return ['skillsSh', 'github', 'depsdev'];
+  return ['skillsSh', 'depsdev'];
+}
 
 function renderScanPayload(
   result: ScanResult,
@@ -204,10 +213,11 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
 
   scanSpinner.succeed('Scan complete');
 
-  if (!options.offline && scannedSkills.length > 0) {
+  const enrichmentSources = selectScanEnrichmentSources(options);
+  if (!options.offline && scannedSkills.length > 0 && enrichmentSources.length > 0) {
     const enrichSpinner = ora('Enriching…').start();
     try {
-      const enrichments = await enrichAll(scannedSkills);
+      const enrichments = await enrichAll(scannedSkills, { sources: enrichmentSources });
       for (let i = 0; i < scannedSkills.length; i++) {
         const s = scannedSkills[i];
         const e = enrichments[i];

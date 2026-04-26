@@ -134,6 +134,10 @@ td{padding:10px 12px;vertical-align:middle}
 .finding pre{background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:8px;font-size:12px;overflow-x:auto;margin-top:6px}
 .finding-msg{margin-top:4px;font-size:13px}
 .finding-fix{margin-top:6px;font-size:12px;color:#6b7280}
+.enrichment{border-top:1px solid #e5e7eb;margin-top:14px;padding-top:14px}
+.enrichment h3{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;margin-bottom:8px}
+.enrichment-row{font-size:13px;margin-bottom:6px;color:#374151}
+.enrichment-source{display:inline-block;min-width:72px;color:#6b7280}
 #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.15);z-index:199}
 #overlay.visible{display:block}
 `;
@@ -201,6 +205,42 @@ function makeFindingEl(f){
   return wrap;
 }
 
+function makeEnrichmentEl(enrichment){
+  var e = enrichment || {};
+  if(!e.skillsSh && !e.github && !e.depsdev) return null;
+
+  var wrap = document.createElement('div');
+  wrap.className = 'enrichment';
+
+  var title = document.createElement('h3');
+  title.textContent = 'Enrichment';
+  wrap.appendChild(title);
+
+  function addRow(source, text){
+    var row = document.createElement('div');
+    row.className = 'enrichment-row';
+    var label = document.createElement('span');
+    label.className = 'enrichment-source';
+    label.textContent = source;
+    row.appendChild(label);
+    row.appendChild(document.createTextNode(text));
+    wrap.appendChild(row);
+  }
+
+  if(e.skillsSh){
+    addRow('skills.sh', 'Gen=' + e.skillsSh.gen + ' · Socket=' + e.skillsSh.socketAlerts + ' · Snyk=' + e.skillsSh.snyk);
+  }
+  if(e.github){
+    addRow('GitHub', e.github.stars + ' stars · ' + e.github.ageDays + ' days old · ' + e.github.contributors + ' contributors');
+  }
+  if(e.depsdev){
+    var score = e.depsdev.scorecardScore === null ? 'scorecard unavailable' : 'scorecard ' + e.depsdev.scorecardScore;
+    addRow('deps.dev', e.depsdev.osvAdvisories + ' OSV advisories · ' + score);
+  }
+
+  return wrap;
+}
+
 function openPanel(idx){
   var sk = skills[idx];
   if(!sk) return;
@@ -230,6 +270,9 @@ function openPanel(idx){
     none.textContent = 'No findings.';
     findingsEl.appendChild(none);
   }
+
+  var enrichmentEl = makeEnrichmentEl(sk.enrichment);
+  if(enrichmentEl) findingsEl.appendChild(enrichmentEl);
 
   document.getElementById('panel').classList.add('open');
   document.getElementById('overlay').classList.add('visible');

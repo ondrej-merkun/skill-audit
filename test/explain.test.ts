@@ -227,6 +227,9 @@ describe('runExplain', () => {
     const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('Enrichment');
     expect(out).toContain('3 stars');
+    expect(enrichSkill).toHaveBeenCalledWith(expect.any(Object), {
+      sources: ['skillsSh', 'github', 'depsdev'],
+    });
   });
 
   it('skips enrichment when --offline is set', async () => {

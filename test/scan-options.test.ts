@@ -16,7 +16,12 @@ vi.mock('../packages/cli/src/rules/engine.js', () => ({
   runRules: vi.fn(),
 }));
 
+vi.mock('../packages/cli/src/enrich/index.js', () => ({
+  enrichAll: vi.fn(async (skills: Skill[]) => skills.map(() => ({}))),
+}));
+
 import { discoverAll } from '../packages/cli/src/discovery/index.js';
+import { enrichAll } from '../packages/cli/src/enrich/index.js';
 import { runRules } from '../packages/cli/src/rules/engine.js';
 import { runScan } from '../packages/cli/src/commands/scan.js';
 
@@ -60,6 +65,7 @@ describe('runScan flag wiring', () => {
       return true;
     });
     vi.mocked(runRules).mockResolvedValue([]);
+    vi.mocked(enrichAll).mockImplementation(async (skills) => skills.map(() => ({})));
   });
 
   afterEach(() => {
@@ -200,6 +206,7 @@ describe('runScan flag wiring', () => {
     const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('skills');
     expect(out).toMatch(/PASS|REVIEW|FAIL/);
+    expect(enrichAll).not.toHaveBeenCalled();
   });
 
   it('--json takes precedence over --summary', async () => {
@@ -207,6 +214,39 @@ describe('runScan flag wiring', () => {
     await runScan({ json: true, summary: true });
     const out = stdoutChunks.join('');
     expect(() => JSON.parse(out)).not.toThrow();
+  });
+
+  it('default scan enriches only sources shown in the table', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+
+    await runScan({});
+
+    expect(enrichAll).toHaveBeenCalledWith(expect.any(Array), {
+      sources: ['skillsSh', 'depsdev'],
+    });
+  });
+
+  it('--json requests all enrichment sources for machine output', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+
+    await runScan({ json: true });
+
+    expect(enrichAll).toHaveBeenCalledWith(expect.any(Array), {
+      sources: ['skillsSh', 'github', 'depsdev'],
+    });
+  });
+
+  it('--html requests all enrichment sources displayed in the report panel', async () => {
+    await withTempDir(async (dir) => {
+      vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+      const html = join(dir, 'report.html');
+
+      await runScan({ html });
+
+      expect(enrichAll).toHaveBeenCalledWith(expect.any(Array), {
+        sources: ['skillsSh', 'github', 'depsdev'],
+      });
+    });
   });
 
   it('--json --output writes JSON to a file and suppresses stdout payload', async () => {

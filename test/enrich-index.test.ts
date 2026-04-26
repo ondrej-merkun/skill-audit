@@ -84,6 +84,21 @@ describe('enrichSkill', () => {
     expect(result.github).toBeUndefined();
     expect(result.depsdev).toEqual({ scorecardScore: null, osvAdvisories: 2 });
   });
+
+  it('should call only the requested sources', async () => {
+    mockEnrichSkillsSh.mockResolvedValue({ gen: 'low', socketAlerts: 0, snyk: 'low' });
+    mockEnrichGitHub.mockResolvedValue({ stars: 10, ageDays: 30, contributors: 1 });
+    mockEnrichDepsDev.mockResolvedValue({ scorecardScore: null, osvAdvisories: 0 });
+
+    const result = await enrichSkill(makeSkill(), { sources: ['skillsSh', 'depsdev'] });
+
+    expect(mockEnrichSkillsSh).toHaveBeenCalledOnce();
+    expect(mockEnrichGitHub).not.toHaveBeenCalled();
+    expect(mockEnrichDepsDev).toHaveBeenCalledOnce();
+    expect(result.skillsSh).toEqual({ gen: 'low', socketAlerts: 0, snyk: 'low' });
+    expect(result.github).toBeUndefined();
+    expect(result.depsdev).toEqual({ scorecardScore: null, osvAdvisories: 0 });
+  });
 });
 
 describe('enrichAll', () => {
@@ -114,7 +129,7 @@ describe('enrichAll', () => {
     mockEnrichDepsDev.mockResolvedValue(null);
 
     const skills = [makeSkill({ id: 'a' }), makeSkill({ id: 'b' }), makeSkill({ id: 'c' })];
-    await enrichAll(skills);
+    await enrichAll(skills, { sources: ['skillsSh'] });
 
     expect(callOrder).toHaveLength(3);
     expect(callOrder).toContain('skillsSh:a');
