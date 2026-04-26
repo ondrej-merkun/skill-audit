@@ -133,8 +133,8 @@ export const PI_HIDDEN_HTML_COMMENT: Rule = {
 // CSS invisible-text tricks in markdown/HTML
 // ---------------------------------------------------------------------------
 const whiteOnWhiteSpanPattern =
-  /<(?:span|div|p)[^>]*style\s*=\s*["'][^"']*(?:color\s*:\s*(?:white|#fff{1,3}|rgba?\s*\(\s*255\s*,\s*255\s*,\s*255)|font-size\s*:\s*0(?:px|pt|em|rem|vw)?;?\s*|visibility\s*:\s*hidden|display\s*:\s*none|opacity\s*:\s*0)[^"']*["'][^>]*>/i;
-const fontSizeZeroPattern = /font-size\s*:\s*0\s*(?:px|pt|em|rem|vw)?\s*;/i;
+  /<(?:span|div|p)[^>]*style\s*=\s*["'][^"']*(?:color\s*:\s*(?:white|#fff{1,3}|rgba?\s*\(\s*255\s*,\s*255\s*,\s*255)|font-size\s*:\s*0(?:px|pt|em|rem|vw)?(?![\d.a-z%]);?\s*|visibility\s*:\s*hidden|display\s*:\s*none|opacity\s*:\s*0(?![\d.]))[^"']*["'][^>]*>/i;
+const fontSizeZeroPattern = /font-size\s*:\s*0\s*(?:px|pt|em|rem|vw)?(?![\d.a-z%])\s*;?/i;
 const colorWhiteOnWhitePattern =
   /style\s*=\s*["'][^"']*color\s*:\s*(?:white|#fff{1,3})[^"']*background(?:-color)?\s*:\s*(?:white|#fff{1,3})/i;
 
