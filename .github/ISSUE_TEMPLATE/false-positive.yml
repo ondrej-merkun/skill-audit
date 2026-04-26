@@ -1,0 +1,58 @@
+name: False positive
+description: Report a noisy finding for rule tuning.
+title: "False positive: "
+labels:
+  - false-positive
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include real secrets. Redact tokens, private paths, and proprietary skill content.
+  - type: input
+    id: version
+    attributes:
+      label: skillaudit version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command run
+      placeholder: "skillaudit scan --json"
+    validations:
+      required: true
+  - type: input
+    id: rule-id
+    attributes:
+      label: Rule ID
+      description: Use the exact rule ID shown in the finding.
+      placeholder: "PI-OVERRIDE"
+    validations:
+      required: true
+  - type: textarea
+    id: finding-output
+    attributes:
+      label: Redacted finding output
+      description: Paste the smallest relevant finding snippet with secrets and private paths redacted.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: why-benign
+    attributes:
+      label: Why is this benign?
+      description: Explain why the flagged content is expected, documentation-only, or otherwise safe.
+    validations:
+      required: true
+  - type: dropdown
+    id: file-kind
+    attributes:
+      label: What kind of file was flagged?
+      options:
+        - Documentation
+        - Test fixture
+        - Runtime code
+        - Other
+    validations:
+      required: true
