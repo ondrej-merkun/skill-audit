@@ -114,7 +114,7 @@ at the bottom and the loop will stop.
   - Verify the built `node packages/cli/dist/index.js scan` output no longer
     shows a smaller unique total beside larger unlabeled severity totals.
 
-- [ ] **5** Derive skill names correctly for nested plugin version
+- [x] **5** Derive skill names correctly for nested plugin version
   directories.
 
   In plugin cache layouts such as
