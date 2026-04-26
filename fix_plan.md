@@ -748,7 +748,7 @@ at the bottom and the loop will stop.
   - Use current rule IDs and current output field names.
   - Do not include live-looking secrets; use clearly synthetic fixture values.
 
-- [ ] **33** Add a README comparison table for adjacent tools.
+- [x] **33** Add a README comparison table for adjacent tools.
 
   Add a neutral comparison table that explains where this CLI fits beside
   adjacent scanners. Focus on implemented behavior such as local execution,
