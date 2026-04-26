@@ -164,6 +164,33 @@ describe('runList', () => {
     ]);
   });
 
+  it('sorts JSON output by path as the final deterministic tie-breaker', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({
+        id: 'project-z-path',
+        agentId: 'claude-code',
+        name: 'same-name',
+        path: '/repo/.claude/skills/z-same-name',
+        scope: 'project',
+      }),
+      makeSkill({
+        id: 'project-a-path',
+        agentId: 'claude-code',
+        name: 'same-name',
+        path: '/repo/.claude/skills/a-same-name',
+        scope: 'project',
+      }),
+    ]);
+
+    await runList({ json: true });
+    const arr = JSON.parse(stdoutChunks.join(''));
+
+    expect(arr.map((skill: { path: string }) => skill.path)).toEqual([
+      '/repo/.claude/skills/a-same-name',
+      '/repo/.claude/skills/z-same-name',
+    ]);
+  });
+
   it('--json output includes path and format fields', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     await runList({ json: true });
