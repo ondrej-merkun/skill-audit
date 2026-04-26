@@ -14,6 +14,14 @@ program
   .description('Scan AI agent skills for prompt injection and malicious code')
   .version('0.1.0');
 
+program.action(() => {
+  runScan({}).catch((err: unknown) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`[skill-audit] fatal: ${msg}\n`);
+    process.exit(2);
+  });
+});
+
 program
   .command('scan')
   .description('Scan installed agent skills for security issues')

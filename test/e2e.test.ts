@@ -426,6 +426,25 @@ describe('e2e: scan flags', () => {
     expect(stdout).not.toContain('coming soon');
   });
 
+  it('bare invocation runs the default scan once', async () => {
+    await cp(join(BENIGN_DIR, 'date-parser'), join(skillsDir, 'date-parser'), { recursive: true });
+
+    const env = { HOME: tempHome, USERPROFILE: tempHome, SKILLAUDIT_CWD: tempCwd };
+    const bareRun = await runCli([], env);
+    const explicitRun = await runCli(['scan'], env);
+    const bareOut = stripAnsi(bareRun.stdout);
+    const explicitOut = stripAnsi(explicitRun.stdout);
+
+    expect(bareRun.code).toBe(0);
+    expect(explicitRun.code).toBe(0);
+    for (const out of [bareOut, explicitOut]) {
+      expect(out).toContain('skill-audit  scanned 1 skill');
+      expect(out).toContain('date-parser');
+      expect(out).toContain('Skills scanned............ 1');
+      expect(out.match(/Skills scanned/g)).toHaveLength(1);
+    }
+  });
+
   it('--json outputs valid JSON for a benign skill', async () => {
     // Put one benign skill so the CLI has something to scan
     await cp(join(BENIGN_DIR, 'date-parser'), join(skillsDir, 'date-parser'), { recursive: true });
