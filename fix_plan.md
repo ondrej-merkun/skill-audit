@@ -824,7 +824,7 @@ at the bottom and the loop will stop.
   - Document any required npm-side trusted publishing settings in
     `docs/RELEASE_CHECKLIST.md` once that file exists.
 
-- [ ] **41** Add `docs/THREAT_MODEL.md`.
+- [x] **41** Add `docs/THREAT_MODEL.md`.
 
   Write a focused threat model for the CLI, covering what skillaudit scans,
   what it intentionally does not trust, what optional enrichment can contact,
