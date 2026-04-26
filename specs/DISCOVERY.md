@@ -105,15 +105,6 @@ Report each as a `Skill` with `agentId: "cross-agent"` and
 - `.gemini/commands/`
 - `GEMINI.md` is handled by the cross-agent sweep.
 
-## Deferred to v0.2 (do not implement now)
-
-- Claude Desktop MCP config (the three-OS JSON at
-  `~/Library/Application Support/Claude/claude_desktop_config.json`
-  etc.) — this is the headline differentiator vs Snyk for v0.2.
-- Continue.dev
-- Windsurf memories/global_rules.md (caught by AGENTS.md sweep
-  anyway via `.windsurfrules` — the full Windsurf scheme waits)
-- Cline VS Code globalStorage
 
 ## Disambiguation rules
 

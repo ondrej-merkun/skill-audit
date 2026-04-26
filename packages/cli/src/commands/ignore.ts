@@ -40,5 +40,5 @@ export async function runIgnore(skillNameOrId: string): Promise<void> {
   await appendToIgnoreList(match.treeSha256, match.name);
   process.stdout.write(chalk.green(`✓ "${match.name}" added to ignore list.\n`));
   process.stdout.write(chalk.dim(`  treeSha256: ${match.treeSha256}\n`));
-  process.stdout.write(chalk.dim('  Future scans will skip this skill.\n'));
+  process.stdout.write(chalk.dim('  Subsequent scans will skip this skill.\n'));
 }

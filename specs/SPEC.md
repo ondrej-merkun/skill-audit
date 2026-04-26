@@ -1,6 +1,6 @@
 # Skillaudit: a weekend plan for a local-first agent-skill scanner
 
-**Bottom line up front.** Build it, ship it this weekend, and name it **`skillaudit`** (or `skill-audit` on npm). The market has a real gap: Snyk's `agent-scan` is the only production-grade tool that auto-discovers skills across multiple agents in one command, but it requires a cloud token, transmits skill contents to Snyk, skips Claude Desktop skills, and is closed to contributions. Every other existing tool handles one skill or one directory at a time. A local-first, zero-auth, multi-agent CLI with a polished TUI and a credible 36%-of-skills-are-vulnerable launch hook (Snyk ToxicSkills, Feb 2026) is a genuinely open slot. The full spec below is ready to code from.
+**Bottom line up front.** Build it, ship it this weekend, and name it **`skillaudit`** (or `skill-audit` on npm). The market has a real gap: Snyk's `agent-scan` is the only production-grade tool that auto-discovers skills across multiple agents in one command, but it requires a cloud token, transmits skill contents to Snyk, and is closed to contributions. Every other existing tool handles one skill or one directory at a time. A local-first, zero-auth, multi-agent CLI with a polished TUI and a credible 36%-of-skills-are-vulnerable launch hook (Snyk ToxicSkills, Feb 2026) is a genuinely open slot. The full spec below is ready to code from.
 
 ---
 
@@ -14,7 +14,7 @@ Research surfaced ~20 tools clustered in four archetypes. The **only tool that m
 
 | Tool | Form factor | Multi-agent auto-discovery? | Scans skills or config? | Local vs cloud | Maintenance |
 |---|---|---|---|---|---|
-| **Snyk `agent-scan` / `mcp-scan`** | Python CLI + MCP + daemon | ✅ Claude Code, Cursor, Windsurf, VS Code, Gemini CLI, Amp, Codex, Amazon Q, Kiro, Antigravity, OpenClaw (but **NOT Claude Desktop**) | Both MCP + skills | **Hybrid cloud** — requires `SNYK_TOKEN`, transmits skill contents | 2.2k⭐, v0.4.17 on Apr 22 2026, 69 releases. Closed to external contributions. |
+| **Snyk `agent-scan` / `mcp-scan`** | Python CLI + MCP + daemon | ✅ Claude Code, Cursor, Windsurf, VS Code, Gemini CLI, Amp, Codex, Amazon Q, Kiro, Antigravity, OpenClaw | Both MCP + skills | **Hybrid cloud** — requires `SNYK_TOKEN`, transmits skill contents | 2.2k⭐, v0.4.17 on Apr 22 2026, 69 releases. Closed to external contributions. |
 | **Cisco `skill-scanner`** | Python CLI | ❌ (`scan-all --recursive` on a path) | Skill content | Hybrid (LLM + VT + AI Defense optional) | 1.4k⭐, v2.0.3, actively maintained |
 | **HarmonicSecurity `claudit-sec`** | Bash/PS1 | Claude Desktop + Claude Code only | Config (MCP, extensions, plugins) | Local only | Recent, Harmonic Security-backed |
 | **fubak `ferret-scan`** | Node.js CLI | Scans current directory (many agent configs) | Skill + CLI configs | Local | Active, npm-published |
@@ -27,9 +27,9 @@ Research surfaced ~20 tools clustered in four archetypes. The **only tool that m
 
 ### The critical positioning gap
 
-**No existing tool combines all five of these:** (1) scans every installed agent's skills/plugins/MCP configs in one command, (2) runs fully local by default with no cloud token, (3) includes Claude Desktop skills, (4) ships as `npx`-installable with a polished TUI, (5) is open-source and welcomes community rules.
+**No existing tool combines these:** (1) scans installed agent skills/plugins/MCP configs across common CLI agents in one command, (2) runs fully local by default with no cloud token, (3) ships as `npx`-installable with a polished TUI, (4) is open-source and welcomes community rules.
 
-Snyk covers (1) but fails (2), (3), and (5). Cisco has the richest detection engine but fails (1). Ferret covers `pwd` but not global install roots. HarmonicSecurity is Anthropic-only. Every other tool requires manual per-skill invocation. **That's the slot.**
+Snyk covers (1) but fails (2) and (4). Cisco has the richest detection engine but fails (1). Ferret covers `pwd` but not global install roots. HarmonicSecurity is Anthropic-only. Every other tool requires manual per-skill invocation. **That's the slot.**
 
 ### What cloud-enrichment APIs are actually usable
 
@@ -86,7 +86,7 @@ Backup picks if `skillaudit` is taken at publish time: `skillprobe`, `agentscan`
 **"Scan every AI agent skill on your machine for prompt injection and malicious code. Local, fast, zero-config."**
 
 ### Elevator pitch (README lede)
-> Agent skills are the new npm. Snyk's ToxicSkills study (Feb 2026) found **36% of agent skills ship with a security flaw**, 13% with a critical one. Most existing scanners demand a cloud account, scan one skill at a time, or only cover Claude. `skillaudit` runs locally in two seconds, discovers every skill across Claude Code, Cursor, Codex, Gemini CLI, Copilot, Windsurf, Cline, and Continue.dev, and hands you a colorized verdict table. `npx skillaudit` is the whole install.
+> Agent skills are the new npm. Snyk's ToxicSkills study (Feb 2026) found **36% of agent skills ship with a security flaw**, 13% with a critical one. Most existing scanners demand a cloud account, scan one skill at a time, or only cover Claude. `skillaudit` runs locally in two seconds, discovers skills across Claude Code, Cursor, Codex, Gemini CLI, Copilot, and cross-agent project instruction files, and hands you a colorized verdict table. `npx skillaudit` is the whole install.
 
 ### Target audience
 - **Primary:** individual developers who've pasted 5–50 skills into `~/.claude/skills/` and `~/.codex/` and have no idea what any of them do.
@@ -102,7 +102,7 @@ Justification, in order of weight:
 3. Excellent TUI ecosystem (`ink`, `chalk`, `cli-table3`, `listr2`, `ora`) in a single runtime.
 4. Single `package.json` publish; no cross-compiled binaries.
 
-Tradeoffs: slightly slower startup than Go/Rust; not an issue at MVP scale (hundreds of skills, not thousands of files). If benchmarks become a selling point in v0.3, port the hot regex loop to a Rust native module or switch to `bun` (which would also shave ~200ms cold-start). **Do not pick Python** — it splits the install story (pipx vs pip) and loses half the "easy install" advantage.
+Tradeoffs: slightly slower startup than Go/Rust; not an issue at MVP scale (hundreds of skills, not thousands of files). **Do not pick Python** — it splits the install story (pipx vs pip) and loses half the "easy install" advantage.
 
 ### Build and tooling
 - **Package manager:** `pnpm` (faster, cleaner lockfile).
@@ -121,9 +121,7 @@ Tradeoffs: slightly slower startup than Go/Rust; not an issue at MVP scale (hund
 
 ### Distribution
 1. **Primary:** `npm publish` → `npx skillaudit` and `pnpm dlx skillaudit` work instantly.
-2. **Secondary:** `brew install skillaudit` via a Homebrew tap (github.com/you/homebrew-skillaudit) wrapping the npm tarball. Low effort, big credibility signal.
-3. **Tertiary (v0.2):** single static binary via `bun build --compile` — only if there's demand. Skip for MVP.
-4. **GitHub Action wrapper:** `uses: you/skillaudit-action@v1` — thin composite action, highest-leverage distribution per the gitleaks playbook.
+2. **GitHub Action wrapper:** `uses: you/skillaudit-action@v1` — thin composite action, highest-leverage distribution per the gitleaks playbook.
 
 ### Directory layout
 ```
@@ -224,14 +222,12 @@ Adding a new agent = adding one file and registering in `discovery/index.ts`. No
 | Agent | User-global paths | Project-local | Manifest |
 |---|---|---|---|
 | **Claude Code** | `~/.claude/skills/*/SKILL.md`; `~/.claude/plugins/<marketplace>/<plugin>/skills/<skill>/SKILL.md` **(recursive — walk to any depth where a SKILL.md is present)**; `~/.claude/plugins/<marketplace>/<plugin>/{agents,commands}/**`; `~/.claude/commands/*.md`; `~/.claude/agents/*.md`; MCP in `~/.claude.json` (inc. `projects.<abs-path>.mcpServers`) | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.mcp.json`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` | `SKILL.md` (YAML+MD), `plugin.json`, `.mcp.json` |
-| **Claude Desktop** | macOS `~/Library/Application Support/Claude/claude_desktop_config.json`; Windows `%APPDATA%\Claude\claude_desktop_config.json`; Linux `~/.config/claude-desktop/claude_desktop_config.json` | — | JSON (`mcpServers`) |
 | **OpenAI Codex** | `~/.codex/AGENTS.md`, `~/.codex/AGENTS.override.md`, `~/.codex/config.toml`, `~/.codex/skills/`, `~/.codex/plugins/`, `~/.codex/prompts/`. `$CODEX_HOME` override. | `AGENTS.md` (walked up), `.codex/config.toml` (if trusted) | `AGENTS.md`, `SKILL.md`, TOML `[mcp_servers.*]` |
 | **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, legacy `.cursorrules` | `.mdc`, JSON |
 | **Gemini CLI** | `~/.gemini/extensions/*/gemini-extension.json`, `~/.gemini/commands/*.toml`, `~/.gemini/agents/`, `~/.gemini/settings.json` | `.gemini/extensions/`, `.gemini/commands/`, `GEMINI.md` | `gemini-extension.json` (JSON), `.toml` |
 | **GitHub Copilot** | `~/.copilot/skills/*/SKILL.md`, `~/.claude/skills/`, `~/.agents/skills/` | `.github/skills/*/SKILL.md`, `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md` | `SKILL.md`, plain `.md` |
 | **Windsurf** | `~/.codeium/windsurf/memories/global_rules.md` | `.windsurf/rules/*.md`, legacy `.windsurfrules`, auto-reads `AGENTS.md` | Plain `.md` |
 | **Cline** | VS Code `globalStorage/saoudrizwan.claude-dev/` | `.clinerules/*.md`, legacy `.clinerules`, cross-reads `.cursorrules`, `AGENTS.md`, `CLAUDE.md` | `.md` w/ YAML FM |
-| **Continue.dev** | `~/.continue/{rules,prompts,mcpServers,assistants}/*`, `~/.continue/config.yaml` | `.continue/*`, `.continue/config.yaml` | YAML |
 | **Cross-agent (AGENTS.md sweep)** | — | `AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `CONVENTIONS.md` (catches 7+ agents in one pass) | plain `.md` |
 
 **Discovery depth rule.** When a path contains "plugins" or
@@ -253,8 +249,6 @@ metadata, then walk only those active payload roots.
 4. Gemini CLI (extensions, commands, agents, settings MCP)
 5. Cross-cutting AGENTS.md + `.mcp.json` sweep (catches Copilot, Windsurf, Cline, Zed, Amp, Factory)
 6. GitHub Copilot (`.github/skills/`, `.github/copilot-instructions.md`)
-
-v0.2 adds: Continue.dev and Claude Desktop MCP.
 
 ### Disambiguation
 When a skill appears at both user scope and project scope, list both rows in the table and mark `scope` column unless the content hash proves it is the same installed payload. Dedupe non-empty `treeSha256` values in the discovery registry (same tree hash → identical content, report once with duplicate paths in `alsoInstalledAt`). Do not dedupe empty hashes used for synthetic config-derived entries. When a skill appears in a project's `.claude/` AND is symlinked from `~/.claude/`, follow the symlink and mark `link`.
@@ -513,7 +507,6 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 | `--json` | Machine-readable per the schema below |
 | `--html <file>` | Standalone HTML report |
 | `--summary` | 3-line output for CI logs: `47 skills · 8 compromised · FAIL` |
-| `--sarif` | GitHub Code Scanning (v0.2) |
 
 ### JSON schema (contract — stable from v0.1)
 ```json
@@ -554,15 +547,12 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 | `skillaudit` / `skillaudit scan` | Default — discover and scan all agents, TUI output |
 | `skillaudit scan --agent claude-code` | Restrict to one agent |
 | `skillaudit scan <path>` | Scan a single skill directory |
-| `skillaudit scan --json` / `--html <file>` / `--summary` / `--sarif` | Output formats |
+| `skillaudit scan --json` / `--html <file>` / `--summary` | Output formats |
 | `skillaudit scan --offline` | Skip all enrichment |
 | `skillaudit scan --strict` | REVIEW becomes FAIL; exit non-zero |
-| `skillaudit scan --deep` | **Stub for v0.2** — errors today with: "Deep mode coming soon. LLM-assisted semantic analysis will be opt-in and local via Ollama." |
 | `skillaudit list` | List discovered skills without scanning (fast inventory) |
 | `skillaudit explain <skill-name-or-id>` | Detail view (mockup above) |
 | `skillaudit ignore <skill-name>` | Append skill's tree sha256 to `~/.config/skillaudit/ignore.yaml` |
-| `skillaudit watch` | **v0.3** — re-scan on file changes in all discovered skill dirs |
-| `skillaudit update-rules` | **v0.2** — pulls rules from GitHub repo; MVP has rules baked into the bundle |
 
 **Exit codes** (CI-friendly):
 - `0` — all PASS
@@ -570,7 +560,7 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 - `2` — tool error
 - `3` — scan incomplete (offline + required enrichment)
 
-**Interactivity.** Zero prompts at MVP. No "Press y to continue". No auth flow. Running the binary with no args performs a full scan. Any destructive action (`ignore`, future `quarantine`) requires an explicit flag. The single most-important UX rule: **a first-time user can type the install command, hit enter, and be reading the result in under 5 seconds.**
+**Interactivity.** Zero prompts at MVP. No "Press y to continue". No auth flow. Running the binary with no args performs a full scan. The single most-important UX rule: **a first-time user can type the install command, hit enter, and be reading the result in under 5 seconds.**
 
 ## 8. Claude Code skill wrapper
 
@@ -670,13 +660,13 @@ The **17% personal stat** is the viral hook. People screenshot their own result.
 
 ### Keeping scope tight
 The "now I own a product" trap is real. Pre-commit these to yourself:
-1. **No roadmap section** in the README beyond v0.2 bullets. Don't promise.
+1. **Do not list unsupported features** in the README. Don't promise.
 2. **Issues triaged in weekly batches, not daily.** Auto-responder: "Thanks — I batch-review Sundays."
 3. **No contributor CLA. Apache-2.0.** Zero process friction for PRs.
 4. **No telemetry, ever.** Say it explicitly in the README. This is a feature.
 5. **No landing page V1.** The GitHub README + a `skillaudit.dev` redirect is enough for the first month.
 
-## 10. MVP scope and stretch goals
+## 10. MVP scope
 
 ### In scope (weekend build, 2-3 days focused)
 
@@ -703,40 +693,14 @@ The "now I own a product" trap is real. Pre-commit these to yourself:
 - README (~250 lines) with all sections above.
 - Claude Code skill wrapper (`packages/skill/SKILL.md`).
 - GitHub Action composite (`action.yml`).
-- `npm publish` + create Homebrew tap.
+- `npm publish`.
 - Schedule HN post for Tuesday 9am PT.
 - Write the author-comment + companion blog post.
 
 ### Out of scope (do NOT build)
-- LLM-assisted semantic analysis (reserve `--deep` for v0.2)
-- Interactive quarantine / auto-fix
-- Watch mode / filesystem daemon
-- Hosted web dashboard or user accounts
-- MCP server interface (Snyk did this; don't recreate it)
-- SARIF output (commit for v0.2)
-- Windows first-class testing (best-effort; fix reported issues post-launch)
-- Claude Desktop MCP scanning (worth calling out as *v0.2 plan* — differentiator vs Snyk)
-- Custom rule format — use Semgrep YAML verbatim (no NIH)
-- Any plugin autoloading from the internet
-
-### Stretch — v0.2 (week 2-3)
-- Claude Desktop MCP discovery (macOS/Windows/Linux) — headline differentiator vs Snyk.
-- Semgrep AST rules bundled by default (ship Python/JS AST coverage).
-- `--deep` mode: optional local LLM via Ollama for `PI-METADATA-MISMATCH` judgement; never cloud.
-- `update-rules` command pulling from `skillaudit/rules` repo.
-- SARIF output for GitHub Code Scanning.
-- Gemini CLI + Continue.dev + Codex full discovery.
-
-### Stretch — v0.3
-- `watch` mode.
-- Rule authoring SDK (`skillaudit rule test <file>`).
-- VS Code extension surfacing findings inline in open skill files.
-- Community rules repo.
-
-### Signals for continued investment
-- **Green:** >500 GitHub stars in week 1, >1000 npm downloads/week sustained at week 4, an inbound contribution from a security-ecosystem name, Anthropic/OpenAI linking to it.
-- **Yellow:** Steady 100-300/week downloads, handful of PRs — keep maintaining but don't expand scope.
-- **Red:** No traction in weeks 2-3, Anthropic ships native scanning, or Snyk open-sources agent-scan with a local mode. If red: leave v0.1 as a "still useful local-first alternative" and stop investing. That's fine — the goal was a weekend project, not a product.
+This spec describes the supported CLI surface only. Do not add commands, output
+formats, discovery families, hosted services, auto-fix flows, remote rule loading,
+custom rule formats, or plugin autoloading from the internet without a new spec.
 
 ## 11. Risk assessment
 
@@ -750,7 +714,7 @@ Highest-probability failure mode. The `PI-*` rules trigger on security-education
 
 ### Maintenance burden
 Mitigations:
-1. Ship rules **in the npm bundle, not from a remote repo.** No `skillaudit update-rules` requirement at MVP — regex rules work offline, forever.
+1. Ship rules **in the npm bundle, not from a remote repo.** Regex rules work offline, forever.
 2. Allowlist is a **static JSON file regenerated manually per release.** No runtime fetches.
 3. The Claude Code skill calls `npx skillaudit@latest` — always pulls the current version; zero skill-file maintenance.
 4. Batch issue triage — weekly, not daily.
@@ -785,11 +749,11 @@ What if Snyk open-sources a local-only mode?
 - [ ] Wire skills.sh + GitHub + deps.dev enrichment behind a cache
 - [ ] Build TUI to match the hero mockup precisely
 - [ ] `--json`, `--html`, `--summary`, `--offline`, `--strict`, `--agent`, `--fail-on` flags
-- [ ] `scan`, `list`, `explain`, `ignore` commands; `--deep` stub
+- [ ] `scan`, `list`, `explain`, `ignore` commands
 - [ ] Ship the Claude Code skill wrapper and GitHub Action
 - [ ] Record a 5-second hero GIF
 - [ ] Write the README (~250 lines, ripgrep/bun-shaped)
-- [ ] `npm publish`, create Homebrew tap
+- [ ] `npm publish`
 - [ ] Schedule HN post: *"Show HN: Skillaudit – npm audit for AI agent skills"* for Tuesday 9am PT
 - [ ] Pre-write the author comment citing Snyk ToxicSkills correctly
 - [ ] Set up weekly issue triage; no daily Slack-like obligation

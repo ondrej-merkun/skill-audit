@@ -352,14 +352,4 @@ describe('runScan flag wiring', () => {
     expect(stdoutChunks.length).toBeGreaterThan(0);
   });
 
-  it('--deep exits 2 with the coming-soon message on stderr', async () => {
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as never);
-    await runScan({ deep: true });
-    expect(exitSpy).toHaveBeenCalledWith(2);
-    const errOut = stripAnsi(stderrChunks.join(''));
-    expect(errOut).toContain('Deep mode coming soon');
-    expect(errOut).toContain('Ollama');
-    // discovery must not have been called — we exit before touching plugins
-    expect(discoverAll).not.toHaveBeenCalled();
-  });
 });

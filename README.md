@@ -44,8 +44,6 @@ npx skillaudit
 | **Gemini CLI** | `~/.gemini/extensions/`, `~/.gemini/commands/`, `~/.gemini/agents/`, `~/.gemini/settings.json` | `.gemini/extensions/`, `.gemini/commands/`, `GEMINI.md` |
 | **Cross-agent sweep** | — | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.windsurfrules`, `CONVENTIONS.md` (walks parents) |
 
-> **v0.2 adds:** Continue.dev and Claude Desktop MCP.
-
 ---
 
 ## Install
@@ -212,17 +210,12 @@ Add your own with `skillaudit ignore <name>`.
 
 **Does it catch everything?**
 No. Pattern matching has ~60–70% recall on confirmed malicious skills. Semantically
-obfuscated attacks (split strings, steganography, LLM-jailbreak phrasing) require the
-`--deep` mode (Ollama-based, coming in v0.2). `skillaudit` is a fast first filter, not
-a guaranteed clean bill of health.
+obfuscated attacks (split strings, steganography, LLM-jailbreak phrasing) can evade
+regex rules. `skillaudit` is a fast first filter, not a guaranteed clean bill of
+health.
 
 **Can I use it in CI?**
 Yes — `skillaudit scan --json --fail-on REVIEW` exits 1 on any REVIEW or FAIL verdict.
 Pipe the JSON to your SAST aggregator or use the GitHub Action directly.
 
-**v0.2 roadmap**
-- Continue.dev + Claude Desktop MCP discovery
-- `--deep` mode: local LLM semantic analysis via Ollama
-- Homebrew tap
-
-No promises beyond that. Issues triaged weekly.
+Issues are triaged weekly.

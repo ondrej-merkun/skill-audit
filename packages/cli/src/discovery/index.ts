@@ -104,7 +104,7 @@ export async function discoverAll(): Promise<Skill[]> {
 
 /**
  * Register a discovery plugin into the runtime registry.
- * Intended for use by tests and future dynamic plugin loading.
+ * Intended for use by tests and explicit registry setup.
  */
 export function registerPlugin(plugin: AgentDiscovery): void {
   PLUGINS.push(plugin);

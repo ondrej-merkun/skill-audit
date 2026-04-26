@@ -29,7 +29,6 @@ program
     'minimum verdict band that triggers exit code 1 (REVIEW or FAIL)',
     'FAIL'
   )
-  .option('--deep', 'enable deep LLM-assisted semantic analysis (coming soon)')
   .action((cmdOpts: Record<string, unknown>) => {
     const options: Partial<ScanOptions> = {
       json: cmdOpts.json === true,
@@ -40,7 +39,6 @@ program
       strict: cmdOpts.strict === true,
       agent: typeof cmdOpts.agent === 'string' ? cmdOpts.agent : undefined,
       failOn: typeof cmdOpts.failOn === 'string' ? cmdOpts.failOn : undefined,
-      deep: cmdOpts.deep === true,
     };
     runScan(options).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
@@ -85,7 +83,7 @@ program
 
 program
   .command('ignore <skill-name-or-id>')
-  .description('Add a skill to the ignore list (skipped on future scans)')
+  .description('Add a skill to the ignore list (skipped on subsequent scans)')
   .action((nameOrId: string) => {
     runIgnore(nameOrId).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);

@@ -40,7 +40,6 @@ export type ScanOptions = {
   strict: boolean;
   agent: string | undefined;
   failOn: string | undefined;
-  deep: boolean;
 };
 
 const DEFAULT_OPTIONS: ScanOptions = {
@@ -52,11 +51,8 @@ const DEFAULT_OPTIONS: ScanOptions = {
   strict: false,
   agent: undefined,
   failOn: undefined,
-  deep: false,
 };
 
-const DEEP_MODE_MESSAGE =
-  'Deep mode coming soon. LLM-assisted semantic analysis will be opt-in and local via Ollama.';
 const SCAN_CONCURRENCY = 8;
 
 export function selectScanEnrichmentSources(
@@ -110,12 +106,6 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     process.stderr.write(
       '[skillaudit] cannot combine --html and --output; choose one destination\n'
     );
-    process.exit(2);
-    return; // unreachable in production; allows mocked exit in tests
-  }
-
-  if (options.deep) {
-    process.stderr.write(`${DEEP_MODE_MESSAGE}\n`);
     process.exit(2);
     return; // unreachable in production; allows mocked exit in tests
   }

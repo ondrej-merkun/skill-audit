@@ -304,11 +304,14 @@ describe('e2e: scan flags', () => {
     await rm(tempCwd, { recursive: true, force: true });
   });
 
-  it('--deep exits with code 2 and prints coming-soon message', async () => {
+  it('scan help only lists supported scan flags', async () => {
     const env = { HOME: tempHome, USERPROFILE: tempHome, SKILLAUDIT_CWD: tempCwd };
-    const { code, stderr } = await runCli(['scan', '--deep'], env);
-    expect(code).toBe(2);
-    expect(stderr).toContain('Deep mode coming soon');
+    const { code, stdout } = await runCli(['scan', '--help'], env);
+    expect(code).toBe(0);
+    expect(stdout).toContain('--json');
+    expect(stdout).toContain('--html <file>');
+    expect(stdout).not.toContain('--deep');
+    expect(stdout).not.toContain('coming soon');
   });
 
   it('--json outputs valid JSON for a benign skill', async () => {

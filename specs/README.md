@@ -26,7 +26,7 @@ that section, not the whole file. Token economy.
 | §7 | Core commands and UX flow, exit codes |
 | §8 | Claude Code skill wrapper (packages/skill/SKILL.md) |
 | §9 | Go-to-market, README design, hero GIF |
-| §10 | MVP scope and stretch goals |
+| §10 | MVP scope |
 | §11 | Risk assessment |
 
 ## Rule-authoring quick reference
