@@ -25,7 +25,15 @@ export function runPatternWithTimeout(
 
   try {
     for (const match of content.matchAll(re)) {
-      matches.push({ index: match.index ?? 0, text: match[0] });
+      const matchIndex = match.index ?? 0;
+      const findingText = match.groups?.finding;
+      const findingOffset =
+        findingText && findingText.length > 0 ? match[0].indexOf(findingText) : -1;
+
+      matches.push({
+        index: findingOffset >= 0 ? matchIndex + findingOffset : matchIndex,
+        text: findingText ?? match[0],
+      });
     }
   } catch {
     return Promise.resolve([]);

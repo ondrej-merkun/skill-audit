@@ -143,8 +143,12 @@ export const PI_WHITE_ON_WHITE: Rule = {
 // SKILL.md frontmatter claims benign purpose but body has covert directives.
 // Detects confidentiality/secrecy instructions that contradict stated metadata.
 // ---------------------------------------------------------------------------
-const frontmatterSecrecyPattern =
-  /^---[\s\S]*?(?:name|description)\s*:[\s\S]*?---[\s\S]*?\b(don['`]?t\s+(?:tell|mention|reveal|disclose)|never\s+(?:reveal|mention|tell|disclose|say|show)|keep\s+this\s+(?:hidden|confidential|secret)|do\s+not\s+(?:mention|reveal|disclose|share)|forget\s+that|hide\s+(?:this|these)\s+instructions?)\b/is;
+const concealedSkillSubject =
+  '(?:this\\s+|these\\s+|the\\s+|your\\s+)?(?:skill|instructions?|system\\s+prompt|behavior|behaviour|source|existence)';
+const frontmatterSecrecyPattern = new RegExp(
+  `^---[\\s\\S]*?(?:name|description)\\s*:[\\s\\S]*?---[\\s\\S]*?(?<finding>\\b(?:(?:don['\`]?t|do\\s+not|never)\\s+(?:tell|mention|reveal|disclose|show|share|say)\\s+(?:(?:the\\s+)?user\\s+(?:about\\s+)?)?${concealedSkillSubject}|keep\\s+${concealedSkillSubject}\\s+(?:hidden|confidential|secret)(?:\\s+from\\s+(?:the\\s+)?user)?|(?:hide|conceal)\\s+${concealedSkillSubject}(?:\\s+from\\s+(?:the\\s+)?user)?)\\b)`,
+  'is'
+);
 
 export const PI_METADATA_MISMATCH: Rule = {
   id: 'PI-METADATA-MISMATCH',
