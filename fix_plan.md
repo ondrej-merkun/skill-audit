@@ -494,7 +494,7 @@ at the bottom and the loop will stop.
   - Preserve findings for genuinely risky benchmark/evaluator scripts that run
     shell strings.
 
-- [ ] **18** Stop code-execution rules from matching explanatory strings and
+- [x] **18** Stop code-execution rules from matching explanatory strings and
   recommendations.
 
   Real scan output flagged strings like `"Never use eval()"`, `"Use
