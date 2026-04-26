@@ -43,6 +43,20 @@ npx skill-audit
 | **Gemini CLI** | `~/.gemini/extensions/`, `~/.gemini/commands/`, `~/.gemini/agents/`, `~/.gemini/settings.json` | `.gemini/extensions/`, `.gemini/commands/`, `GEMINI.md` |
 | **Cross-agent sweep** | — | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.windsurfrules`, `CONVENTIONS.md` (walks parents) |
 
+## Where it fits
+
+`skillaudit` is meant to be the fast local first pass: inventory the agent
+instructions and skills already on your machine, run deterministic rules, and
+produce shareable CLI output without an account.
+
+| Tool | Best fit | Account or token | Agent discovery | Output | Rule/model approach |
+|---|---|---|---|---|---|
+| **skillaudit** | Local skill and instruction audit before installing, sharing, or running agent workflows | No account; `--offline` disables optional metadata lookups | Claude Code, Codex, Copilot, Cursor, Gemini CLI, and cross-agent project files | Table, summary, JSON, HTML, file output, GitHub Action | Deterministic local rules plus optional `skills.sh`, GitHub, and `deps.dev` metadata |
+| [**Snyk Agent Scan**](https://github.com/snyk/agent-scan) | Agent/MCP/skill security scanning with Snyk-backed verification and enterprise monitoring options | Requires `SNYK_TOKEN` for CLI scanning | MCP configs, tools, prompts, resources, and skills across many agents; skills require `--skills` | Rich CLI, JSON, background/enterprise modes | Local checks plus Agent Scan API analysis |
+| [**Cisco AI Security Scanner / Skill Scanner**](https://cisco-ai-defense.github.io/docs/ai-security-scanner) | IDE-centered agent asset review, skill scanning, allowlists, and optional deeper analyzers | Basic YARA scanning runs without setup; LLM, Cisco AI Defense, and VirusTotal analyzers need provider/API keys | VS Code, Cursor, Windsurf, Antigravity extension commands for MCP configs and skills | IDE sidebar, Problems panel, SARIF via the underlying scanner | YARA and behavioral analysis, with optional LLM/cloud/VT analyzers |
+| [**Semgrep CLI**](https://semgrep.dev/docs/getting-started/cli) | General source-code SAST and custom rule development | `semgrep scan` can run locally without an account; `semgrep ci` uses Semgrep AppSec Platform login/policies | Code repositories, not agent-skill inventory | CLI findings, CI integrations, Semgrep platform workflows | Language-aware static analysis rules |
+| [**SkillScan**](https://skillscan.dev/) | Hosted verification badge and public registry workflow for submitted skills | Hosted submission flow | Submitted GitHub repositories, ClawHub skills, MCP servers, LangChain tools, and plugins | Web report and verification badge | Hosted AI-powered scan for prompt injection, code execution, credential theft, and supply-chain issues |
+
 ---
 
 ## Install
