@@ -82,7 +82,9 @@ function redactPaths(skills: ScannedSkill[]): ScannedSkill[] {
 export function renderHtml(result: ScanResult): string {
   const sorted = sortScanSkills(result.skills);
 
-  const agentIds = [...new Set(result.agents.map((a) => a.id))];
+  const agentIds = [
+    ...new Set([...result.agents.map((a) => a.id), ...sorted.map((skill) => skill.agentId)]),
+  ];
   const agentNames = Object.fromEntries(
     [...new Set([...agentIds, ...sorted.map((skill) => skill.agentId)])].map((id) => [
       id,
@@ -126,7 +128,7 @@ export function renderHtml(result: ScanResult): string {
   const agentFilters = agentIds
     .map(
       (id) =>
-        `<li><a href="#" class="agent-link" data-agent="${escapeHtml(id)}">${escapeHtml(formatAgentName(id))}</a></li>`
+        `<li><button type="button" class="agent-filter" data-agent="${escapeHtml(id)}" aria-pressed="false">${escapeHtml(formatAgentName(id))}</button></li>`
     )
     .join('\n');
 
@@ -141,9 +143,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;f
 #rail h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;margin-bottom:8px}
 #rail ul{list-style:none}
 #rail li{margin-bottom:4px}
-#rail a{display:block;padding:4px 8px;border-radius:6px;color:#374151;text-decoration:none;font-size:13px}
-#rail a:hover,#rail a.active{background:#f3f4f6;color:#111827}
-#rail a.active{font-weight:600}
+#rail button{display:block;width:100%;padding:4px 8px;border:0;border-radius:6px;background:transparent;color:#374151;text-align:left;font:inherit;font-size:13px;cursor:pointer}
+#rail button:hover,#rail button.active,#rail button:focus-visible{background:#f3f4f6;color:#111827;outline:none}
+#rail button.active{font-weight:600}
 #main{flex:1;padding:20px;overflow:auto}
 .toolbar{display:flex;gap:8px;margin-bottom:12px}
 .btn{padding:6px 12px;border-radius:6px;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-size:13px;color:#374151}
@@ -209,11 +211,16 @@ function filterRows(){
     var ag = tr.getAttribute('data-agent');
     tr.style.display = (!activeAgent || ag===activeAgent) ? '' : 'none';
   });
-  document.querySelectorAll('.agent-link').forEach(function(a){
-    a.classList.toggle('active', a.getAttribute('data-agent')===activeAgent);
+  document.querySelectorAll('.agent-filter').forEach(function(button){
+    var selected = button.getAttribute('data-agent')===activeAgent;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-pressed', selected ? 'true' : 'false');
   });
   var all = document.getElementById('all-link');
-  if(all) all.classList.toggle('active', !activeAgent);
+  if(all) {
+    all.classList.toggle('active', !activeAgent);
+    all.setAttribute('aria-pressed', !activeAgent ? 'true' : 'false');
+  }
 }
 
 function makeFindingEl(f){
@@ -341,20 +348,31 @@ function closePanel(){
 
 document.querySelectorAll('.skill-row').forEach(function(tr,i){
   tr.addEventListener('click', function(){ openPanel(i); });
-  tr.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' ') openPanel(i); });
-});
-
-document.querySelectorAll('.agent-link').forEach(function(a){
-  a.addEventListener('click', function(e){
-    e.preventDefault();
-    var ag = a.getAttribute('data-agent');
-    activeAgent = ag===activeAgent ? null : ag;
-    filterRows();
+  tr.addEventListener('keydown', function(e){
+    if(e.key==='Enter'||e.key===' '){
+      e.preventDefault();
+      openPanel(i);
+    }
   });
 });
-var allLink = document.getElementById('all-link');
-if(allLink) allLink.addEventListener('click', function(e){ e.preventDefault(); activeAgent=null; filterRows(); });
 
+function activateAgentFilter(button){
+  var ag = button.getAttribute('data-agent');
+  activeAgent = ag === '' || ag===activeAgent ? null : ag;
+  filterRows();
+}
+
+document.querySelectorAll('.agent-filter').forEach(function(button){
+  button.addEventListener('click', function(){
+    activateAgentFilter(button);
+  });
+  button.addEventListener('keydown', function(e){
+    if(e.key==='Enter'||e.key===' '){
+      e.preventDefault();
+      activateAgentFilter(button);
+    }
+  });
+});
 document.getElementById('panel-close').addEventListener('click', closePanel);
 document.getElementById('overlay').addEventListener('click', closePanel);
 
@@ -411,7 +429,7 @@ document.getElementById('btn-share').addEventListener('click', function(){
   <nav id="rail" aria-label="Agent filter">
     <h2>Agents</h2>
     <ul>
-      <li><a href="#" id="all-link" class="active">All agents</a></li>
+      <li><button type="button" id="all-link" class="agent-filter active" data-agent="" aria-pressed="true">All agents</button></li>
       ${agentFilters}
     </ul>
   </nav>

@@ -1,3 +1,4 @@
+import { Script, createContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 import stripAnsi from './helpers/strip-ansi.js';
 import { formatAgentName } from '../packages/cli/src/agent-names.js';
@@ -105,6 +106,243 @@ function riskFixtureSkills(): ScannedSkill[] {
     makeRiskSkill('review-score-50', 50, 'REVIEW', 'critical'),
     makeRiskSkill('fail-score-0', 0, 'FAIL', 'medium'),
   ];
+}
+
+class FakeEvent {
+  defaultPrevented = false;
+
+  constructor(
+    readonly type: string,
+    readonly key = ''
+  ) {}
+
+  preventDefault(): void {
+    this.defaultPrevented = true;
+  }
+}
+
+type FakeListener = (event: FakeEvent) => void;
+type FakeNode = FakeElement | FakeTextNode;
+
+class FakeTextNode {
+  parentNode: FakeElement | null = null;
+
+  constructor(readonly textContent: string) {}
+}
+
+class FakeClassList {
+  constructor(private readonly element: FakeElement) {}
+
+  add(token: string): void {
+    this.setTokens([...this.tokens(), token]);
+  }
+
+  remove(token: string): void {
+    this.setTokens(this.tokens().filter((existing) => existing !== token));
+  }
+
+  contains(token: string): boolean {
+    return this.tokens().includes(token);
+  }
+
+  toggle(token: string, force?: boolean): boolean {
+    const shouldAdd = force ?? !this.contains(token);
+    if (shouldAdd) this.add(token);
+    else this.remove(token);
+    return shouldAdd;
+  }
+
+  private tokens(): string[] {
+    return this.element.className.split(/\s+/).filter(Boolean);
+  }
+
+  private setTokens(tokens: string[]): void {
+    this.element.className = [...new Set(tokens)].join(' ');
+  }
+}
+
+class FakeElement {
+  readonly attributes = new Map<string, string>();
+  readonly listeners = new Map<string, FakeListener[]>();
+  readonly style: Record<string, string> = {};
+  readonly children: FakeNode[] = [];
+  readonly classList = new FakeClassList(this);
+  parentNode: FakeElement | null = null;
+  className = '';
+  textContent = '';
+
+  constructor(readonly tagName: string) {}
+
+  get firstChild(): FakeNode | null {
+    return this.children[0] ?? null;
+  }
+
+  setAttribute(name: string, value: string): void {
+    this.attributes.set(name, value);
+    if (name === 'class') this.className = value;
+  }
+
+  getAttribute(name: string): string | null {
+    return this.attributes.get(name) ?? null;
+  }
+
+  appendChild(node: FakeNode): FakeNode {
+    node.parentNode = this;
+    this.children.push(node);
+    return node;
+  }
+
+  removeChild(node: FakeNode): FakeNode {
+    const index = this.children.indexOf(node);
+    if (index >= 0) this.children.splice(index, 1);
+    node.parentNode = null;
+    return node;
+  }
+
+  addEventListener(type: string, listener: FakeListener): void {
+    const listeners = this.listeners.get(type) ?? [];
+    listeners.push(listener);
+    this.listeners.set(type, listeners);
+  }
+
+  dispatchEvent(event: FakeEvent): boolean {
+    for (const listener of this.listeners.get(event.type) ?? []) {
+      listener(event);
+    }
+    return !event.defaultPrevented;
+  }
+
+  click(): void {
+    this.dispatchEvent(new FakeEvent('click'));
+  }
+}
+
+class FakeDocument {
+  readonly body = new FakeElement('body');
+  private readonly elements: FakeElement[] = [];
+  private readonly ids = new Map<string, FakeElement>();
+
+  register(element: FakeElement): FakeElement {
+    this.elements.push(element);
+    const id = element.getAttribute('id');
+    if (id !== null) this.ids.set(id, element);
+    return element;
+  }
+
+  querySelectorAll(selector: string): FakeElement[] {
+    if (!selector.startsWith('.')) return [];
+    const className = selector.slice(1);
+    return this.elements.filter((element) => element.classList.contains(className));
+  }
+
+  getElementById(id: string): FakeElement | null {
+    return this.ids.get(id) ?? null;
+  }
+
+  createElement(tagName: string): FakeElement {
+    return new FakeElement(tagName);
+  }
+
+  createTextNode(textContent: string): FakeTextNode {
+    return new FakeTextNode(textContent);
+  }
+}
+
+function registerElement(
+  document: FakeDocument,
+  tagName: string,
+  attributes: Record<string, string> = {}
+): FakeElement {
+  const element = new FakeElement(tagName);
+  for (const [name, value] of Object.entries(attributes)) {
+    element.setAttribute(name, value);
+  }
+  return document.register(element);
+}
+
+function executeHtmlReportScript(html: string): FakeDocument {
+  const document = new FakeDocument();
+
+  for (const id of [
+    'panel',
+    'overlay',
+    'panel-close',
+    'panel-title',
+    'panel-meta',
+    'panel-findings',
+    'btn-copy-json',
+    'btn-copy-md',
+    'btn-download',
+    'btn-share',
+  ]) {
+    registerElement(document, id.startsWith('btn-') || id === 'panel-close' ? 'button' : 'div', {
+      id,
+    });
+  }
+
+  for (const match of html.matchAll(
+    /<button type="button"(?: id="([^"]+)")? class="([^"]+)" data-agent="([^"]*)" aria-pressed="([^"]+)">/g
+  )) {
+    registerElement(document, 'button', {
+      ...(match[1] !== undefined ? { id: match[1] } : {}),
+      class: match[2] ?? '',
+      'data-agent': match[3] ?? '',
+      'aria-pressed': match[4] ?? '',
+    });
+  }
+
+  for (const match of html.matchAll(
+    /<tr class="skill-row" data-idx="([^"]+)" data-agent="([^"]+)" tabindex="0">/g
+  )) {
+    registerElement(document, 'tr', {
+      class: 'skill-row',
+      'data-idx': match[1] ?? '',
+      'data-agent': match[2] ?? '',
+      tabindex: '0',
+    });
+  }
+
+  const script = html.match(/<script>([\s\S]*)<\/script>/)?.[1];
+  if (script === undefined) throw new Error('HTML report script not found');
+
+  const clipboard = { writeText: vi.fn() };
+  const context = createContext({
+    document,
+    navigator: { clipboard },
+    Blob: class FakeBlob {
+      constructor(
+        readonly parts: unknown[],
+        readonly options?: unknown
+      ) {}
+    },
+    URL: { createObjectURL: () => 'blob:skill-audit-report' },
+    JSON,
+  });
+  new Script(script).runInContext(context);
+
+  return document;
+}
+
+function getElementById(document: FakeDocument, id: string): FakeElement {
+  const element = document.getElementById(id);
+  if (element === null) throw new Error(`Missing element #${id}`);
+  return element;
+}
+
+function getFilter(document: FakeDocument, agentId: string): FakeElement {
+  const filter = document
+    .querySelectorAll('.agent-filter')
+    .find((element) => element.getAttribute('data-agent') === agentId);
+  if (filter === undefined) throw new Error(`Missing filter for ${agentId}`);
+  return filter;
+}
+
+function getRow(document: FakeDocument, agentId: string): FakeElement {
+  const row = document
+    .querySelectorAll('.skill-row')
+    .find((element) => element.getAttribute('data-agent') === agentId);
+  if (row === undefined) throw new Error(`Missing row for ${agentId}`);
+  return row;
 }
 
 describe('sortScanSkills', () => {
@@ -1003,9 +1241,65 @@ describe('renderHtml', () => {
 
     expect(html).toContain('>Claude Code</td>');
     expect(html).toContain('data-agent="claude-code"');
-    expect(html).toContain('>Claude Code</a>');
+    expect(html).toContain('>Claude Code</button>');
+    expect(html).toContain('aria-pressed="false"');
     expect(html).toContain('"claude-code":"Claude Code"');
     expect(html).toContain('>unknown-agent</td>');
+  });
+
+  it('filters rows from the agent sidebar and keeps row expansion working', async () => {
+    const { renderHtml } = await import('../packages/cli/src/output/html.js');
+    const html = renderHtml(
+      makeScanResult({
+        agents: [
+          { id: 'claude-code', installed: true, skillsScanned: 1 },
+          { id: 'cursor', installed: true, skillsScanned: 1 },
+        ],
+        skills: [
+          makeSkill({ id: 'claude-skill', agentId: 'claude-code', name: 'claude-skill' }),
+          makeSkill({
+            id: 'cursor-skill',
+            agentId: 'cursor',
+            name: 'cursor-skill',
+            path: '/tmp/cursor-skill',
+          }),
+        ],
+        summary: { skillsScanned: 2, compromised: 0, percentCompromised: 0, verdict: 'PASS' },
+      })
+    );
+    const document = executeHtmlReportScript(html);
+    const allFilter = getFilter(document, '');
+    const claudeFilter = getFilter(document, 'claude-code');
+    const cursorFilter = getFilter(document, 'cursor');
+    const claudeRow = getRow(document, 'claude-code');
+    const cursorRow = getRow(document, 'cursor');
+
+    cursorFilter.click();
+
+    expect(claudeRow.style.display).toBe('none');
+    expect(cursorRow.style.display).toBe('');
+    expect(cursorFilter.classList.contains('active')).toBe(true);
+    expect(cursorFilter.getAttribute('aria-pressed')).toBe('true');
+    expect(allFilter.getAttribute('aria-pressed')).toBe('false');
+
+    cursorRow.click();
+
+    expect(getElementById(document, 'panel').classList.contains('open')).toBe(true);
+    expect(getElementById(document, 'panel-title').textContent).toBe('cursor-skill');
+
+    allFilter.dispatchEvent(new FakeEvent('keydown', ' '));
+
+    expect(claudeRow.style.display).toBe('');
+    expect(cursorRow.style.display).toBe('');
+    expect(allFilter.classList.contains('active')).toBe(true);
+    expect(allFilter.getAttribute('aria-pressed')).toBe('true');
+
+    claudeFilter.dispatchEvent(new FakeEvent('keydown', 'Enter'));
+
+    expect(claudeRow.style.display).toBe('');
+    expect(cursorRow.style.display).toBe('none');
+    expect(claudeFilter.classList.contains('active')).toBe(true);
+    expect(claudeFilter.getAttribute('aria-pressed')).toBe('true');
   });
 });
 
