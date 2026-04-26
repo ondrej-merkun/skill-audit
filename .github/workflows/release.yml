@@ -27,6 +27,11 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
+      - name: Use npm with trusted publishing support
+        run: |
+          npm install -g npm@^11.5.1
+          npm --version
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -36,6 +41,27 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Check clean build output
+        run: |
+          set -o pipefail
+          pnpm build 2>&1 | tee /tmp/skillaudit-build.log
+          if grep -iE 'warn|error' /tmp/skillaudit-build.log; then
+            exit 1
+          fi
+
+      - name: Smoke built CLI
+        run: node packages/cli/dist/index.js --help
+
+      - name: Verify package contents
+        run: pnpm --filter skill-audit pack --dry-run
+
       - name: Publish skill-audit
-        run: npm publish --access public --provenance
+        # No NODE_AUTH_TOKEN: npm uses GitHub OIDC trusted publishing when configured.
+        run: npm publish --access public
         working-directory: packages/cli
