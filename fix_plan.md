@@ -1048,3 +1048,13 @@ output and what was attempted.)
   `gh repo view ondrej-merkun/skill-audit --json nameWithOwner,repositoryTopics`
   and `gh repo edit ondrej-merkun/skill-audit --add-topic ai-security --add-topic prompt-injection --add-topic agent-skills --add-topic cli --add-topic static-analysis --add-topic supply-chain-security --add-topic claude-code --add-topic cursor --add-topic codex --add-topic copilot`
   both fail with `error connecting to api.github.com`.
+
+- **37 blocked in Codex session** — Default-branch protection and repository
+  rulesets are GitHub repository settings, not tracked files in this repo.
+  Rechecked on 2026-04-27. `tool_search` exposes GitHub PR, branch, and file
+  tools but no branch-protection or ruleset write endpoint. Local
+  `gh auth status` reports the configured `ondrej-merkun` token is invalid, and
+  `gh repo view --json nameWithOwner,defaultBranchRef,isPrivate` fails with
+  `error connecting to api.github.com`. Without an authenticated GitHub settings
+  API, this session cannot require CI checks, up-to-date branches, force-push
+  and deletion blocks, or conversation resolution on the default branch.
