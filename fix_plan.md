@@ -861,7 +861,7 @@ at the bottom and the loop will stop.
   - Keep command outputs short and current.
   - Link from README without duplicating the whole document there.
 
-- [ ] **44** Add `docs/ROADMAP.md`.
+- [x] **44** Add `docs/ROADMAP.md`.
 
   Create a restrained maintainer roadmap that separates committed near-term
   work from ideas. The README should not depend on speculative items, but a
