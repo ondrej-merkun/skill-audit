@@ -872,7 +872,7 @@ at the bottom and the loop will stop.
   - Clearly label anything not committed.
   - Do not promise dates.
 
-- [ ] **45** Add a false-positive issue form.
+- [x] **45** Add a false-positive issue form.
 
   Add `.github/ISSUE_TEMPLATE/false-positive.yml` so users can report noisy
   findings with enough structured information for rule tuning.
