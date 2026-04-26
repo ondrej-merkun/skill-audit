@@ -29,7 +29,7 @@ at the bottom and the loop will stop.
   - Verify the built `node packages/cli/dist/index.js list` output shows
     project skills first against a fixture or temp project/home setup.
 
-- [ ] **2** Show nonzero sub-1% compromised scan percentages with two decimal
+- [x] **2** Show nonzero sub-1% compromised scan percentages with two decimal
   places.
 
   The `scan` command currently rounds or floors the compromised-skill
