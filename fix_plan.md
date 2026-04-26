@@ -322,7 +322,7 @@ at the bottom and the loop will stop.
   - Verify JSON output no longer contains duplicate `(file,line,rule_id)`
     findings for the parent and child.
 
-- [ ] **8** Stop counting plugin manifest directories as scan targets when
+- [x] **8** Stop counting plugin manifest directories as scan targets when
   they do not contain prompt-bearing content.
 
   Real scan output contained 143 entries named `.claude-plugin`,
