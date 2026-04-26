@@ -748,6 +748,27 @@ describe('renderJson', () => {
     ]);
   });
 
+  it('serializes modified_at only when discovery found an mtime', () => {
+    const result = makeScanResult({
+      skills: [
+        makeSkill({ modifiedAt: '2024-03-04T05:06:07.000Z' }),
+        makeSkill({ id: 'no-mtime', name: 'no-mtime', path: '/tmp/no-mtime' }),
+      ],
+    });
+
+    const json = JSON.parse(renderJson(result));
+    expect(json.skills[0].modified_at).toBe('2024-03-04T05:06:07.000Z');
+    expect(json.skills[1]).not.toHaveProperty('modified_at');
+    expect(Object.keys(json.skills[0]).slice(0, 6)).toEqual([
+      'id',
+      'agent_id',
+      'name',
+      'path',
+      'modified_at',
+      'tree_sha256',
+    ]);
+  });
+
   it('serializes finding fields with snake_case keys', () => {
     const result = makeScanResult({
       skills: [

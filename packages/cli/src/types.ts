@@ -17,6 +17,7 @@ export type Skill = {
   path: string; // absolute dir or file path
   alsoInstalledAt?: string[];
   manifestPath: string | null;
+  modifiedAt?: string;
   format:
     | 'SKILL.md'
     | 'plugin.json'

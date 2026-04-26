@@ -76,6 +76,7 @@ type JsonSkill = {
   name: string;
   path: string;
   also_installed_at?: string[];
+  modified_at?: string;
   tree_sha256: string;
   findings: JsonFinding[];
   summary: {
@@ -243,6 +244,8 @@ describe('e2e: scan malicious fixtures', () => {
     expect(skill).toHaveProperty('agent_id');
     expect(skill).toHaveProperty('name');
     expect(skill).toHaveProperty('path');
+    expect(skill).toHaveProperty('modified_at');
+    expect(new Date(skill.modified_at ?? '').toISOString()).toBe(skill.modified_at);
     expect(skill).toHaveProperty('tree_sha256');
     expect(skill).toHaveProperty('findings');
     expect(skill).toHaveProperty('summary');

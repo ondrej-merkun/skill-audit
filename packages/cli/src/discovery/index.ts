@@ -6,6 +6,7 @@ import codexDiscovery from './codex.js';
 import copilotDiscovery from './copilot.js';
 import cursorDiscovery from './cursor.js';
 import geminiDiscovery from './gemini.js';
+import { addModifiedAt } from './modified-at.js';
 
 // Registry starts empty so test files get a clean slate on import.
 // Call initDefaultPlugins() from the CLI entry point to register built-ins.
@@ -157,7 +158,7 @@ export async function discoverAll(options: DiscoverAllOptions = {}): Promise<Ski
     }
 
     try {
-      const skills = await plugin.discoverSkills();
+      const skills = await addModifiedAt(await plugin.discoverSkills());
       results.push(...skills);
       options.onProgress?.({
         type: 'agent-done',

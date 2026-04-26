@@ -24,6 +24,7 @@ ship as the hero GIF).
       "name": "polymarket-trader",
       "path": "/Users/.../skills/polymarket-trader",
       "also_installed_at": ["/Users/.../.agents/skills/polymarket-trader"],
+      "modified_at": "2026-04-23T18:12:00.000Z",
       "tree_sha256": "...",
       "allowlisted": false,
       "findings": [
@@ -89,9 +90,12 @@ Field notes:
 - `also_installed_at` is present only when discovery collapsed duplicate
   non-empty `treeSha256` values. It contains the other absolute install paths
   that point at identical content.
+- `modified_at` is present only when the scanner can read a filesystem mtime
+  for the skill manifest or file. It is an ISO 8601 timestamp and is not an
+  install or creation time.
 
-Do not add fields. Do not rename fields. Do not reorder in the source
-JSON stringifier (use a deterministic serializer).
+Do not add fields beyond this schema. Do not rename fields. Do not reorder in
+the source JSON stringifier (use a deterministic serializer).
 
 ## Global scan ordering contract
 

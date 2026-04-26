@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -68,6 +68,35 @@ describe('discoverAll', () => {
     expect(skills).toHaveLength(2);
     expect(skills).toContainEqual(skill1);
     expect(skills).toContainEqual(skill2);
+  });
+
+  it('adds modifiedAt from the manifest file mtime when available', async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), 'skill-audit-modified-at-'));
+    const skillDir = join(tempDir, 'skills', 'mtime-skill');
+    const manifestPath = join(skillDir, 'SKILL.md');
+    const directoryTime = new Date('2024-01-01T00:00:00.000Z');
+    const manifestTime = new Date('2024-03-04T05:06:07.000Z');
+
+    try {
+      await mkdir(skillDir, { recursive: true });
+      await writeFile(manifestPath, '# mtime skill\n');
+      await utimes(skillDir, directoryTime, directoryTime);
+      await utimes(manifestPath, manifestTime, manifestTime);
+
+      registerPlugin({
+        id: 'plugin-a',
+        displayName: 'Plugin A',
+        isInstalled: async () => true,
+        discoverSkills: async () => [
+          makeSkill({ path: skillDir, manifestPath, treeSha256: 'mtime-tree' }),
+        ],
+      });
+
+      const skills = await discoverAll();
+      expect(skills[0]?.modifiedAt).toBe(manifestTime.toISOString());
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
   });
 
   it('runs only the selected discovery plugin when an agent filter is provided', async () => {
