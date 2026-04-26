@@ -1058,3 +1058,18 @@ output and what was attempted.)
   `error connecting to api.github.com`. Without an authenticated GitHub settings
   API, this session cannot require CI checks, up-to-date branches, force-push
   and deletion blocks, or conversation resolution on the default branch.
+
+- **38 blocked in Codex session** — Repository security settings are hosted
+  GitHub settings, not fully tracked files. Rechecked on 2026-04-27. The
+  tracked `.github/dependabot.yml` already exists for npm and GitHub Actions,
+  but Dependabot alerts, secret scanning, and push protection still require an
+  authenticated GitHub settings API. `tool_search` exposes no security-settings
+  write endpoint. The GitHub connector can read
+  `ondrej-merkun/skill-audit` and reports admin permission, but exposes no
+  Dependabot-alerts, secret-scanning, or push-protection mutation. Local
+  `gh auth status` reports the configured `ondrej-merkun` token is invalid,
+  `gh repo view ondrej-merkun/skillaudit --json nameWithOwner,securityAndAnalysis`
+  fails because `securityAndAnalysis` is not an available `gh repo view` field,
+  and `gh api repos/ondrej-merkun/skillaudit --method PATCH ...` fails with
+  `error connecting to api.github.com`. Without an authenticated GitHub settings
+  API, this session cannot enable or verify those repository security features.
