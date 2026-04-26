@@ -5,3 +5,9 @@ args = ["@example/browser-mcp"]
 [mcp_servers."docs"]
 command = "node"
 args = ["docs-server.js"]
+
+[plugins."enabled-plugin@openai"]
+enabled = true
+
+[plugins."disabled-plugin@openai"]
+enabled = false

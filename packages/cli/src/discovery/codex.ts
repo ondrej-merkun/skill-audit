@@ -7,6 +7,15 @@ import { computeTreeSha256 } from './tree-hash.js';
 
 const AGENT_ID = 'codex';
 
+type WalkOptions = {
+  skipDirectory?: (dirPath: string, entryName: string, parentPath: string) => boolean;
+};
+
+type EnabledPluginCache = {
+  marketplace: string;
+  plugin: string;
+};
+
 function getCodexHome(): string {
   return (
     process.env.CODEX_HOME ??
@@ -31,7 +40,7 @@ async function pathExists(p: string): Promise<boolean> {
   }
 }
 
-async function walkFiles(root: string): Promise<string[]> {
+async function walkFiles(root: string, options: WalkOptions = {}): Promise<string[]> {
   const files: string[] = [];
 
   async function walk(dir: string): Promise<void> {
@@ -45,6 +54,7 @@ async function walkFiles(root: string): Promise<string[]> {
     for (const entry of entries) {
       const fullPath = join(dir, entry.name);
       if (entry.isDirectory()) {
+        if (options.skipDirectory?.(fullPath, entry.name, dir)) continue;
         await walk(fullPath);
       } else if (entry.isFile()) {
         files.push(fullPath);
@@ -123,7 +133,9 @@ async function discoverSkillDirs(dir: string, scope: Skill['scope']): Promise<Sk
 }
 
 async function discoverPluginTree(dir: string, scope: Skill['scope']): Promise<Skill[]> {
-  const files = await walkFiles(dir);
+  const files = await walkFiles(dir, {
+    skipDirectory: (_dirPath, entryName, parentPath) => entryName === 'cache' && parentPath === dir,
+  });
   const skills: Skill[] = [];
 
   for (const file of files) {
@@ -136,6 +148,29 @@ async function discoverPluginTree(dir: string, scope: Skill['scope']): Promise<S
       skills.push(await skillFromDir(dirname(file), 'plugin.json', scope, 'plugin.json'));
     } else if (name.endsWith('.md') && segments.includes('commands')) {
       skills.push(await skillFromFile(file, basename(file, '.md'), 'prompt-md', scope));
+    }
+  }
+
+  return skills;
+}
+
+async function discoverActivePluginPayloadTree(
+  dir: string,
+  scope: Skill['scope']
+): Promise<Skill[]> {
+  const files = await walkFiles(dir);
+  const skills: Skill[] = [];
+
+  for (const file of files) {
+    const name = basename(file);
+    const segments = pathSegments(dir, file);
+
+    if (name === 'SKILL.md') {
+      skills.push(await skillFromDir(dirname(file), 'SKILL.md', scope, 'SKILL.md'));
+    } else if (name.endsWith('.md') && segments.includes('commands')) {
+      skills.push(await skillFromFile(file, basename(file, '.md'), 'prompt-md', scope));
+    } else if (name.endsWith('.md') && segments.includes('agents')) {
+      skills.push(await skillFromFile(file, basename(file, '.md'), 'agents-md', scope));
     }
   }
 
@@ -182,6 +217,41 @@ function parseMcpServerNames(toml: string): string[] {
   return [...names].sort((a, b) => a.localeCompare(b));
 }
 
+function parseEnabledPluginCacheRef(name: string): EnabledPluginCache | null {
+  const atIndex = name.lastIndexOf('@');
+  if (atIndex <= 0 || atIndex === name.length - 1) return null;
+
+  return {
+    plugin: name.slice(0, atIndex),
+    marketplace: name.slice(atIndex + 1),
+  };
+}
+
+function parseEnabledPluginCaches(toml: string): EnabledPluginCache[] {
+  let currentPlugin: string | null = null;
+  const enabled = new Map<string, boolean>();
+
+  for (const line of toml.split(/\r?\n/)) {
+    const tableMatch = line.match(/^\s*\[([^\]]+)\]\s*(?:#.*)?$/);
+    if (tableMatch?.[1]) {
+      const pluginTable = tableMatch[1].trim().match(/^plugins\.(.+)$/);
+      currentPlugin = pluginTable?.[1] ? parseTomlTableName(pluginTable[1]) : null;
+      continue;
+    }
+
+    if (!currentPlugin) continue;
+
+    const enabledMatch = line.match(/^\s*enabled\s*=\s*(true|false)\s*(?:#.*)?$/);
+    if (enabledMatch?.[1]) enabled.set(currentPlugin, enabledMatch[1] === 'true');
+  }
+
+  return [...enabled.entries()]
+    .filter(([, isEnabled]) => isEnabled)
+    .map(([name]) => parseEnabledPluginCacheRef(name))
+    .filter((ref): ref is EnabledPluginCache => ref !== null)
+    .sort((a, b) => a.marketplace.localeCompare(b.marketplace) || a.plugin.localeCompare(b.plugin));
+}
+
 async function discoverMcpToml(configPath: string, scope: Skill['scope']): Promise<Skill[]> {
   let raw: string;
   try {
@@ -200,6 +270,29 @@ async function discoverMcpToml(configPath: string, scope: Skill['scope']): Promi
     scope,
     treeSha256: '',
   }));
+}
+
+async function discoverEnabledPluginCaches(
+  codexHome: string,
+  configPath: string,
+  scope: Skill['scope']
+): Promise<Skill[]> {
+  let raw: string;
+  try {
+    raw = await readFile(configPath, 'utf8');
+  } catch {
+    return [];
+  }
+
+  const skills: Skill[] = [];
+  const refs = parseEnabledPluginCaches(raw);
+
+  for (const ref of refs) {
+    const cacheRoot = join(codexHome, 'plugins', 'cache', ref.marketplace, ref.plugin);
+    skills.push(...(await discoverActivePluginPayloadTree(cacheRoot, scope)));
+  }
+
+  return skills;
 }
 
 async function discoverUntrustedProjectConfig(configPath: string): Promise<Skill[]> {
@@ -224,6 +317,9 @@ const codexDiscovery: AgentDiscovery = {
     skills.push(...(await discoverMcpToml(join(codexHome, 'config.toml'), 'user')));
     skills.push(...(await discoverSkillDirs(join(codexHome, 'skills'), 'user')));
     skills.push(...(await discoverPluginTree(join(codexHome, 'plugins'), 'user')));
+    skills.push(
+      ...(await discoverEnabledPluginCaches(codexHome, join(codexHome, 'config.toml'), 'user'))
+    );
     skills.push(...(await discoverPromptFiles(join(codexHome, 'prompts'))));
     skills.push(...(await discoverUntrustedProjectConfig(join(cwd, '.codex', 'config.toml'))));
 

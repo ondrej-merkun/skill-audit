@@ -266,6 +266,22 @@ describe('codex: fixture skill tree', () => {
     expect(byName.has('openai')).toBe(false);
   });
 
+  it('discovers only enabled Codex plugin cache payload leaves', async () => {
+    const skills = await codexDiscovery.discoverSkills();
+    const byName = new Map(skills.map((skill) => [skill.name, skill]));
+
+    expect(byName.get('cache-helper')?.format).toBe('SKILL.md');
+    expect(byName.get('cache-command')?.format).toBe('prompt-md');
+    expect(byName.get('cache-agent')?.format).toBe('agents-md');
+    expect(byName.get('cache-helper')?.path).toContain(
+      join('plugins', 'cache', 'openai', 'enabled-plugin')
+    );
+
+    expect(byName.has('disabled-helper')).toBe(false);
+    expect(byName.has('cache-only-helper')).toBe(false);
+    expect(byName.has('rev-1')).toBe(false);
+  });
+
   it('emits project-local .codex/config.toml as untrusted project config', async () => {
     const skills = await codexDiscovery.discoverSkills();
     const skill = skills.find((candidate) => candidate.name === '.codex/config.toml');
