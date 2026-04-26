@@ -278,7 +278,7 @@ at the bottom and the loop will stop.
     are common in modern CLIs, but this repo should keep the implementation
     local and avoid a new dependency for v1.
 
-- [ ] **9** Render human-readable agent names in pretty outputs.
+- [x] **9** Render human-readable agent names in pretty outputs.
 
   Human-facing output should render technical agent identifiers such as
   `claude-code` and `cross-agent` as nicer names like `Claude Code`.
