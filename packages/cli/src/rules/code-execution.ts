@@ -1,4 +1,5 @@
 import type { Rule } from '../types.js';
+import { maskDocumentationTextInCode } from './code-context.js';
 
 // Pattern split to avoid triggering static-analysis hooks on this detector file itself.
 // This rule detects `new Function(` usage in scanned skills, not in this codebase.
@@ -14,6 +15,7 @@ export const CODEEXEC_PY_EVAL: Rule = {
   severity: 'critical',
   appliesTo: ['*.py'],
   patterns: [/\beval\s*\(/],
+  prepareContent: maskDocumentationTextInCode,
   message: 'Python eval() call — arbitrary code execution risk.',
   fix: 'Replace eval() with ast.literal_eval() for data or a safe parser for expressions.',
   cwe: ['CWE-95'],
@@ -68,6 +70,7 @@ export const CODEEXEC_DESERIALIZE: Rule = {
     /\bunserialize\s*\(/,
     /\bMarshal\.load\s*\(/,
   ],
+  prepareContent: maskDocumentationTextInCode,
   message: 'Unsafe deserialization — may allow arbitrary code execution via crafted input.',
   fix: 'Use yaml.safe_load(), avoid pickle on untrusted data, validate before deserializing.',
   cwe: ['CWE-502'],

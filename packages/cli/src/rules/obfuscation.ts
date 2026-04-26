@@ -1,4 +1,5 @@
 import type { Rule } from '../types.js';
+import { maskDocumentationTextInCode } from './code-context.js';
 
 // Patterns split across array elements so this detector file does not
 // contain literal dangerous substrings that trigger security scanners.
@@ -67,6 +68,7 @@ export const OBFS_EVAL_ATOB: Rule = {
   severity: 'critical',
   appliesTo: ['*.js', '*.ts', '*.mjs', '*.cjs', '*.jsx', '*.tsx', '*.py', '*.sh', '*.md'],
   patterns: [evalAtobPattern, pyB64DecodePattern, evalBufferPattern],
+  prepareContent: maskDocumentationTextInCode,
   message: 'eval(atob(...)) or exec(base64.b64decode(...)) — executing base64-decoded payload.',
   fix: 'Remove the eval/exec wrapper. Decode to a variable first and inspect before any execution.',
   cwe: ['CWE-95', 'CWE-506'],

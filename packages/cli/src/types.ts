@@ -41,6 +41,7 @@ export type Rule = {
   severity: Severity;
   appliesTo: string[]; // glob patterns for which files this rule matches
   patterns: RegExp[];
+  prepareContent?: (content: string, filePath: string) => string;
   message: string;
   fix: string;
   cwe: string[];

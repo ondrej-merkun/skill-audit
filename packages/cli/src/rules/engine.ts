@@ -160,8 +160,9 @@ export async function runRules(skillPath: string, rules: Rule[]): Promise<Findin
       // Track seen lines per rule to avoid duplicate findings from overlapping patterns
       const seenLines = new Set<number>();
 
+      const matchContent = rule.prepareContent?.(content, filePath) ?? content;
       for (const pattern of rule.patterns) {
-        const matches = await runPatternWithTimeout(pattern, content);
+        const matches = await runPatternWithTimeout(pattern, matchContent);
         for (const { index, text } of matches) {
           const { line, column } = lineCol(content, index);
           if (seenLines.has(line)) continue;
