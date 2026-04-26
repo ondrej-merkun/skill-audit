@@ -736,7 +736,7 @@ at the bottom and the loop will stop.
   - Ensure examples use the canonical package name from task 24.
   - Mention `--fail-on` behavior using the exact implemented flag values.
 
-- [ ] **32** Add README example findings.
+- [x] **32** Add README example findings.
 
   Add compact examples that show how common findings appear and what a user
   should do next. Include at least one prompt-injection example, one
