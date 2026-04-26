@@ -103,6 +103,8 @@ Rule scanning is local. Skill contents are read from disk and matched on your
 machine; they are not uploaded by `skillaudit`. Optional enrichment may make
 metadata lookups unless you pass `--offline`.
 
+For the full security boundary, see [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
+
 | Command or mode | Local reads | Network by default | What may be sent |
 |---|---|---|---|
 | `skillaudit list` | Skill paths and manifests for discovery | No | Nothing |

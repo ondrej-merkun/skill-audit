@@ -26,3 +26,7 @@ support requests can be filed as regular GitHub issues.
 `skillaudit` is a local scanner. It reports suspicious skill content and exits
 with a verdict code; it does not quarantine files or guarantee that a skill is
 safe.
+
+For the detailed scanner trust boundaries, local data handling, optional
+enrichment behavior, and false-positive/false-negative model, see
+[`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
