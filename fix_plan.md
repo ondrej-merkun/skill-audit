@@ -133,7 +133,7 @@ at the bottom and the loop will stop.
   - Add discovery tests for at least one semver nested directory and one normal
     non-version skill directory so regular names are unchanged.
 
-- [ ] **6** Prefer non-cache paths as the primary path when deduping skills.
+- [x] **6** Prefer non-cache paths as the primary path when deduping skills.
 
   When identical skill content is discovered both in a regular plugin/skills
   location and in an agent plugin cache, deduplication correctly collapses the
