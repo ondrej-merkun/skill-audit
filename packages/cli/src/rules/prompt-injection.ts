@@ -70,8 +70,12 @@ export const PI_JAILBREAK: Rule = {
 // All patterns use \uXXXX escapes — no literal invisible chars in source.
 // ---------------------------------------------------------------------------
 
-// U+200B-U+200F: ZWSP, ZWNJ, ZWJ, LRM, RLM
-const zwspRangePattern = /[\u200B-\u200F]/;
+// U+200B-U+200F: ZWSP, ZWNJ, ZWJ, LRM, RLM.
+// U+200D is also used in visible emoji ZWJ sequences such as family emoji.
+// Keep flagging it unless it sits directly between emoji pictographs.
+const zeroWidthNonJoinerPattern = /[\u200B\u200C\u200E\u200F]/;
+const suspiciousZwjPattern =
+  /(?<!\p{Extended_Pictographic})\u200D|\u200D(?!\p{Extended_Pictographic})/u;
 // U+202A-U+202E: LRE, RLE, PDF, LRO, RLO (bidi controls)
 const bidiControlPattern = /[\u202A-\u202E]/;
 // U+2060-U+2064: Word Joiner, invisible math operators
@@ -87,7 +91,8 @@ export const PI_HIDDEN_UNICODE: Rule = {
   severity: 'critical',
   appliesTo: ['*.md', '*.mdc', '*.txt', 'SKILL.md', 'AGENTS.md'],
   patterns: [
-    zwspRangePattern,
+    zeroWidthNonJoinerPattern,
+    suspiciousZwjPattern,
     bidiControlPattern,
     invisibleOpsPattern,
     zwnbspPattern,

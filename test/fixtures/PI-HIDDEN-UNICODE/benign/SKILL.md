@@ -5,3 +5,6 @@ description: Formats dates in various locales.
 
 Formats dates according to locale settings.
 Supports ISO 8601 and human-readable formats.
+
+Emoji labels are allowed in user-visible examples:
+- Family: 👨‍👩‍👧‍👦

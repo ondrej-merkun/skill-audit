@@ -70,6 +70,10 @@ without a commit message explaining why it no longer applies.
   Keep e2e helpers executing the built binary, but avoid depending on piped
   Node child stdout when the environment drops it.
 
+- **L1.10 — `scan` does not take a positional fixture path.** _Task 16 first ran `node packages/cli/dist/index.js scan test/fixtures/...` and accidentally scanned the real discovered home skills._
+  For built-CLI fixture checks, create a temp home/project and use `HOME`,
+  `USERPROFILE`, and `SKILLAUDIT_CWD` discovery overrides.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task
