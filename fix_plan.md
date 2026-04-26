@@ -675,7 +675,7 @@ at the bottom and the loop will stop.
   - If the README cites an external statistic, keep attribution explicit and do
     not phrase it as this project's own finding.
 
-- [ ] **27** Replace the README hero placeholder with a local demo asset.
+- [x] **27** Replace the README hero placeholder with a local demo asset.
 
   Create a small local demo GIF or terminal recording asset and reference it
   from README instead of using a remote placeholder or commented-out image.
