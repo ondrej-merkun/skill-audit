@@ -11,8 +11,10 @@ import geminiDiscovery from './gemini.js';
 const PLUGINS: AgentDiscovery[] = [];
 
 function cloneSkill(skill: Skill): Skill {
-  const { alsoInstalledAt: _alsoInstalledAt, ...rest } = skill;
-  return rest;
+  return {
+    ...skill,
+    ...(skill.alsoInstalledAt !== undefined ? { alsoInstalledAt: [...skill.alsoInstalledAt] } : {}),
+  };
 }
 
 export function dedupeDiscoveredSkills(skills: Skill[]): Skill[] {

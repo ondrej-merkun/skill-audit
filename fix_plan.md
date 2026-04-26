@@ -1015,3 +1015,13 @@ output and what was attempted.)
   `mount` shows `/home/linuxuser/skillaudit` is writable but
   `/home/linuxuser/skillaudit/.git` is mounted read-only, so this session cannot
   stage, commit, or check off the task.
+
+- **0.1 commit still blocked in Codex session** — A narrow follow-up fix for
+  empty-hash annotation cloning passed verification, but
+  `git commit -m "fix(discovery): preserve empty-hash install annotations"`
+  failed with `fatal: Unable to create
+  '/home/linuxuser/skillaudit/.git/index.lock': Read-only file system`.
+  `mount` again shows `/home/linuxuser/skillaudit` as `rw` and
+  `/home/linuxuser/skillaudit/.git` as `ro`; current uncommitted files are
+  `packages/cli/src/discovery/index.ts`, `test/discovery-registry.test.ts`, and
+  this blocker note.

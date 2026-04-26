@@ -163,6 +163,39 @@ describe('discoverAll', () => {
     expect(skills).toEqual([skill1, skill2]);
   });
 
+  it('preserves existing duplicate path annotations on empty tree hashes', async () => {
+    const skill1 = makeSkill({
+      id: 'config-a',
+      path: '/tmp/config-a',
+      treeSha256: '',
+      alsoInstalledAt: ['/tmp/config-a-alias'],
+    });
+    const skill2 = makeSkill({
+      id: 'config-b',
+      path: '/tmp/config-b',
+      treeSha256: '',
+      alsoInstalledAt: ['/tmp/config-b-alias'],
+    });
+
+    registerPlugin({
+      id: 'plugin-a',
+      displayName: 'Plugin A',
+      isInstalled: async () => true,
+      discoverSkills: async () => [skill1],
+    });
+    registerPlugin({
+      id: 'plugin-b',
+      displayName: 'Plugin B',
+      isInstalled: async () => true,
+      discoverSkills: async () => [skill2],
+    });
+
+    const skills = await discoverAll();
+    expect(skills).toEqual([skill1, skill2]);
+    expect(skills[0]).not.toBe(skill1);
+    expect(skills[0]?.alsoInstalledAt).not.toBe(skill1.alsoInstalledAt);
+  });
+
   it('is fail-silent when isInstalled() throws', async () => {
     registerPlugin({
       id: 'broken-check',
