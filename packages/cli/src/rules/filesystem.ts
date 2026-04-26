@@ -1,4 +1,5 @@
 import type { Rule } from '../types.js';
+import { maskDocumentationExampleContext } from './code-context.js';
 
 // Patterns using RegExp constructor to avoid triggering static-analysis hooks on this detector file.
 
@@ -26,6 +27,7 @@ export const FS_CREDSTORE: Rule = {
     libKeychainPattern,
     etcPasswdPattern,
   ],
+  prepareContent: maskDocumentationExampleContext,
   message: 'Access to a known credential store path detected.',
   fix: 'Remove references to ~/.ssh, ~/.aws/credentials, ~/.kube/config and other credential stores.',
   cwe: ['CWE-522'],
@@ -88,6 +90,7 @@ export const FS_BOUNDARY_ESCAPE: Rule = {
   severity: 'high',
   appliesTo: ['*.py', '*.sh', '*.bash', '*.js', '*.ts', '*.mjs'],
   patterns: [pathTraversalPattern, procEnvironPattern, etcSudoersPattern],
+  prepareContent: maskDocumentationExampleContext,
   message: 'Path traversal or access to protected system path detected.',
   fix: 'Do not use ../../ traversal sequences or read /proc/*/environ or /etc/sudoers.',
   cwe: ['CWE-22'],

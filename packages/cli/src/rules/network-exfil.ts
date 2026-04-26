@@ -1,4 +1,5 @@
 import type { Rule } from '../types.js';
+import { maskDocumentationExampleContext } from './code-context.js';
 
 // Patterns are split to avoid triggering static-analysis hooks on this detector file itself.
 // These rules detect env-exfil and network calls in scanned skills, not in this codebase.
@@ -39,6 +40,7 @@ export const NET_OUTBOUND_NONLOCAL: Rule = {
   severity: 'high',
   appliesTo: ['*.py', '*.sh', '*.bash', '*.js', '*.ts', '*.mjs'],
   patterns: [shellOutboundPattern, pyOutboundPattern, jsOutboundPattern],
+  prepareContent: maskDocumentationExampleContext,
   message: 'Hardcoded outbound HTTP call to non-localhost address detected.',
   fix: 'Audit the destination. Skills should not make arbitrary external HTTP calls.',
   cwe: ['CWE-918'],
@@ -75,6 +77,7 @@ export const NET_RAW_SOCKET: Rule = {
     /\bnet\.createConnection\s*\(/,
     /\bnet\.connect\s*\(/,
   ],
+  prepareContent: maskDocumentationExampleContext,
   message: 'Raw socket creation detected — may be used for covert C2 communication.',
   fix: 'Replace raw socket usage with a documented, auditable HTTP client library.',
   cwe: ['CWE-200'],
@@ -92,6 +95,7 @@ export const NET_DNS_UNUSUAL_TLD: Rule = {
   severity: 'medium',
   appliesTo: ['*.py', '*.sh', '*.bash', '*.js', '*.ts', '*.mjs', '*.md'],
   patterns: [unusualTldUrlPattern, unusualTldDnsPattern],
+  prepareContent: maskDocumentationExampleContext,
   message: 'Network connection to a TLD commonly used for C2 infrastructure.',
   fix: 'Audit the destination domain. If legitimate, document the reason in a comment.',
   cwe: ['CWE-200'],

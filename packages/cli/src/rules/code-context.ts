@@ -1,5 +1,18 @@
 const PYTHON_CODE_EXTENSIONS = new Set(['.py']);
 const JAVASCRIPT_CODE_EXTENSIONS = new Set(['.js', '.ts', '.mjs', '.cjs', '.jsx', '.tsx']);
+const DOCUMENTATION_PATH_SEGMENTS = new Set([
+  'docs',
+  'documentation',
+  'examples',
+  'samples',
+  'assets',
+  '__tests__',
+]);
+const DOCUMENTATION_BASENAME_PATTERN =
+  /^(?:readme|changelog|threat[-_]?model)\b|(?:\.test|\.spec)\.[^.]+$|^test[_-]|(?:^|[-_])(?:fixture|sample|example|asset)(?:[-_.]|$)/i;
+const DOCUMENTATION_LINE_CONTEXT_PATTERN =
+  /\b(?:docs?|documentation|reference|example|sample|test(?:s|ing)?|fixture|asset|image|opengraph|threat[- ]?model|table|benign|false positive|payload|informational|mock|demo)\b/i;
+const COMMENT_LINE_PATTERN = /^\s*(?:#|\/\/|\/\*|\*|<!--)/;
 
 function extensionOf(filePath: string): string {
   const lastSlash = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
@@ -8,10 +21,19 @@ function extensionOf(filePath: string): string {
   return dot >= 0 ? basename.slice(dot) : '';
 }
 
+function basenameOf(filePath: string): string {
+  const lastSlash = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+  return filePath.slice(lastSlash + 1);
+}
+
 function maskRange(chars: string[], start: number, end: number): void {
   for (let idx = start; idx < end; idx += 1) {
     if (chars[idx] !== '\n' && chars[idx] !== '\r') chars[idx] = ' ';
   }
+}
+
+function maskLine(line: string): string {
+  return ' '.repeat(line.length);
 }
 
 function isStringPrefixChar(char: string): boolean {
@@ -141,4 +163,35 @@ export function maskDocumentationTextInCode(content: string, filePath: string): 
   if (PYTHON_CODE_EXTENSIONS.has(ext)) return maskPythonStringsAndComments(content);
   if (JAVASCRIPT_CODE_EXTENSIONS.has(ext)) return maskJavaScriptStringsAndComments(content);
   return content;
+}
+
+function pathLooksDocumentationOnly(filePath: string): boolean {
+  const normalized = filePath.replaceAll('\\', '/');
+  const segments = normalized.split('/');
+  if (segments.some((segment) => DOCUMENTATION_PATH_SEGMENTS.has(segment.toLowerCase())))
+    return true;
+  return DOCUMENTATION_BASENAME_PATTERN.test(basenameOf(filePath));
+}
+
+/**
+ * Suppresses lines that are clearly documentation, examples, tests, fixtures, or assets.
+ * This is intentionally line-based so active runtime code in normal skill files still matches.
+ */
+export function maskDocumentationExampleContext(content: string, filePath: string): string {
+  const pathIsDocumentationOnly = pathLooksDocumentationOnly(filePath);
+  const isMarkdown = /\.(?:md|mdc)$/i.test(filePath);
+
+  return content
+    .split('\n')
+    .map((line) => {
+      if (pathIsDocumentationOnly) return maskLine(line);
+      if (COMMENT_LINE_PATTERN.test(line) && DOCUMENTATION_LINE_CONTEXT_PATTERN.test(line)) {
+        return maskLine(line);
+      }
+      if (isMarkdown && DOCUMENTATION_LINE_CONTEXT_PATTERN.test(line)) {
+        return maskLine(line);
+      }
+      return line;
+    })
+    .join('\n');
 }
