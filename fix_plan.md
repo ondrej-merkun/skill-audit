@@ -725,7 +725,7 @@ at the bottom and the loop will stop.
   - Avoid unsupported recall or false-positive percentages unless measured or
     already backed by project evidence.
 
-- [ ] **31** Add verified CI usage documentation.
+- [x] **31** Add verified CI usage documentation.
 
   Document a working CI setup for `skillaudit`, including the supported command,
   exit-code behavior, JSON output, and action usage once task 28 settles the
