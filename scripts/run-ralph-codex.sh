@@ -19,11 +19,16 @@
 #   - Invokes `codex exec` instead of `claude -p`
 #   - Uses --full-auto (= --ask-for-approval never + --sandbox workspace-write)
 #     instead of Claude's --dangerously-skip-permissions
+#   - Adds --add-dir "$PWD/.git" because workspace-write keeps `.git` read-only
+#     by default, which silently breaks the agent's `git commit` step and
+#     forces every iteration through the straggler fallback. See LESSONS.md.
 #   - Pre-flight checks for OPENAI_API_KEY (or codex login) instead of
 #     ANTHROPIC_API_KEY
 #   - Reads PROMPT.md via stdin redirection (avoids ARG_MAX on long prompts)
 #   - Sets NO_COLOR=1 inside the loop so logs don't accumulate ANSI cruft
 #   - CODEX_MODEL env var lets operator pin the model
+#   - STRAGGLER_LIMIT env var bounds consecutive straggler-fallback commits;
+#     the loop aborts when the agent is clearly stuck (default: 2)
 
 set -uo pipefail
 
@@ -33,7 +38,8 @@ MAX_MINUTES="${MAX_MINUTES:-}"               # alternative finer-grained
 MAX_ITERATIONS="${MAX_ITERATIONS:-1000}"     # hard safety cap, not primary limit
 SLEEP_BETWEEN="${SLEEP_BETWEEN:-5}"
 CODEX_MODEL="${CODEX_MODEL:-}"               # optional model pin (e.g. gpt-5-codex)
-CODEX_ARGS="${CODEX_ARGS:---full-auto --skip-git-repo-check}"
+CODEX_ARGS="${CODEX_ARGS:---full-auto --skip-git-repo-check --add-dir $PWD/.git}"
+STRAGGLER_LIMIT="${STRAGGLER_LIMIT:-2}"      # consecutive stragglers before aborting
 LOG_DIR="${LOG_DIR:-logs}"
 LOG_FILE="${LOG_DIR}/ralph-codex.log"
 DONE_MARKER="ALL TASKS COMPLETE"
@@ -106,16 +112,18 @@ WARN_TIME=$(( START_TIME + BUDGET_SECONDS * 3 / 4 ))   # 75% warning
 warned=0
 
 echo "🔁 Ralph (Codex) starting — time-bounded run"
-echo "   Budget:         $(human_duration "$BUDGET_SECONDS")"
-echo "   Will stop by:   $(fmt_epoch "$END_TIME")"
-echo "   Iteration cap:  $MAX_ITERATIONS (safety backstop only)"
-echo "   Model:          ${CODEX_MODEL:-<codex default>}"
-echo "   Codex args:     $CODEX_ARGS"
-echo "   Log:            $LOG_FILE"
-echo "   Stop early:     Ctrl-C (or pkill -f run-ralph-codex.sh from another terminal)"
+echo "   Budget:          $(human_duration "$BUDGET_SECONDS")"
+echo "   Will stop by:    $(fmt_epoch "$END_TIME")"
+echo "   Iteration cap:   $MAX_ITERATIONS (safety backstop only)"
+echo "   Model:           ${CODEX_MODEL:-<codex default>}"
+echo "   Codex args:      $CODEX_ARGS"
+echo "   Straggler limit: $STRAGGLER_LIMIT consecutive (then exit 2)"
+echo "   Log:             $LOG_FILE"
+echo "   Stop early:      Ctrl-C (or pkill -f run-ralph-codex.sh from another terminal)"
 echo ""
 
 iter=0
+straggler_streak=0
 while true; do
   now=$(date +%s)
   elapsed=$(( now - START_TIME ))
@@ -169,9 +177,27 @@ while true; do
     fi
   fi
 
-  # --- Commit straggler changes the iteration forgot to commit (defensive)
+  # --- Commit straggler changes the iteration forgot to commit (defensive).
+  #     Should be rare. If it happens repeatedly the agent is stuck — usually
+  #     because it can't write to .git, or it's reading the same task each
+  #     iteration without flipping the checkbox. We bail loudly rather than
+  #     silently masking the failure with `|| true`.
   if ! git diff --quiet || ! git diff --cached --quiet; then
-    git add -A && git commit -m "ralph-codex: iter ${iter} stragglers" >> "$LOG_FILE" 2>&1 || true
+    if git add -A && git commit -m "ralph-codex: iter ${iter} stragglers" >> "$LOG_FILE" 2>&1; then
+      straggler_streak=$(( straggler_streak + 1 ))
+      echo "⚠️  [$ts] iter $iter committed via straggler fallback — agent did not commit cleanly (streak: $straggler_streak/$STRAGGLER_LIMIT)" \
+        | tee -a "$LOG_FILE"
+      if (( straggler_streak >= STRAGGLER_LIMIT )); then
+        echo "🛑 [$ts] $straggler_streak consecutive straggler iterations — loop is likely stuck. Inspect fix_plan.md and recent commits, then restart. Exiting." \
+          | tee -a "$LOG_FILE"
+        exit 2
+      fi
+    else
+      echo "⚠️  [$ts] iter $iter had uncommitted changes but the fallback commit itself failed. Continuing." \
+        | tee -a "$LOG_FILE"
+    fi
+  else
+    straggler_streak=0
   fi
 
   sleep "$SLEEP_BETWEEN"
