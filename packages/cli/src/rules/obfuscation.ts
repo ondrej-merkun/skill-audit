@@ -9,6 +9,10 @@ const pyB64DecodePattern = new RegExp(
 const evalBufferPattern = new RegExp(
   ['\\bev', 'al\\s*\\(\\s*Buffer\\.from\\s*\\([^)]+,\\s*[\'"]', 'base64', '[\'"]\\)'].join('')
 );
+const cyrillicHomoglyphInAsciiTokenPattern =
+  /(?<finding>\b[A-Za-z0-9_.:/-]*[аеіорсху][A-Za-z0-9_.:/-]+|[A-Za-z0-9_.:/-]+[аеіорсху][A-Za-z0-9_.:/-]*\b)/u;
+const greekHomoglyphInSuspiciousTokenPattern =
+  /(?<finding>\b(?:ignοre|οverride|bypαss|disαble|nοde|pythοn|cοm)[A-Za-z0-9_.:/-]*\b|https?:\/\/[^\s"'`<>]*[αουν][^\s"'`<>]*)/iu;
 
 const TEXT_FILES = [
   '*.md',
@@ -91,9 +95,12 @@ export const OBFS_HOMOGLYPH: Rule = {
   severity: 'low',
   appliesTo: TEXT_FILES,
   patterns: [
-    // Cyrillic lookalikes for Latin: а е і о р с х у
-    // Greek lookalikes: α ο υ ν
-    /[аеіорсхуαουν]/,
+    // Cyrillic lookalikes for Latin letters inside ASCII-like identifiers,
+    // paths, commands, or URLs. Ordinary Cyrillic words are not obfuscation.
+    cyrillicHomoglyphInAsciiTokenPattern,
+    // Greek symbols are common in math/statistics, so only flag common
+    // suspicious prompt, command, and URL contexts.
+    greekHomoglyphInSuspiciousTokenPattern,
   ],
   message: 'Homoglyph character detected — Unicode lookalike for an ASCII letter.',
   fix: 'Replace the lookalike character with the ASCII equivalent. Run a Unicode normalizer.',
