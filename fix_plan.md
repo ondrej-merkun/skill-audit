@@ -1104,3 +1104,13 @@ output and what was attempted.)
   `gh repo view ondrej-merkun/skill-audit --json nameWithOwner,repositoryTopics`
   and `gh repo edit ondrej-merkun/skill-audit --add-topic ...` fail with
   `error connecting to api.github.com`.
+
+- **35 remains blocked in Codex session** — Rechecked the GitHub plugin and
+  local CLI on 2026-04-27. `tool_search` still exposes only repository/issue/PR/
+  file tools, not repository topic updates. `_get_repo` confirms admin access to
+  `ondrej-merkun/skill-audit`, but the connector has no topics field or write
+  action. `gh auth status` still reports the configured `ondrej-merkun` token is
+  invalid, `gh repo view ondrej-merkun/skill-audit --json nameWithOwner,repositoryTopics`
+  fails with `error connecting to api.github.com`, and
+  `gh repo edit ondrej-merkun/skill-audit --add-topic ai-security --add-topic prompt-injection --add-topic agent-skills --add-topic cli --add-topic static-analysis --add-topic supply-chain-security --add-topic claude-code --add-topic cursor --add-topic codex --add-topic copilot`
+  fails with the same API connection error.
