@@ -102,6 +102,12 @@ without a commit message explaining why it no longer applies.
   When testing interactive spinners, either exercise the reporter directly or
   stub `cursorTo`, `clearLine`, and `moveCursor` with the TTY flag.
 
+- **L1.16 — Public README contract snippets may be intentionally duplicated.**
+  _Task 19 moved dense CI docs out of README and `test/e2e.test.ts` caught the
+  missing `uses: ondrej-merkun/skill-audit@v1` snippet._
+  When slimming docs, keep compact public install/action snippets where tests
+  assert them, or update the product contract deliberately.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task
