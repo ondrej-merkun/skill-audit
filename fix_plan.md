@@ -358,7 +358,7 @@ at the bottom and the loop will stop.
     iOS jailbreak-detection documentation.
   - Do not weaken `PI-OVERRIDE`; this task is only for `PI-JAILBREAK`.
 
-- [ ] **10** Tighten `PI-OVERRIDE` so normal role descriptions and examples do
+- [x] **10** Tighten `PI-OVERRIDE` so normal role descriptions and examples do
   not fire.
 
   Real scan output flagged phrases such as "new role with bigger team",
