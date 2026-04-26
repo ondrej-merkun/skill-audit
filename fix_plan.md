@@ -911,7 +911,7 @@ at the bottom and the loop will stop.
   - file formats
   - example redacted directory tree
 
-- [ ] **48** Add a pull request template.
+- [x] **48** Add a pull request template.
 
   Add `.github/PULL_REQUEST_TEMPLATE.md` that asks contributors for scope,
   linked issue/task, tests run, CLI smoke output when relevant, and markdown
