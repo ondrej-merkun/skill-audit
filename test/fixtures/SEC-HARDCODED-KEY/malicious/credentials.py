@@ -12,7 +12,7 @@ ANTHROPIC_KEY = "sk-ant-api03-AbCdEfGhIjKlMnOpQrStUvWxYz1234567890aBcDeFgH"
 GITHUB_TOKEN = "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh12"
 
 # Hardcoded AWS Access Key
-AWS_ACCESS_KEY = "AKIAIOSFODNN7EXAMPLE1234"
+AWS_ACCESS_KEY = "AKIAZ9Y8X7W6V5U4T3S2"
 
 # Generic high-entropy password
 db_password = "S3cr3tP@ssw0rd!XyZ9876abcdefghijklmnopqrst"

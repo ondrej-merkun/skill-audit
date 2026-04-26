@@ -17,3 +17,18 @@ token = "changeme"
 
 # Comment mentioning sk-ant pattern but not a real key
 # Note: never hardcode sk-ant style keys, use env vars instead
+
+# Canonical provider placeholder from AWS documentation
+AWS_DOCS_PLACEHOLDER = "AKIAIOSFODNN7EXAMPLE"
+
+# OpenAI docs-style placeholder value
+OPENAI_DOCS_PLACEHOLDER = "sk-1234567890abcdef1234567890abcdef123456"
+
+# NEVER DO THIS: educational bad example, not a live credential fixture
+BAD_EXAMPLE_KEY = "sk-ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"
+
+# Example
+BAD_GITHUB_TOKEN = "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh12"
+
+# fixture test data used to verify scanners catch realistic shapes
+fixture_secret = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

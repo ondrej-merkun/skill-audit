@@ -164,6 +164,14 @@ without a commit message explaining why it no longer applies.
   users what to fix first, whether machine and human outputs agree, and whether
   users can save/share the result through normal CLI affordances.
 
+## 7. Rule fixtures
+
+- **L7.1 — Malicious secret fixtures must not use provider placeholder keys.** _Task
+  20 found `SEC-HARDCODED-KEY` treating AWS's `AKIAIOSFODNN7EXAMPLE` docs
+  placeholder as malicious evidence._
+  Use plausible non-placeholder values in malicious fixtures; reserve canonical
+  docs/test values for benign placeholder coverage.
+
 ---
 
 ## How to add a new lesson
