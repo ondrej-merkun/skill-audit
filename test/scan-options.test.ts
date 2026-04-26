@@ -51,6 +51,14 @@ async function withTempDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
 describe('runScan flag wiring', () => {
   let stdoutChunks: string[];
   let stderrChunks: string[];
+  let originalStdoutIsTTY: PropertyDescriptor | undefined;
+  let originalStderrIsTTY: PropertyDescriptor | undefined;
+  let originalStderrCursorTo: PropertyDescriptor | undefined;
+  let originalStderrClearLine: PropertyDescriptor | undefined;
+  let originalStderrMoveCursor: PropertyDescriptor | undefined;
+  let ttyOverridden = false;
+  const originalCi = process.env['CI'];
+  const originalTerm = process.env['TERM'];
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -69,8 +77,75 @@ describe('runScan flag wiring', () => {
   });
 
   afterEach(() => {
+    restoreTTY();
+    restoreProgressEnv();
     vi.restoreAllMocks();
   });
+
+  function makeInteractiveTTY(): void {
+    if (ttyOverridden) return;
+    originalStdoutIsTTY = Object.getOwnPropertyDescriptor(process.stdout, 'isTTY');
+    originalStderrIsTTY = Object.getOwnPropertyDescriptor(process.stderr, 'isTTY');
+    originalStderrCursorTo = Object.getOwnPropertyDescriptor(process.stderr, 'cursorTo');
+    originalStderrClearLine = Object.getOwnPropertyDescriptor(process.stderr, 'clearLine');
+    originalStderrMoveCursor = Object.getOwnPropertyDescriptor(process.stderr, 'moveCursor');
+    Object.defineProperty(process.stdout, 'isTTY', { configurable: true, value: true });
+    Object.defineProperty(process.stderr, 'isTTY', { configurable: true, value: true });
+    Object.defineProperty(process.stderr, 'cursorTo', { configurable: true, value: () => true });
+    Object.defineProperty(process.stderr, 'clearLine', { configurable: true, value: () => true });
+    Object.defineProperty(process.stderr, 'moveCursor', { configurable: true, value: () => true });
+    delete process.env['CI'];
+    process.env['TERM'] = 'xterm-256color';
+    ttyOverridden = true;
+  }
+
+  function restoreTTY(): void {
+    if (!ttyOverridden) return;
+    if (originalStdoutIsTTY !== undefined) {
+      Object.defineProperty(process.stdout, 'isTTY', originalStdoutIsTTY);
+    } else {
+      delete (process.stdout as { isTTY?: boolean }).isTTY;
+    }
+    if (originalStderrIsTTY !== undefined) {
+      Object.defineProperty(process.stderr, 'isTTY', originalStderrIsTTY);
+    } else {
+      delete (process.stderr as { isTTY?: boolean }).isTTY;
+    }
+    if (originalStderrCursorTo !== undefined) {
+      Object.defineProperty(process.stderr, 'cursorTo', originalStderrCursorTo);
+    } else {
+      delete (process.stderr as { cursorTo?: unknown }).cursorTo;
+    }
+    if (originalStderrClearLine !== undefined) {
+      Object.defineProperty(process.stderr, 'clearLine', originalStderrClearLine);
+    } else {
+      delete (process.stderr as { clearLine?: unknown }).clearLine;
+    }
+    if (originalStderrMoveCursor !== undefined) {
+      Object.defineProperty(process.stderr, 'moveCursor', originalStderrMoveCursor);
+    } else {
+      delete (process.stderr as { moveCursor?: unknown }).moveCursor;
+    }
+    originalStdoutIsTTY = undefined;
+    originalStderrIsTTY = undefined;
+    originalStderrCursorTo = undefined;
+    originalStderrClearLine = undefined;
+    originalStderrMoveCursor = undefined;
+    ttyOverridden = false;
+  }
+
+  function restoreProgressEnv(): void {
+    if (originalCi === undefined) {
+      delete process.env['CI'];
+    } else {
+      process.env['CI'] = originalCi;
+    }
+    if (originalTerm === undefined) {
+      delete process.env['TERM'];
+    } else {
+      process.env['TERM'] = originalTerm;
+    }
+  }
 
   it('--json emits parseable JSON to stdout', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
@@ -80,6 +155,17 @@ describe('runScan flag wiring', () => {
     const json = JSON.parse(out);
     expect(json.schema_version).toBe('1.0');
     expect(Array.isArray(json.skills)).toBe(true);
+  });
+
+  it('keeps JSON stdout clean in an interactive terminal', async () => {
+    makeInteractiveTTY();
+    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+
+    await runScan({ json: true, offline: true });
+
+    const out = stdoutChunks.join('');
+    expect(() => JSON.parse(out)).not.toThrow();
+    expect(stripAnsi(stderrChunks.join(''))).not.toContain('Scanning skills');
   });
 
   it('--json emits scanned skills in risk-first order', async () => {
@@ -225,6 +311,24 @@ describe('runScan flag wiring', () => {
     expect(enrichAll).toHaveBeenCalledWith(expect.any(Array), {
       sources: ['skillsSh', 'depsdev'],
     });
+  });
+
+  it('writes live scan and enrichment progress only to stderr for pretty output', async () => {
+    makeInteractiveTTY();
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({ id: 'one', name: 'one', path: '/tmp/one', treeSha256: 'one' }),
+      makeSkill({ id: 'two', name: 'two', path: '/tmp/two', treeSha256: 'two' }),
+    ]);
+
+    await runScan({});
+
+    const stdout = stripAnsi(stdoutChunks.join(''));
+    const stderr = stripAnsi(stderrChunks.join(''));
+    expect(stdout).toContain('skillaudit');
+    expect(stdout).not.toContain('Scanning skills');
+    expect(stderr).toContain('Scanning skills 1/2');
+    expect(stderr).toContain('Scanning skills 2/2');
+    expect(stderr).toContain('Enriching with skills.sh, deps.dev');
   });
 
   it('default scan explains when selected enrichment sources find no metadata', async () => {

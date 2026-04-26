@@ -107,6 +107,53 @@ describe('discoverAll', () => {
     expect(earlierPath).not.toHaveProperty('alsoInstalledAt');
   });
 
+  it('reports discovery progress with deduped skill and unique agent totals', async () => {
+    const events: string[] = [];
+    const sharedTree = 'same-tree';
+
+    registerPlugin({
+      id: 'plugin-a',
+      displayName: 'Plugin A',
+      isInstalled: async () => true,
+      discoverSkills: async () => [
+        makeSkill({ id: 'skill-a', agentId: 'claude-code', treeSha256: sharedTree }),
+      ],
+    });
+    registerPlugin({
+      id: 'plugin-b',
+      displayName: 'Plugin B',
+      isInstalled: async () => true,
+      discoverSkills: async () => [
+        makeSkill({
+          id: 'skill-b',
+          agentId: 'cursor',
+          path: '/tmp/duplicate',
+          treeSha256: sharedTree,
+        }),
+        makeSkill({ id: 'skill-c', agentId: 'codex', treeSha256: 'unique-tree' }),
+      ],
+    });
+
+    const skills = await discoverAll({
+      onProgress: (event) => {
+        if (event.type === 'checking-agent') events.push(`checking:${event.agentId}`);
+        if (event.type === 'agent-done') events.push(`done:${event.agentId}:${event.skillCount}`);
+        if (event.type === 'complete') {
+          events.push(`complete:${event.skillCount}:${event.agentCount}`);
+        }
+      },
+    });
+
+    expect(skills).toHaveLength(2);
+    expect(events).toEqual([
+      'checking:plugin-a',
+      'done:plugin-a:1',
+      'checking:plugin-b',
+      'done:plugin-b:2',
+      'complete:2:2',
+    ]);
+  });
+
   it('merges preexisting duplicate install paths lexicographically', async () => {
     const primary = makeSkill({
       id: 'primary-skill',

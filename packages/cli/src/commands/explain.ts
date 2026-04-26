@@ -1,8 +1,8 @@
 import chalk from 'chalk';
-import ora from 'ora';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
 import { enrichSkill } from '../enrich/index.js';
 import { renderJson } from '../output/json.js';
+import { createProgressReporter, selectProgressMode } from '../progress.js';
 import { runRules } from '../rules/engine.js';
 import { ALL_RULES } from '../rules/index.js';
 import { scoreFindings } from '../score.js';
@@ -149,17 +149,22 @@ export async function runExplain(
   clearPlugins();
   initDefaultPlugins();
 
-  const spinner = ora('Discovering skills…').start();
+  const progress = createProgressReporter({
+    mode: selectProgressMode({
+      outputKind: options.json ? 'json' : 'pretty',
+      stdoutIsTTY: process.stdout.isTTY === true,
+      stderrIsTTY: process.stderr.isTTY === true,
+    }),
+  });
+
   let skills: Skill[];
   try {
-    skills = await discoverAll();
+    skills = await discoverAll({ onProgress: progress.onDiscoveryProgress });
   } catch (err) {
-    spinner.fail('Discovery failed');
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(`[skillaudit] ${msg}\n`);
     process.exit(2);
   }
-  spinner.stop();
 
   const target = skills.find(
     (s) =>
@@ -175,36 +180,38 @@ export async function runExplain(
     process.exit(1);
   }
 
-  const scanSpinner = ora(`Scanning ${target.name}…`).start();
+  progress.startScan(1);
   let findings: Finding[];
   try {
     findings = await runRules(target.path, ALL_RULES);
+    progress.updateScan(1, 1, target.name);
   } catch (err) {
-    scanSpinner.fail('Scan failed');
+    progress.failScan();
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(`[skillaudit] ${msg}\n`);
     process.exit(2);
   }
-  scanSpinner.succeed('Scan complete');
+  progress.succeedScan(1);
 
   const summary = scoreFindings(findings, target.treeSha256);
 
   let enrichment: Enrichment = {};
   let enrichmentStatus: EnrichmentStatus = options.offline ? 'skipped-offline' : 'not-run';
   if (!options.offline) {
-    const enrichSpinner = ora('Enriching…').start();
+    const enrichmentSources = ['skillsSh', 'github', 'depsdev'] as const;
+    progress.startEnrichment([...enrichmentSources]);
     try {
-      enrichment = await enrichSkill(target, { sources: ['skillsSh', 'github', 'depsdev'] });
+      enrichment = await enrichSkill(target, { sources: [...enrichmentSources] });
       enrichmentStatus =
         enrichment.skillsSh !== undefined ||
         enrichment.github !== undefined ||
         enrichment.depsdev !== undefined
           ? 'found'
           : 'no-metadata';
-      enrichSpinner.succeed('Enrichment complete');
+      progress.succeedEnrichment([...enrichmentSources]);
     } catch {
       enrichmentStatus = 'unavailable';
-      enrichSpinner.warn('Enrichment failed (continuing)');
+      progress.warnEnrichment();
     }
   }
 

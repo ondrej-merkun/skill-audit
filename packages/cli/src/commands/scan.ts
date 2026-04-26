@@ -1,6 +1,5 @@
 import { writeFile } from 'node:fs/promises';
 import { stripVTControlCharacters } from 'node:util';
-import ora from 'ora';
 import { loadIgnoreList } from '../allowlist/ignore.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
 import { enrichAll } from '../enrich/index.js';
@@ -11,6 +10,11 @@ import { sortScanSkills } from '../output/sort.js';
 import { renderSummaryCompact } from '../output/summary.js';
 import { renderTableToString } from '../output/table.js';
 import { calculateCompromisedPercent } from '../percent.js';
+import {
+  type ProgressOutputKind,
+  createProgressReporter,
+  selectProgressMode,
+} from '../progress.js';
 import { runRules } from '../rules/engine.js';
 import { ALL_RULES } from '../rules/index.js';
 import { scoreFindings } from '../score.js';
@@ -96,7 +100,8 @@ function hasEnrichmentData(enrichment: Enrichment): boolean {
 async function mapWithConcurrency<T, R>(
   items: T[],
   limit: number,
-  mapper: (item: T) => Promise<R>
+  mapper: (item: T) => Promise<R>,
+  onComplete?: (result: R, item: T, index: number) => void
 ): Promise<R[]> {
   const results = new Array<R>(items.length);
   let nextIndex = 0;
@@ -106,7 +111,9 @@ async function mapWithConcurrency<T, R>(
       const index = nextIndex++;
       const item = items[index];
       if (item !== undefined) {
-        results[index] = await mapper(item);
+        const result = await mapper(item);
+        results[index] = result;
+        onComplete?.(result, item, index);
       }
     }
   }
@@ -114,6 +121,13 @@ async function mapWithConcurrency<T, R>(
   const workerCount = Math.min(limit, items.length);
   await Promise.all(Array.from({ length: workerCount }, () => worker()));
   return results;
+}
+
+function scanProgressOutputKind(options: ScanOptions): ProgressOutputKind {
+  if (options.json) return 'json';
+  if (options.summary) return 'summary';
+  if (options.output !== undefined || options.html !== undefined) return 'file';
+  return 'pretty';
 }
 
 export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
@@ -133,18 +147,22 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   clearPlugins();
   initDefaultPlugins();
 
-  const discoverSpinner = ora('Discovering skills…').start();
+  const progress = createProgressReporter({
+    mode: selectProgressMode({
+      outputKind: scanProgressOutputKind(options),
+      stdoutIsTTY: process.stdout.isTTY === true,
+      stderrIsTTY: process.stderr.isTTY === true,
+    }),
+  });
+
   let skills: Skill[];
   try {
-    skills = await discoverAll();
+    skills = await discoverAll({ onProgress: progress.onDiscoveryProgress });
   } catch (err) {
-    discoverSpinner.fail('Discovery failed');
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(`[skillaudit] ${msg}\n`);
     process.exit(2);
   }
-
-  discoverSpinner.succeed(`Found ${skills.length} skill${skills.length === 1 ? '' : 's'}`);
 
   if (options.agent !== undefined) {
     const agentId = options.agent;
@@ -178,13 +196,12 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     );
   }
 
-  const scanSpinner = ora(
-    `Scanning ${toScan.length} skill${toScan.length === 1 ? '' : 's'}…`
-  ).start();
+  progress.startScan(toScan.length);
 
   const scannedSkills: ScannedSkill[] = [];
   const agentMap = new Map<string, number>();
   let incompleteCount = 0;
+  let completedScans = 0;
 
   // Ignored skills appear in output with no findings and ignored: true
   for (const skill of ignoredSkills) {
@@ -205,6 +222,10 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
         const msg = err instanceof Error ? err.message : String(err);
         return { skill, error: msg };
       }
+    },
+    (_outcome, skill) => {
+      completedScans++;
+      progress.updateScan(completedScans, toScan.length, skill.name);
     }
   );
 
@@ -218,12 +239,12 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     agentMap.set(outcome.skill.agentId, (agentMap.get(outcome.skill.agentId) ?? 0) + 1);
   }
 
-  scanSpinner.succeed('Scan complete');
+  progress.succeedScan(toScan.length);
 
   const enrichmentSources = selectScanEnrichmentSources(options);
   let enrichmentStatus: EnrichmentStatus = options.offline ? 'skipped-offline' : 'not-run';
   if (!options.offline && scannedSkills.length > 0 && enrichmentSources.length > 0) {
-    const enrichSpinner = ora('Enriching…').start();
+    progress.startEnrichment(enrichmentSources);
     try {
       const enrichments = await enrichAll(scannedSkills, { sources: enrichmentSources });
       let foundMetadata = false;
@@ -236,10 +257,10 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
         }
       }
       enrichmentStatus = foundMetadata ? 'found' : 'no-metadata';
-      enrichSpinner.succeed('Enrichment complete');
+      progress.succeedEnrichment(enrichmentSources);
     } catch {
       enrichmentStatus = 'unavailable';
-      enrichSpinner.warn('Enrichment failed (continuing)');
+      progress.warnEnrichment();
     }
   }
 

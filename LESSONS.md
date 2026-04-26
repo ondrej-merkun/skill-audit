@@ -96,6 +96,12 @@ without a commit message explaining why it no longer applies.
   Render changed docs images at their embedded README dimensions and inspect
   for clipping, overlap, and stale output before committing.
 
+- **L1.15 — Faked TTY tests need TTY cursor methods, not just `isTTY`.** _Task
+  8 progress tests set `process.stderr.isTTY = true`, then `ora` crashed because
+  the sandbox stream lacked `cursorTo`._
+  When testing interactive spinners, either exercise the reporter directly or
+  stub `cursorTo`, `clearLine`, and `moveCursor` with the TTY flag.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

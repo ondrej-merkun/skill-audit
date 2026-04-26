@@ -1,3 +1,4 @@
+import type { DiscoveryProgressCallback } from '../progress.js';
 import type { AgentDiscovery, Skill } from '../types.js';
 import agentsMdSweepDiscovery from './agents-md-sweep.js';
 import claudeCodeDiscovery from './claude-code.js';
@@ -120,10 +121,21 @@ export function initDefaultPlugins(): void {
  * Plugins that are not installed are silently skipped.
  * Plugins that throw are caught and logged to stderr — discovery is fail-silent.
  */
-export async function discoverAll(): Promise<Skill[]> {
+export type DiscoverAllOptions = {
+  onProgress?: DiscoveryProgressCallback;
+};
+
+export async function discoverAll(options: DiscoverAllOptions = {}): Promise<Skill[]> {
   const results: Skill[] = [];
+  options.onProgress?.({ type: 'start', pluginCount: PLUGINS.length });
 
   for (const plugin of PLUGINS) {
+    options.onProgress?.({
+      type: 'checking-agent',
+      agentId: plugin.id,
+      displayName: plugin.displayName,
+    });
+
     let installed: boolean;
     try {
       installed = await plugin.isInstalled();
@@ -132,11 +144,24 @@ export async function discoverAll(): Promise<Skill[]> {
       continue;
     }
 
-    if (!installed) continue;
+    if (!installed) {
+      options.onProgress?.({
+        type: 'agent-skipped',
+        agentId: plugin.id,
+        displayName: plugin.displayName,
+      });
+      continue;
+    }
 
     try {
       const skills = await plugin.discoverSkills();
       results.push(...skills);
+      options.onProgress?.({
+        type: 'agent-done',
+        agentId: plugin.id,
+        displayName: plugin.displayName,
+        skillCount: skills.length,
+      });
     } catch (err) {
       // Fail-silent: one broken plugin must not abort the entire scan
       const msg = err instanceof Error ? err.message : String(err);
@@ -144,7 +169,13 @@ export async function discoverAll(): Promise<Skill[]> {
     }
   }
 
-  return dedupeDiscoveredSkills(results);
+  const deduped = dedupeDiscoveredSkills(results);
+  options.onProgress?.({
+    type: 'complete',
+    skillCount: deduped.length,
+    agentCount: new Set(deduped.map((skill) => skill.agentId)).size,
+  });
+  return deduped;
 }
 
 /**

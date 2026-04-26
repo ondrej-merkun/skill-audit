@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
-import ora from 'ora';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
+import { createProgressReporter, selectProgressMode } from '../progress.js';
 import type { Skill } from '../types.js';
 
 const NO_BORDERS = {
@@ -69,18 +69,22 @@ export async function runList(opts: Partial<ListOptions> = {}): Promise<void> {
   clearPlugins();
   initDefaultPlugins();
 
-  const spinner = ora('Discovering skills…').start();
+  const progress = createProgressReporter({
+    mode: selectProgressMode({
+      outputKind: options.json ? 'json' : 'pretty',
+      stdoutIsTTY: process.stdout.isTTY === true,
+      stderrIsTTY: process.stderr.isTTY === true,
+    }),
+  });
+
   let skills: Skill[];
   try {
-    skills = await discoverAll();
+    skills = await discoverAll({ onProgress: progress.onDiscoveryProgress });
   } catch (err) {
-    spinner.fail('Discovery failed');
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(`[skillaudit] error: ${msg}\n`);
     process.exit(2);
   }
-
-  spinner.stop();
 
   if (options.agent) {
     skills = skills.filter((s) => s.agentId === options.agent);
