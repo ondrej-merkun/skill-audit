@@ -393,7 +393,7 @@ at the bottom and the loop will stop.
     decide whether it should remain high severity or be demoted as a tool-mode
     recommendation.
 
-- [ ] **12** Fix `PI-METADATA-MISMATCH` snippet location and reduce idiomatic
+- [x] **12** Fix `PI-METADATA-MISMATCH` snippet location and reduce idiomatic
   phrase false positives.
 
   Real scan output reports line 1 with snippet `---`, which hides the actual
