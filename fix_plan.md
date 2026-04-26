@@ -513,7 +513,7 @@ at the bottom and the loop will stop.
     malicious fixtures for actual `eval(...)`, unsafe `yaml.load(...)`, and
     `exec(base64.b64decode(...))` calls.
 
-- [ ] **19** Tighten `DEPS-INLINE-INSTALL` so install instructions and
+- [x] **19** Tighten `DEPS-INLINE-INSTALL` so install instructions and
   negative statements do not look like runtime installs.
 
   Real scan output flagged lines such as "No pip install needed", echoed
