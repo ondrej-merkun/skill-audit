@@ -583,7 +583,7 @@ at the bottom and the loop will stop.
   - Document how to refresh the allowlist and make the output clearly show when
     a skill was allowlisted.
 
-- [ ] **23** Remove public-facing mentions of v0.2, roadmap, and future
+- [x] **23** Remove public-facing mentions of v0.2, roadmap, and future
   features.
 
   Clean up docs and package-facing text so the project presents only what the
