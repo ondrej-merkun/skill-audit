@@ -429,7 +429,7 @@ at the bottom and the loop will stop.
   - Keep malicious fixtures with hidden comments that instruct the model to
     ignore, override, always follow, or never reveal instructions.
 
-- [ ] **14** Fix `PI-WHITE-ON-WHITE` so normal fractional font sizes do not
+- [x] **14** Fix `PI-WHITE-ON-WHITE` so normal fractional font sizes do not
   match `font-size: 0`.
 
   Real scan output flagged `font-size:0.8rem` and similar visible UI styles.
