@@ -26,7 +26,9 @@
 #     ANTHROPIC_API_KEY
 #   - Reads PROMPT.md via stdin redirection (avoids ARG_MAX on long prompts)
 #   - Sets NO_COLOR=1 inside the loop so logs don't accumulate ANSI cruft
-#   - CODEX_MODEL env var lets operator pin the model
+#   - CODEX_MODEL env var pins the model (default: gpt-5.5)
+#   - CODEX_EFFORT env var sets reasoning effort (default: medium); passed
+#     through as `-c model_reasoning_effort="$CODEX_EFFORT"`
 #   - STRAGGLER_LIMIT env var bounds consecutive straggler-fallback commits;
 #     the loop aborts when the agent is clearly stuck (default: 2)
 
@@ -37,7 +39,8 @@ MAX_HOURS="${MAX_HOURS:-}"                   # primary budget (decimal OK)
 MAX_MINUTES="${MAX_MINUTES:-}"               # alternative finer-grained
 MAX_ITERATIONS="${MAX_ITERATIONS:-1000}"     # hard safety cap, not primary limit
 SLEEP_BETWEEN="${SLEEP_BETWEEN:-5}"
-CODEX_MODEL="${CODEX_MODEL:-}"               # optional model pin (e.g. gpt-5-codex)
+CODEX_MODEL="${CODEX_MODEL:-gpt-5.5}"        # model pin (default: gpt-5.5)
+CODEX_EFFORT="${CODEX_EFFORT:-medium}"       # reasoning effort (default: medium)
 CODEX_ARGS="${CODEX_ARGS:---full-auto --skip-git-repo-check --add-dir $PWD/.git}"
 STRAGGLER_LIMIT="${STRAGGLER_LIMIT:-2}"      # consecutive stragglers before aborting
 LOG_DIR="${LOG_DIR:-logs}"
@@ -116,6 +119,7 @@ echo "   Budget:          $(human_duration "$BUDGET_SECONDS")"
 echo "   Will stop by:    $(fmt_epoch "$END_TIME")"
 echo "   Iteration cap:   $MAX_ITERATIONS (safety backstop only)"
 echo "   Model:           ${CODEX_MODEL:-<codex default>}"
+echo "   Reasoning:       $CODEX_EFFORT"
 echo "   Codex args:      $CODEX_ARGS"
 echo "   Straggler limit: $STRAGGLER_LIMIT consecutive (then exit 2)"
 echo "   Log:             $LOG_FILE"
@@ -165,13 +169,13 @@ while true; do
     | tee -a "$LOG_FILE"
 
   if [[ "${DRY_RUN:-0}" == "1" ]]; then
-    echo "(DRY_RUN) would invoke: codex exec $CODEX_ARGS ${CODEX_MODEL:+--model $CODEX_MODEL} < PROMPT.md" \
+    echo "(DRY_RUN) would invoke: codex exec $CODEX_ARGS ${CODEX_MODEL:+--model $CODEX_MODEL} ${CODEX_EFFORT:+-c model_reasoning_effort=\"$CODEX_EFFORT\"} < PROMPT.md" \
       | tee -a "$LOG_FILE"
     sleep 2
   else
     # NO_COLOR keeps the log file free of ANSI escapes when codex
     # auto-detects a TTY parent through `tee`.
-    if ! NO_COLOR=1 codex exec $CODEX_ARGS ${CODEX_MODEL:+--model "$CODEX_MODEL"} < PROMPT.md 2>&1 \
+    if ! NO_COLOR=1 codex exec $CODEX_ARGS ${CODEX_MODEL:+--model "$CODEX_MODEL"} ${CODEX_EFFORT:+-c model_reasoning_effort="$CODEX_EFFORT"} < PROMPT.md 2>&1 \
         | tee -a "$LOG_FILE"; then
       echo "⚠️  [$ts] codex exited non-zero on iter $iter. Continuing." | tee -a "$LOG_FILE"
     fi
