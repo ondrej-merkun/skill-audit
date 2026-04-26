@@ -835,7 +835,7 @@ at the bottom and the loop will stop.
     rule updates, allowlists, and GitHub Action execution as explicit sections.
   - Link from README and `SECURITY.md` once the file exists.
 
-- [ ] **42** Add `docs/RELEASE_CHECKLIST.md`.
+- [x] **42** Add `docs/RELEASE_CHECKLIST.md`.
 
   Create a release checklist that captures the project-specific verification
   steps before publishing a package or action version.
