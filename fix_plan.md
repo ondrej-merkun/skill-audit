@@ -301,7 +301,7 @@ at the bottom and the loop will stop.
   - Add tests that parse or inspect the rendered HTML string and assert all
     three enrichment sections/fields are visible when present.
 
-- [ ] **7** Prevent parent/container skills from inheriting child skill
+- [x] **7** Prevent parent/container skills from inheriting child skill
   findings.
 
   Real `report.json` output showed aggregate plugin directories such as
