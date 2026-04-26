@@ -783,30 +783,6 @@ at the bottom and the loop will stop.
   - Do not reference the image from README unless it is useful there too.
   - Verify the image file exists and is under GitHub's size guidance.
 
-
-- [ ] **38** Enable repository security settings and dependency automation.
-
-  Enable the repository security features that fit this project and add any
-  repo-tracked configuration needed for dependency updates.
-
-  Target behavior:
-  - Dependabot alerts are enabled.
-  - Dependabot update configuration exists for npm and GitHub Actions.
-  - Secret scanning and push protection are enabled where available.
-  - The chosen settings are documented in `docs/RELEASE_CHECKLIST.md` or
-    another maintainer checklist.
-
-- [ ] **39** Enable private vulnerability reporting and advisory workflow.
-
-  Configure the repository so vulnerability reports can be sent privately, and
-  document how maintainers triage and publish security advisories.
-
-  Implementation notes:
-  - Add or update `SECURITY.md` with supported versions and reporting
-    instructions.
-  - Document when to use a private advisory instead of a public issue.
-  - Keep the policy consistent with GitHub Security Advisories.
-
 - [x] **40** Use npm trusted publishing and provenance for package releases.
 
   Update the package release workflow to use npm trusted publishing where
