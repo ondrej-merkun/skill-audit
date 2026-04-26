@@ -103,15 +103,26 @@ export const PI_HIDDEN_UNICODE: Rule = {
 // PI-HIDDEN-HTML-COMMENT (Medium)
 // HTML comments in markdown that carry instruction-like directives
 // ---------------------------------------------------------------------------
-const htmlCommentInstructionPattern =
-  /<!--[\s\S]*?\b(ignore|disregard|override|pretend|act\s+as|you\s+are|follow|always|never|must|shall)\b[\s\S]*?-->/i;
+const htmlCommentOverridePattern =
+  /<!--[\s\S]{0,500}?\b(?:ignore|disregard|override|bypass|forget)\s+(?:all\s+)?(?:previous|prior|above|system|developer)?\s*(?:instructions?|rules?|prompts?|context|guidelines?)\b[\s\S]{0,500}?-->/i;
+const htmlCommentRoleplayPattern =
+  /<!--[\s\S]{0,500}?\b(?:pretend|act)\s+as\s+(?:if\s+)?(?:you|the\s+(?:assistant|model|agent))\s+(?:are|have|can)\b[\s\S]{0,500}?-->/i;
+const htmlCommentAgentDirectivePattern =
+  /<!--[\s\S]{0,500}?\b(?:you|assistant|model|agent)\s+(?:must|should|shall|always|never|will)\s+(?:ignore|disregard|override|bypass|forget|follow|obey|reveal|disclose|mention|tell|show|include|append|send|leak|exfiltrate|execute|run|respond)\b[\s\S]{0,500}?-->/i;
+const htmlCommentHiddenInstructionPattern =
+  /<!--[\s\S]{0,500}?\b(?:always|never|must|shall)\s+(?:follow|obey)\s+(?:these|the|this)\s+(?:hidden\s+)?(?:instructions?|comment|directive)\b[\s\S]{0,500}?-->/i;
 
 export const PI_HIDDEN_HTML_COMMENT: Rule = {
   id: 'PI-HIDDEN-HTML-COMMENT',
   category: 'prompt-injection',
   severity: 'medium',
   appliesTo: ['*.md', '*.mdc', 'SKILL.md', 'AGENTS.md', '*.html'],
-  patterns: [htmlCommentInstructionPattern],
+  patterns: [
+    htmlCommentOverridePattern,
+    htmlCommentRoleplayPattern,
+    htmlCommentAgentDirectivePattern,
+    htmlCommentHiddenInstructionPattern,
+  ],
   message: 'HTML comment containing instruction-like directives detected.',
   fix: 'Remove HTML comments that carry hidden model instructions.',
   cwe: ['CWE-1427'],
