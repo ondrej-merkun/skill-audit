@@ -178,7 +178,7 @@ while true; do
     # --json + jq filter drops exec_command_output_delta (file/shell
     # content firehose) and agent_reasoning_* events; keeps run/conclude.
     set -o pipefail
-    NO_COLOR=1 codex exec --json $CODEX_ARGS ${CODEX_MODEL:+--model "$CODEX_MODEL"} ${CODEX_EFFORT:+-c model_reasoning_effort="$CODEX_EFFORT"} < PROMPT.md 2>&1 \
+    NO_COLOR=1 codex exec --json $CODEX_ARGS ${CODEX_MODEL:+--model "$CODEX_MODEL"} ${CODEX_EFFORT:+-c model_reasoning_effort="$CODEX_EFFORT"} < PROMPT.md 2>>"$LOG_FILE" \
       | jq -rc 'select((.type // .msg.type // "") | IN("agent_message","exec_command_begin","exec_command_end","task_started","task_complete","error","item.completed"))' \
       | tee -a "$LOG_FILE"
     rc=${PIPESTATUS[0]}
