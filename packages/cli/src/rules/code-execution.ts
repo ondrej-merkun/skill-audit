@@ -3,6 +3,10 @@ import type { Rule } from '../types.js';
 // Pattern split to avoid triggering static-analysis hooks on this detector file itself.
 // This rule detects `new Function(` usage in scanned skills, not in this codebase.
 const newFunctionPattern = new RegExp(['\\bnew\\s+', 'Function\\s*\\('].join(''));
+const subprocessWithShellPattern =
+  /\bsubprocess\.(?:call|run|Popen|check_output|check_call)\s*\([\s\S]{0,500}?\bshell\s*=\s*True\b/;
+const subprocessStringCommandPattern =
+  /\bsubprocess\.(?:call|run|Popen|check_output|check_call)\s*\(\s*(?:[rbufRBUF]*['"]|[rbufRBUF]*f['"])/;
 
 export const CODEEXEC_PY_EVAL: Rule = {
   id: 'CODEEXEC-PY-EVAL',
@@ -23,7 +27,8 @@ export const CODEEXEC_PY_OSSYS: Rule = {
   patterns: [
     /\bos\.system\s*\(/,
     /\bos\.popen\s*\(/,
-    /\bsubprocess\.(?:call|run|Popen|check_output|check_call)\s*\(/,
+    subprocessWithShellPattern,
+    subprocessStringCommandPattern,
   ],
   message: 'Python OS command execution — command injection risk.',
   fix: 'Pass a list of arguments to subprocess with shell=False and never interpolate user input.',
