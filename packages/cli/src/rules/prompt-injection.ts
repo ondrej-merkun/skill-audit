@@ -188,13 +188,14 @@ export const PI_EXFIL_TRIGGER_CLAUSE: Rule = {
 // Skill instructs the agent to escalate privileges or run as root/admin.
 // ---------------------------------------------------------------------------
 const escalatePrivsPattern =
-  /\b(escalate|elevate)\s+(your\s+)?(privileges?|access|permissions?)\b/i;
-const gainRootAccessPattern = /\bgain\s+(root|admin(?:istrator)?|superuser)\s+access\b/i;
+  /(?:^|[\n.!?:;-]\s*|[-*]\s+)(?:(?:you|agent|assistant|skill|tool|script|command|process)\s+(?:must|should|can|may|needs?\s+to|will|shall)\s+)?(?:escalate|elevate)\s+(?:your|its|the\s+agent'?s)\s+(?:privileges?|access|permissions?)\b/im;
+const gainRootAccessPattern =
+  /(?:^|[\n.!?:;-]\s*|[-*]\s+)(?:use\s+\w+\s+to\s+|try\s+to\s+|attempt\s+to\s+|always\s+|must\s+|you\s+must\s+)?gain\s+(?:root|admin(?:istrator)?|superuser)\s+access\b/im;
 const sudoToAccessPattern = /\buse\s+sudo\s+to\s+(read|write|access|get|fetch|steal|copy)\b/i;
 const bypassPermissionsPattern =
-  /\bbypass\s+(file\s+)?(permissions?|access\s+controls?|security\s+checks?)\b/i;
+  /\bbypass\s+(?:file\s+)?(?:permissions?|access\s+controls?|security\s+checks?)\s+to\s+(?:read|write|access|get|fetch|steal|copy|modify|delete)\b/i;
 const runAsRootPattern =
-  /\brun\s+(?:this\s+)?(?:script\s+)?(?:with|as)\s+root\s*(?:privileges?|access|permissions?)?\b/i;
+  /(?<!never\s)(?<!don't\s)(?<!do not\s)\brun\s+(?:this\s+)?(?:script\s+)?(?:with|as)\s+root\s*(?:privileges?|access|permissions?)?\b/i;
 
 export const PI_PRIV_ESCALATE_INSTRUCTION: Rule = {
   id: 'PI-PRIV-ESCALATE-INSTRUCTION',
