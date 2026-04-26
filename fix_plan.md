@@ -10,7 +10,7 @@ at the bottom and the loop will stop.
 
 ## Pending tasks
 
-- [ ] **0.1** Deduplicate discovery results by non-empty `treeSha256` and
+- [x] **0.1** Deduplicate discovery results by non-empty `treeSha256` and
   preserve duplicate install paths.
 
   `skillaudit` currently appends every discovery-plugin result directly to the
