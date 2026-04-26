@@ -789,6 +789,14 @@ at the bottom and the loop will stop.
   - `codex`
   - `copilot`
 
+  Blocker (2026-04-27): repository topics are GitHub-hosted metadata and
+  cannot be configured through a repository file. The available GitHub
+  connector exposes issue/PR/file operations but no repository topics endpoint,
+  and `gh repo edit ondrej-merkun/skillaudit --add-topic ...` failed locally
+  with `error connecting to api.github.com`; `gh auth status` also reports the
+  configured token is invalid. Re-run this task in an environment with working
+  GitHub API access and valid repository-admin credentials.
+
 - [ ] **36** Add a repository social preview asset.
 
   Create a 1280x640 image under `docs/` that clearly identifies the project and
