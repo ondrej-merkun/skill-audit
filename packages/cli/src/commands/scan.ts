@@ -67,6 +67,14 @@ const DEFAULT_OPTIONS: ScanOptions = {
 };
 
 const SCAN_CONCURRENCY = 8;
+const SUPPORTED_SCAN_AGENTS = new Set([
+  'claude-code',
+  'cursor',
+  'copilot',
+  'codex',
+  'gemini',
+  'cross-agent',
+]);
 
 export function selectScanEnrichmentSources(
   options: Pick<ScanOptions, 'json' | 'summary' | 'html'>
@@ -141,6 +149,14 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     return; // unreachable in production; allows mocked exit in tests
   }
 
+  if (options.agent !== undefined && !SUPPORTED_SCAN_AGENTS.has(options.agent)) {
+    process.stderr.write(
+      `[skillaudit] unsupported agent "${options.agent}". Supported agents: ${[...SUPPORTED_SCAN_AGENTS].join(', ')}\n`
+    );
+    process.exit(2);
+    return; // unreachable in production; allows mocked exit in tests
+  }
+
   const startedAt = new Date().toISOString();
   const start = Date.now();
 
@@ -157,23 +173,14 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
 
   let skills: Skill[];
   try {
-    skills = await discoverAll({ onProgress: progress.onDiscoveryProgress });
+    skills = await discoverAll({
+      ...(options.agent !== undefined ? { agent: options.agent } : {}),
+      onProgress: progress.onDiscoveryProgress,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(`[skillaudit] ${msg}\n`);
     process.exit(2);
-  }
-
-  if (options.agent !== undefined) {
-    const agentId = options.agent;
-    const before = skills.length;
-    skills = skills.filter((s) => s.agentId === agentId);
-    if (skills.length === 0) {
-      process.stderr.write(
-        `[skillaudit] no skills found for agent "${agentId}" (${before} total)\n`
-      );
-      process.exit(0);
-    }
   }
 
   if (options.offline) {
@@ -181,7 +188,11 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   }
 
   if (skills.length === 0) {
-    process.stdout.write('No skills found. Install some agent skills and try again.\n');
+    process.stdout.write(
+      options.agent === undefined
+        ? 'No skills found. Install some agent skills and try again.\n'
+        : `No skills found for agent "${options.agent}". Install or enable skills for that agent and try again.\n`
+    );
     return;
   }
 

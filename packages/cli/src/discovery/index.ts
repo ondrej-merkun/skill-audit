@@ -122,14 +122,17 @@ export function initDefaultPlugins(): void {
  * Plugins that throw are caught and logged to stderr — discovery is fail-silent.
  */
 export type DiscoverAllOptions = {
+  agent?: string;
   onProgress?: DiscoveryProgressCallback;
 };
 
 export async function discoverAll(options: DiscoverAllOptions = {}): Promise<Skill[]> {
   const results: Skill[] = [];
-  options.onProgress?.({ type: 'start', pluginCount: PLUGINS.length });
+  const plugins =
+    options.agent === undefined ? PLUGINS : PLUGINS.filter((plugin) => plugin.id === options.agent);
+  options.onProgress?.({ type: 'start', pluginCount: plugins.length });
 
-  for (const plugin of PLUGINS) {
+  for (const plugin of plugins) {
     options.onProgress?.({
       type: 'checking-agent',
       agentId: plugin.id,

@@ -70,6 +70,37 @@ describe('discoverAll', () => {
     expect(skills).toContainEqual(skill2);
   });
 
+  it('runs only the selected discovery plugin when an agent filter is provided', async () => {
+    const selectedSkill = makeSkill({ id: 'selected-skill', agentId: 'cursor' });
+    const selectedIsInstalled = vi.fn(async () => true);
+    const selectedDiscoverSkills = vi.fn(async () => [selectedSkill]);
+    const skippedIsInstalled = vi.fn(async () => true);
+    const skippedDiscoverSkills = vi.fn(async () => [
+      makeSkill({ id: 'skipped-skill', agentId: 'claude-code' }),
+    ]);
+
+    registerPlugin({
+      id: 'claude-code',
+      displayName: 'Claude Code',
+      isInstalled: skippedIsInstalled,
+      discoverSkills: skippedDiscoverSkills,
+    });
+    registerPlugin({
+      id: 'cursor',
+      displayName: 'Cursor',
+      isInstalled: selectedIsInstalled,
+      discoverSkills: selectedDiscoverSkills,
+    });
+
+    const skills = await discoverAll({ agent: 'cursor' });
+
+    expect(skills).toEqual([selectedSkill]);
+    expect(selectedIsInstalled).toHaveBeenCalledTimes(1);
+    expect(selectedDiscoverSkills).toHaveBeenCalledTimes(1);
+    expect(skippedIsInstalled).not.toHaveBeenCalled();
+    expect(skippedDiscoverSkills).not.toHaveBeenCalled();
+  });
+
   it('deduplicates non-empty tree hashes and preserves duplicate paths', async () => {
     const laterPath = makeSkill({
       id: 'later-path-skill',

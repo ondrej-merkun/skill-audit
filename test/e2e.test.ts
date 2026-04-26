@@ -439,6 +439,26 @@ describe('e2e: scan flags', () => {
     expect(result.skills.length).toBe(1);
   });
 
+  it('applies --agent during discovery so selected-agent counts exclude other agents', async () => {
+    await cp(join(BENIGN_DIR, 'date-parser'), join(skillsDir, 'date-parser'), { recursive: true });
+    await mkdir(join(tempHome, '.cursor'), { recursive: true });
+    await mkdir(join(tempCwd, '.cursor', 'rules'), { recursive: true });
+    await writeFile(
+      join(tempCwd, '.cursor', 'rules', 'project-style.mdc'),
+      '# Project style\n\nPrefer explicit names and small functions.\n'
+    );
+
+    const env = { HOME: tempHome, USERPROFILE: tempHome, SKILLAUDIT_CWD: tempCwd };
+    const { stdout, code } = await runCli(['scan', '--json', '--offline', '--agent', 'cursor'], env);
+
+    expect(code).toBe(0);
+    const result = JSON.parse(stdout) as JsonOutput;
+    expect(result.summary.skills_scanned).toBe(1);
+    expect(result.agents).toEqual([{ id: 'cursor', installed: true, skills_scanned: 1 }]);
+    expect(result.skills).toHaveLength(1);
+    expect(result.skills[0]?.agent_id).toBe('cursor');
+  });
+
   it('does not duplicate nested child skill findings onto the parent in JSON', async () => {
     const parent = join(skillsDir, 'parent');
     const child = join(parent, 'child');

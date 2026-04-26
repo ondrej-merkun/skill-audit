@@ -445,24 +445,37 @@ describe('runScan flag wiring', () => {
   it('--agent filters to matching agent only', async () => {
     vi.mocked(discoverAll).mockResolvedValue([
       makeSkill({ id: 'cc-skill', agentId: 'claude-code', name: 'cc-skill' }),
-      makeSkill({ id: 'cursor-skill', agentId: 'cursor', name: 'cursor-skill' }),
     ]);
     await runScan({ json: true, agent: 'claude-code' });
     const out = stdoutChunks.join('');
     const json = JSON.parse(out);
     expect(json.skills).toHaveLength(1);
     expect(json.skills[0].agent_id).toBe('claude-code');
+    expect(discoverAll).toHaveBeenCalledWith({
+      agent: 'claude-code',
+      onProgress: expect.any(Function),
+    });
   });
 
-  it('--agent with no matching skills exits 0 with stderr message', async () => {
-    vi.mocked(discoverAll).mockResolvedValue([
-      makeSkill({ id: 'cc-skill', agentId: 'claude-code', name: 'cc-skill' }),
-    ]);
+  it('--agent with no discovered skills exits 0 with a clear message', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([]);
     const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as never);
     await runScan({ agent: 'cursor' });
-    expect(exitSpy).toHaveBeenCalledWith(0);
+    expect(exitSpy).not.toHaveBeenCalled();
+    const out = stripAnsi(stdoutChunks.join(''));
+    expect(out).toContain('No skills found for agent "cursor"');
+  });
+
+  it('--agent with an unsupported id exits 2 with usage-style error', async () => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as never);
+
+    await runScan({ agent: 'unknown-agent' });
+
+    expect(exitSpy).toHaveBeenCalledWith(2);
+    expect(discoverAll).not.toHaveBeenCalled();
     const errOut = stripAnsi(stderrChunks.join(''));
-    expect(errOut).toContain('"cursor"');
+    expect(errOut).toContain('unsupported agent "unknown-agent"');
+    expect(errOut).toContain('claude-code');
   });
 
   it('--offline writes notice to stderr', async () => {
