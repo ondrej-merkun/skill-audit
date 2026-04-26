@@ -817,6 +817,13 @@ at the bottom and the loop will stop.
   but `gh repo view --json nameWithOwner,repositoryTopics` fails with
   `error connecting to api.github.com`, and `gh auth status` still reports the
   configured `ondrej-merkun` token is invalid.
+  Reconfirmed (2026-04-27): the GitHub connector can resolve both local remote
+  alias `ondrej-merkun/skillaudit` and canonical repo `ondrej-merkun/skill-audit`
+  to the same admin-access repository, but still exposes no topics write
+  endpoint. Local `gh repo edit ondrej-merkun/skill-audit --add-topic ...`
+  fails with `error connecting to api.github.com`, `gh auth status` reports the
+  configured token is invalid, and no `GITHUB_TOKEN`/`GH_TOKEN` environment
+  variable is available.
 
 - [ ] **36** Add a repository social preview asset.
 
