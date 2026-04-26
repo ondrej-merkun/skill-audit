@@ -32,11 +32,14 @@ export const PI_OVERRIDE: Rule = {
 // PI-JAILBREAK (High)
 // Jailbreak phrases: DAN, developer mode, no-restrictions invocations
 // ---------------------------------------------------------------------------
-const danModePattern = /\bDAN\s+mode\b|\bact\s+as\s+DAN\b|\byou\s+are\s+DAN\b/i;
-const developerModePattern = /\bdeveloper\s+mode\b/i;
-const jailbreakWordPattern = /\bjailbreak\b/i;
+const danModePattern =
+  /\b(?:enable|activate|enter|use|switch\s+to)\s+DAN\s+mode\b|\b(?:act|pretend|roleplay)\s+as\s+DAN\b|\byou\s+are\s+DAN\b/i;
+const developerModePattern =
+  /\b(?:chatgpt|assistant|model)\s+developer\s+mode\b|\bdeveloper\s+mode\b(?=[\s\S]{0,100}\b(?:ignore|bypass|unfiltered|unrestricted|uncensored|no\s+(?:restrictions?|rules?|safety\s+guidelines?|safeguards?|limitations?)|can\s+do\s+anything)\b)/i;
+const jailbreakWordPattern =
+  /\b(?:use|run|apply|execute|follow)\s+(?:this\s+)?jailbreak\b|\bjailbreak\s+(?:the\s+)?(?:assistant|agent|model|chatgpt)\b|\bjailbreak\s+prompt\s*[:=]\s*["'`]/i;
 const noRestrictionsPattern =
-  /\bno\s+(restrictions?|rules?|safety\s+guidelines?|safeguards?|limitations?)\b/i;
+  /\b(?:act|operate|respond|roleplay|behave|answer)\s+(?:as\s+if\s+)?(?:you\s+(?:have|had|are\s+under)\s+)?(?:with\s+)?no\s+(restrictions?|rules?|safety\s+guidelines?|safeguards?|limitations?)\b/i;
 const actAsIfPattern =
   /\bact\s+as\s+if\s+you\s+(have|had)\s+no\s+(restrictions?|rules?|limits?|guidelines?|safeguards?)\b/i;
 
