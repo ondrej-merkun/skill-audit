@@ -1,3 +1,4 @@
+import { basename } from 'node:path';
 import type { Rule } from '../types.js';
 
 // Patterns are split to avoid triggering static-analysis hooks on this detector file.
@@ -108,13 +109,80 @@ export const DEPS_UNPINNED_SUSPECT: Rule = {
 const inlinePipPattern = /\bpip3?[^\S\n]+install[^\S\n]+(?!-r\b)(?!--requirement\b)[A-Za-z0-9@]/;
 const inlineNpmPattern = /\bnpm[^\S\n]+(?:install|i|add)[^\S\n]+[A-Za-z@]/;
 const inlineCondaPattern = /\bconda[^\S\n]+install[^\S\n]+[A-Za-z]/;
+const pythonSubprocessListInstallPattern =
+  /\bsubprocess\.\w+\s*\(\s*\[\s*['"](?:pip3?|npm|conda)['"]\s*,\s*['"](?:install|i|add)['"]\s*,\s*['"][A-Za-z0-9@]/;
+const jsProcessListInstallPattern =
+  /\b(?:execFileSync|execFile|spawnSync|spawn)\s*\(\s*['"](?:pip3?|npm|conda)['"]\s*,\s*\[\s*['"](?:install|i|add)['"]\s*,\s*['"][A-Za-z0-9@]/;
+
+const inlineInstallPattern =
+  /\b(?:pip3?|npm|conda)[^\S\n]+(?:install|i|add)[^\S\n]+(?!(?:-r|--requirement)\b)[A-Za-z0-9@]/i;
+const markdownInstallHeadingPattern = /^\s{0,3}#{1,6}\s+.*\b(?:install|installation|setup)\b/i;
+const markdownCodeFencePattern = /^\s{0,3}```/;
+const agentRuntimeInstructionPattern =
+  /\b(?:agent|assistant|skill|workflow|runtime|execution|before running|when running|when executing|automatically|if missing|if unavailable|ensure|must|should|run)\b/i;
+const documentationInstallContextPattern =
+  /\b(?:no|not|never|without|doesn['’]?t|do not|don't|permanent installation|optional(?: tools?| extras?)|setup example|readme|for humans?|demo locally|preparing the demo)\b/i;
+const quotedInstallPattern =
+  /^\s*(?:echo|printf|console\.log|print)\s*(?:\(|['"`])[\s\S]*\b(?:pip3?|npm|conda)[^\S\n]+(?:install|i|add)\b/i;
+const codeDocumentationLinePattern =
+  /^\s*(?:(?:return|throw\b|raise\b)[\s\S]*|(?:console\.log|print)\s*\()[\s\S]*\b(?:pip3?|npm|conda)[^\S\n]+(?:install|i|add)\b/i;
+const commentLinePattern = /^\s*(?:#|\/\/)/;
+
+function maskLine(line: string): string {
+  return ' '.repeat(line.length);
+}
+
+function prepareInlineInstallContent(content: string, filePath: string): string {
+  const name = basename(filePath);
+  const isMarkdown = name.endsWith('.md') || name.endsWith('.mdc');
+  const lines = content.split('\n');
+  const originalLines = content.split('\n');
+  let inMarkdownInstallSection = false;
+  let inMarkdownFence = false;
+
+  return lines
+    .map((line, index) => {
+      const originalLine = originalLines[index] ?? line;
+      const hasInlineInstall = inlineInstallPattern.test(line);
+
+      if (isMarkdown) {
+        if (markdownCodeFencePattern.test(originalLine)) {
+          inMarkdownFence = !inMarkdownFence;
+        }
+
+        if (/^\s{0,3}#{1,6}\s+/.test(originalLine)) {
+          inMarkdownInstallSection = markdownInstallHeadingPattern.test(originalLine);
+        }
+      }
+
+      if (!hasInlineInstall) return line;
+      if (commentLinePattern.test(originalLine)) return maskLine(line);
+      if (quotedInstallPattern.test(originalLine)) return maskLine(line);
+      if (codeDocumentationLinePattern.test(originalLine)) return maskLine(line);
+      if (documentationInstallContextPattern.test(originalLine)) return maskLine(line);
+
+      if (isMarkdown && (inMarkdownInstallSection || inMarkdownFence)) {
+        if (!agentRuntimeInstructionPattern.test(originalLine)) return maskLine(line);
+      }
+
+      return line;
+    })
+    .join('\n');
+}
 
 export const DEPS_INLINE_INSTALL: Rule = {
   id: 'DEPS-INLINE-INSTALL',
   category: 'dependencies',
   severity: 'medium',
   appliesTo: ['*.sh', '*.bash', '*.py', '*.js', '*.ts', '*.mjs', '*.md'],
-  patterns: [inlinePipPattern, inlineNpmPattern, inlineCondaPattern],
+  patterns: [
+    inlinePipPattern,
+    inlineNpmPattern,
+    inlineCondaPattern,
+    pythonSubprocessListInstallPattern,
+    jsProcessListInstallPattern,
+  ],
+  prepareContent: prepareInlineInstallContent,
   message: 'Inline package installation in skill code — installs packages at skill execution time.',
   fix: 'Declare all dependencies in requirements.txt or package.json. Do not install packages inside skill logic.',
   cwe: ['CWE-829'],
