@@ -82,6 +82,8 @@ skillaudit explain <name>     # full detail view for one skill
 skillaudit ignore <name>      # add a skill's treeSha256 to your ignore list
 ```
 
+More workflows: [`docs/EXAMPLES.md`](docs/EXAMPLES.md).
+
 ### Flags
 
 | Flag | Description |
