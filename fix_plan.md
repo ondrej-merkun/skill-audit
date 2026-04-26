@@ -798,7 +798,7 @@ at the bottom and the loop will stop.
   - Remove `NPM_TOKEN` dependency from the workflow only after trusted
     publishing is configured and verified.
 
-- [ ] **40.1** Harden release workflow verification before npm publish.
+- [x] **40.1** Harden release workflow verification before npm publish.
 
   The release workflow currently grants `id-token: write` but still publishes
   with `NPM_TOKEN`, and it verifies only build/test before publishing. Public
