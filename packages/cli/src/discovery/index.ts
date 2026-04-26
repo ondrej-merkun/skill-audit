@@ -10,6 +10,13 @@ import geminiDiscovery from './gemini.js';
 // Call initDefaultPlugins() from the CLI entry point to register built-ins.
 const PLUGINS: AgentDiscovery[] = [];
 
+type DedupeGroup = {
+  primary: Skill;
+  outputIndex: number;
+  skills: Skill[];
+  paths: Set<string>;
+};
+
 function cloneSkill(skill: Skill): Skill {
   return {
     ...skill,
@@ -17,9 +24,35 @@ function cloneSkill(skill: Skill): Skill {
   };
 }
 
+export function isPluginCachePath(pathLike: string): boolean {
+  const normalizedSegments = pathLike
+    .replaceAll('\\', '/')
+    .split('/')
+    .filter((segment) => segment.length > 0);
+
+  return normalizedSegments.some(
+    (segment, index) => segment === 'plugins' && normalizedSegments[index + 1] === 'cache'
+  );
+}
+
+function selectPrimaryPath(paths: Iterable<string>): string {
+  const sortedPaths = [...paths].sort();
+  const nonCachePath = sortedPaths.find((path) => !isPluginCachePath(path));
+  return nonCachePath ?? sortedPaths[0] ?? '';
+}
+
+function selectPrimarySkill(group: DedupeGroup, primaryPath: string): Skill {
+  return (
+    group.skills.find((skill) => skill.path === primaryPath) ?? {
+      ...group.primary,
+      path: primaryPath,
+    }
+  );
+}
+
 export function dedupeDiscoveredSkills(skills: Skill[]): Skill[] {
   const output: Skill[] = [];
-  const byTreeHash = new Map<string, { primary: Skill; paths: Set<string> }>();
+  const byTreeHash = new Map<string, DedupeGroup>();
 
   for (const skill of skills) {
     const clonedSkill = cloneSkill(skill);
@@ -34,21 +67,33 @@ export function dedupeDiscoveredSkills(skills: Skill[]): Skill[] {
 
     if (existing === undefined) {
       const pathSet = new Set(paths);
-      byTreeHash.set(clonedSkill.treeSha256, { primary: clonedSkill, paths: pathSet });
+      byTreeHash.set(clonedSkill.treeSha256, {
+        primary: clonedSkill,
+        outputIndex: output.length,
+        skills: [clonedSkill],
+        paths: pathSet,
+      });
       output.push(clonedSkill);
       continue;
     }
 
+    existing.skills.push(clonedSkill);
     for (const path of paths) {
       existing.paths.add(path);
     }
   }
 
-  for (const { primary, paths } of byTreeHash.values()) {
-    const alsoInstalledAt = [...paths].filter((path) => path !== primary.path).sort();
-    if (alsoInstalledAt.length > 0) {
-      primary.alsoInstalledAt = alsoInstalledAt;
-    }
+  for (const group of byTreeHash.values()) {
+    const primaryPath = selectPrimaryPath(group.paths);
+    const selectedPrimary = selectPrimarySkill(group, primaryPath);
+    const { alsoInstalledAt: _alsoInstalledAt, ...primaryWithoutAliases } = selectedPrimary;
+
+    const alsoInstalledAt = [...group.paths].filter((path) => path !== primaryPath).sort();
+    output[group.outputIndex] = {
+      ...primaryWithoutAliases,
+      path: primaryPath,
+      ...(alsoInstalledAt.length > 0 ? { alsoInstalledAt } : {}),
+    };
   }
 
   return output;

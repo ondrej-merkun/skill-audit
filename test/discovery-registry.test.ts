@@ -6,6 +6,7 @@ import {
   clearPlugins,
   discoverAll,
   initDefaultPlugins,
+  isPluginCachePath,
   registerPlugin,
 } from '../packages/cli/src/discovery/index.js';
 import type { AgentDiscovery, Skill } from '../packages/cli/src/types.js';
@@ -70,13 +71,13 @@ describe('discoverAll', () => {
   });
 
   it('deduplicates non-empty tree hashes and preserves duplicate paths', async () => {
-    const primary = makeSkill({
-      id: 'primary-skill',
+    const laterPath = makeSkill({
+      id: 'later-path-skill',
       path: '/tmp/skills/b-primary',
       treeSha256: 'same-tree',
     });
-    const duplicate = makeSkill({
-      id: 'duplicate-skill',
+    const earlierPath = makeSkill({
+      id: 'earlier-path-skill',
       agentId: 'cursor',
       path: '/tmp/skills/a-duplicate',
       treeSha256: 'same-tree',
@@ -86,24 +87,24 @@ describe('discoverAll', () => {
       id: 'plugin-a',
       displayName: 'Plugin A',
       isInstalled: async () => true,
-      discoverSkills: async () => [primary],
+      discoverSkills: async () => [laterPath],
     });
     registerPlugin({
       id: 'plugin-b',
       displayName: 'Plugin B',
       isInstalled: async () => true,
-      discoverSkills: async () => [duplicate],
+      discoverSkills: async () => [earlierPath],
     });
 
     const skills = await discoverAll();
     expect(skills).toEqual([
       {
-        ...primary,
-        alsoInstalledAt: ['/tmp/skills/a-duplicate'],
+        ...earlierPath,
+        alsoInstalledAt: ['/tmp/skills/b-primary'],
       },
     ]);
-    expect(skills[0]).not.toBe(primary);
-    expect(primary).not.toHaveProperty('alsoInstalledAt');
+    expect(skills[0]).not.toBe(earlierPath);
+    expect(earlierPath).not.toHaveProperty('alsoInstalledAt');
   });
 
   it('merges preexisting duplicate install paths lexicographically', async () => {
@@ -135,10 +136,87 @@ describe('discoverAll', () => {
 
     const skills = await discoverAll();
     expect(skills).toHaveLength(1);
+    expect(skills[0]?.path).toBe('/tmp/skills/a-existing');
     expect(skills[0]?.alsoInstalledAt).toEqual([
-      '/tmp/skills/a-existing',
       '/tmp/skills/duplicate',
+      '/tmp/skills/primary',
       '/tmp/skills/z-existing',
+    ]);
+  });
+
+  it('prefers a non-cache path as the primary path for deduped plugin skills', async () => {
+    const claudeCache = makeSkill({
+      id: 'claude-cache-skill',
+      agentId: 'claude-code',
+      path: '/home/user/.claude/plugins/cache/marketplace/security-helper/SKILL.md',
+      treeSha256: 'same-tree',
+    });
+    const codexCache = makeSkill({
+      id: 'codex-cache-skill',
+      agentId: 'codex',
+      path: '/home/user/.codex/plugins/cache/openai/security-helper/SKILL.md',
+      treeSha256: 'same-tree',
+    });
+    const installedPlugin = makeSkill({
+      id: 'installed-plugin-skill',
+      agentId: 'claude-code',
+      path: '/home/user/.claude/plugins/marketplace/security-helper/skills/audit/SKILL.md',
+      treeSha256: 'same-tree',
+    });
+
+    registerPlugin({
+      id: 'plugin-a',
+      displayName: 'Plugin A',
+      isInstalled: async () => true,
+      discoverSkills: async () => [claudeCache],
+    });
+    registerPlugin({
+      id: 'plugin-b',
+      displayName: 'Plugin B',
+      isInstalled: async () => true,
+      discoverSkills: async () => [codexCache, installedPlugin],
+    });
+
+    const skills = await discoverAll();
+    expect(skills).toEqual([
+      {
+        ...installedPlugin,
+        alsoInstalledAt: [claudeCache.path, codexCache.path],
+      },
+    ]);
+  });
+
+  it('chooses a deterministic cache path when all duplicate paths are cache paths', async () => {
+    const laterCache = makeSkill({
+      id: 'later-cache-skill',
+      path: '/home/user/.codex/plugins/cache/z-market/security-helper/SKILL.md',
+      treeSha256: 'same-tree',
+    });
+    const earlierCache = makeSkill({
+      id: 'earlier-cache-skill',
+      path: '/home/user/.claude/plugins/cache/a-market/security-helper/SKILL.md',
+      treeSha256: 'same-tree',
+    });
+
+    registerPlugin({
+      id: 'plugin-a',
+      displayName: 'Plugin A',
+      isInstalled: async () => true,
+      discoverSkills: async () => [laterCache],
+    });
+    registerPlugin({
+      id: 'plugin-b',
+      displayName: 'Plugin B',
+      isInstalled: async () => true,
+      discoverSkills: async () => [earlierCache],
+    });
+
+    const skills = await discoverAll();
+    expect(skills).toEqual([
+      {
+        ...earlierCache,
+        alsoInstalledAt: [laterCache.path],
+      },
     ]);
   });
 
@@ -296,5 +374,17 @@ describe('discoverAll', () => {
       await rm(tempHome, { recursive: true, force: true });
       await rm(tempCwd, { recursive: true, force: true });
     }
+  });
+});
+
+describe('isPluginCachePath', () => {
+  it('matches only adjacent plugins/cache path segments', () => {
+    expect(isPluginCachePath('/home/user/.claude/plugins/cache/vendor/skill')).toBe(true);
+    expect(isPluginCachePath('C:\\Users\\user\\.codex\\plugins\\cache\\vendor\\skill')).toBe(true);
+
+    expect(isPluginCachePath('/home/user/.claude/marketplaces/cache/vendor/skill')).toBe(false);
+    expect(isPluginCachePath('/home/user/.claude/skills/cache/vendor/skill')).toBe(false);
+    expect(isPluginCachePath('/home/user/.claude/plugins/vendor/cache/skill')).toBe(false);
+    expect(isPluginCachePath('/home/user/.claude/plugins/vendor/skills/cache')).toBe(false);
   });
 });
