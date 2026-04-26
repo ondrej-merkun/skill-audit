@@ -2,7 +2,13 @@ import allowlistData from './allowlist/anthropic-skills.json';
 import type { Finding, Severity, SkillSummary, Verdict } from './types.js';
 
 /** SHA-256 tree hashes of trusted/allowlisted skills (exact match demotes PI-* to info). */
-const ALLOWLISTED_SHAS = new Set(allowlistData.entries.map((e) => e.sha256_tree));
+const SHA256_TREE_RE = /^[0-9a-f]{64}$/;
+const PLACEHOLDER_SHA = '0000000000000000000000000000000000000000000000000000000000000000';
+const ALLOWLISTED_SHAS = new Set(
+  allowlistData.entries
+    .map((e) => e.sha256_tree)
+    .filter((sha) => SHA256_TREE_RE.test(sha) && sha !== PLACEHOLDER_SHA)
+);
 
 /** Rules that individually force a FAIL verdict regardless of score. */
 const MANDATORY_FAIL_STANDALONE = new Set([

@@ -207,7 +207,7 @@ a one-liner with no account. The Snyk 36% stat cited above is theirs — credit 
 **What's the false-positive rate?**
 Pure-regex MVP: ~5–10% FPR on legitimate security-education skills before the allowlist,
 ~2% after. Security skills often contain the same patterns they're designed to detect.
-The Anthropic official skill allowlist covers the ~17 canonical skills by tree hash.
+The trusted bundled-skill allowlist uses exact tree hashes; see [`docs/ALLOWLIST.md`](docs/ALLOWLIST.md).
 Add your own with `skillaudit ignore <name>`.
 
 **Does it catch everything?**

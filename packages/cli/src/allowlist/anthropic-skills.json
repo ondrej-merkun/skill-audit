@@ -1,144 +1,54 @@
 {
-  "_note": "Regenerate with: pnpm tsx scripts/vendor-allowlist.ts",
+  "_note": "Exact tree hashes only. Regenerate with: node scripts/vendor-allowlist.mjs",
   "version": "1.0",
   "entries": [
     {
       "name": "pdf",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/pdf",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    {
-      "name": "web-search",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/web-search",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    {
-      "name": "github",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/github",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    {
-      "name": "jira",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/jira",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
+      "vendor": "openai-curated",
+      "path": "codex/vendor_imports/skills/skills/.curated/pdf",
+      "sha256_tree": "b364d819a7271a010bdba1f020135992b31d47ada3e5b524a6677043f05d24d7"
     },
     {
       "name": "linear",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/linear",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    {
-      "name": "notion",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/notion",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    {
-      "name": "slack",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/slack",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    {
-      "name": "google-docs",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/google-docs",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    {
-      "name": "google-sheets",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/google-sheets",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    {
-      "name": "zendesk",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/zendesk",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    {
-      "name": "stripe",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/stripe",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
+      "vendor": "openai-curated",
+      "path": "codex/vendor_imports/skills/skills/.curated/linear",
+      "sha256_tree": "6eb8872eeeecfce1a76d5124b571c0a2db762a09c729c45d38064c6aaf521d76"
     },
     {
       "name": "sentry",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/sentry",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
+      "vendor": "openai-curated",
+      "path": "codex/vendor_imports/skills/skills/.curated/sentry",
+      "sha256_tree": "51a6a7476483ebf131fbe0560560214b7538c344dc511032bb2a9d44bfec1421"
     },
     {
-      "name": "datadog",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/datadog",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
+      "name": "openai-docs",
+      "vendor": "openai-curated",
+      "path": "codex/vendor_imports/skills/skills/.curated/openai-docs",
+      "sha256_tree": "94cc28c120cab21e8ea7299731e87cccd1c6d41b619d64d40c8d568968efe8a3"
     },
     {
-      "name": "playwright",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/playwright",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
+      "name": "github/gh-fix-ci",
+      "vendor": "openai-curated",
+      "path": "codex/vendor_imports/skills/skills/.curated/gh-fix-ci",
+      "sha256_tree": "0236ac399e18ed8258c7960ee7402e2200277d66374a17448f2f8f72b8bd2a33"
     },
     {
-      "name": "aws",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/aws",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
+      "name": "github/gh-address-comments",
+      "vendor": "openai-curated",
+      "path": "codex/vendor_imports/skills/skills/.curated/gh-address-comments",
+      "sha256_tree": "f073284a4cdea766643f85e609095d1aff5ffbddf0e62866dbcabc8f8e203e29"
     },
     {
-      "name": "gcp",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/gcp",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    {
-      "name": "docker",
-      "vendor": "anthropic",
-      "path": "anthropics/skills/skills/docker",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    {
-      "name": "mcp-security-audit",
-      "vendor": "trailofbits",
-      "path": "trailofbits/skills/plugins/mcp-security-audit",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    {
-      "name": "ai-security-review",
-      "vendor": "trailofbits",
-      "path": "trailofbits/skills/plugins/ai-security-review",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    {
-      "name": "smart-contract-audit",
-      "vendor": "trailofbits",
-      "path": "trailofbits/skills/plugins/smart-contract-audit",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    {
-      "name": "snyk-security",
-      "vendor": "snyk",
-      "path": "snyk/studio-recipes/snyk-security",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    {
-      "name": "snyk-fix",
-      "vendor": "snyk",
-      "path": "snyk/studio-recipes/snyk-fix",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
+      "name": "github/yeet",
+      "vendor": "openai-curated",
+      "path": "codex/vendor_imports/skills/skills/.curated/yeet",
+      "sha256_tree": "549195eddf0c2cac77c4731665646153b27d4c4e6e3a2921c7d6c1cebff40fe1"
     },
     {
       "name": "skillaudit",
       "vendor": "skillaudit",
       "path": "skillaudit/packages/skill",
-      "sha256_tree": "0000000000000000000000000000000000000000000000000000000000000000"
+      "sha256_tree": "6693621fdf076e6700f4f1ee37cba9606a801677be41f7a898c6040afd8d8e57"
     }
   ]
 }

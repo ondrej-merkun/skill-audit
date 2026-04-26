@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import allowlistData from '../packages/cli/src/allowlist/anthropic-skills.json';
 import { scoreFindings } from '../packages/cli/src/score.js';
 import type { Finding } from '../packages/cli/src/types.js';
 
@@ -203,8 +204,16 @@ describe('mandatory-fail overrides', () => {
 });
 
 describe('allowlist matching', () => {
-  // anthropic-skills.json uses placeholder SHA for all entries
-  const ALLOWLISTED_SHA = '0000000000000000000000000000000000000000000000000000000000000000';
+  const PLACEHOLDER_SHA = '0000000000000000000000000000000000000000000000000000000000000000';
+  const ALLOWLISTED_SHA = allowlistData.entries[0]?.sha256_tree ?? '';
+
+  it('ships only real exact tree hashes in the allowlist manifest', () => {
+    expect(allowlistData.entries.length).toBeGreaterThan(0);
+    for (const entry of allowlistData.entries) {
+      expect(entry.sha256_tree).toMatch(/^[0-9a-f]{64}$/);
+      expect(entry.sha256_tree).not.toBe(PLACEHOLDER_SHA);
+    }
+  });
 
   it('should set allowlisted: true and demote PI-OVERRIDE to info on SHA match', () => {
     const result = scoreFindings([finding('PI-OVERRIDE', 'critical')], ALLOWLISTED_SHA);
@@ -242,6 +251,13 @@ describe('allowlist matching', () => {
     expect(result.critical).toBe(1);
     expect(result.verdict).toBe('FAIL');
     expect(result.mandatoryFail).toContain('NET-EXFIL-ENV');
+  });
+
+  it('should not allowlist placeholder zero hashes', () => {
+    const result = scoreFindings([finding('PI-OVERRIDE', 'critical')], PLACEHOLDER_SHA);
+    expect(result.allowlisted).toBe(false);
+    expect(result.critical).toBe(1);
+    expect(result.score).toBe(75);
   });
 
   it('should not allowlist when SHA does not match', () => {

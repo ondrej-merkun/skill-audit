@@ -74,6 +74,10 @@ without a commit message explaining why it no longer applies.
   For built-CLI fixture checks, create a temp home/project and use `HOME`,
   `USERPROFILE`, and `SKILLAUDIT_CWD` discovery overrides.
 
+- **L1.11 — Documented maintenance commands must exist and run.** _Task 22 found `anthropic-skills.json` pointing at missing `scripts/vendor-allowlist.ts` and unavailable `tsx`._
+  Run any command you document for regenerating shipped data before committing
+  the data it produces.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

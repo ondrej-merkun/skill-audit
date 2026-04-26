@@ -1004,6 +1004,11 @@ at the bottom and the loop will stop.
   validating `node packages/cli/dist/index.js list` against real Codex paths.
   Task 13.3 now only needs to register Gemini.
 
+- **22: exact allowlist sources** — Replaced zero-hash placeholders with only
+  trusted skill payloads whose exact trees are available to the repo-local
+  generator: bundled OpenAI-curated Codex skills and the skillaudit wrapper
+  skill. Unavailable vendor skills are omitted instead of trusted by name/path.
+
 ## Blockers
 
 (If Ralph hits something it cannot proceed past, document here with error
