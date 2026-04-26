@@ -168,6 +168,11 @@ without a commit message explaining why it no longer applies.
   users what to fix first, whether machine and human outputs agree, and whether
   users can save/share the result through normal CLI affordances.
 
+- **L6.4 — Re-check release-tool minimums before changing publish workflows.** _Task
+  40 found npm trusted publishing needs newer Node/npm than the existing Node 20
+  release job._
+  Verify the current registry docs before editing OIDC/provenance release steps.
+
 ## 7. Rule fixtures
 
 - **L7.1 — Malicious secret fixtures must not use provider placeholder keys.** _Task

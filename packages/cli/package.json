@@ -7,7 +7,7 @@
   "homepage": "https://github.com/ondrejmerkun/skillaudit#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ondrejmerkun/skillaudit.git",
+    "url": "https://github.com/ondrejmerkun/skillaudit.git",
     "directory": "packages/cli"
   },
   "bugs": {
