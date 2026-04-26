@@ -617,7 +617,7 @@ at the bottom and the loop will stop.
   - Add or update a smoke check proving the documented one-line command invokes
     the expected binary.
 
-- [ ] **24.1** Add npm metadata and packed package docs.
+- [x] **24.1** Add npm metadata and packed package docs.
 
   The CLI package currently has minimal package metadata and the npm tarball
   dry-run includes only `dist/*` plus `package.json`. Before public publishing,
