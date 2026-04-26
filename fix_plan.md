@@ -79,7 +79,7 @@ at the bottom and the loop will stop.
   - Update `specs/DISCOVERY.md` if the implementation discovers a more
     authoritative active-plugin source than the current config metadata.
 
-- [ ] **1** Add first-class file output support for `scan` results.
+- [x] **1** Add first-class file output support for `scan` results.
 
   Implement a destination flag for the `scan` command so users can ask
   skillaudit to write the rendered scan result directly to a file instead of
