@@ -713,7 +713,7 @@ at the bottom and the loop will stop.
   - Do not imply skill contents are uploaded unless the implementation actually
     sends contents.
 
-- [ ] **30** Add a README limitations section.
+- [x] **30** Add a README limitations section.
 
   Add a concise limitations section that explains the scanner's detection model,
   expected false-positive classes, and why a PASS verdict is not a guarantee
