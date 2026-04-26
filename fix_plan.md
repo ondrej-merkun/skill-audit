@@ -395,6 +395,162 @@ at the bottom and the loop will stop.
   - Add the field to discovery output paths where skills are constructed.
   - Add tests with controlled fixture timestamps where feasible.
 
+- [ ] **14** Populate the CLI scan enrichment column from realistic metadata.
+
+  The default human scan table can show an `ENRICHMENT` column that is always
+  empty in real output, even when selected enrichment sources should be able to
+  provide displayable metadata. This task fixes the populated data path; task 3
+  covers the user-facing message when enrichment is unavailable or intentionally
+  absent.
+
+  Target behavior:
+  - Skills with resolvable repository, package, or source metadata receive
+    enrichment before table rendering.
+  - The human `ENRICHMENT` column displays compact useful metadata instead of
+    `-` for at least one realistic populated path.
+  - Offline mode, timeout/failure fallback, and true no-metadata cases remain
+    graceful and fail-silent except for the compact user-facing messages from
+    task 3.
+  - Machine-readable output keeps the existing schema unless a separate schema
+    task explicitly changes it.
+
+  Implementation notes:
+  - Add a command-level or pipeline-level regression test that starts with a
+    realistic discovered skill and ends with a non-empty rendered table cell.
+  - Use deterministic fixtures, mocked enrichment sources, or a seeded cache
+    rather than relying on live network access.
+  - Also cover the clear empty/unavailable path so the populated-path fix does
+    not make normal offline use look broken.
+
+- [ ] **15** Reduce false positives on security-auditor and tester skills.
+
+  Skills and packages that discuss prompt injection, jailbreaks, suspicious
+  code, hardcoded keys, or exfiltration as security education or scanner test
+  data should not be flagged as malicious solely because they describe those
+  attacks.
+
+  Target behavior:
+  - Benign security-auditor, scanner, tester, red-team training, and rule
+    documentation skills do not receive high-confidence prompt-injection or
+    code-risk findings for quoted, fenced, or explanatory examples.
+  - Operative instructions that actually tell the agent to ignore rules,
+    disable safeguards, exfiltrate data, or run dangerous code are still
+    detected.
+  - Existing malicious fixtures keep passing; do not weaken a rule simply to
+    silence a benign example.
+
+  Implementation notes:
+  - Add benign fixtures modeled after packages such as `skill-security-auditor`,
+    `ai-security`, and `skill-tester`.
+  - Prefer context masking, quoted/fenced-example handling, or operative-intent
+    checks over broad allowlists by package name.
+  - Verify `node packages/cli/dist/index.js explain <fixture>` reads as benign
+    for the new security-education fixtures.
+
+- [ ] **16** Make the no-subcommand CLI invocation run the default scan.
+
+  Invoking the canonical binary with no subcommand should behave like the
+  default `scan` command. The current `skillaudit` binary can produce no output
+  when run without arguments even though the docs describe bare invocation as a
+  scan.
+
+  Target behavior:
+  - `node packages/cli/dist/index.js` behaves the same as
+    `node packages/cli/dist/index.js scan` for default scan options.
+  - The published binary behaves the same way. If task 12 has renamed the
+    binary by the time this task runs, apply the invariant to `skill-audit`.
+  - `--help`, `--version`, unknown subcommands, and validation errors keep their
+    existing command-line behavior and exit codes.
+  - The default scan does not execute twice and does not corrupt stdout for JSON
+    or file-output modes.
+
+  Implementation notes:
+  - Add parser-level coverage that executes the built CLI with no subcommand,
+    not only unit tests for `runScan({})`.
+  - Smoke-test the exact documented bare invocation before committing.
+
+- [ ] **17** Make HTML report agent sidebar entries interactive.
+
+  The generated HTML report should let users filter report rows by clicking an
+  agent in the left sidebar. Static sidebar markup is not enough; the generated
+  file must work when opened as a local HTML report.
+
+  Target behavior:
+  - Clicking an agent sidebar entry filters visible skills/findings to that
+    agent.
+  - The selected agent has a clear visual/accessible selected state.
+  - Users can return to an all-agents view.
+  - Keyboard activation works for the same controls.
+  - Filtering does not break row expansion, detail panels, or any existing
+    toolbar controls.
+
+  Implementation notes:
+  - Add a DOM or browser smoke test that renders the generated HTML, executes
+    its script, clicks an agent filter, and asserts visible row state changes.
+  - Keep the report self-contained and file-mode friendly; do not require
+    network access or a dev server for sidebar filtering.
+
+- [ ] **18** Fix the README CI badge link so it targets a real workflow.
+
+  The README CI badge currently links to a GitHub "page not found" target. Badges
+  are product surface and should point at the exact public repository and
+  workflow that users can inspect.
+
+  Target behavior:
+  - The badge image URL and click target use the actual public owner, repo, and
+    workflow path/name.
+  - The badge link resolves without a 404.
+  - Any related GitHub Action examples or repository links touched in the same
+    area use the same verified canonical target.
+
+  Implementation notes:
+  - Verify the external GitHub target instead of composing it from partial
+    identity fields.
+  - If the canonical repository slug or workflow name is ambiguous, document the
+    verified value near the identity/docs source that future README edits use.
+
+- [ ] **19** Tighten the README first screen and move dense material to docs.
+
+  The README has become too long and table-heavy for a first impression. It
+  should quickly explain what the tool does, how to install it, how to run a
+  first scan, and how to interpret the first result, while moving deeper
+  comparisons and maintainer detail into linked docs.
+
+  Target behavior:
+  - The first screen communicates purpose, install command, scan command, and
+    result interpretation without dense tables.
+  - Tables are reduced to the few cases where comparison is genuinely easier in
+    table form.
+  - Deep comparison, privacy detail, long examples, CI material, and maintainer
+    notes move to focused docs unless they clearly improve the front page.
+  - The tone stays accurate, minimal, and pleasant to share.
+
+  Implementation notes:
+  - Preserve important external links and verify changed markdown links resolve.
+  - Keep README claims aligned with `specs/SPEC.md` and current CLI behavior.
+  - If content moves to docs, add or update the destination document in the same
+    task rather than dropping useful material.
+
+- [ ] **20** Repair or replace the README header screenshot.
+
+  The README header image currently has overflowing and overlapping terminal
+  text. The visual should be readable at the size GitHub renders it and should
+  reflect current CLI output.
+
+  Target behavior:
+  - No text overlaps, clips, or spills outside the terminal/image bounds.
+  - The screenshot or SVG reflects current built CLI output and current command
+    naming.
+  - The image remains legible at the embedded README dimensions on GitHub.
+  - Markdown image references still resolve on disk.
+
+  Implementation notes:
+  - Prefer generating the visual from real built CLI output where feasible.
+  - Render the changed asset at its README dimensions and inspect it before
+    committing.
+  - Coordinate with task 19 if the README first screen changes how the hero
+    asset is used.
+
 ## Dependencies added
 
 (Append to this list when Ralph adds anything beyond the list in AGENT.md.)
