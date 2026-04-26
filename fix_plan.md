@@ -175,7 +175,7 @@ at the bottom and the loop will stop.
     would not prove the behavior, such as `FAIL score 40`, `FAIL score 0`,
     `REVIEW score 50`, and `PASS score 100`.
 
-- [ ] **3** Surface `skills.sh` and `deps.dev` enrichment in the default
+- [x] **3** Surface `skills.sh` and `deps.dev` enrichment in the default
   scan output.
 
   The regular human `skillaudit scan` table currently only shows a coarse
