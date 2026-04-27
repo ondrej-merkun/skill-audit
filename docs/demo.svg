@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="540" viewBox="0 0 1000 540" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="640" viewBox="0 0 1000 640" role="img" aria-labelledby="title desc">
   <title id="title">skill-audit terminal demo</title>
-  <desc id="desc">A terminal screenshot showing skill-audit scan --offline --agent claude-code and the current risk-first verdict table output.</desc>
+  <desc id="desc">A terminal screenshot showing skill-audit scan --offline --agent claude-code with current risk-first scan results and summary footer.</desc>
   <defs>
     <linearGradient id="screen" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#111827"/>
@@ -9,11 +9,17 @@
     <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
       <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#020617" flood-opacity="0.28"/>
     </filter>
+    <clipPath id="terminal-body">
+      <rect x="78" y="94" width="844" height="456"/>
+    </clipPath>
+    <clipPath id="issue-column">
+      <rect x="654" y="246" width="274" height="118"/>
+    </clipPath>
   </defs>
 
-  <rect width="1000" height="540" fill="#f8fafc"/>
+  <rect width="1000" height="640" fill="#f8fafc"/>
   <g filter="url(#shadow)">
-    <rect x="50" y="34" width="900" height="472" rx="14" fill="url(#screen)"/>
+    <rect x="50" y="34" width="900" height="572" rx="14" fill="url(#screen)"/>
     <rect x="50" y="34" width="900" height="42" rx="14" fill="#0f172a"/>
     <rect x="50" y="62" width="900" height="14" fill="#0f172a"/>
     <circle cx="80" cy="55" r="6" fill="#ef4444"/>
@@ -22,48 +28,60 @@
     <text x="500" y="60" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#94a3b8">skill-audit</text>
   </g>
 
-  <g font-family="SFMono-Regular, Consolas, 'Liberation Mono', monospace" font-size="15">
+  <g clip-path="url(#terminal-body)" font-family="SFMono-Regular, Consolas, 'Liberation Mono', monospace" font-size="14">
     <text x="82" y="108" fill="#22c55e">$</text>
     <text x="104" y="108" fill="#e5e7eb">skill-audit scan --offline --agent claude-code</text>
 
-    <text x="82" y="140" fill="#fbbf24">[skill-audit] offline mode - enrichment skipped</text>
+    <text x="82" y="140" fill="#fbbf24">[skill-audit] offline mode &#8212; enrichment skipped</text>
 
     <rect x="82" y="162" width="836" height="58" rx="6" fill="#020617" stroke="#334155"/>
-    <text x="105" y="198" fill="#e5e7eb">skill-audit  scanned 3 skills across 1 agent in 0.0s</text>
+    <text x="104" y="198" fill="#e5e7eb">skill-audit  scanned 3 skills across 1 agent in 0.0s</text>
 
     <text x="92" y="254" fill="#93c5fd" font-weight="700">AGENT</text>
-    <text x="248" y="254" fill="#93c5fd" font-weight="700">SKILL</text>
-    <text x="520" y="254" fill="#93c5fd" font-weight="700">VERDICT</text>
-    <text x="623" y="254" fill="#93c5fd" font-weight="700">SCORE</text>
-    <text x="650" y="254" fill="#93c5fd" font-weight="700">TOP ISSUE</text>
+    <text x="236" y="254" fill="#93c5fd" font-weight="700">SKILL</text>
+    <text x="508" y="254" fill="#93c5fd" font-weight="700">VERDICT</text>
+    <text x="596" y="254" fill="#93c5fd" font-weight="700">SCORE</text>
+    <text x="656" y="254" fill="#93c5fd" font-weight="700">TOP ISSUE</text>
     <line x1="92" y1="268" x2="908" y2="268" stroke="#334155"/>
 
     <text x="92" y="300" fill="#cbd5e1">Claude Code</text>
-    <circle cx="251" cy="295" r="6" fill="#ef4444"/>
-    <text x="268" y="300" fill="#fca5a5">obfuscated-eval-skill</text>
-    <text x="520" y="300" fill="#f87171" font-weight="700">FAIL</text>
-    <text x="623" y="300" fill="#f87171" font-weight="700">50</text>
-    <text x="650" y="300" fill="#fca5a5" font-size="12">codeexec-js-eval-function (minify.js:10)</text>
+    <circle cx="239" cy="295" r="6" fill="#ef4444"/>
+    <text x="254" y="300" fill="#fca5a5">obfuscated-eval-skill</text>
+    <text x="508" y="300" fill="#f87171" font-weight="700">FAIL</text>
+    <text x="596" y="300" fill="#f87171" font-weight="700">50</text>
+    <g clip-path="url(#issue-column)">
+      <text x="656" y="300" fill="#fca5a5" font-size="10.5">codeexec-js-eval-function (minify.js:10)</text>
+    </g>
 
     <text x="92" y="336" fill="#cbd5e1">Claude Code</text>
-    <circle cx="251" cy="331" r="6" fill="#ef4444"/>
-    <text x="268" y="336" fill="#fca5a5">webhook-exfil-skill</text>
-    <text x="520" y="336" fill="#f87171" font-weight="700">FAIL</text>
-    <text x="623" y="336" fill="#f87171" font-weight="700">75</text>
-    <text x="650" y="336" fill="#fca5a5" font-size="12">net-webhook-known (notify.py:5)</text>
+    <circle cx="239" cy="331" r="6" fill="#ef4444"/>
+    <text x="254" y="336" fill="#fca5a5">webhook-exfil-skill</text>
+    <text x="508" y="336" fill="#f87171" font-weight="700">FAIL</text>
+    <text x="596" y="336" fill="#f87171" font-weight="700">75</text>
+    <g clip-path="url(#issue-column)">
+      <text x="656" y="336" fill="#fca5a5" font-size="10.5">net-webhook-known (notify.py:5)</text>
+    </g>
 
     <text x="92" y="372" fill="#cbd5e1">Claude Code</text>
-    <circle cx="251" cy="367" r="6" fill="#22c55e"/>
-    <text x="268" y="372" fill="#86efac">csv-processor</text>
-    <text x="520" y="372" fill="#4ade80" font-weight="700">PASS</text>
-    <text x="623" y="372" fill="#4ade80" font-weight="700">100</text>
-    <text x="650" y="372" fill="#94a3b8">-</text>
+    <circle cx="239" cy="367" r="6" fill="#22c55e"/>
+    <text x="254" y="372" fill="#86efac">csv-processor</text>
+    <text x="508" y="372" fill="#4ade80" font-weight="700">PASS</text>
+    <text x="596" y="372" fill="#4ade80" font-weight="700">100</text>
+    <text x="656" y="372" fill="#94a3b8">&#8212;</text>
 
     <line x1="92" y1="400" x2="908" y2="400" stroke="#334155"/>
     <text x="92" y="430" fill="#e5e7eb">Skills scanned............ 3</text>
-    <text x="92" y="454" fill="#e5e7eb">Compromised skills........ 2   (67% of installed)</text>
+    <text x="92" y="454" fill="#e5e7eb">Agents scanned............ Claude Code: 3</text>
+    <text x="92" y="478" fill="#e5e7eb">Unique issues............. 2  (2 critical, 0 high, 0 medium, 0 low)</text>
+    <text x="92" y="502" fill="#e5e7eb">Compromised skills........ 2   (67% of installed)</text>
+    <text x="92" y="526" fill="#e5e7eb">Enrichment................ skills.sh skipped  GitHub skipped  deps.dev skipped</text>
+  </g>
 
-    <text x="92" y="486" fill="#bfdbfe">-&gt; skill-audit explain obfuscated-eval-skill</text>
-    <text x="470" y="486" fill="#e5e7eb">See full findings</text>
+  <g font-family="SFMono-Regular, Consolas, 'Liberation Mono', monospace" font-size="13">
+    <text x="82" y="568" fill="#bfdbfe">&#8594; skill-audit explain obfuscated-eval-skill</text>
+    <text x="470" y="568" fill="#94a3b8">See full findings</text>
+    <text x="82" y="592" fill="#bfdbfe">&#8594; skill-audit ignore &lt;skill&gt;</text>
+    <text x="352" y="592" fill="#94a3b8">Allowlist a false positive</text>
+    <text x="618" y="592" fill="#bfdbfe">&#8594; skill-audit --html report.html</text>
   </g>
 </svg>
