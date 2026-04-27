@@ -87,7 +87,7 @@ Output comparison contract:
 
 ## Pending tasks
 
-- [ ] **1** Exclude marketplace inventory from default discovery for all
+- [x] **1** Exclude marketplace inventory from default discovery for all
   agents.
 
   Default discovery must return only active, installed, or currently exposed
