@@ -584,7 +584,7 @@ Output comparison contract:
   - Smoke-test the built CLI against a temp skill and a fake local
     OpenAI-compatible endpoint.
 
-- [ ] **12** Support multiple local LLMs in the same scan run.
+- [x] **12** Support multiple local LLMs in the same scan run.
 
   Users should be able to connect several local models and ask `skill-audit` to
   run them side by side. The implementation must preserve per-model identity,
