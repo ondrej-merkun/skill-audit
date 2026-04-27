@@ -66,6 +66,32 @@ export type Finding = {
   cwe: string[];
 };
 
+export type LlmReviewFinding = {
+  severity: Severity;
+  category: string;
+  confidence: number;
+  rationale: string;
+  file?: string;
+  suggestedFix?: string;
+};
+
+export type LlmReviewStatus =
+  | 'ok'
+  | 'unavailable'
+  | 'timeout'
+  | 'invalid-response'
+  | 'skipped-offline';
+
+export type LlmReviewResult = {
+  modelName: string;
+  provider: string;
+  model: string;
+  status: LlmReviewStatus;
+  promptVersion: string;
+  findings: LlmReviewFinding[];
+  error?: string;
+};
+
 export type SkillsShEnrichment = {
   gen: string;
   socketAlerts: number;
@@ -128,6 +154,7 @@ export type SkillSummary = {
 // A skill after scanning — extends Skill with runtime findings
 export type ScannedSkill = Skill & {
   findings: Finding[];
+  llmReviews?: LlmReviewResult[];
   enrichment: Enrichment;
   enrichmentOutcomes?: EnrichmentSourceOutcome[];
   summary: SkillSummary;

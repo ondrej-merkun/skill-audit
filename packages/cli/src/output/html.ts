@@ -71,19 +71,26 @@ function renderEnrichmentCells(skill: ScannedSkill): string {
 }
 
 function redactPaths(skills: ScannedSkill[]): ScannedSkill[] {
-  return skills.map((s) => ({
-    ...s,
-    path: '[redacted]',
-    findings: s.findings.map((f) => ({
-      ...f,
-      file: f.file.replace(/.*\//, '[redacted]/'),
-      snippet: '[redacted]',
-    })),
-  }));
+  return skills.map((s) => {
+    const { llmReviews: _llmReviews, ...skill } = s;
+    return {
+      ...skill,
+      path: '[redacted]',
+      findings: skill.findings.map((f) => ({
+        ...f,
+        file: f.file.replace(/.*\//, '[redacted]/'),
+        snippet: '[redacted]',
+      })),
+    };
+  });
 }
 
 export function renderHtml(result: ScanResult): string {
   const sorted = sortScanSkills(result.skills);
+  const publicSorted = sorted.map((skill) => {
+    const { llmReviews: _llmReviews, ...publicSkill } = skill;
+    return publicSkill;
+  });
 
   const agentIds = [
     ...new Set([...result.agents.map((a) => a.id), ...sorted.map((skill) => skill.agentId)]),
@@ -105,9 +112,9 @@ export function renderHtml(result: ScanResult): string {
   );
 
   // Embed scan data as JSON for client-side consumption (all strings are server-generated)
-  const jsonData = JSON.stringify({ result: { ...result, skills: sorted } });
+  const jsonData = JSON.stringify({ result: { ...result, skills: publicSorted } });
   const redactedJson = JSON.stringify({
-    result: { ...result, skills: redactPaths(sorted) },
+    result: { ...result, skills: redactPaths(publicSorted) },
   });
 
   const rows = sorted

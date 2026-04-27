@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import stripAnsi from './helpers/strip-ansi.js';
+import type { LlmReviewFetch } from '../packages/cli/src/llm/review.js';
 import type { Skill } from '../packages/cli/src/types.js';
 
 // Mock discovery and rules engine before importing runScan
@@ -182,6 +183,32 @@ describe('runScan flag wiring', () => {
     } else {
       process.env['XDG_CONFIG_HOME'] = originalXdgConfigHome;
     }
+  }
+
+  async function writeLlmConfig(configDir: string): Promise<void> {
+    const llmDir = join(configDir, 'skill-audit');
+    await mkdir(llmDir, { recursive: true });
+    await writeFile(
+      join(llmDir, 'llms.json'),
+      JSON.stringify(
+        {
+          version: 1,
+          models: [
+            {
+              name: 'reviewer',
+              provider: 'openai-compatible',
+              baseUrl: 'http://localhost:11434',
+              model: 'local-reviewer',
+              timeoutMs: 1000,
+              contextTokens: 800,
+            },
+          ],
+        },
+        null,
+        2
+      ),
+      'utf-8'
+    );
   }
 
   it('--json emits parseable JSON to stdout', async () => {
@@ -675,6 +702,155 @@ describe('runScan flag wiring', () => {
     const out = stripAnsi(stdoutChunks.join(''));
     expect(errOut).toContain('offline mode');
     expect(out).not.toContain('ENRICHMENT');
+  });
+
+  it('--llm reviews scanned skills with a configured local model', async () => {
+    await withTempDir(async (dir) => {
+      process.env['XDG_CONFIG_HOME'] = dir;
+      await writeLlmConfig(dir);
+      const skill = makeSkill({ path: '/tmp/review-me', name: 'review-me' });
+      vi.mocked(discoverAll).mockResolvedValue([skill]);
+      vi.mocked(runRules).mockResolvedValue([
+        {
+          ruleId: 'PI-OVERRIDE',
+          severity: 'critical',
+          category: 'prompt-injection',
+          file: '/tmp/review-me/SKILL.md',
+          line: 1,
+          column: 1,
+          snippet: 'ignore previous instructions',
+          message: 'Instruction override.',
+          fix: 'Remove override instructions.',
+          cwe: ['CWE-1427'],
+        },
+      ]);
+      const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
+      const fetchImpl: LlmReviewFetch = async (url, init) => {
+        calls.push({ url, body: JSON.parse(init.body) as Record<string, unknown> });
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    findings: [
+                      {
+                        severity: 'high',
+                        category: 'prompt-injection',
+                        confidence: 0.9,
+                        rationale: 'The model found an override instruction.',
+                        file: 'SKILL.md',
+                        suggested_fix: 'Delete the override.',
+                      },
+                    ],
+                  }),
+                },
+              },
+            ],
+          }),
+        };
+      };
+
+      await runScan({ llm: 'reviewer', llmFetchImpl: fetchImpl });
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.url).toBe('http://localhost:11434/v1/chat/completions');
+      expect(calls[0]?.body).toMatchObject({ model: 'local-reviewer', stream: false });
+      const errOut = stripAnsi(stderrChunks.join(''));
+      expect(errOut).toContain('LLM review: reviewer');
+      expect(errOut).toContain('review-me: reviewer ok (1 LLM-only finding)');
+      expect(process.exitCode).toBeUndefined();
+    });
+  });
+
+  it('--llm captures invalid model output without corrupting JSON stdout', async () => {
+    await withTempDir(async (dir) => {
+      process.env['XDG_CONFIG_HOME'] = dir;
+      await writeLlmConfig(dir);
+      vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+      const fetchImpl = async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: 'not json' } }] }),
+      });
+
+      await runScan({ json: true, llm: 'reviewer', llmFetchImpl: fetchImpl });
+
+      const parsed = JSON.parse(stdoutChunks.join(''));
+      expect(parsed.schema_version).toBe('1.0');
+      expect(parsed.skills[0]).not.toHaveProperty('llm_reviews');
+      expect(stripAnsi(stderrChunks.join(''))).toContain('reviewer invalid-response');
+    });
+  });
+
+  it('--summary --llm keeps stdout compact and puts review status on stderr', async () => {
+    await withTempDir(async (dir) => {
+      process.env['XDG_CONFIG_HOME'] = dir;
+      await writeLlmConfig(dir);
+      vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+      const fetchImpl = async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: '{"findings":[]}' } }] }),
+      });
+
+      await runScan({ summary: true, llm: 'reviewer', llmFetchImpl: fetchImpl });
+
+      expect(stripAnsi(stdoutChunks.join(''))).toMatch(/PASS|REVIEW|FAIL/);
+      expect(stripAnsi(stdoutChunks.join(''))).not.toContain('LLM review');
+      expect(stripAnsi(stderrChunks.join(''))).toContain('reviewer ok (0 LLM-only findings)');
+    });
+  });
+
+  it('--html --llm writes HTML without adding LLM fields before the output contract task', async () => {
+    await withTempDir(async (dir) => {
+      process.env['XDG_CONFIG_HOME'] = dir;
+      await writeLlmConfig(dir);
+      vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+      const html = join(dir, 'report.html');
+      const fetchImpl = async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: '{"findings":[]}' } }] }),
+      });
+
+      await runScan({ html, llm: 'reviewer', llmFetchImpl: fetchImpl });
+
+      const htmlOut = await readFile(html, 'utf-8');
+      expect(htmlOut).toContain('<html');
+      expect(htmlOut).not.toContain('llmReviews');
+      expect(stripAnsi(stderrChunks.join(''))).toContain('report written');
+    });
+  });
+
+  it('--offline --llm validates config but skips model requests', async () => {
+    await withTempDir(async (dir) => {
+      process.env['XDG_CONFIG_HOME'] = dir;
+      await writeLlmConfig(dir);
+      vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+      const fetchImpl = vi.fn();
+
+      await runScan({ offline: true, llm: 'reviewer', llmFetchImpl: fetchImpl });
+
+      expect(fetchImpl).not.toHaveBeenCalled();
+      expect(stripAnsi(stderrChunks.join(''))).toContain('offline mode — LLM review skipped');
+    });
+  });
+
+  it('--llm exits with a usage error for unknown models before discovery', async () => {
+    await withTempDir(async (dir) => {
+      process.env['XDG_CONFIG_HOME'] = dir;
+      await writeLlmConfig(dir);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as never);
+
+      await runScan({ llm: 'missing' });
+
+      expect(exitSpy).toHaveBeenCalledWith(2);
+      expect(discoverAll).not.toHaveBeenCalled();
+      expect(stripAnsi(stderrChunks.join(''))).toContain('local LLM "missing" is not configured');
+    });
   });
 
   it('default (no flags) renders table output without throwing', async () => {

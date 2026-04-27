@@ -8,6 +8,11 @@ import {
   summarizeEnrichmentOutcomes,
 } from '../enrich/index.js';
 import type { EnrichmentSource } from '../enrich/index.js';
+import { loadLlmRegistry } from '../llm/config.js';
+import type { LocalLlmConfig } from '../llm/config.js';
+import { LLM_REVIEW_PROMPT_VERSION, buildLlmReviewPayload } from '../llm/prompt.js';
+import { reviewWithOpenAiCompatibleModel } from '../llm/review.js';
+import type { LlmReviewFetch } from '../llm/review.js';
 import { renderHtml } from '../output/html.js';
 import { renderJson } from '../output/json.js';
 import { sortScanSkills } from '../output/sort.js';
@@ -26,6 +31,7 @@ import type {
   AgentInfo,
   EnrichmentSourceOutcome,
   EnrichmentStatus,
+  LlmReviewResult,
   ScanResult,
   ScannedSkill,
   Skill,
@@ -58,6 +64,8 @@ export type ScanOptions = {
   agent: string | undefined;
   failOn: string | undefined;
   includeMarketplaces: boolean;
+  llm: string | undefined;
+  llmFetchImpl: LlmReviewFetch | undefined;
 };
 
 const DEFAULT_OPTIONS: ScanOptions = {
@@ -70,6 +78,8 @@ const DEFAULT_OPTIONS: ScanOptions = {
   agent: undefined,
   failOn: undefined,
   includeMarketplaces: false,
+  llm: undefined,
+  llmFetchImpl: undefined,
 };
 
 const SCAN_CONCURRENCY = 8;
@@ -160,6 +170,43 @@ function scanProgressOutputKind(options: ScanOptions): ProgressOutputKind {
   return 'pretty';
 }
 
+async function loadSelectedLlmConfig(name: string): Promise<LocalLlmConfig> {
+  const registry = await loadLlmRegistry();
+  const config = registry.models.find((model) => model.name === name);
+  if (config === undefined) throw new Error(`local LLM "${name}" is not configured`);
+  if (config.disabled === true) throw new Error(`local LLM "${name}" is disabled`);
+  return config;
+}
+
+function llmStatusLine(result: LlmReviewResult): string {
+  if (result.status === 'ok') {
+    return `${result.modelName} ok (${result.findings.length} LLM-only finding${result.findings.length === 1 ? '' : 's'})`;
+  }
+  return `${result.modelName} ${result.status}`;
+}
+
+async function reviewSkillsWithLlm(
+  skills: ScannedSkill[],
+  config: LocalLlmConfig,
+  fetchImpl: LlmReviewFetch | undefined
+): Promise<ScannedSkill[]> {
+  const reviewed: ScannedSkill[] = [];
+  for (const skill of skills) {
+    if (skill.ignored === true) {
+      reviewed.push(skill);
+      continue;
+    }
+    const payload = await buildLlmReviewPayload(
+      skill,
+      config.contextTokens !== undefined ? { contextTokens: config.contextTokens } : {}
+    );
+    const result = await reviewWithOpenAiCompatibleModel(config, payload, fetchImpl);
+    reviewed.push({ ...skill, llmReviews: [result] });
+    process.stderr.write(`[skill-audit] LLM review: ${skill.name}: ${llmStatusLine(result)}\n`);
+  }
+  return reviewed;
+}
+
 export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   const options: ScanOptions = { ...DEFAULT_OPTIONS, ...opts };
 
@@ -177,6 +224,18 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     );
     process.exit(2);
     return; // unreachable in production; allows mocked exit in tests
+  }
+
+  let selectedLlmConfig: LocalLlmConfig | undefined;
+  if (options.llm !== undefined) {
+    try {
+      selectedLlmConfig = await loadSelectedLlmConfig(options.llm);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[skill-audit] ${msg}\n`);
+      process.exit(2);
+      return; // unreachable in production; allows mocked exit in tests
+    }
   }
 
   const startedAt = new Date().toISOString();
@@ -208,6 +267,9 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
 
   if (options.offline) {
     process.stderr.write('[skill-audit] offline mode — enrichment skipped\n');
+    if (selectedLlmConfig !== undefined) {
+      process.stderr.write('[skill-audit] offline mode — LLM review skipped\n');
+    }
   }
 
   if (skills.length === 0) {
@@ -274,6 +336,18 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   }
 
   progress.succeedScan(toScan.length);
+
+  if (selectedLlmConfig !== undefined && !options.offline && scannedSkills.length > 0) {
+    process.stderr.write(
+      `[skill-audit] LLM review: ${selectedLlmConfig.name} (${selectedLlmConfig.model}, prompt ${LLM_REVIEW_PROMPT_VERSION})\n`
+    );
+    const reviewedSkills = await reviewSkillsWithLlm(
+      scannedSkills,
+      selectedLlmConfig,
+      options.llmFetchImpl
+    );
+    scannedSkills.splice(0, scannedSkills.length, ...reviewedSkills);
+  }
 
   const enrichmentSources = selectScanEnrichmentSources(options);
   let enrichmentStatus: EnrichmentStatus = options.offline ? 'skipped-offline' : 'not-run';
