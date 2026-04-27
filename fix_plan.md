@@ -389,7 +389,7 @@ Output comparison contract:
     enrichment output. If live network is unavailable, record the exact blocker
     under `Blockers`.
 
-- [ ] **8** Fix GitHub enrichment reliability and contributor counts.
+- [x] **8** Fix GitHub enrichment reliability and contributor counts.
 
   Postmortem issue 1 says GitHub enrichment is missing for most skills, and when
   it appears the collaborator/contributor count can be incorrectly shown as
