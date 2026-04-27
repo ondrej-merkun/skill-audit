@@ -630,7 +630,7 @@ Output comparison contract:
     model's completed review from appearing in results.
   - Smoke-test the built CLI against two fake local endpoints in the same run.
 
-- [ ] **13** Show per-LLM finding comparison in scan outputs.
+- [x] **13** Show per-LLM finding comparison in scan outputs.
 
   Multi-model review is only useful if users can see which local model found
   which issue. Human, JSON, and HTML outputs should make agreement and
