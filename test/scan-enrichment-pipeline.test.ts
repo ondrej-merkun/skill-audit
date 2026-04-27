@@ -128,4 +128,27 @@ describe('scan enrichment pipeline', () => {
     expect(out).not.toContain('no metadata found');
     expect(stripAnsi(stderrChunks.join(''))).toBe('');
   });
+
+  it('populates deps.dev enrichment from a nested tool manifest', async () => {
+    const dir = await mkdtemp(join(testHome, 'nested-skill-'));
+    await mkdir(join(dir, 'tools', 'node-helper'), { recursive: true });
+    await writeFile(join(dir, 'SKILL.md'), '# Nested Source Skill\n');
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ repository: 'https://github.com/example/source-skill.git' })
+    );
+    await writeFile(
+      join(dir, 'tools', 'node-helper', 'package.json'),
+      JSON.stringify({ dependencies: { 'left-pad': '^1.3.0' } })
+    );
+    vi.mocked(discoverAll).mockResolvedValue([makeSkill(dir)]);
+
+    await runScan({});
+
+    const out = stripAnsi(stdoutChunks.join(''));
+    expect(out).toContain('ENRICHMENT');
+    expect(out).toContain('GitHub=7 stars');
+    expect(out).toContain('1 OSV advisory');
+    expect(stripAnsi(stderrChunks.join(''))).toBe('');
+  });
 });

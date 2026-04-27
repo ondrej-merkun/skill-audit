@@ -1,7 +1,6 @@
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import type { DepsDevEnrichment, Skill } from '../types.js';
 import { cacheGet, cacheSet } from './cache.js';
+import { readDependencyRefs } from './metadata.js';
 
 const SOURCE = 'depsdev';
 const API_BASE = 'https://api.deps.dev/v3alpha';
@@ -52,41 +51,13 @@ async function fetchAdvisoryCount(ecosystem: string, packageName: string): Promi
   }
 }
 
-async function readDeps(skillPath: string): Promise<Array<{ ecosystem: string; name: string }>> {
-  const deps: Array<{ ecosystem: string; name: string }> = [];
-
-  try {
-    const raw = await readFile(join(skillPath, 'package.json'), 'utf8');
-    const pkg = JSON.parse(raw) as { dependencies?: Record<string, string> };
-    for (const name of Object.keys(pkg.dependencies ?? {}).slice(0, MAX_DEPS)) {
-      deps.push({ ecosystem: 'npm', name });
-    }
-  } catch {
-    // no package.json
-  }
-
-  if (deps.length === 0) {
-    try {
-      const raw = await readFile(join(skillPath, 'requirements.txt'), 'utf8');
-      for (const line of raw.split('\n').slice(0, MAX_DEPS)) {
-        const name = line.split(/[>=<!]/)[0].trim();
-        if (name && !name.startsWith('#')) deps.push({ ecosystem: 'pypi', name });
-      }
-    } catch {
-      // no requirements.txt
-    }
-  }
-
-  return deps;
-}
-
 export async function hasDepsDevQueryInput(skill: Skill): Promise<boolean> {
-  return (await readDeps(skill.path)).length > 0;
+  return (await readDependencyRefs(skill, MAX_DEPS)).length > 0;
 }
 
 /** Fetch OSSF Scorecard + OSV advisory count from deps.dev for skill dependencies. Fail-silent, cached 24h. */
 export async function enrichDepsDev(skill: Skill): Promise<DepsDevEnrichment | null> {
-  const deps = await readDeps(skill.path);
+  const deps = await readDependencyRefs(skill, MAX_DEPS);
   if (deps.length === 0) return null;
 
   const counts = await Promise.all(deps.map((d) => fetchAdvisoryCount(d.ecosystem, d.name)));

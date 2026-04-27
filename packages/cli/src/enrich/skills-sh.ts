@@ -1,7 +1,6 @@
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import type { Skill, SkillsShEnrichment } from '../types.js';
 import { cacheGet, cacheSet } from './cache.js';
+import { resolveGitHubSlug } from './metadata.js';
 
 const SOURCE = 'skills-sh';
 const AUDIT_URL = 'https://add-skill.vercel.sh/audit';
@@ -14,42 +13,13 @@ type SkillsShResponse = {
   snyk?: string;
 };
 
-/** Extract a GitHub owner/repo slug from a skill's package.json or SKILL.md. */
-async function resolveSlug(skill: Skill): Promise<string | null> {
-  // Try package.json repository field
-  const pkgPath = join(skill.path, 'package.json');
-  try {
-    const raw = await readFile(pkgPath, 'utf8');
-    const pkg = JSON.parse(raw) as { repository?: string | { url?: string } };
-    const repoUrl = typeof pkg.repository === 'string' ? pkg.repository : pkg.repository?.url;
-    if (repoUrl) {
-      const match = /github\.com[/:]([\w.-]+\/[\w.-]+?)(?:\.git)?$/i.exec(repoUrl);
-      if (match?.[1]) return match[1];
-    }
-  } catch {
-    // no package.json or unparseable
-  }
-
-  // Try SKILL.md for a GitHub URL reference
-  const skillMdPath = skill.manifestPath ?? join(skill.path, 'SKILL.md');
-  try {
-    const text = await readFile(skillMdPath, 'utf8');
-    const match = /github\.com\/([\w.-]+\/[\w.-]+)/i.exec(text);
-    if (match?.[1]) return match[1].replace(/\.git$/, '');
-  } catch {
-    // no SKILL.md or unreadable
-  }
-
-  return null;
-}
-
 export async function hasSkillsShQueryInput(skill: Skill): Promise<boolean> {
-  return (await resolveSlug(skill)) !== null;
+  return (await resolveGitHubSlug(skill)) !== null;
 }
 
 /** Fetch enrichment from skills.sh audit endpoint. Fail-silent, cached 24h. */
 export async function enrichSkillsSh(skill: Skill): Promise<SkillsShEnrichment | null> {
-  const slug = await resolveSlug(skill);
+  const slug = await resolveGitHubSlug(skill);
   if (!slug) return null;
 
   const cacheKey = `slug:${slug}`;

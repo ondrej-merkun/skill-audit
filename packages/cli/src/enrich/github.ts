@@ -1,41 +1,14 @@
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import type { GitHubEnrichment, Skill } from '../types.js';
 import { cacheGet, cacheSet } from './cache.js';
+import { resolveGitHubSlug } from './metadata.js';
 
 const SOURCE = 'github';
 const API_BASE = 'https://api.github.com';
 const TIMEOUT_MS = 5_000;
 const USER_AGENT = 'skill-audit/0.1.0 (+github.com/ondrej-merkun/skill-audit)';
 
-async function resolveSlug(skill: Skill): Promise<string | null> {
-  const pkgPath = join(skill.path, 'package.json');
-  try {
-    const raw = await readFile(pkgPath, 'utf8');
-    const pkg = JSON.parse(raw) as { repository?: string | { url?: string } };
-    const repoUrl = typeof pkg.repository === 'string' ? pkg.repository : pkg.repository?.url;
-    if (repoUrl) {
-      const match = /github\.com[/:]([\w.-]+\/[\w.-]+?)(?:\.git)?$/i.exec(repoUrl);
-      if (match?.[1]) return match[1];
-    }
-  } catch {
-    // no package.json or unparseable
-  }
-
-  const skillMdPath = skill.manifestPath ?? join(skill.path, 'SKILL.md');
-  try {
-    const text = await readFile(skillMdPath, 'utf8');
-    const match = /github\.com\/([\w.-]+\/[\w.-]+)/i.exec(text);
-    if (match?.[1]) return match[1].replace(/\.git$/, '');
-  } catch {
-    // no SKILL.md or unreadable
-  }
-
-  return null;
-}
-
 export async function hasGitHubQueryInput(skill: Skill): Promise<boolean> {
-  return (await resolveSlug(skill)) !== null;
+  return (await resolveGitHubSlug(skill)) !== null;
 }
 
 function makeHeaders(etag?: string): Record<string, string> {
@@ -68,7 +41,7 @@ function parseLinkLastPage(link: string | null): number | null {
 
 /** Fetch GitHub repo metadata. Unauthenticated by default; uses GITHUB_TOKEN if set. ETag-cached. */
 export async function enrichGitHub(skill: Skill): Promise<GitHubEnrichment | null> {
-  const slug = await resolveSlug(skill);
+  const slug = await resolveGitHubSlug(skill);
   if (!slug) return null;
 
   const cacheKey = `slug:${slug}`;
