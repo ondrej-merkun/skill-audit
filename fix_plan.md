@@ -434,7 +434,7 @@ Output comparison contract:
   - Smoke-test the built CLI against a temp skill with a known GitHub repository
     fixture or seeded cache and inspect the first-screen GitHub enrichment.
 
-- [ ] **9** Repair the README header demo image and prove it visually in a
+- [x] **9** Repair the README header demo image and prove it visually in a
   browser.
 
   Postmortem issue 2 reports that the README header image text is overflowing
