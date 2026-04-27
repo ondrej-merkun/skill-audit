@@ -340,7 +340,7 @@ Output comparison contract:
     and confirm the first screen no longer reports enrichment as a successful
     empty phase.
 
-- [ ] **7** Repair `skills.sh` and `deps.dev` provider contracts.
+- [x] **7** Repair `skills.sh` and `deps.dev` provider contracts.
 
   The current `skills.sh` implementation posts a single `{ "slug": "owner/repo" }`
   shape, while `specs/SPEC.md` describes `{ "owner", "repo", "skill" }` and a
