@@ -174,7 +174,7 @@ Output comparison contract:
     `node packages/cli/dist/index.js list --include-marketplaces` against a temp
     fixture.
 
-- [ ] **3** Add `scan --include-marketplaces` with compact scan-result
+- [x] **3** Add `scan --include-marketplaces` with compact scan-result
   labeling.
 
   The `scan` command should scan only installed skills by default. When users
