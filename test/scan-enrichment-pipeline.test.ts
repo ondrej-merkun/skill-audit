@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -26,14 +26,31 @@ const { discoverAll } = await import('../packages/cli/src/discovery/index.js');
 const { runRules } = await import('../packages/cli/src/rules/engine.js');
 const { runScan } = await import('../packages/cli/src/commands/scan.js');
 
-function makeDepsDevResponse(advisoryCount: number): Response {
-  const advisoryKeys = Array.from({ length: advisoryCount }, (_, i) => ({ id: `GHSA-${i}` }));
+function makeDepsDevPackageResponse(version = '1.0.0'): Response {
   return new Response(
     JSON.stringify({
-      versions: [{ isDefault: true, advisoryKeys }],
+      versions: [{ isDefault: true, versionKey: { version } }],
     }),
     { status: 200, headers: { 'Content-Type': 'application/json' } }
   );
+}
+
+function makeDepsDevVersionResponse(advisoryCount: number): Response {
+  const advisoryKeys = Array.from({ length: advisoryCount }, (_, i) => ({ id: `GHSA-${i}` }));
+  return new Response(
+    JSON.stringify({
+      advisoryKeys,
+      relatedProjects: [{ projectKey: { id: 'github.com/example/source-skill' } }],
+    }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
+  );
+}
+
+function makeDepsDevProjectResponse(): Response {
+  return new Response(JSON.stringify({ scorecard: { overallScore: 6.5 } }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
 
 function makeSkill(skillPath: string): Skill {
@@ -70,9 +87,18 @@ describe('scan enrichment pipeline', () => {
       'fetch',
       vi.fn(async (input: string | URL | Request) => {
         const url = String(input);
-        if (url === 'https://add-skill.vercel.sh/audit') {
+        if (
+          url ===
+          'https://add-skill.vercel.sh/audit?source=github&skills=example%2Fsource-skill%2Frealistic-source-skill'
+        ) {
           return new Response(
-            JSON.stringify({ gen: 'Low', socket_alerts: 1, snyk: 'Pass' }),
+            JSON.stringify({
+              'example/source-skill/realistic-source-skill': {
+                gen: 'Low',
+                socket: { alerts: 1 },
+                snyk: 'Pass',
+              },
+            }),
             { status: 200, headers: { 'Content-Type': 'application/json' } }
           );
         }
@@ -88,8 +114,14 @@ describe('scan enrichment pipeline', () => {
             headers: { 'Content-Type': 'application/json' },
           });
         }
-        if (url === 'https://api.deps.dev/v3alpha/packages/npm/left-pad') {
-          return makeDepsDevResponse(1);
+        if (url === 'https://api.deps.dev/v3alpha/systems/NPM/packages/left-pad') {
+          return makeDepsDevPackageResponse('1.3.0');
+        }
+        if (url === 'https://api.deps.dev/v3alpha/systems/NPM/packages/left-pad/versions/1.3.0') {
+          return makeDepsDevVersionResponse(1);
+        }
+        if (url === 'https://api.deps.dev/v3alpha/projects/github.com%2Fexample%2Fsource-skill') {
+          return makeDepsDevProjectResponse();
         }
         return new Response('not found', { status: 404 });
       })
@@ -127,6 +159,42 @@ describe('scan enrichment pipeline', () => {
     expect(out).toContain('1 OSV advisory');
     expect(out).not.toContain('no metadata found');
     expect(stripAnsi(stderrChunks.join(''))).toBe('');
+  });
+
+  it('populates JSON and HTML enrichment from the same provider contracts', async () => {
+    const dir = await mkdtemp(join(testHome, 'json-html-skill-'));
+    const htmlPath = join(testHome, 'report.html');
+    await writeFile(join(dir, 'SKILL.md'), '# Source Skill\n');
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({
+        repository: 'https://github.com/example/source-skill.git',
+        dependencies: { 'left-pad': '^1.3.0' },
+      })
+    );
+    vi.mocked(discoverAll).mockResolvedValue([makeSkill(dir)]);
+
+    await runScan({ json: true });
+    const json = JSON.parse(stdoutChunks.join('')) as {
+      skills: Array<{
+        enrichment: {
+          skills_sh: { socket_alerts: number };
+          deps_dev: { osv_advisories: number; scorecard_score: number };
+        };
+      }>;
+    };
+    expect(json.skills[0]?.enrichment.skills_sh.socket_alerts).toBe(1);
+    expect(json.skills[0]?.enrichment.deps_dev.osv_advisories).toBe(1);
+    expect(json.skills[0]?.enrichment.deps_dev.scorecard_score).toBe(6.5);
+
+    stdoutChunks = [];
+    stderrChunks = [];
+    await runScan({ html: htmlPath });
+    const html = await readFile(htmlPath, 'utf8');
+    expect(html).toContain('Gen=Low');
+    expect(html).toContain('1 OSV advisories');
+    expect(html).toContain('scorecard 6.5');
+    expect(stripAnsi(stderrChunks.join(''))).toContain(`HTML report written to ${htmlPath}`);
   });
 
   it('populates deps.dev enrichment from a nested tool manifest', async () => {

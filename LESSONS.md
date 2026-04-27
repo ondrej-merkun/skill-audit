@@ -116,6 +116,10 @@ without a commit message explaining why it no longer applies.
   For source-status work, add aggregation tests that force every public status
   through the production producer, not only renderer/unit formatting tests.
 
+- **L1.18 — Undocumented enrichment endpoints must be live-checked before patching mocks.** _Task 7 found `add-skill.vercel.sh/audit` had drifted from POST body to GET query parameters._
+  Record the observed request/response shape in tests and keep stale provider
+  failures from becoming successful zero-value enrichment.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

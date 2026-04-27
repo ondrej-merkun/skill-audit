@@ -52,7 +52,7 @@ describe('enrichSkillsSh', () => {
     );
 
     vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify({ gen: 'Pass', socket_alerts: 0, snyk: 'Pass' }), {
+      new Response(JSON.stringify({ 'owner/my-skill/test-skill': { gen: 'Pass', socket: { alerts: 0 }, snyk: 'Pass' } }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }),
@@ -61,10 +61,9 @@ describe('enrichSkillsSh', () => {
     const result = await enrichSkillsSh(makeSkill());
     expect(result).toEqual({ gen: 'Pass', socketAlerts: 0, snyk: 'Pass' });
     expect(fetch).toHaveBeenCalledWith(
-      'https://add-skill.vercel.sh/audit',
+      'https://add-skill.vercel.sh/audit?source=github&skills=owner%2Fmy-skill%2Ftest-skill',
       expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ slug: 'owner/my-skill' }),
+        headers: expect.objectContaining({ 'User-Agent': expect.stringMatching(/^skill-audit\//) }),
       }),
     );
   });
@@ -76,7 +75,7 @@ describe('enrichSkillsSh', () => {
     );
 
     vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify({ gen: 'High', socket_alerts: 2, snyk: 'Critical' }), {
+      new Response(JSON.stringify({ gen: 'High', socket: { alerts: 2 }, snyk: 'Critical' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }),
@@ -96,7 +95,7 @@ describe('enrichSkillsSh', () => {
     );
 
     vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify({ gen: 'Pass', socket_alerts: 1, snyk: 'Pass' }), {
+      new Response(JSON.stringify({ 'org/skill-repo/test-skill': { gen: 'Pass', socket: { alerts: 1 }, snyk: 'Pass' } }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }),
@@ -104,8 +103,25 @@ describe('enrichSkillsSh', () => {
 
     const result = await enrichSkillsSh(makeSkill({ manifestPath: skillMdPath }));
     expect(result).not.toBeNull();
-    const body = JSON.parse((vi.mocked(fetch).mock.calls[0]![1] as RequestInit).body as string) as { slug: string };
-    expect(body.slug).toBe('org/skill-repo');
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe(
+      'https://add-skill.vercel.sh/audit?source=github&skills=org%2Fskill-repo%2Ftest-skill'
+    );
+  });
+
+  it('returns null for malformed 200 responses instead of unknown values', async () => {
+    await writeFile(
+      join(testHome, 'skill', 'package.json'),
+      JSON.stringify({ repository: 'https://github.com/owner/malformed' }),
+    );
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ 'owner/malformed/test-skill': {} }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await enrichSkillsSh(makeSkill());
+    expect(result).toBeNull();
   });
 
   it('returns null on non-200 response with no stale cache', async () => {
@@ -138,7 +154,7 @@ describe('enrichSkillsSh', () => {
 
     // First call populates cache
     vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify({ gen: 'Pass', socket_alerts: 0, snyk: 'Pass' }), {
+      new Response(JSON.stringify({ gen: 'Pass', socket: { alerts: 0 }, snyk: 'Pass' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }),
@@ -159,7 +175,7 @@ describe('enrichSkillsSh', () => {
       JSON.stringify({ repository: 'https://github.com/owner/ua-test' }),
     );
     vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify({ gen: 'Pass', socket_alerts: 0, snyk: 'Pass' }), {
+      new Response(JSON.stringify({ gen: 'Pass', socket: { alerts: 0 }, snyk: 'Pass' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }),

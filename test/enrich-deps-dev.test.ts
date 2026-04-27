@@ -26,17 +26,35 @@ function makeSkill(skillPath = join(testHome, 'skill')): Skill {
   };
 }
 
-function makeDepsDevResponse(advisoryCount: number): Response {
-  const advisoryKeys = Array.from({ length: advisoryCount }, (_, i) => ({ id: `GHSA-${i}` }));
+function makeDepsDevPackageResponse(version = '1.0.0'): Response {
   return new Response(
     JSON.stringify({
       packageKey: { system: 'NPM', name: 'example' },
-      versions: [
-        { versionKey: { system: 'NPM', name: 'example', version: '1.0.0' }, isDefault: true, advisoryKeys },
-      ],
+      versions: [{ versionKey: { system: 'NPM', name: 'example', version }, isDefault: true }],
     }),
     { status: 200, headers: { 'Content-Type': 'application/json' } },
   );
+}
+
+function makeDepsDevVersionResponse(advisoryCount: number, projectId?: string): Response {
+  const advisoryKeys = Array.from({ length: advisoryCount }, (_, i) => ({ id: `GHSA-${i}` }));
+  return new Response(
+    JSON.stringify({
+      versionKey: { system: 'NPM', name: 'example', version: '1.0.0' },
+      advisoryKeys,
+      ...(projectId === undefined
+        ? {}
+        : { relatedProjects: [{ projectKey: { id: projectId } }] }),
+    }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } },
+  );
+}
+
+function makeDepsDevProjectResponse(score: number): Response {
+  return new Response(JSON.stringify({ scorecard: { overallScore: score } }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
 
 describe('enrichDepsDev', () => {
@@ -47,6 +65,7 @@ describe('enrichDepsDev', () => {
 
   afterEach(async () => {
     await rm(testHome, { recursive: true, force: true });
+    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
@@ -64,14 +83,21 @@ describe('enrichDepsDev', () => {
     );
 
     vi.mocked(fetch)
-      .mockResolvedValueOnce(makeDepsDevResponse(2))
-      .mockResolvedValueOnce(makeDepsDevResponse(0));
+      .mockResolvedValueOnce(makeDepsDevPackageResponse('4.18.2'))
+      .mockResolvedValueOnce(makeDepsDevVersionResponse(2, 'github.com/expressjs/express'))
+      .mockResolvedValueOnce(makeDepsDevProjectResponse(7.4))
+      .mockResolvedValueOnce(makeDepsDevPackageResponse('4.17.21'))
+      .mockResolvedValueOnce(makeDepsDevVersionResponse(0));
 
     const result = await enrichDepsDev(makeSkill());
     expect(result).not.toBeNull();
     expect(result?.osvAdvisories).toBe(2);
-    expect(result?.scorecardScore).toBeNull();
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(result?.scorecardScore).toBe(7.4);
+    expect(fetch).toHaveBeenCalledTimes(5);
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.deps.dev/v3alpha/systems/NPM/packages/express',
+      expect.any(Object),
+    );
   });
 
   it('reads Python deps from requirements.txt when no package.json', async () => {
@@ -81,8 +107,10 @@ describe('enrichDepsDev', () => {
     );
 
     vi.mocked(fetch)
-      .mockResolvedValueOnce(makeDepsDevResponse(1))
-      .mockResolvedValueOnce(makeDepsDevResponse(0));
+      .mockResolvedValueOnce(makeDepsDevPackageResponse('2.32.3'))
+      .mockResolvedValueOnce(makeDepsDevVersionResponse(1))
+      .mockResolvedValueOnce(makeDepsDevPackageResponse('1.24.0'))
+      .mockResolvedValueOnce(makeDepsDevVersionResponse(0));
 
     const result = await enrichDepsDev(makeSkill());
     expect(result).not.toBeNull();
@@ -90,7 +118,27 @@ describe('enrichDepsDev', () => {
 
     // should use pypi ecosystem
     const calls = vi.mocked(fetch).mock.calls;
-    expect(calls[0]?.[0]).toMatch(/pypi/);
+    expect(calls[0]?.[0]).toMatch(/systems\/PYPI/);
+  });
+
+  it('encodes scoped npm package names for deps.dev paths', async () => {
+    await writeFile(
+      join(testHome, 'skill', 'package.json'),
+      JSON.stringify({ dependencies: { '@colors/colors': '^1.5.0' } }),
+    );
+
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(makeDepsDevPackageResponse('1.5.0'))
+      .mockResolvedValueOnce(makeDepsDevVersionResponse(0));
+
+    const result = await enrichDepsDev(makeSkill());
+    expect(result?.osvAdvisories).toBe(0);
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe(
+      'https://api.deps.dev/v3alpha/systems/NPM/packages/%40colors%2Fcolors',
+    );
+    expect(vi.mocked(fetch).mock.calls[1]?.[0]).toBe(
+      'https://api.deps.dev/v3alpha/systems/NPM/packages/%40colors%2Fcolors/versions/1.5.0',
+    );
   });
 
   it('returns zero advisories when all deps are clean', async () => {
@@ -99,13 +147,15 @@ describe('enrichDepsDev', () => {
       JSON.stringify({ dependencies: { chalk: '^5.0.0' } }),
     );
 
-    vi.mocked(fetch).mockResolvedValueOnce(makeDepsDevResponse(0));
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(makeDepsDevPackageResponse('5.0.0'))
+      .mockResolvedValueOnce(makeDepsDevVersionResponse(0));
 
     const result = await enrichDepsDev(makeSkill());
     expect(result?.osvAdvisories).toBe(0);
   });
 
-  it('fails silently when API returns non-200', async () => {
+  it('returns null when deps.dev has no registry record', async () => {
     await writeFile(
       join(testHome, 'skill', 'package.json'),
       JSON.stringify({ dependencies: { 'some-pkg': '^1.0.0' } }),
@@ -114,11 +164,10 @@ describe('enrichDepsDev', () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response('Not Found', { status: 404 }));
 
     const result = await enrichDepsDev(makeSkill());
-    expect(result).not.toBeNull();
-    expect(result?.osvAdvisories).toBe(0);
+    expect(result).toBeNull();
   });
 
-  it('fails silently when fetch throws', async () => {
+  it('surfaces lookup failures instead of treating them as zero advisories', async () => {
     await writeFile(
       join(testHome, 'skill', 'package.json'),
       JSON.stringify({ dependencies: { 'some-pkg': '^1.0.0' } }),
@@ -126,9 +175,33 @@ describe('enrichDepsDev', () => {
 
     vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'));
 
-    const result = await enrichDepsDev(makeSkill());
-    expect(result).not.toBeNull();
-    expect(result?.osvAdvisories).toBe(0);
+    await expect(enrichDepsDev(makeSkill())).rejects.toThrow('deps.dev lookup failed');
+  });
+
+  it('serves stale cache when deps.dev fails after a prior successful lookup', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+    await writeFile(
+      join(testHome, 'skill', 'package.json'),
+      JSON.stringify({ dependencies: { cached: '^1.0.0' } }),
+    );
+
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(makeDepsDevPackageResponse('1.0.0'))
+      .mockResolvedValueOnce(makeDepsDevVersionResponse(3));
+    await expect(enrichDepsDev(makeSkill())).resolves.toEqual({
+      osvAdvisories: 3,
+      scorecardScore: null,
+    });
+
+    vi.setSystemTime(new Date('2026-01-03T00:00:00Z'));
+    vi.mocked(fetch).mockReset();
+    vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'));
+
+    await expect(enrichDepsDev(makeSkill())).resolves.toEqual({
+      osvAdvisories: 3,
+      scorecardScore: null,
+    });
   });
 
   it('ignores comment lines in requirements.txt', async () => {
@@ -137,11 +210,13 @@ describe('enrichDepsDev', () => {
       '# this is a comment\nrequests>=2.0\n',
     );
 
-    vi.mocked(fetch).mockResolvedValueOnce(makeDepsDevResponse(0));
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(makeDepsDevPackageResponse('2.0.0'))
+      .mockResolvedValueOnce(makeDepsDevVersionResponse(0));
 
     const result = await enrichDepsDev(makeSkill());
     expect(result).not.toBeNull();
-    // only one real dep (requests), not the comment
-    expect(fetch).toHaveBeenCalledTimes(1);
+    // only one real dep (requests), not the comment; deps.dev requires package + version calls.
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 });

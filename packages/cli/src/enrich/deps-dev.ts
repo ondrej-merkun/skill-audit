@@ -10,11 +10,24 @@ const MAX_DEPS = 20;
 
 type DepsDevVersion = {
   isDefault?: boolean;
+  versionKey?: { version?: string };
   advisoryKeys?: { id: string }[];
+  relatedProjects?: { projectKey?: { id?: string } }[];
 };
 
 type DepsDevPackageResponse = {
   versions?: DepsDevVersion[];
+};
+
+type DepsDevProjectResponse = {
+  scorecard?: {
+    overallScore?: number;
+  };
+};
+
+type DependencyLookup = {
+  advisories: number;
+  scorecardScore: number | null;
 };
 
 async function fetchWithTimeout(url: string): Promise<Response> {
@@ -30,24 +43,73 @@ async function fetchWithTimeout(url: string): Promise<Response> {
   }
 }
 
-async function fetchAdvisoryCount(ecosystem: string, packageName: string): Promise<number> {
+function depsDevSystem(ecosystem: string): 'NPM' | 'PYPI' {
+  return ecosystem === 'pypi' ? 'PYPI' : 'NPM';
+}
+
+function versionUrl(ecosystem: string, packageName: string, version: string): string {
+  return `${API_BASE}/systems/${depsDevSystem(ecosystem)}/packages/${encodeURIComponent(packageName)}/versions/${encodeURIComponent(version)}`;
+}
+
+function packageUrl(ecosystem: string, packageName: string): string {
+  return `${API_BASE}/systems/${depsDevSystem(ecosystem)}/packages/${encodeURIComponent(packageName)}`;
+}
+
+function projectUrl(projectId: string): string {
+  return `${API_BASE}/projects/${encodeURIComponent(projectId)}`;
+}
+
+async function fetchProjectScorecard(projectId: string): Promise<number | null> {
+  try {
+    const res = await fetchWithTimeout(projectUrl(projectId));
+    if (!res.ok) return null;
+    const json = (await res.json()) as DepsDevProjectResponse;
+    return typeof json.scorecard?.overallScore === 'number' ? json.scorecard.overallScore : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchDependencyLookup(
+  ecosystem: string,
+  packageName: string
+): Promise<DependencyLookup | null> {
   const cacheKey = `${ecosystem}__${packageName}`;
-  const cached = await cacheGet<{ advisories: number }>(SOURCE, cacheKey);
-  if (cached && !cached.stale) return cached.data.advisories;
+  const cached = await cacheGet<DependencyLookup>(SOURCE, cacheKey);
+  if (cached && !cached.stale) return cached.data;
 
   try {
-    const encoded = encodeURIComponent(packageName);
-    const res = await fetchWithTimeout(`${API_BASE}/packages/${ecosystem}/${encoded}`);
-    if (!res.ok) return cached?.data.advisories ?? 0;
+    const packageRes = await fetchWithTimeout(packageUrl(ecosystem, packageName));
+    if (packageRes.status === 404) return cached?.data ?? null;
+    if (!packageRes.ok) {
+      if (cached) return cached.data;
+      throw new Error(`deps.dev package lookup failed with ${packageRes.status}`);
+    }
 
-    const json = (await res.json()) as DepsDevPackageResponse;
-    const defaultVer = json.versions?.find((v) => v.isDefault) ?? json.versions?.[0];
-    const count = defaultVer?.advisoryKeys?.length ?? 0;
+    const packageJson = (await packageRes.json()) as DepsDevPackageResponse;
+    const defaultVer = packageJson.versions?.find((v) => v.isDefault) ?? packageJson.versions?.[0];
+    const version = defaultVer?.versionKey?.version;
+    if (typeof version !== 'string' || version.length === 0) return cached?.data ?? null;
 
-    await cacheSet(SOURCE, cacheKey, { advisories: count });
-    return count;
+    const versionRes = await fetchWithTimeout(versionUrl(ecosystem, packageName, version));
+    if (versionRes.status === 404) return cached?.data ?? null;
+    if (!versionRes.ok) {
+      if (cached) return cached.data;
+      throw new Error(`deps.dev version lookup failed with ${versionRes.status}`);
+    }
+
+    const versionJson = (await versionRes.json()) as DepsDevVersion;
+    const advisories = versionJson.advisoryKeys?.length ?? 0;
+    const projectId = versionJson.relatedProjects?.find((p) => p.projectKey?.id)?.projectKey?.id;
+    const scorecardScore =
+      typeof projectId === 'string' ? await fetchProjectScorecard(projectId) : null;
+    const result = { advisories, scorecardScore };
+
+    await cacheSet(SOURCE, cacheKey, result);
+    return result;
   } catch {
-    return cached?.data.advisories ?? 0;
+    if (cached) return cached.data;
+    throw new Error('deps.dev lookup failed');
   }
 }
 
@@ -60,8 +122,15 @@ export async function enrichDepsDev(skill: Skill): Promise<DepsDevEnrichment | n
   const deps = await readDependencyRefs(skill, MAX_DEPS);
   if (deps.length === 0) return null;
 
-  const counts = await Promise.all(deps.map((d) => fetchAdvisoryCount(d.ecosystem, d.name)));
-  const osvAdvisories = counts.reduce((sum, c) => sum + c, 0);
+  const lookups = await Promise.all(deps.map((d) => fetchDependencyLookup(d.ecosystem, d.name)));
+  const found = lookups.filter((lookup): lookup is DependencyLookup => lookup !== null);
+  if (found.length === 0) return null;
 
-  return { scorecardScore: null, osvAdvisories };
+  const osvAdvisories = found.reduce((sum, lookup) => sum + lookup.advisories, 0);
+  const scorecardScores = found
+    .map((lookup) => lookup.scorecardScore)
+    .filter((score): score is number => typeof score === 'number');
+  const scorecardScore = scorecardScores.length === 0 ? null : Math.max(...scorecardScores);
+
+  return { scorecardScore, osvAdvisories };
 }
