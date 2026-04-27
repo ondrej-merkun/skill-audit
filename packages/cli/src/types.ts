@@ -76,6 +76,7 @@ export type LlmReviewFinding = {
 };
 
 export type LlmReviewStatus =
+  | 'not-run'
   | 'ok'
   | 'unavailable'
   | 'timeout'

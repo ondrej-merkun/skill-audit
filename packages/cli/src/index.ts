@@ -35,7 +35,12 @@ program
   .option('--strict', 'treat REVIEW band as FAIL for exit code purposes')
   .option('--agent <id>', 'restrict scan to a single agent (e.g. claude-code, cursor)')
   .option('--include-marketplaces', 'include locally available but inactive marketplace skills')
-  .option('--llm <name>', 'run one configured local LLM as an opt-in second opinion')
+  .option(
+    '--llm <name>',
+    'run configured local LLM review; repeat, comma-separate, or use "all"',
+    (value: string, previous: string[]) => [...previous, value],
+    []
+  )
   .option(
     '--fail-on <band>',
     'minimum verdict band that triggers exit code 1 (REVIEW or FAIL)',
@@ -51,7 +56,7 @@ program
       strict: cmdOpts.strict === true,
       agent: typeof cmdOpts.agent === 'string' ? cmdOpts.agent : undefined,
       includeMarketplaces: cmdOpts.includeMarketplaces === true,
-      llm: typeof cmdOpts.llm === 'string' ? cmdOpts.llm : undefined,
+      llm: Array.isArray(cmdOpts.llm) && cmdOpts.llm.length > 0 ? cmdOpts.llm : undefined,
       failOn: typeof cmdOpts.failOn === 'string' ? cmdOpts.failOn : undefined,
     };
     runScan(options).catch((err: unknown) => {

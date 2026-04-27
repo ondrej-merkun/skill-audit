@@ -64,7 +64,7 @@ export type ScanOptions = {
   agent: string | undefined;
   failOn: string | undefined;
   includeMarketplaces: boolean;
-  llm: string | undefined;
+  llm: string | string[] | undefined;
   llmFetchImpl: LlmReviewFetch | undefined;
 };
 
@@ -170,12 +170,36 @@ function scanProgressOutputKind(options: ScanOptions): ProgressOutputKind {
   return 'pretty';
 }
 
-async function loadSelectedLlmConfig(name: string): Promise<LocalLlmConfig> {
+function parseLlmSelections(selection: string | string[]): string[] {
+  const selections = Array.isArray(selection) ? selection : [selection];
+  const names: string[] = [];
+  for (const entry of selections) {
+    for (const name of entry.split(',')) {
+      const trimmed = name.trim();
+      if (trimmed !== '') names.push(trimmed);
+    }
+  }
+  return [...new Set(names)];
+}
+
+async function loadSelectedLlmConfigs(selection: string | string[]): Promise<LocalLlmConfig[]> {
+  const selectedNames = parseLlmSelections(selection);
+  if (selectedNames.length === 0) throw new Error('at least one local LLM name is required');
+
   const registry = await loadLlmRegistry();
-  const config = registry.models.find((model) => model.name === name);
-  if (config === undefined) throw new Error(`local LLM "${name}" is not configured`);
-  if (config.disabled === true) throw new Error(`local LLM "${name}" is disabled`);
-  return config;
+  const enabledModels = registry.models.filter((model) => model.disabled !== true);
+  const selectedConfigs =
+    selectedNames.length === 1 && selectedNames[0] === 'all'
+      ? enabledModels
+      : selectedNames.map((name) => {
+          const config = registry.models.find((model) => model.name === name);
+          if (config === undefined) throw new Error(`local LLM "${name}" is not configured`);
+          if (config.disabled === true) throw new Error(`local LLM "${name}" is disabled`);
+          return config;
+        });
+
+  if (selectedConfigs.length === 0) throw new Error('no enabled local LLMs are configured');
+  return [...selectedConfigs].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function llmStatusLine(result: LlmReviewResult): string {
@@ -187,10 +211,15 @@ function llmStatusLine(result: LlmReviewResult): string {
 
 async function reviewSkillsWithLlm(
   skills: ScannedSkill[],
-  config: LocalLlmConfig,
+  configs: LocalLlmConfig[],
   fetchImpl: LlmReviewFetch | undefined
 ): Promise<ScannedSkill[]> {
   const reviewed: ScannedSkill[] = [];
+  const contextTokens = configs
+    .map((config) => config.contextTokens)
+    .filter((value): value is number => value !== undefined)
+    .sort((a, b) => a - b)[0];
+
   for (const skill of skills) {
     if (skill.ignored === true) {
       reviewed.push(skill);
@@ -198,11 +227,17 @@ async function reviewSkillsWithLlm(
     }
     const payload = await buildLlmReviewPayload(
       skill,
-      config.contextTokens !== undefined ? { contextTokens: config.contextTokens } : {}
+      contextTokens !== undefined ? { contextTokens } : {}
     );
-    const result = await reviewWithOpenAiCompatibleModel(config, payload, fetchImpl);
-    reviewed.push({ ...skill, llmReviews: [result] });
-    process.stderr.write(`[skill-audit] LLM review: ${skill.name}: ${llmStatusLine(result)}\n`);
+    const results = (
+      await Promise.all(
+        configs.map((config) => reviewWithOpenAiCompatibleModel(config, payload, fetchImpl))
+      )
+    ).sort((a, b) => a.modelName.localeCompare(b.modelName));
+    reviewed.push({ ...skill, llmReviews: results });
+    for (const result of results) {
+      process.stderr.write(`[skill-audit] LLM review: ${skill.name}: ${llmStatusLine(result)}\n`);
+    }
   }
   return reviewed;
 }
@@ -226,10 +261,10 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     return; // unreachable in production; allows mocked exit in tests
   }
 
-  let selectedLlmConfig: LocalLlmConfig | undefined;
+  let selectedLlmConfigs: LocalLlmConfig[] = [];
   if (options.llm !== undefined) {
     try {
-      selectedLlmConfig = await loadSelectedLlmConfig(options.llm);
+      selectedLlmConfigs = await loadSelectedLlmConfigs(options.llm);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       process.stderr.write(`[skill-audit] ${msg}\n`);
@@ -267,7 +302,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
 
   if (options.offline) {
     process.stderr.write('[skill-audit] offline mode — enrichment skipped\n');
-    if (selectedLlmConfig !== undefined) {
+    if (selectedLlmConfigs.length > 0) {
       process.stderr.write('[skill-audit] offline mode — LLM review skipped\n');
     }
   }
@@ -337,13 +372,16 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
 
   progress.succeedScan(toScan.length);
 
-  if (selectedLlmConfig !== undefined && !options.offline && scannedSkills.length > 0) {
+  if (selectedLlmConfigs.length > 0 && !options.offline && scannedSkills.length > 0) {
+    const modelSummary = selectedLlmConfigs
+      .map((config) => `${config.name} (${config.model})`)
+      .join(', ');
     process.stderr.write(
-      `[skill-audit] LLM review: ${selectedLlmConfig.name} (${selectedLlmConfig.model}, prompt ${LLM_REVIEW_PROMPT_VERSION})\n`
+      `[skill-audit] LLM review: ${modelSummary}, prompt ${LLM_REVIEW_PROMPT_VERSION}\n`
     );
     const reviewedSkills = await reviewSkillsWithLlm(
       scannedSkills,
-      selectedLlmConfig,
+      selectedLlmConfigs,
       options.llmFetchImpl
     );
     scannedSkills.splice(0, scannedSkills.length, ...reviewedSkills);

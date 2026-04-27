@@ -185,7 +185,19 @@ describe('runScan flag wiring', () => {
     }
   }
 
-  async function writeLlmConfig(configDir: string): Promise<void> {
+  async function writeLlmConfig(
+    configDir: string,
+    models: Array<Record<string, unknown>> = [
+      {
+        name: 'reviewer',
+        provider: 'openai-compatible',
+        baseUrl: 'http://localhost:11434',
+        model: 'local-reviewer',
+        timeoutMs: 1000,
+        contextTokens: 800,
+      },
+    ]
+  ): Promise<void> {
     const llmDir = join(configDir, 'skill-audit');
     await mkdir(llmDir, { recursive: true });
     await writeFile(
@@ -193,16 +205,7 @@ describe('runScan flag wiring', () => {
       JSON.stringify(
         {
           version: 1,
-          models: [
-            {
-              name: 'reviewer',
-              provider: 'openai-compatible',
-              baseUrl: 'http://localhost:11434',
-              model: 'local-reviewer',
-              timeoutMs: 1000,
-              contextTokens: 800,
-            },
-          ],
+          models,
         },
         null,
         2
@@ -762,6 +765,163 @@ describe('runScan flag wiring', () => {
       expect(errOut).toContain('LLM review: reviewer');
       expect(errOut).toContain('review-me: reviewer ok (1 LLM-only finding)');
       expect(process.exitCode).toBeUndefined();
+    });
+  });
+
+  it('--llm can run repeated and comma-separated models with deterministic output', async () => {
+    await withTempDir(async (dir) => {
+      process.env['XDG_CONFIG_HOME'] = dir;
+      await writeLlmConfig(dir, [
+        {
+          name: 'zeta',
+          provider: 'openai-compatible',
+          baseUrl: 'http://localhost:11435',
+          model: 'zeta-model',
+          timeoutMs: 1000,
+          contextTokens: 900,
+        },
+        {
+          name: 'alpha',
+          provider: 'openai-compatible',
+          baseUrl: 'http://localhost:11434',
+          model: 'alpha-model',
+          timeoutMs: 1000,
+          contextTokens: 500,
+        },
+      ]);
+      vi.mocked(discoverAll).mockResolvedValue([makeSkill({ name: 'multi-review' })]);
+
+      const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
+      const fetchImpl: LlmReviewFetch = async (url, init) => {
+        const body = JSON.parse(init.body) as Record<string, unknown>;
+        calls.push({ url, body });
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ choices: [{ message: { content: '{"findings":[]}' } }] }),
+        };
+      };
+
+      await runScan({ llm: ['zeta,alpha', 'alpha'], llmFetchImpl: fetchImpl });
+
+      expect(calls.map((call) => call.body.model)).toEqual(['alpha-model', 'zeta-model']);
+      expect(calls.map((call) => call.url)).toEqual([
+        'http://localhost:11434/v1/chat/completions',
+        'http://localhost:11435/v1/chat/completions',
+      ]);
+      const errOut = stripAnsi(stderrChunks.join(''));
+      expect(errOut).toContain('LLM review: alpha (alpha-model), zeta (zeta-model)');
+      expect(errOut.indexOf('multi-review: alpha ok')).toBeLessThan(
+        errOut.indexOf('multi-review: zeta ok')
+      );
+    });
+  });
+
+  it('--llm all selects every enabled model and skips disabled configs', async () => {
+    await withTempDir(async (dir) => {
+      process.env['XDG_CONFIG_HOME'] = dir;
+      await writeLlmConfig(dir, [
+        {
+          name: 'beta',
+          provider: 'openai-compatible',
+          baseUrl: 'http://localhost:11435',
+          model: 'beta-model',
+        },
+        {
+          name: 'disabled',
+          provider: 'openai-compatible',
+          baseUrl: 'http://localhost:11436',
+          model: 'disabled-model',
+          disabled: true,
+        },
+        {
+          name: 'alpha',
+          provider: 'openai-compatible',
+          baseUrl: 'http://localhost:11434',
+          model: 'alpha-model',
+        },
+      ]);
+      vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+      const fetchImpl: LlmReviewFetch = async (_url, init) => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: '{"findings":[]}' } }] }),
+      });
+
+      await runScan({ llm: 'all', llmFetchImpl: fetchImpl });
+
+      const errOut = stripAnsi(stderrChunks.join(''));
+      expect(errOut).toContain('LLM review: alpha (alpha-model), beta (beta-model)');
+      expect(errOut).not.toContain('disabled-model');
+    });
+  });
+
+  it('--llm preserves other model results when one model times out or fails', async () => {
+    await withTempDir(async (dir) => {
+      process.env['XDG_CONFIG_HOME'] = dir;
+      await writeLlmConfig(dir, [
+        {
+          name: 'bad-json',
+          provider: 'openai-compatible',
+          baseUrl: 'http://localhost:11436',
+          model: 'bad-json-model',
+          timeoutMs: 1000,
+        },
+        {
+          name: 'ok-model',
+          provider: 'openai-compatible',
+          baseUrl: 'http://localhost:11434',
+          model: 'ok-local',
+          timeoutMs: 1000,
+        },
+        {
+          name: 'slow',
+          provider: 'openai-compatible',
+          baseUrl: 'http://localhost:11435',
+          model: 'slow-local',
+          timeoutMs: 5,
+        },
+        {
+          name: 'unavailable',
+          provider: 'openai-compatible',
+          baseUrl: 'http://localhost:11437',
+          model: 'unavailable-local',
+          timeoutMs: 1000,
+        },
+      ]);
+      vi.mocked(discoverAll).mockResolvedValue([makeSkill({ name: 'partial-review' })]);
+      const fetchImpl: LlmReviewFetch = async (url, init) => {
+        if (url.includes('11435')) {
+          await new Promise((_resolve, reject) => {
+            init.signal.addEventListener('abort', () =>
+              reject(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+            );
+          });
+        }
+        if (url.includes('11436')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ choices: [{ message: { content: 'not json' } }] }),
+          };
+        }
+        if (url.includes('11437')) {
+          throw new Error('connection refused');
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ choices: [{ message: { content: '{"findings":[]}' } }] }),
+        };
+      };
+
+      await runScan({ llm: 'all', llmFetchImpl: fetchImpl });
+
+      const errOut = stripAnsi(stderrChunks.join(''));
+      expect(errOut).toContain('partial-review: bad-json invalid-response');
+      expect(errOut).toContain('partial-review: ok-model ok (0 LLM-only findings)');
+      expect(errOut).toContain('partial-review: slow timeout');
+      expect(errOut).toContain('partial-review: unavailable unavailable');
     });
   });
 
