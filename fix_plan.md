@@ -295,7 +295,7 @@ Output comparison contract:
   - Verify stdout stays valid JSON in `scan --json` while any human diagnostics
     stay out of the JSON payload unless the schema is intentionally updated.
 
-- [ ] **6** Share and harden enrichment metadata extraction.
+- [x] **6** Share and harden enrichment metadata extraction.
 
   Postmortem issue 1 also reports that most skills never receive GitHub or
   registry enrichment. Before provider-specific fixes, the CLI needs one shared
