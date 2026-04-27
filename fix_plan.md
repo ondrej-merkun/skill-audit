@@ -250,7 +250,7 @@ Output comparison contract:
   - Run the full verification suite required by `AGENT.md`: build, test, lint,
     typecheck, and the clean build-output warning check.
 
-- [ ] **5** Make enrichment source outcomes truthful in progress and summaries.
+- [x] **5** Make enrichment source outcomes truthful in progress and summaries.
 
   Postmortem issue 1 reports that `skills.sh` and `deps.dev` show success
   checkmarks even when the user sees no enrichment data and no explanation. The
