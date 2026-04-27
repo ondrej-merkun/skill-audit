@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 import { formatAgentName } from '../agent-names.js';
 import type { ScanResult, ScannedSkill } from '../types.js';
+import { installStateLabel } from './install-state.js';
 import { sortScanSkills } from './sort.js';
 import { renderSummaryFooter } from './summary.js';
 
@@ -104,6 +105,9 @@ function enrichmentDetails(skill: ScannedSkill): string {
 export function renderTableToString(result: ScanResult): string {
   const { skills, scan, agents, summary } = result;
   const showEnrichmentColumn = result.enrichmentStatus !== 'skipped-offline';
+  const showInstallStateColumn = skills.some(
+    (skill) => installStateLabel(skill.installState) === 'marketplace'
+  );
   const agentCount = agents.length;
   const durationS = (scan.durationMs / 1000).toFixed(1);
   const lines: string[] = [];
@@ -126,6 +130,7 @@ export function renderTableToString(result: ScanResult): string {
   const head = [
     chalk.bold('AGENT'),
     chalk.bold('SKILL'),
+    ...(showInstallStateColumn ? [chalk.bold('STATE')] : []),
     chalk.bold('VERDICT'),
     chalk.bold('SCORE'),
     chalk.bold('TOP ISSUE'),
@@ -150,6 +155,7 @@ export function renderTableToString(result: ScanResult): string {
     const row = [
       formatAgentName(skill.agentId),
       `${verdictDot(skill)} ${skill.name}`,
+      ...(showInstallStateColumn ? [chalk.dim(installStateLabel(skill.installState))] : []),
       colorVerdict(skill),
       colorScore(skill),
       topIssue(skill),

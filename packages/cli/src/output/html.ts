@@ -1,6 +1,7 @@
 import { formatAgentName } from '../agent-names.js';
 import { formatCompromisedPercent } from '../percent.js';
 import type { ScanResult, ScannedSkill } from '../types.js';
+import { installStateLabel } from './install-state.js';
 import { sortScanSkills } from './sort.js';
 
 function escapeHtml(s: string): string {
@@ -97,6 +98,9 @@ export function renderHtml(result: ScanResult): string {
       ? Math.round(sorted.reduce((s, sk) => s + sk.summary.score, 0) / sorted.length)
       : 100;
   const overallVerdict = result.summary.verdict;
+  const showInstallState = sorted.some(
+    (skill) => installStateLabel(skill.installState) === 'marketplace'
+  );
 
   // Embed scan data as JSON for client-side consumption (all strings are server-generated)
   const jsonData = JSON.stringify({ result: { ...result, skills: sorted } });
@@ -112,10 +116,13 @@ export function renderHtml(result: ScanResult): string {
       const allowlistedTag = sk.summary.allowlisted
         ? ` <span class="tag-allow">allowlisted</span>`
         : '';
+      const stateTag = showInstallState
+        ? ` <span class="tag-state">${escapeHtml(installStateLabel(sk.installState))}</span>`
+        : '';
       const topIssue = sk.findings[0]?.ruleId ?? '—';
       return `<tr class="skill-row" data-idx="${i}" data-agent="${escapeHtml(sk.agentId)}" tabindex="0">
       <td><span class="verdict-dot" style="background:${color}"></span> <strong style="color:${color}">${escapeHtml(v)}</strong></td>
-      <td>${escapeHtml(sk.name)}${ignoredTag}${allowlistedTag}</td>
+      <td>${escapeHtml(sk.name)}${ignoredTag}${allowlistedTag}${stateTag}</td>
       <td>${escapeHtml(formatAgentName(sk.agentId))}</td>
       <td style="font-weight:600;color:${color}">${sk.summary.score}</td>
       <td>${sk.summary.critical}C ${sk.summary.high}H ${sk.summary.medium}M ${sk.summary.low}L</td>
@@ -163,9 +170,10 @@ td{padding:10px 12px;vertical-align:middle}
 .enrichment-cell{font-size:12px;line-height:1.45;color:#374151;min-width:230px}
 .enrichment-cell span{display:inline-block;min-width:54px;color:#6b7280}
 .enrichment-missing{color:#9ca3af}
-.tag-ignored,.tag-allow{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;margin-left:6px;vertical-align:middle}
+.tag-ignored,.tag-allow,.tag-state{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;margin-left:6px;vertical-align:middle}
 .tag-ignored{background:#fef3c7;color:#92400e}
 .tag-allow{background:#d1fae5;color:#065f46}
+.tag-state{background:#e0f2fe;color:#075985}
 #panel{position:fixed;top:0;right:-480px;width:460px;height:100vh;background:#fff;border-left:1px solid #e5e7eb;box-shadow:-4px 0 20px rgba(0,0,0,.08);transition:right .2s ease;z-index:200;overflow-y:auto;padding:20px}
 #panel.open{right:0}
 #panel-close{position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280}

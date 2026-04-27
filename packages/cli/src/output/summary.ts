@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import { formatAgentName } from '../agent-names.js';
 import { formatCompromisedPercent } from '../percent.js';
 import type { AgentInfo, ScanResult, ScannedSkill, Severity } from '../types.js';
+import { installStateLabel } from './install-state.js';
 import { sortScanSkills } from './sort.js';
 
 const C_CRITICAL = chalk.hex('#FF4444');
@@ -95,6 +96,17 @@ function agentCountsLine(agents: AgentInfo[]): string {
     .join(', ');
 }
 
+function installStateCounts(skills: ScannedSkill[]): { installed: number; marketplace: number } {
+  return skills.reduce(
+    (counts, skill) => {
+      if (installStateLabel(skill.installState) === 'marketplace') counts.marketplace += 1;
+      else counts.installed += 1;
+      return counts;
+    },
+    { installed: 0, marketplace: 0 }
+  );
+}
+
 /**
  * Renders the detailed scan-summary footer (used by the TUI table and --summary).
  * orderedSkills may already be sorted by the caller; this function re-sorts with the shared
@@ -108,6 +120,8 @@ export function renderSummaryFooter(
   const riskOrderedSkills = sortScanSkills(orderedSkills);
   const { scan, summary } = result;
   const stats = findingsStats(riskOrderedSkills);
+  const states = installStateCounts(riskOrderedSkills);
+  const hasMarketplace = states.marketplace > 0;
   const label = (s: string): string => s.padEnd(26, '.');
   const durationFull = (scan.durationMs / 1000).toFixed(2);
   const lines: string[] = [];
@@ -117,11 +131,16 @@ export function renderSummaryFooter(
   if (result.agents.length > 0) {
     lines.push(`  ${label('Agents scanned')} ${agentCountsLine(result.agents)}`);
   }
+  if (hasMarketplace) {
+    lines.push(
+      `  ${label('Install state')} installed: ${states.installed}, marketplace: ${states.marketplace}`
+    );
+  }
   lines.push(`  ${label('Unique issues')} ${stats.affectedSkills}  (${severityBreakdown(stats)})`);
 
   const compromisedStr =
     summary.compromised > 0
-      ? `${C_CRITICAL(String(summary.compromised))}   (${formatCompromisedPercent(summary.percentCompromised)}% of installed)`
+      ? `${C_CRITICAL(String(summary.compromised))}   (${formatCompromisedPercent(summary.percentCompromised)}% of ${hasMarketplace ? 'scanned' : 'installed'})`
       : '0';
   lines.push(`  ${label('Compromised skills')} ${compromisedStr}`);
 
@@ -158,6 +177,8 @@ export function renderSummaryFooter(
 export function renderSummaryCompact(result: ScanResult): string {
   const { scan, summary, skills } = result;
   const stats = findingsStats(skills);
+  const states = installStateCounts(skills);
+  const hasMarketplace = states.marketplace > 0;
   const verdictColored =
     summary.verdict === 'FAIL'
       ? C_CRITICAL(summary.verdict)
@@ -172,6 +193,9 @@ export function renderSummaryCompact(result: ScanResult): string {
 
   const lines = [
     `${summary.skillsScanned} skills · ${compromisedPart} · ${verdictColored}`,
+    ...(hasMarketplace
+      ? [`installed: ${states.installed} · marketplace: ${states.marketplace}`]
+      : []),
     compactSeverityBreakdown(stats),
     `Scanned in ${(scan.durationMs / 1000).toFixed(2)}s`,
   ];

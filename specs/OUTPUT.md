@@ -23,6 +23,7 @@ ship as the hero GIF).
       "agent_id": "claude-code",
       "name": "polymarket-trader",
       "path": "/Users/.../skills/polymarket-trader",
+      "install_state": "installed",
       "also_installed_at": ["/Users/.../.agents/skills/polymarket-trader"],
       "modified_at": "2026-04-23T18:12:00.000Z",
       "tree_sha256": "...",
@@ -90,6 +91,9 @@ Field notes:
 - `also_installed_at` is present only when discovery collapsed duplicate
   non-empty `treeSha256` values. It contains the other absolute install paths
   that point at identical content.
+- `install_state` is always present and is `"installed"` for active or exposed
+  skills, or `"marketplace"` for inactive local marketplace inventory included
+  through `--include-marketplaces`.
 - `modified_at` is present only when the scanner can read a filesystem mtime
   for the skill manifest or file. It is an ISO 8601 timestamp and is not an
   install or creation time.
@@ -132,6 +136,18 @@ Human list output stays quiet by default. When marketplace rows are included,
 it adds a compact state column with `installed` or `marketplace`. JSON list
 output always includes the same state as `install_state` so `--json` and human
 output agree.
+
+## Scan marketplace output contract
+
+`skill-audit scan` shows installed or currently exposed skills by default.
+Marketplace inventory is locally available but inactive and is scanned only
+with `skill-audit scan --include-marketplaces`.
+
+When marketplace rows are included, human scan output adds compact
+`installed` / `marketplace` labels and summary counts. JSON scan output always
+includes the same state as `install_state`. Marketplace findings participate in
+scan counts, risk ordering, and exit code decisions only because the user opted
+in.
 
 ## Visible data contract
 

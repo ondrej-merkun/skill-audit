@@ -1,4 +1,5 @@
 import type { Enrichment, Finding, ScanResult, ScannedSkill } from '../types.js';
+import { installStateLabel } from './install-state.js';
 import { sortScanSkills } from './sort.js';
 
 function serializeFinding(f: Finding): object {
@@ -47,6 +48,7 @@ function serializeSkill(s: ScannedSkill): object {
     agent_id: s.agentId,
     name: s.name,
     path: s.path,
+    install_state: installStateLabel(s.installState),
     ...(s.alsoInstalledAt !== undefined && s.alsoInstalledAt.length > 0
       ? { also_installed_at: s.alsoInstalledAt }
       : {}),

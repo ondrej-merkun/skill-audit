@@ -32,6 +32,7 @@ program
   .option('--offline', 'skip network enrichment calls')
   .option('--strict', 'treat REVIEW band as FAIL for exit code purposes')
   .option('--agent <id>', 'restrict scan to a single agent (e.g. claude-code, cursor)')
+  .option('--include-marketplaces', 'include locally available but inactive marketplace skills')
   .option(
     '--fail-on <band>',
     'minimum verdict band that triggers exit code 1 (REVIEW or FAIL)',
@@ -46,6 +47,7 @@ program
       offline: cmdOpts.offline === true,
       strict: cmdOpts.strict === true,
       agent: typeof cmdOpts.agent === 'string' ? cmdOpts.agent : undefined,
+      includeMarketplaces: cmdOpts.includeMarketplaces === true,
       failOn: typeof cmdOpts.failOn === 'string' ? cmdOpts.failOn : undefined,
     };
     runScan(options).catch((err: unknown) => {

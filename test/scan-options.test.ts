@@ -464,6 +464,83 @@ describe('runScan flag wiring', () => {
     });
   });
 
+  it('--include-marketplaces passes the discovery opt-in', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+
+    await runScan({ json: true, includeMarketplaces: true, offline: true });
+
+    expect(discoverAll).toHaveBeenCalledWith({
+      includeMarketplaces: true,
+      onProgress: expect.any(Function),
+    });
+  });
+
+  it('--include-marketplaces JSON includes install_state labels', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({ id: 'installed', name: 'installed-skill', installState: 'installed' }),
+      makeSkill({
+        id: 'marketplace',
+        name: 'marketplace-skill',
+        path: '/tmp/plugins/marketplaces/vendor/tool/skills/marketplace-skill',
+        treeSha256: 'marketplace-hash',
+        installState: 'marketplace',
+      }),
+    ]);
+
+    await runScan({ json: true, includeMarketplaces: true, offline: true });
+
+    const json = JSON.parse(stdoutChunks.join(''));
+    expect(
+      json.skills.map((skill: { name: string; install_state: string }) => [
+        skill.name,
+        skill.install_state,
+      ])
+    ).toEqual([
+      ['installed-skill', 'installed'],
+      ['marketplace-skill', 'marketplace'],
+    ]);
+  });
+
+  it('--include-marketplaces human output shows compact state labels and counts', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({ id: 'installed', name: 'installed-skill', installState: 'installed' }),
+      makeSkill({
+        id: 'marketplace',
+        name: 'marketplace-skill',
+        path: '/tmp/plugins/marketplaces/vendor/tool/skills/marketplace-skill',
+        treeSha256: 'marketplace-hash',
+        installState: 'marketplace',
+      }),
+    ]);
+
+    await runScan({ includeMarketplaces: true, offline: true });
+
+    const out = stripAnsi(stdoutChunks.join(''));
+    expect(out).toContain('STATE');
+    expect(out).toContain('installed');
+    expect(out).toContain('marketplace');
+    expect(out).toContain('Install state');
+    expect(out).toContain('installed: 1, marketplace: 1');
+  });
+
+  it('--include-marketplaces --summary reports installed and marketplace counts', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({ id: 'installed', name: 'installed-skill', installState: 'installed' }),
+      makeSkill({
+        id: 'marketplace',
+        name: 'marketplace-skill',
+        path: '/tmp/plugins/marketplaces/vendor/tool/skills/marketplace-skill',
+        treeSha256: 'marketplace-hash',
+        installState: 'marketplace',
+      }),
+    ]);
+
+    await runScan({ summary: true, includeMarketplaces: true, offline: true });
+
+    const out = stripAnsi(stdoutChunks.join(''));
+    expect(out).toContain('installed: 1 · marketplace: 1');
+  });
+
   it('reports per-agent counts for ignored and successfully scanned skills only', async () => {
     await withTempDir(async (dir) => {
       process.env['XDG_CONFIG_HOME'] = dir;

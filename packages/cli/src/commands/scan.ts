@@ -53,6 +53,7 @@ export type ScanOptions = {
   strict: boolean;
   agent: string | undefined;
   failOn: string | undefined;
+  includeMarketplaces: boolean;
 };
 
 const DEFAULT_OPTIONS: ScanOptions = {
@@ -64,6 +65,7 @@ const DEFAULT_OPTIONS: ScanOptions = {
   strict: false,
   agent: undefined,
   failOn: undefined,
+  includeMarketplaces: false,
 };
 
 const SCAN_CONCURRENCY = 8;
@@ -175,6 +177,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   try {
     skills = await discoverAll({
       ...(options.agent !== undefined ? { agent: options.agent } : {}),
+      ...(options.includeMarketplaces ? { includeMarketplaces: true } : {}),
       onProgress: progress.onDiscoveryProgress,
     });
   } catch (err) {

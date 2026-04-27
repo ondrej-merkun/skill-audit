@@ -961,6 +961,7 @@ describe('renderJson', () => {
     const json = JSON.parse(renderJson(makeScanResult()));
     const skill = json.skills[0];
     expect(skill.agent_id).toBe('claude-code');
+    expect(skill.install_state).toBe('installed');
     expect(skill.tree_sha256).toBe('deadbeef');
     expect(skill.allowlisted).toBe(false);
   });
@@ -976,11 +977,12 @@ describe('renderJson', () => {
     const json = JSON.parse(renderJson(result));
     expect(json.skills[0].also_installed_at).toEqual(['/tmp/copy-a', '/tmp/copy-b']);
     expect(json.skills[1]).not.toHaveProperty('also_installed_at');
-    expect(Object.keys(json.skills[0]).slice(0, 6)).toEqual([
+    expect(Object.keys(json.skills[0]).slice(0, 7)).toEqual([
       'id',
       'agent_id',
       'name',
       'path',
+      'install_state',
       'also_installed_at',
       'tree_sha256',
     ]);
@@ -997,11 +999,12 @@ describe('renderJson', () => {
     const json = JSON.parse(renderJson(result));
     expect(json.skills[0].modified_at).toBe('2024-03-04T05:06:07.000Z');
     expect(json.skills[1]).not.toHaveProperty('modified_at');
-    expect(Object.keys(json.skills[0]).slice(0, 6)).toEqual([
+    expect(Object.keys(json.skills[0]).slice(0, 7)).toEqual([
       'id',
       'agent_id',
       'name',
       'path',
+      'install_state',
       'modified_at',
       'tree_sha256',
     ]);
