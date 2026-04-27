@@ -478,7 +478,7 @@ Output comparison contract:
   - Include the visual proof path or screenshot reference in the commit message
     or task notes so the next iteration can audit what was actually inspected.
 
-- [ ] **10** Add local LLM connection configuration and health checks.
+- [x] **10** Add local LLM connection configuration and health checks.
 
   Users who already downloaded and started a local model server need a smooth
   way to connect it to `skill-audit` without editing TypeScript, setting up
