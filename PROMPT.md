@@ -69,6 +69,15 @@ Rules for implementation:
   detail panels, cover both the realistic populated path and the clear
   empty/skipped/offline/unavailable path. A renderer test with synthetic data
   does not prove the command can populate the UI.
+- For enrichment work, verify source-level status semantics. A progress
+  checkmark means displayable data or a valid stale cache exists for that
+  source, not merely that a Promise resolved. Do not coerce failed or skipped
+  numeric lookups into `0`; render unavailable/unknown unless the source
+  returned an actual zero.
+- For skills.sh, GitHub, or deps.dev changes, derive mocks from the current
+  endpoint/client contract or official docs. Include at least one realistic
+  installed-skill fixture whose metadata resolves through discovery into
+  enrichment output.
 - For generated HTML reports, test interactive behavior in a DOM/browser
   environment. Clicking agent filters, rows, and toolbar buttons must change
   the visible state without relying on network access.
@@ -109,9 +118,12 @@ Run the exact invocation documented by the task, spec, README, examples, or
 action metadata. If bare `skill-audit` is documented as the default scan, run the
 built binary with no subcommand. If an HTML report is involved, open or execute
 the generated file and verify at least one interactive control. If README
-screenshots, SVGs, badges, or visual assets changed, render them at their
-embedded size and inspect for clipping, overlap, broken targets, and stale
-output.
+screenshots, SVGs, badges, or visual assets changed, render them in a browser or
+image renderer at their embedded README/GitHub size and inspect for clipping,
+overlap, broken targets, unreadable text, and stale output. For hand-authored
+SVGs, check every text label/line against neighboring text and the visible
+frame; if no renderer is available, document the blocker instead of completing
+the task.
 
 ### 4b. Capture any new lesson
 

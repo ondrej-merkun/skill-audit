@@ -1,7 +1,13 @@
-# Task 19 — Tighten README first screen
+# Task — Harden postmortem lessons
 
-- [x] Move dense reference material from README into focused docs without dropping useful content.
-- [x] Rewrite the README front page around purpose, install, first scan, and interpreting results.
-- [x] Verify changed markdown links resolve locally.
-- [x] Run build, tests, lint, typecheck, and clean build-output check.
-- [x] Commit the feature, then check off task 19 in `fix_plan.md` and commit that separately.
+- [x] Read the repo instructions, lessons, and `.postmortem/identified-issues.md`.
+- [x] Investigate enrichment failures and why prior agent checks missed them.
+- [x] Investigate README header visual overflow and why prior verification missed it.
+- [x] Update only Markdown guidance needed to prevent similar mistakes.
+- [x] Verify the diff contains no code changes and document review hotspots.
+
+## Review
+
+- Highest review ROI: enrichment status wording in `specs/OUTPUT.md` and
+  `specs/SPEC.md`, plus visual-verification wording in `AGENT.md` and
+  `PROMPT.md`.

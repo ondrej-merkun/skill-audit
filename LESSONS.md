@@ -90,11 +90,13 @@ without a commit message explaining why it no longer applies.
   For generated HTML controls, execute the page script in a browser/DOM smoke
   test and assert the visible state changes after click/keyboard events.
 
-- **L1.14 — README images need rendered proof, not just existing paths.** _Post-mortem
-  issue: `docs/demo.svg` existed, but the embedded terminal text overflowed and
-  covered itself in the README hero._
-  Render changed docs images at their embedded README dimensions and inspect
-  for clipping, overlap, and stale output before committing.
+- **L1.14 — README images need browser-rendered proof, not just existing paths.** _Post-mortem
+  issue: `docs/demo.svg` existed, then task 20 hand-edited it again after
+  reading CLI output, but unmeasured SVG text still overlapped in the README
+  hero._
+  Render changed docs images at their embedded README/GitHub dimensions in a
+  browser or image renderer. If the asset is hand-authored, check text bounds
+  for every label/line; no renderer means the task is blocked, not done.
 
 - **L1.15 — Faked TTY tests need TTY cursor methods, not just `isTTY`.** _Task
   8 progress tests set `process.stderr.isTTY = true`, then `ora` crashed because
@@ -222,6 +224,21 @@ without a commit message explaining why it no longer applies.
   Put concise install, scan, and interpretation content above the fold; move
   deep comparisons, privacy detail, and examples into `docs/` unless they earn
   their space on the front page.
+
+- **L6.7 — Enrichment checkmarks must mean data, not "the batch did not throw".**
+  _Post-mortem issue: skills.sh and deps.dev appeared successful in progress
+  output even when they returned no displayable metadata, and GitHub contributor
+  lookup failures were rendered as `0 contributors`._
+  Track source-level states. Distinguish not-applicable, no metadata,
+  unavailable, stale-cache, and found-data; render unknown numeric metadata as
+  unavailable/unknown, never as zero.
+
+- **L6.8 — External enrichment mocks must be contract-derived.** _Post-mortem
+  issue: enrichment tests mocked the response shapes the implementation already
+  expected, while the spec and public API docs used different paths/payloads._
+  Before shipping skills.sh, GitHub, or deps.dev changes, verify the current
+  endpoint/client contract or docs and make tests mirror that contract plus one
+  realistic installed-skill fixture.
 
 ## 7. Rule fixtures
 

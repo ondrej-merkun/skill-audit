@@ -132,6 +132,19 @@ commands.
   unavailable, skipped, or offline path. Renderer-only tests with
   hand-built data are not enough; add at least one realistic pipeline
   or command-level test for the data source that should populate it.
+- Enrichment success is a source-level data contract, not a batch-level
+  "no exception" signal. For `skills.sh`, GitHub, and `deps.dev`, keep
+  not-applicable, no metadata, unavailable, stale-cache, and found-data states
+  distinguishable enough that progress, table, summary, JSON, and HTML do not
+  imply data exists when it does not. Do not render failed numeric lookups such
+  as GitHub contributors or dependency advisories as `0`; use an unavailable or
+  unknown state unless the source actually returned zero.
+- Enrichment tests must be derived from current endpoint/client contracts and
+  realistic discovered skills. Do not write mocks only around the code's current
+  assumptions. Before changing `skills.sh`, GitHub, or `deps.dev` behavior,
+  verify the relevant public docs, official client behavior, or a live response
+  shape, then add one test where a realistic installed skill resolves metadata
+  without synthetic-only fields.
 - Generated HTML reports are interactive products, not static strings.
   For filters, sidebars, toolbar buttons, downloads, copy actions, or
   detail panels, execute the page script in a DOM/browser smoke test and
@@ -212,8 +225,11 @@ A task is done when:
     one interaction by clicking or dispatching the relevant event in a
     DOM/browser environment.
 11. For any task that changes README screenshots, SVGs, badges, or other
-    visual assets: render the asset at the size used by README/GitHub and
-    check for overlap, clipping, stale output, and unreadable text.
+    visual assets: render the asset at the size used by README/GitHub in a
+    browser or image renderer and check for overlap, clipping, stale output, and
+    unreadable text. If the asset is hand-authored SVG, also verify text bounds
+    against the visible frame and adjacent labels. If no renderer is available,
+    document the blocker instead of marking the task complete.
 12. For any task that changes external links, badges, action examples,
     package metadata, or trusted-publishing settings: verify the external
     owner/repo/workflow/package target exists. Do not assemble GitHub URLs

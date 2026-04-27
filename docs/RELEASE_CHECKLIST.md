@@ -16,8 +16,11 @@ a problem appears.
 - Confirm public docs changed in the release have working local links and image
   paths.
 - Confirm changed README screenshots, SVGs, and badges render at their embedded
-  GitHub dimensions without clipping, overlap, stale output, or broken external
-  targets.
+  GitHub dimensions in a browser or image renderer without clipping, overlap,
+  stale output, unreadable text, or broken external targets.
+- Confirm enrichment changes have one source-level smoke or contract check for
+  each touched external source. Checkmarks must mean found displayable metadata
+  or a labeled cache hit, not merely that the enrichment batch completed.
 
 ## Local Verification
 

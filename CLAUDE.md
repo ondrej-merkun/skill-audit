@@ -95,6 +95,15 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
   scan target.
 - **Enrichment always fails silently with stale-cache fallback.** Network
   timeouts are 5 seconds, never blocking. Offline is a first-class mode.
+- **Enrichment status must not lie.** A source is not successful just because
+  the enrichment batch completed. Keep source-level states distinct enough to
+  show found data, no metadata, not applicable, unavailable, and stale cache.
+  Unknown counts are not zero counts: if GitHub contributors or deps.dev
+  advisories cannot be fetched, render unavailable/unknown rather than `0`.
+- **External enrichment contracts drift.** Before changing skills.sh, GitHub, or
+  deps.dev code/tests, verify the current API docs, official client behavior, or
+  a live response shape. Mocks that only reflect the implementation's current
+  assumptions do not prove the integration works.
 - **JSON output is a contract** — schema version 1.0, deterministic field
   order, see `specs/OUTPUT.md`. Do not add, rename, or reorder fields.
 - **Scan output is product behavior.** Table, summary, JSON, HTML, and
@@ -111,8 +120,10 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
   red-team examples, quoted attacks, and test fixtures often contain hostile
   vocabulary without being hostile instructions.
 - **README visuals are product surface.** SVGs, screenshots, badges, and demo
-  assets must be rendered at their embedded size and checked for clipping,
-  overlap, and broken external targets.
+  assets must be rendered in a browser or image renderer at their embedded size
+  and checked for clipping, overlap, stale output, and broken external targets.
+  Hand-authored SVG text needs explicit bounds/spacing checks; do not mark a
+  visual task done when no renderer is available.
 
 ## What "done" means for any task
 
@@ -138,7 +149,10 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
     package metadata, or trusted-publishing settings: verify the external
     target exists and matches the canonical repository/package target.
 11. For any task that changes README screenshots, SVGs, or visual docs
-    assets: render them at their embedded size and inspect for overflow.
+    assets: render them in a browser or image renderer at their embedded
+    README/GitHub size and inspect for overflow, clipping, overlap, stale
+    output, and unreadable text. For hand-authored SVGs, check text bounds
+    against adjacent labels and the visible frame.
 12. For any task that changes generated HTML interactions: verify a
     click/keyboard interaction in a DOM/browser environment.
 13. `fix_plan.md` checkbox flipped to `- [x]`.

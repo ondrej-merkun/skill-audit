@@ -139,6 +139,23 @@ Fail-silent enrichment is acceptable for scanner correctness, but the user
 should still understand whether enrichment was not requested, had no metadata,
 or could not be displayed.
 
+For enrichment specifically, track and render source-level truth:
+
+- A source checkmark means that source produced displayable metadata, or a valid
+  stale-cache value that is labeled as cached/stale. It must not mean only that
+  the enrichment batch finished without throwing.
+- Distinguish not-applicable input (for example no repo slug or no dependency
+  manifest) from a source lookup that returned no metadata and from a lookup
+  that failed or timed out.
+- Numeric source fields must preserve unknown vs zero. If GitHub contributors,
+  deps.dev advisories, stars, scorecard data, or skills.sh audit counts cannot
+  be fetched, render an unavailable/unknown state rather than `0`.
+- Tests for `skills.sh`, GitHub, and `deps.dev` must use response shapes and URL
+  paths verified against the current external contract, not only mocks invented
+  from the implementation under test. Include at least one realistic installed
+  skill fixture whose repository/dependency metadata is discovered the same way
+  a user's local installation would be discovered.
+
 ## File output contract
 
 `scan` supports `-o, --output <file>` for non-HTML output modes:
@@ -213,10 +230,12 @@ across `snyk test`, `semgrep scan`, `npm audit`, `trivy image`. Never
 skip it.
 
 README screenshots, SVG demos, and terminal recordings derived from this output
-must be rendered at the embedded README/GitHub dimensions before committing.
-Text must not clip, overlap, spill beyond the terminal frame, or show stale
-columns/commands. Prefer generating the asset from real built CLI output; if it
-is hand-authored, check text widths after every output-column change.
+must be rendered in a browser or image renderer at the embedded README/GitHub
+dimensions before committing. Text must not clip, overlap, spill beyond the
+terminal frame, or show stale columns/commands. Prefer generating the asset from
+real built CLI output; if it is hand-authored, check text widths and text
+bounding boxes after every output-column change. Missing render tooling is a
+blocker for visual-asset tasks, not a reason to rely on source inspection.
 
 ## Detail view — `skill-audit explain <skill>`
 

@@ -402,6 +402,25 @@ All caches include `fetched_at`. TTL stale-cache is served when enrichment API f
 - Skills.sh endpoint 500s? Fall back to HTML scrape; if that fails, emit Info note and continue.
 - Zero enrichment is always a complete scan — the local analyzer is the product; cloud is the garnish.
 
+### Enrichment contract verification
+
+Fail-silent does not mean success-silent. Each source needs a source-level state
+that can distinguish not applicable, no metadata, unavailable/timed out,
+cached-stale, and found data. User-facing checkmarks are only for found data or
+clearly labeled cache hits; unknown numeric fields must not be rendered as zero.
+
+Before changing these integrations, verify the current external contract:
+
+- `skills.sh`/`add-skill` is an undocumented endpoint; confirm the request and
+  response shape from the live endpoint or official client before updating code
+  or tests.
+- GitHub contributor counts come from the contributors endpoint or pagination;
+  if the contributor request fails, keep stars/age only and label contributors
+  unavailable rather than `0`.
+- deps.dev package, version, advisory, and project/scorecard data come from
+  distinct API methods. Do not hardcode scorecard as `null` or advisories as `0`
+  when the lookup failed or used the wrong endpoint.
+
 ### ToS posture
 - **skills.sh endpoint** — undocumented but consumed by Vercel's own CLI and forks. Courtesy caching + User-Agent (`skill-audit/0.1.0 (+github.com/you/skill-audit)`). Reasonable.
 - **agentskill.sh** — README explicitly states "No API key required. The learn skill uses the public API." — clean.
