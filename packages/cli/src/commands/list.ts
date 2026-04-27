@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 import { formatAgentName } from '../agent-names.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
+import { installStateLabel } from '../output/install-state.js';
 import { createProgressReporter, selectProgressMode } from '../progress.js';
 import type { Skill } from '../types.js';
 
@@ -37,6 +38,7 @@ const SCOPE_RANK: Record<Skill['scope'], number> = {
 
 export type ListOptions = {
   agent: string | undefined;
+  includeMarketplaces: boolean;
   json: boolean;
 };
 
@@ -50,6 +52,12 @@ export function sortListSkills(skills: Skill[]): Skill[] {
   return [...skills].sort((a, b) => {
     const scopeDelta = SCOPE_RANK[a.scope] - SCOPE_RANK[b.scope];
     if (scopeDelta !== 0) return scopeDelta;
+
+    const installStateDelta = compareString(
+      installStateLabel(a.installState),
+      installStateLabel(b.installState)
+    );
+    if (installStateDelta !== 0) return installStateDelta;
 
     return (
       compareString(a.agentId, b.agentId) ||
@@ -65,7 +73,12 @@ function shortenPath(p: string): string {
 }
 
 export async function runList(opts: Partial<ListOptions> = {}): Promise<void> {
-  const options: ListOptions = { agent: undefined, json: false, ...opts };
+  const options: ListOptions = {
+    agent: undefined,
+    includeMarketplaces: false,
+    json: false,
+    ...opts,
+  };
 
   clearPlugins();
   initDefaultPlugins();
@@ -80,7 +93,10 @@ export async function runList(opts: Partial<ListOptions> = {}): Promise<void> {
 
   let skills: Skill[];
   try {
-    skills = await discoverAll({ onProgress: progress.onDiscoveryProgress });
+    skills = await discoverAll({
+      ...(options.includeMarketplaces ? { includeMarketplaces: true } : {}),
+      onProgress: progress.onDiscoveryProgress,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(`[skill-audit] error: ${msg}\n`);
@@ -104,6 +120,7 @@ export async function runList(opts: Partial<ListOptions> = {}): Promise<void> {
             : {}),
           tree_sha256: s.treeSha256,
           scope: s.scope,
+          install_state: installStateLabel(s.installState),
           format: s.format,
         })),
         null,
@@ -120,18 +137,26 @@ export async function runList(opts: Partial<ListOptions> = {}): Promise<void> {
 
   const table = new Table({
     chars: NO_BORDERS,
-    head: [chalk.bold('Agent'), chalk.bold('Name'), chalk.bold('Path'), chalk.bold('Scope')],
+    head: [
+      chalk.bold('Agent'),
+      chalk.bold('Name'),
+      chalk.bold('Path'),
+      chalk.bold('Scope'),
+      ...(options.includeMarketplaces ? [chalk.bold('State')] : []),
+    ],
     style: { head: [], border: [] },
   });
 
   for (const skill of skills) {
     const colorScope = SCOPE_COLOR[skill.scope] ?? chalk.white;
-    table.push([
+    const row = [
       chalk.dim(formatAgentName(skill.agentId)),
       skill.name,
       chalk.grey(shortenPath(skill.path)),
       colorScope(skill.scope),
-    ]);
+    ];
+    if (options.includeMarketplaces) row.push(chalk.dim(installStateLabel(skill.installState)));
+    table.push(row);
   }
 
   process.stdout.write(`${table.toString()}\n`);

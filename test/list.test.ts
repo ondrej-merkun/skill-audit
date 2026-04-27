@@ -197,7 +197,87 @@ describe('runList', () => {
     const arr = JSON.parse(stdoutChunks.join(''));
     expect(arr[0].path).toBeTruthy();
     expect(arr[0].format).toBe('SKILL.md');
+    expect(arr[0].install_state).toBe('installed');
     expect(arr[0].tree_sha256).toBe('deadbeef');
+  });
+
+  it('does not show install-state labels in default human output', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+    await runList({});
+    const out = stripAnsi(stdoutChunks.join(''));
+    expect(out).not.toContain('State');
+    expect(out).not.toContain('installed');
+  });
+
+  it('--include-marketplaces passes the discovery opt-in and shows state labels', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({
+        id: 'installed',
+        name: 'installed-skill',
+        installState: 'installed',
+      }),
+      makeSkill({
+        id: 'marketplace',
+        name: 'marketplace-skill',
+        path: '/home/user/.claude/plugins/marketplaces/vendor/tool/skills/marketplace-skill',
+        installState: 'marketplace',
+      }),
+    ]);
+
+    await runList({ includeMarketplaces: true });
+    const out = stripAnsi(stdoutChunks.join(''));
+
+    expect(discoverAll).toHaveBeenCalledWith(
+      expect.objectContaining({ includeMarketplaces: true })
+    );
+    expect(out).toContain('State');
+    expect(out).toContain('installed-skill');
+    expect(out).toContain('marketplace-skill');
+    expect(out).toContain('installed');
+    expect(out).toContain('marketplace');
+  });
+
+  it('--include-marketplaces JSON includes install_state labels', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({
+        id: 'marketplace',
+        name: 'marketplace-skill',
+        path: '/home/user/.claude/plugins/marketplaces/vendor/tool/skills/marketplace-skill',
+        installState: 'marketplace',
+      }),
+    ]);
+
+    await runList({ includeMarketplaces: true, json: true });
+    const arr = JSON.parse(stdoutChunks.join(''));
+
+    expect(arr[0].install_state).toBe('marketplace');
+  });
+
+  it('sorts installed rows before marketplace rows within the same scope', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({
+        id: 'marketplace-a',
+        name: 'alpha-marketplace',
+        path: '/home/user/.claude/plugins/marketplaces/vendor/tool/skills/alpha-marketplace',
+        scope: 'user',
+        installState: 'marketplace',
+      }),
+      makeSkill({
+        id: 'installed-z',
+        name: 'zeta-installed',
+        path: '/home/user/.claude/skills/zeta-installed',
+        scope: 'user',
+        installState: 'installed',
+      }),
+    ]);
+
+    await runList({ includeMarketplaces: true, json: true });
+    const arr = JSON.parse(stdoutChunks.join(''));
+
+    expect(arr.map((skill: { name: string }) => skill.name)).toEqual([
+      'zeta-installed',
+      'alpha-marketplace',
+    ]);
   });
 
   it('--json emits also_installed_at only when duplicate paths are present', async () => {

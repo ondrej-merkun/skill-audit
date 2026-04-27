@@ -439,6 +439,14 @@ describe('e2e: scan flags', () => {
     expect(stdout).not.toContain('coming soon');
   });
 
+  it('list help documents marketplace inventory as inactive opt-in output', async () => {
+    const env = { HOME: tempHome, USERPROFILE: tempHome, SKILLAUDIT_CWD: tempCwd };
+    const { code, stdout } = await runCli(['list', '--help'], env);
+    expect(code).toBe(0);
+    expect(stdout).toContain('--include-marketplaces');
+    expect(stdout).toContain('locally available but inactive marketplace');
+  });
+
   it('bare invocation runs the default scan once', async () => {
     await cp(join(BENIGN_DIR, 'date-parser'), join(skillsDir, 'date-parser'), { recursive: true });
 
@@ -610,6 +618,29 @@ describe('e2e: scan flags', () => {
       expect(listRun.code).toBe(0);
       const listed = JSON.parse(listRun.stdout) as Array<{ name: string }>;
       expect(listed.map((skill) => skill.name).sort()).toEqual(['codex-safe', 'date-parser']);
+
+      const listWithMarketplaces = await runCli(['list', '--include-marketplaces', '--json'], env);
+      expect(listWithMarketplaces.code).toBe(0);
+      expect(listWithMarketplaces.stderr).toBe('');
+      const listedWithMarketplaces = JSON.parse(listWithMarketplaces.stdout) as Array<{
+        name: string;
+        install_state: string;
+      }>;
+      expect(
+        listedWithMarketplaces.map((skill) => [skill.name, skill.install_state]).sort()
+      ).toEqual([
+        ['codex-marketplace-override', 'marketplace'],
+        ['codex-safe', 'installed'],
+        ['date-parser', 'installed'],
+        ['marketplace-override', 'marketplace'],
+      ]);
+
+      const humanListWithMarketplaces = await runCli(['list', '--include-marketplaces'], env);
+      const humanListOut = stripAnsi(humanListWithMarketplaces.stdout);
+      expect(humanListWithMarketplaces.code).toBe(0);
+      expect(humanListOut).toContain('State');
+      expect(humanListOut).toContain('marketplace-override');
+      expect(humanListOut).toContain('marketplace');
 
       const scanRun = await runCli(['scan', '--json', '--offline'], env);
       expect(scanRun.code).toBe(0);

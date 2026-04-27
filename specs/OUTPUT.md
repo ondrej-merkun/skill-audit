@@ -122,6 +122,17 @@ GitHub Action invocation, and shorthand alias needs a built-binary smoke test
 using that exact invocation; calling the command function directly is not enough
 for CLI parser behavior.
 
+## List output contract
+
+`skill-audit list` shows installed or currently exposed skills by default.
+Marketplace inventory is locally available but inactive and appears only with
+`skill-audit list --include-marketplaces`.
+
+Human list output stays quiet by default. When marketplace rows are included,
+it adds a compact state column with `installed` or `marketplace`. JSON list
+output always includes the same state as `install_state` so `--json` and human
+output agree.
+
 ## Visible data contract
 
 If a human output adds a visible column, footer line, panel field, badge, or

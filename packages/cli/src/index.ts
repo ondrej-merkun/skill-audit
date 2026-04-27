@@ -59,10 +59,12 @@ program
   .command('list')
   .description('List all discovered agent skills without scanning')
   .option('--agent <id>', 'restrict to a single agent (e.g. claude-code, cursor)')
+  .option('--include-marketplaces', 'include locally available but inactive marketplace skills')
   .option('--json', 'emit JSON array to stdout')
   .action((cmdOpts: Record<string, unknown>) => {
     const options: Partial<ListOptions> = {
       agent: typeof cmdOpts.agent === 'string' ? cmdOpts.agent : undefined,
+      includeMarketplaces: cmdOpts.includeMarketplaces === true,
       json: cmdOpts.json === true,
     };
     runList(options).catch((err: unknown) => {
