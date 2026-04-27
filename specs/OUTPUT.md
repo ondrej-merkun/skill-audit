@@ -181,6 +181,11 @@ multi-model selection is passed. When enabled, every scan output keeps
 deterministic scanner findings visible as the baseline and shows LLM review as
 a separate comparison layer.
 
+LLM review is local-first and optional. It must not imply that cloud access,
+hosted model accounts, or API keys are required. Model output is advisory:
+models can miss issues and hallucinate findings, so deterministic rule findings
+remain visible and authoritative for the baseline scan.
+
 - Pretty output adds a compact `LLM REVIEW` column only when LLM review ran.
   Each cell shows per-model status and, for successful models, the highest
   model finding severity plus finding count.
@@ -198,6 +203,11 @@ a separate comparison layer.
   statuses, and confidence values.
 - If every selected model is skipped, unavailable, timed out, or invalid, the
   output says so and still renders deterministic findings normally.
+- Review payloads sent to local models are bounded to skill metadata,
+  deterministic findings, relevant file paths, and capped snippets from files
+  that produced findings after obvious secret redaction. Outputs and docs must
+  not imply that whole home directories, unrelated files, environment
+  variables, cache trees, or discovered secrets are sent to models.
 
 ## Visible data contract
 

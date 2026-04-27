@@ -120,6 +120,12 @@ without a commit message explaining why it no longer applies.
   Record the observed request/response shape in tests and keep stale provider
   failures from becoming successful zero-value enrichment.
 
+- **L1.19 — Fake HTTP servers need async CLI children.** _Task 14 local LLM docs
+  smoke test first reported timeouts because `spawnSync` blocked the same Node
+  event loop that was supposed to serve `/v1/chat/completions`._
+  When a smoke test starts an in-process server, use async child processes or a
+  separate server process so the server can answer while the CLI runs.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

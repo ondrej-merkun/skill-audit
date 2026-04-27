@@ -76,6 +76,11 @@ skill-audit scan --agent claude-code                 # restrict discovery
 skill-audit scan --include-marketplaces              # include inactive local marketplace inventory
 skill-audit scan --json -o skill-audit-report.json   # machine-readable report
 skill-audit scan --html skill-audit-report.html      # standalone HTML report
+skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model llama3.1
+skill-audit llm list                                 # configured local models
+skill-audit llm check local                          # local model health check
+skill-audit scan --llm local                         # add local LLM review
+skill-audit scan --llm local --llm qwen              # compare multiple local models
 skill-audit list                                     # inventory without scanning
 skill-audit list --include-marketplaces              # show installed and inactive marketplace skills
 skill-audit ignore <name>                            # suppress a reviewed tree hash
@@ -96,6 +101,39 @@ Installed or currently exposed skills are the default scan and list surface.
 Plugin marketplace payloads under `plugins/marketplaces/` are inactive local
 inventory; include them only with `--include-marketplaces`, where output labels
 rows as `installed` or `marketplace`.
+
+## Optional Local LLM Review
+
+The deterministic rule scanner is the baseline. If you already run a local
+OpenAI-compatible model server, you can add LLM review as a second opinion:
+
+```bash
+skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model llama3.1
+skill-audit llm check local
+skill-audit scan --llm local
+```
+
+`skill-audit llm add` writes model config to
+`$XDG_CONFIG_HOME/skill-audit/llms.json`, or `~/.config/skill-audit/llms.json`
+when `XDG_CONFIG_HOME` is unset. Base URLs must be loopback URLs such as
+`127.0.0.1` or `localhost`; no cloud API key, hosted account, or remote model is
+required.
+
+For comparison runs, repeat `--llm`, pass comma-separated names, or use
+`--llm all` for every enabled configured local model:
+
+```bash
+skill-audit scan --llm local --llm qwen
+skill-audit scan --llm local,qwen --summary
+skill-audit scan --llm all --html skill-audit-report.html
+```
+
+LLM findings are labeled separately from deterministic rule findings. They do
+not replace rule results, and model failures, timeouts, or invalid responses do
+not hide scanner findings. Review payloads include skill metadata, deterministic
+findings, relevant file paths, and capped snippets from files that triggered
+findings after obvious secret redaction. `skill-audit` does not send whole home
+directories, unrelated files, environment variables, or discovered secrets.
 
 Detailed reference:
 
@@ -125,8 +163,9 @@ See the [CI reference](docs/REFERENCE.md#use-in-ci) for the full workflow.
 
 ## Limitations
 
-`skill-audit` is a local, rule-based scanner. It does not execute skills, run an
-LLM review, sandbox tools, or prove intent. It can miss novel jailbreaks,
-runtime-fetched behavior, split-string obfuscation, and risks in services that a
-skill calls later. Treat it as a fast first filter, not a replacement for code
-review or dependency review.
+`skill-audit` is a local scanner. It does not execute skills, sandbox tools, or
+prove intent. Optional local LLM review can miss issues and can hallucinate
+findings; deterministic rules remain the baseline scanner. The tool can miss
+novel jailbreaks, runtime-fetched behavior, split-string obfuscation, and risks
+in services that a skill calls later. Treat it as a fast first filter, not a
+replacement for code review or dependency review.

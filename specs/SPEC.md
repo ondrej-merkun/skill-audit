@@ -578,7 +578,11 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 | `skill-audit scan --include-marketplaces` | Include inactive local marketplace inventory and label it separately |
 | `skill-audit scan --json` / `--html <file>` / `--summary` | Output formats |
 | `skill-audit scan --offline` | Skip all enrichment |
+| `skill-audit scan --llm <name>` | Optional local LLM review; repeat, comma-separate, or use `all` |
 | `skill-audit scan --strict` | REVIEW becomes FAIL; exit non-zero |
+| `skill-audit llm add <name> --base-url <url> --model <id>` | Store a loopback OpenAI-compatible local model |
+| `skill-audit llm list` | List configured local review models |
+| `skill-audit llm check <name>` | Health-check one configured local review model |
 | `skill-audit list` | List installed or exposed skills without scanning (fast inventory) |
 | `skill-audit list --include-marketplaces` | Also list inactive local marketplace inventory |
 | `skill-audit explain <skill-name-or-id>` | Detail view (mockup above) |
@@ -591,6 +595,43 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 - `3` — scan incomplete (offline + required enrichment)
 
 **Interactivity.** Zero prompts at MVP. No "Press y to continue". No auth flow. Running the binary with no args performs a full scan. The single most-important UX rule: **a first-time user can type the install command, hit enter, and be reading the result in under 5 seconds.**
+
+### Optional local LLM review
+
+Local LLM review is an opt-in second opinion over discovered skill content and
+deterministic scanner findings. The built-in rules remain the baseline scanner:
+LLM findings are labeled separately, do not replace deterministic findings, and
+do not change the existing exit-code behavior unless a later spec revision says
+so. A model can miss issues or hallucinate findings; output must not imply
+consensus is proof.
+
+Configuration is local-first:
+
+- `skill-audit llm add` stores named model configs in
+  `$XDG_CONFIG_HOME/skill-audit/llms.json`, or
+  `~/.config/skill-audit/llms.json` when `XDG_CONFIG_HOME` is unset.
+- The initial provider type is `openai-compatible`, joined with
+  `/v1/chat/completions`.
+- Base URLs must be loopback HTTP(S) hosts such as `127.0.0.1`, `localhost`,
+  or `[::1]`. Cloud-hosted model APIs, remote model URLs, accounts, and API
+  keys are not required for the default path.
+- `skill-audit llm check <name>` sends the smallest health-check request and
+  never includes skill content.
+
+Scan review stays bounded and redacted:
+
+- `skill-audit scan` with no `--llm` performs no model requests.
+- `--offline --llm <name>` validates the configured model name but skips review.
+- `--llm <name>` accepts repeated flags, comma-separated names, or `all` for
+  every enabled configured local model.
+- Each selected model receives the same prompt version and normalized payload:
+  skill metadata, deterministic findings, relevant file paths, and capped
+  snippets from files that produced findings after obvious secret redaction.
+- The payload must not include whole home directories, unrelated files, cache
+  trees, environment variables, or discovered secrets.
+- Per-model statuses such as `ok`, `unavailable`, `timeout`,
+  `invalid-response`, and `skipped-offline` stay visible. A failed model must
+  not hide deterministic findings or other models' completed reviews.
 
 ## 8. Claude Code skill wrapper
 

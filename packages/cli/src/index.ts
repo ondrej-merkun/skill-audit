@@ -37,7 +37,7 @@ program
   .option('--include-marketplaces', 'include locally available but inactive marketplace skills')
   .option(
     '--llm <name>',
-    'run configured local LLM review; repeat, comma-separate, or use "all"',
+    'run optional local LLM review; repeat, comma-separate, or use "all"',
     (value: string, previous: string[]) => [...previous, value],
     []
   )
@@ -113,11 +113,11 @@ program
     });
   });
 
-const llm = program.command('llm').description('Manage local LLM connections');
+const llm = program.command('llm').description('Manage optional local LLM review models');
 
 llm
   .command('add <name>')
-  .description('Store a named local OpenAI-compatible model configuration')
+  .description('Store a named loopback OpenAI-compatible model configuration')
   .requiredOption('--base-url <url>', 'loopback OpenAI-compatible server base URL')
   .requiredOption('--model <id>', 'local model id')
   .option('--provider <provider>', 'provider type', 'openai-compatible')
@@ -142,7 +142,7 @@ llm
 
 llm
   .command('list')
-  .description('List configured local models')
+  .description('List configured local review models')
   .option('--json', 'emit JSON array to stdout')
   .action((cmdOpts: Record<string, unknown>) => {
     const options: Partial<LlmListOptions> = {
@@ -157,7 +157,7 @@ llm
 
 llm
   .command('check <name>')
-  .description('Verify connectivity for one configured local model')
+  .description('Verify connectivity for one configured local review model')
   .option('--json', 'emit JSON object to stdout')
   .action((name: string, cmdOpts: Record<string, unknown>) => {
     const options: Partial<LlmCheckOptions> = {
