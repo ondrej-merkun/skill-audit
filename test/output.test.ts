@@ -589,6 +589,22 @@ describe('renderTableToString', () => {
     expect(out).toContain('3 contributors');
   });
 
+  it('does not render unknown GitHub contributors as zero in table output', () => {
+    const result = makeScanResult({
+      skills: [
+        makeSkill({
+          enrichment: {
+            github: { stars: 10, ageDays: 20, contributors: null },
+          },
+        }),
+      ],
+    });
+    const out = stripAnsi(renderTableToString(result));
+    expect(out).toContain('GitHub=10 stars');
+    expect(out).toContain('contributors unknown');
+    expect(out).not.toContain('0 contributors');
+  });
+
   it('sorts FAIL rows before REVIEW and PASS', () => {
     const result = makeScanResult({
       skills: [
@@ -1125,6 +1141,19 @@ describe('renderJson', () => {
     });
   });
 
+  it('serializes GitHub contributors as null when unavailable', () => {
+    const result = makeScanResult({
+      skills: [makeSkill({ enrichment: { github: { stars: 2, ageDays: 4, contributors: null } } })],
+    });
+
+    const json = JSON.parse(renderJson(result));
+    expect(json.skills[0].enrichment.github).toEqual({
+      stars: 2,
+      age_days: 4,
+      contributors: null,
+    });
+  });
+
   it('omits enrichment keys that are absent', () => {
     const json = JSON.parse(renderJson(makeScanResult()));
     const enrich = json.skills[0].enrichment;
@@ -1225,6 +1254,24 @@ describe('renderHtml', () => {
     expect(html).toContain('2 contributors');
     expect(html).toContain('1 OSV advisories');
     expect(html).toContain('scorecard 8.5');
+  });
+
+  it('does not render unknown GitHub contributors as zero in HTML', async () => {
+    const { renderHtml } = await import('../packages/cli/src/output/html.js');
+    const html = renderHtml(
+      makeScanResult({
+        skills: [
+          makeSkill({
+            enrichment: {
+              github: { stars: 12, ageDays: 34, contributors: null },
+            },
+          }),
+        ],
+      })
+    );
+
+    expect(html).toContain('contributors unknown');
+    expect(html).not.toContain('0 contributors');
   });
 
   it('renders neutral HTML enrichment states when sources are missing', async () => {

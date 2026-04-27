@@ -13,7 +13,8 @@ export async function hasGitHubQueryInput(skill: Skill): Promise<boolean> {
 
 function makeHeaders(etag?: string): Record<string, string> {
   const headers: Record<string, string> = {
-    Accept: 'application/vnd.github.v3+json',
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
     'User-Agent': USER_AGENT,
   };
   const token = process.env.GITHUB_TOKEN;
@@ -34,9 +35,28 @@ async function fetchWithTimeout(url: string, headers: Record<string, string>): P
 
 function parseLinkLastPage(link: string | null): number | null {
   if (!link) return null;
-  const pattern = /[?&]page=(\d+)>;\s*rel="last"/;
+  const pattern = /[?&]page=(\d+)[^>]*>;\s*rel="last"/;
   const match = pattern.exec(link);
   return match ? Number.parseInt(match[1], 10) : null;
+}
+
+async function fetchContributorCount(slug: string): Promise<number | null> {
+  try {
+    const contribRes = await fetchWithTimeout(
+      `${API_BASE}/repos/${slug}/contributors?anon=true&per_page=1`,
+      makeHeaders()
+    );
+    if (contribRes.status === 204) return 0;
+    if (!contribRes.ok) return null;
+
+    const lastPage = parseLinkLastPage(contribRes.headers.get('link'));
+    if (lastPage !== null) return lastPage;
+
+    const items = (await contribRes.json()) as unknown;
+    return Array.isArray(items) ? items.length : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Fetch GitHub repo metadata. Unauthenticated by default; uses GITHUB_TOKEN if set. ETag-cached. */
@@ -65,26 +85,14 @@ export async function enrichGitHub(skill: Skill): Promise<GitHubEnrichment | nul
     const ageDays = Math.floor((Date.now() - new Date(repoJson.created_at).getTime()) / 86_400_000);
     const newEtag = repoRes.headers.get('etag') ?? undefined;
 
-    let contributors = 0;
-    try {
-      const contribRes = await fetchWithTimeout(
-        `${API_BASE}/repos/${slug}/contributors?anon=true&per_page=1`,
-        makeHeaders()
-      );
-      if (contribRes.ok) {
-        const lastPage = parseLinkLastPage(contribRes.headers.get('link'));
-        if (lastPage !== null) {
-          contributors = lastPage;
-        } else {
-          const items = (await contribRes.json()) as unknown[];
-          contributors = Array.isArray(items) ? items.length : 0;
-        }
-      }
-    } catch {
-      // contributor fetch failure is non-fatal
-    }
+    const contributors = await fetchContributorCount(slug);
 
-    const result: GitHubEnrichment = { stars, ageDays, contributors };
+    const result: GitHubEnrichment = {
+      stars,
+      ageDays,
+      contributors,
+      contributorsStatus: contributors === null ? 'unavailable' : 'found',
+    };
     await cacheSet(SOURCE, cacheKey, result, newEtag);
     return result;
   } catch {

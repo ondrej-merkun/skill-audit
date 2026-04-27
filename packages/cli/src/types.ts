@@ -75,7 +75,8 @@ export type SkillsShEnrichment = {
 export type GitHubEnrichment = {
   stars: number;
   ageDays: number;
-  contributors: number;
+  contributors: number | null;
+  contributorsStatus?: 'found' | 'unavailable';
 };
 
 export type DepsDevEnrichment = {

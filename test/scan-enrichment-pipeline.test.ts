@@ -108,11 +108,20 @@ describe('scan enrichment pipeline', () => {
             { status: 200, headers: { 'Content-Type': 'application/json' } }
           );
         }
+        if (url === 'https://api.github.com/repos/example/unknown-contrib') {
+          return new Response(
+            JSON.stringify({ stargazers_count: 11, created_at: '2025-01-01T00:00:00Z' }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
         if (url === 'https://api.github.com/repos/example/source-skill/contributors?anon=true&per_page=1') {
           return new Response(JSON.stringify([{ login: 'one' }, { login: 'two' }]), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
           });
+        }
+        if (url === 'https://api.github.com/repos/example/unknown-contrib/contributors?anon=true&per_page=1') {
+          return new Response('rate limited', { status: 403 });
         }
         if (url === 'https://api.deps.dev/v3alpha/systems/NPM/packages/left-pad') {
           return makeDepsDevPackageResponse('1.3.0');
@@ -195,6 +204,38 @@ describe('scan enrichment pipeline', () => {
     expect(html).toContain('1 OSV advisories');
     expect(html).toContain('scorecard 6.5');
     expect(stripAnsi(stderrChunks.join(''))).toContain(`HTML report written to ${htmlPath}`);
+  });
+
+  it('keeps unavailable GitHub contributors unknown across pretty, JSON, and HTML output', async () => {
+    const dir = await mkdtemp(join(testHome, 'unknown-contrib-skill-'));
+    const htmlPath = join(testHome, 'unknown-contrib.html');
+    await writeFile(join(dir, 'SKILL.md'), '# Unknown Contributor Skill\n');
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ repository: 'https://github.com/example/unknown-contrib.git' })
+    );
+    vi.mocked(discoverAll).mockResolvedValue([makeSkill(dir)]);
+
+    await runScan({});
+    const out = stripAnsi(stdoutChunks.join(''));
+    expect(out).toContain('GitHub=11 stars');
+    expect(out).toContain('contributors unknown');
+    expect(out).not.toContain('0 contributors');
+
+    stdoutChunks = [];
+    stderrChunks = [];
+    await runScan({ json: true });
+    const json = JSON.parse(stdoutChunks.join('')) as {
+      skills: Array<{ enrichment: { github: { contributors: number | null } } }>;
+    };
+    expect(json.skills[0]?.enrichment.github.contributors).toBeNull();
+
+    stdoutChunks = [];
+    stderrChunks = [];
+    await runScan({ html: htmlPath });
+    const html = await readFile(htmlPath, 'utf8');
+    expect(html).toContain('contributors unknown');
+    expect(html).not.toContain('0 contributors');
   });
 
   it('populates deps.dev enrichment from a nested tool manifest', async () => {

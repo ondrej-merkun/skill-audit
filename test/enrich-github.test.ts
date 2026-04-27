@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -43,6 +44,17 @@ function makeContribResponse(count: number, hasMore = false): Response {
   }
   const body = hasMore ? [{ login: 'user1' }] : Array.from({ length: count }, (_, i) => ({ login: `user${i}` }));
   return new Response(JSON.stringify(body), { status: 200, headers });
+}
+
+function makeEmptyContribResponse(): Response {
+  return new Response(JSON.stringify([]), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+function cacheFilename(key: string): string {
+  return `${createHash('sha256').update(key).digest('hex')}.json`;
 }
 
 describe('enrichGitHub', () => {
@@ -123,6 +135,39 @@ describe('enrichGitHub', () => {
 
     const result = await enrichGitHub(makeSkill());
     expect(result?.contributors).toBe(47);
+  });
+
+  it('renders a true empty contributor list as zero', async () => {
+    await writeFile(
+      join(testHome, 'skill', 'package.json'),
+      JSON.stringify({ repository: 'https://github.com/owner/empty-repo' }),
+    );
+
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(makeRepoResponse(3))
+      .mockResolvedValueOnce(makeEmptyContribResponse());
+
+    const result = await enrichGitHub(makeSkill());
+    expect(result?.contributors).toBe(0);
+    expect(result?.contributorsStatus).toBe('found');
+  });
+
+  it('uses null contributors for forbidden contributor responses after repo success', async () => {
+    await writeFile(
+      join(testHome, 'skill', 'package.json'),
+      JSON.stringify({ repository: 'https://github.com/owner/forbidden-contrib' }),
+    );
+
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(makeRepoResponse(5))
+      .mockResolvedValueOnce(new Response('rate limited', { status: 403 }));
+
+    const result = await enrichGitHub(makeSkill());
+    expect(result).toMatchObject({
+      stars: 5,
+      contributors: null,
+      contributorsStatus: 'unavailable',
+    });
   });
 
   it('returns null on non-200 repo response with no stale cache', async () => {
@@ -214,6 +259,57 @@ describe('enrichGitHub', () => {
     const result = await enrichGitHub(makeSkill());
     expect(result).not.toBeNull();
     expect(result?.stars).toBe(5);
-    expect(result?.contributors).toBe(0);
+    expect(result?.contributors).toBeNull();
+    expect(result?.contributorsStatus).toBe('unavailable');
+  });
+
+  it('keeps unknown contributor counts unknown when served from cache', async () => {
+    await writeFile(
+      join(testHome, 'skill', 'package.json'),
+      JSON.stringify({ repository: 'https://github.com/owner/cached-unknown' }),
+    );
+
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(makeRepoResponse(5))
+      .mockRejectedValueOnce(new Error('network blip'));
+
+    await enrichGitHub(makeSkill());
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    vi.mocked(fetch).mockClear();
+    const result = await enrichGitHub(makeSkill());
+    expect(fetch).not.toHaveBeenCalled();
+    expect(result?.contributors).toBeNull();
+    expect(result?.contributorsStatus).toBe('unavailable');
+  });
+
+  it('serves stale cached GitHub data when repo refresh fails', async () => {
+    await writeFile(
+      join(testHome, 'skill', 'package.json'),
+      JSON.stringify({ repository: 'https://github.com/owner/stale-repo' }),
+    );
+    const cacheDir = join(testHome, '.cache', 'skill-audit', 'github');
+    await mkdir(cacheDir, { recursive: true });
+    await writeFile(
+      join(cacheDir, cacheFilename('slug:owner/stale-repo')),
+      JSON.stringify({
+        data: {
+          stars: 9,
+          ageDays: 10,
+          contributors: null,
+          contributorsStatus: 'unavailable',
+        },
+        cachedAt: 0,
+      })
+    );
+
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('rate limited', { status: 403 }));
+
+    const result = await enrichGitHub(makeSkill());
+    expect(result).toMatchObject({
+      stars: 9,
+      contributors: null,
+      contributorsStatus: 'unavailable',
+    });
   });
 });

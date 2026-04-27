@@ -46,8 +46,10 @@ function renderEnrichmentCells(skill: ScannedSkill): string {
   }
 
   if (github !== undefined) {
+    const contributors =
+      github.contributors === null ? 'contributors unknown' : `${github.contributors} contributors`;
     rows.push(
-      `<div><span>GitHub</span> ${github.stars} stars · ${github.ageDays} days old · ${github.contributors} contributors</div>`
+      `<div><span>GitHub</span> ${github.stars} stars · ${github.ageDays} days old · ${contributors}</div>`
     );
   } else {
     rows.push('<div class="enrichment-missing"><span>GitHub</span> —</div>');
@@ -297,7 +299,8 @@ function makeEnrichmentEl(enrichment){
     addRow('skills.sh', '—', true);
   }
   if(e.github){
-    addRow('GitHub', e.github.stars + ' stars · ' + e.github.ageDays + ' days old · ' + e.github.contributors + ' contributors', false);
+    var contributors = e.github.contributors === null ? 'contributors unknown' : e.github.contributors + ' contributors';
+    addRow('GitHub', e.github.stars + ' stars · ' + e.github.ageDays + ' days old · ' + contributors, false);
   } else {
     addRow('GitHub', '—', true);
   }

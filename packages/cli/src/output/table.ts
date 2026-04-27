@@ -84,7 +84,11 @@ function enrichmentDetails(skill: ScannedSkill): string {
   if (github !== undefined) {
     const starLabel = github.stars === 1 ? '1 star' : `${github.stars} stars`;
     const contributorLabel =
-      github.contributors === 1 ? '1 contributor' : `${github.contributors} contributors`;
+      github.contributors === null
+        ? 'contributors unknown'
+        : github.contributors === 1
+          ? '1 contributor'
+          : `${github.contributors} contributors`;
     parts.push(`GitHub=${starLabel}`, contributorLabel);
   }
 

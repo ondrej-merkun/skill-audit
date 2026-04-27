@@ -177,6 +177,10 @@ For enrichment specifically, track and render source-level truth:
 - Numeric source fields must preserve unknown vs zero. If GitHub contributors,
   deps.dev advisories, stars, scorecard data, or skills.sh audit counts cannot
   be fetched, render an unavailable/unknown state rather than `0`.
+- `enrichment.github.contributors` is a number only when the public GitHub
+  contributors endpoint returned a count. It is `null` when repository metadata
+  was available but contributors were rate-limited, forbidden, timed out, or
+  otherwise unavailable.
 - Tests for `skills.sh`, GitHub, and `deps.dev` must use response shapes and URL
   paths verified against the current external contract, not only mocks invented
   from the implementation under test. Include at least one realistic installed

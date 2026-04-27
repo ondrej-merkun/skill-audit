@@ -103,8 +103,12 @@ function renderEnrichment(
   }
   if (e.github !== undefined) {
     const g = e.github;
+    const contributorLabel =
+      g.contributors === null
+        ? 'contributors unknown'
+        : `${g.contributors} contributor${g.contributors === 1 ? '' : 's'}`;
     process.stdout.write(
-      `  ${chalk.dim('github.com:')}  ${g.stars} stars, ${g.ageDays} days old, ${g.contributors} contributor${g.contributors === 1 ? '' : 's'}\n`
+      `  ${chalk.dim('github.com:')}  ${g.stars} stars, ${g.ageDays} days old, ${contributorLabel}\n`
     );
   }
   if (e.depsdev !== undefined) {

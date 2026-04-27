@@ -264,6 +264,22 @@ describe('runExplain', () => {
     });
   });
 
+  it('does not render unknown GitHub contributors as zero', async () => {
+    const enrichment: Enrichment = {
+      github: { stars: 3, ageDays: 10, contributors: null },
+    };
+    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+    vi.mocked(runRules).mockResolvedValue([]);
+    vi.mocked(scoreFindings).mockReturnValue(makeSummary());
+    vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult(enrichment));
+
+    await runExplain('test-skill', {});
+
+    const out = stripAnsi(stdoutChunks.join(''));
+    expect(out).toContain('contributors unknown');
+    expect(out).not.toContain('0 contributors');
+  });
+
   it('explains when enrichment runs but finds no metadata', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     vi.mocked(runRules).mockResolvedValue([]);
