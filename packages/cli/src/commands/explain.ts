@@ -1,14 +1,23 @@
 import chalk from 'chalk';
 import { formatAgentName } from '../agent-names.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
-import { enrichSkill } from '../enrich/index.js';
+import {
+  enrichSkillWithOutcomes,
+  skippedEnrichmentOutcomes,
+  summarizeEnrichmentOutcomes,
+} from '../enrich/index.js';
 import { renderJson } from '../output/json.js';
-import { createProgressReporter, selectProgressMode } from '../progress.js';
+import {
+  createProgressReporter,
+  formatEnrichmentOutcome,
+  selectProgressMode,
+} from '../progress.js';
 import { runRules } from '../rules/engine.js';
 import { ALL_RULES } from '../rules/index.js';
 import { scoreFindings } from '../score.js';
 import type {
   Enrichment,
+  EnrichmentSourceOutcome,
   EnrichmentStatus,
   Finding,
   ScannedSkill,
@@ -54,12 +63,26 @@ function renderFinding(f: Finding): void {
   }
 }
 
-function renderEnrichment(e: Enrichment, status: EnrichmentStatus): void {
+function renderEnrichment(
+  e: Enrichment,
+  status: EnrichmentStatus,
+  outcomes?: EnrichmentSourceOutcome[]
+): void {
   const hasAny = e.skillsSh !== undefined || e.github !== undefined || e.depsdev !== undefined;
-  if (!hasAny && status === 'not-run') return;
+  if (!hasAny && status === 'not-run' && outcomes === undefined) return;
 
   process.stdout.write(`\n  ${chalk.bold('Enrichment')}\n`);
   process.stdout.write(`  ${'─'.repeat(40)}\n`);
+
+  if (!hasAny && status === 'skipped-offline') {
+    process.stdout.write(`  ${chalk.dim('Enrichment skipped: offline mode is active.')}\n`);
+    return;
+  }
+
+  if (!hasAny && outcomes !== undefined && outcomes.length > 0) {
+    process.stdout.write(`  ${chalk.dim(outcomes.map(formatEnrichmentOutcome).join('  '))}\n`);
+    return;
+  }
 
   if (!hasAny) {
     const message =
@@ -128,7 +151,7 @@ function renderDetail(skill: ScannedSkill, enrichmentStatus: EnrichmentStatus): 
     }
   }
 
-  renderEnrichment(skill.enrichment, enrichmentStatus);
+  renderEnrichment(skill.enrichment, enrichmentStatus, skill.enrichmentOutcomes);
 
   process.stdout.write(`\n  ${chalk.bold('Next steps')}\n`);
   process.stdout.write(`  ${'─'.repeat(40)}\n`);
@@ -198,25 +221,26 @@ export async function runExplain(
 
   let enrichment: Enrichment = {};
   let enrichmentStatus: EnrichmentStatus = options.offline ? 'skipped-offline' : 'not-run';
+  const enrichmentSources = ['skillsSh', 'github', 'depsdev'] as const;
+  let enrichmentOutcomes: EnrichmentSourceOutcome[] | undefined = options.offline
+    ? skippedEnrichmentOutcomes([...enrichmentSources])
+    : undefined;
   if (!options.offline) {
-    const enrichmentSources = ['skillsSh', 'github', 'depsdev'] as const;
     progress.startEnrichment([...enrichmentSources]);
-    try {
-      enrichment = await enrichSkill(target, { sources: [...enrichmentSources] });
-      enrichmentStatus =
-        enrichment.skillsSh !== undefined ||
-        enrichment.github !== undefined ||
-        enrichment.depsdev !== undefined
-          ? 'found'
-          : 'no-metadata';
-      progress.succeedEnrichment([...enrichmentSources]);
-    } catch {
-      enrichmentStatus = 'unavailable';
-      progress.warnEnrichment();
-    }
+    const result = await enrichSkillWithOutcomes(target, { sources: [...enrichmentSources] });
+    enrichment = result.enrichment;
+    enrichmentOutcomes = result.outcomes;
+    enrichmentStatus = summarizeEnrichmentOutcomes(result.outcomes);
+    progress.succeedEnrichment(result.outcomes);
   }
 
-  const scannedSkill: ScannedSkill = { ...target, findings, enrichment, summary };
+  const scannedSkill: ScannedSkill = {
+    ...target,
+    findings,
+    enrichment,
+    ...(enrichmentOutcomes !== undefined ? { enrichmentOutcomes } : {}),
+    summary,
+  };
 
   if (options.json) {
     const startedAt = new Date().toISOString();

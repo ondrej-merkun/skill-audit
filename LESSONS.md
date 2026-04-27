@@ -110,6 +110,12 @@ without a commit message explaining why it no longer applies.
   When slimming docs, keep compact public install/action snippets where tests
   assert them, or update the product contract deliberately.
 
+- **L1.17 — Status taxonomy tests must prove each status is produced.** _Task 5
+  initially added `no-input` as a type/formatter state without wiring any
+  provider path to emit it._
+  For source-status work, add aggregation tests that force every public status
+  through the production producer, not only renderer/unit formatting tests.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

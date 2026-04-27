@@ -80,6 +80,10 @@ async function readDeps(skillPath: string): Promise<Array<{ ecosystem: string; n
   return deps;
 }
 
+export async function hasDepsDevQueryInput(skill: Skill): Promise<boolean> {
+  return (await readDeps(skill.path)).length > 0;
+}
+
 /** Fetch OSSF Scorecard + OSV advisory count from deps.dev for skill dependencies. Fail-silent, cached 24h. */
 export async function enrichDepsDev(skill: Skill): Promise<DepsDevEnrichment | null> {
   const deps = await readDeps(skill.path);

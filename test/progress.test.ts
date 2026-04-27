@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createProgressReporter,
+  formatEnrichmentOutcome,
   formatEnrichmentSource,
   selectProgressMode,
 } from '../packages/cli/src/progress.js';
@@ -72,7 +73,20 @@ describe('progress mode selection', () => {
   it('uses source display names for enrichment progress', () => {
     expect(formatEnrichmentSource('skillsSh')).toBe('skills.sh');
     expect(formatEnrichmentSource('depsdev')).toBe('deps.dev');
-    expect(formatEnrichmentSource('github')).toBe('github');
+    expect(formatEnrichmentSource('github')).toBe('GitHub');
+  });
+
+  it('renders truthful source outcome labels for enrichment progress', () => {
+    expect(formatEnrichmentOutcome({ source: 'skillsSh', status: 'found' })).toBe('skills.sh ✓');
+    expect(formatEnrichmentOutcome({ source: 'depsdev', status: 'no-metadata' })).toBe(
+      'deps.dev no metadata'
+    );
+    expect(formatEnrichmentOutcome({ source: 'github', status: 'unavailable' })).toBe(
+      'GitHub unavailable'
+    );
+    expect(formatEnrichmentOutcome({ source: 'skillsSh', status: 'skipped-offline' })).toBe(
+      'skills.sh skipped'
+    );
   });
 
   it('renders ASCII progress when unicode is disabled', () => {

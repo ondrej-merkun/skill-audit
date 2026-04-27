@@ -34,6 +34,10 @@ async function resolveSlug(skill: Skill): Promise<string | null> {
   return null;
 }
 
+export async function hasGitHubQueryInput(skill: Skill): Promise<boolean> {
+  return (await resolveSlug(skill)) !== null;
+}
+
 function makeHeaders(etag?: string): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github.v3+json',

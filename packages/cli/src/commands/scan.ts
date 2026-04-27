@@ -2,7 +2,11 @@ import { writeFile } from 'node:fs/promises';
 import { stripVTControlCharacters } from 'node:util';
 import { loadIgnoreList } from '../allowlist/ignore.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
-import { enrichAll } from '../enrich/index.js';
+import {
+  enrichAllWithOutcomes,
+  skippedEnrichmentOutcomes,
+  summarizeEnrichmentOutcomes,
+} from '../enrich/index.js';
 import type { EnrichmentSource } from '../enrich/index.js';
 import { renderHtml } from '../output/html.js';
 import { renderJson } from '../output/json.js';
@@ -20,7 +24,7 @@ import { ALL_RULES } from '../rules/index.js';
 import { scoreFindings } from '../score.js';
 import type {
   AgentInfo,
-  Enrichment,
+  EnrichmentSourceOutcome,
   EnrichmentStatus,
   ScanResult,
   ScannedSkill,
@@ -99,12 +103,28 @@ function renderScanPayload(
   return renderTableToString(result);
 }
 
-function hasEnrichmentData(enrichment: Enrichment): boolean {
-  return (
-    enrichment.skillsSh !== undefined ||
-    enrichment.github !== undefined ||
-    enrichment.depsdev !== undefined
-  );
+function summarizeOutcomesBySource(
+  outcomes: EnrichmentSourceOutcome[],
+  sources: EnrichmentSource[]
+): EnrichmentSourceOutcome[] {
+  const rank: Record<EnrichmentSourceOutcome['status'], number> = {
+    found: 0,
+    'stale-cache': 1,
+    unavailable: 2,
+    'no-input': 3,
+    'no-metadata': 4,
+    'skipped-offline': 5,
+  };
+  return sources.map((source) => {
+    const sourceOutcomes = outcomes.filter((o) => o.source === source);
+    return (
+      sourceOutcomes.sort((a, b) => rank[a.status] - rank[b.status])[0] ?? {
+        source,
+        status: 'no-metadata',
+        reason: 'no metadata found',
+      }
+    );
+  });
 }
 
 async function mapWithConcurrency<T, R>(
@@ -257,25 +277,29 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
 
   const enrichmentSources = selectScanEnrichmentSources(options);
   let enrichmentStatus: EnrichmentStatus = options.offline ? 'skipped-offline' : 'not-run';
+  let enrichmentOutcomes: EnrichmentSourceOutcome[] | undefined;
+  if (options.offline && enrichmentSources.length > 0) {
+    enrichmentOutcomes = skippedEnrichmentOutcomes(enrichmentSources);
+  }
   if (!options.offline && scannedSkills.length > 0 && enrichmentSources.length > 0) {
     progress.startEnrichment(enrichmentSources);
-    try {
-      const enrichments = await enrichAll(scannedSkills, { sources: enrichmentSources });
-      let foundMetadata = false;
-      for (let i = 0; i < scannedSkills.length; i++) {
-        const s = scannedSkills[i];
-        const e = enrichments[i];
-        if (s !== undefined && e !== undefined) {
-          scannedSkills[i] = { ...s, enrichment: e };
-          if (hasEnrichmentData(e)) foundMetadata = true;
-        }
+    const enrichments = await enrichAllWithOutcomes(scannedSkills, { sources: enrichmentSources });
+    const allOutcomes: EnrichmentSourceOutcome[] = [];
+    for (let i = 0; i < scannedSkills.length; i++) {
+      const s = scannedSkills[i];
+      const e = enrichments[i];
+      if (s !== undefined && e !== undefined) {
+        scannedSkills[i] = {
+          ...s,
+          enrichment: e.enrichment,
+          enrichmentOutcomes: e.outcomes,
+        };
+        allOutcomes.push(...e.outcomes);
       }
-      enrichmentStatus = foundMetadata ? 'found' : 'no-metadata';
-      progress.succeedEnrichment(enrichmentSources);
-    } catch {
-      enrichmentStatus = 'unavailable';
-      progress.warnEnrichment();
     }
+    enrichmentOutcomes = summarizeOutcomesBySource(allOutcomes, enrichmentSources);
+    enrichmentStatus = summarizeEnrichmentOutcomes(enrichmentOutcomes);
+    progress.succeedEnrichment(enrichmentOutcomes);
   }
 
   const durationMs = Date.now() - start;
@@ -309,6 +333,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
       verdict: overallVerdict,
     },
     enrichmentStatus,
+    ...(enrichmentOutcomes !== undefined ? { enrichmentOutcomes } : {}),
   };
 
   if (options.html !== undefined) {

@@ -1,7 +1,14 @@
 import chalk from 'chalk';
 import { formatAgentName } from '../agent-names.js';
 import { formatCompromisedPercent } from '../percent.js';
-import type { AgentInfo, ScanResult, ScannedSkill, Severity } from '../types.js';
+import { formatEnrichmentOutcome } from '../progress.js';
+import type {
+  AgentInfo,
+  EnrichmentSourceOutcome,
+  ScanResult,
+  ScannedSkill,
+  Severity,
+} from '../types.js';
 import { installStateLabel } from './install-state.js';
 import { sortScanSkills } from './sort.js';
 
@@ -77,6 +84,11 @@ function compactSeverityBreakdown(stats: ReturnType<typeof findingsStats>): stri
   return parts.join(' · ');
 }
 
+function outcomeEnrichmentLine(outcomes: EnrichmentSourceOutcome[] | undefined): string | null {
+  if (outcomes === undefined || outcomes.length === 0) return null;
+  return outcomes.map((outcome) => formatEnrichmentOutcome(outcome)).join('  ');
+}
+
 function enrichmentLine(skills: ScannedSkill[]): string | null {
   const hasSkillsSh = skills.some((s) => s.enrichment.skillsSh != null);
   const hasGithub = skills.some((s) => s.enrichment.github != null);
@@ -84,7 +96,7 @@ function enrichmentLine(skills: ScannedSkill[]): string | null {
   if (!hasSkillsSh && !hasGithub && !hasDepsDev) return null;
   const parts: string[] = [];
   if (hasSkillsSh) parts.push(`skills.sh ${C_PASS('✓')}`);
-  if (hasGithub) parts.push(`github ${C_PASS('✓')}`);
+  if (hasGithub) parts.push(`GitHub ${C_PASS('✓')}`);
   if (hasDepsDev) parts.push(`deps.dev ${C_PASS('✓')}`);
   return parts.join('  ');
 }
@@ -144,7 +156,8 @@ export function renderSummaryFooter(
       : '0';
   lines.push(`  ${label('Compromised skills')} ${compromisedStr}`);
 
-  const enrich = enrichmentLine(riskOrderedSkills);
+  const enrich =
+    outcomeEnrichmentLine(result.enrichmentOutcomes) ?? enrichmentLine(riskOrderedSkills);
   if (enrich) {
     lines.push(`  ${label('Enrichment')} ${enrich}`);
   } else if (result.enrichmentStatus === 'no-metadata') {

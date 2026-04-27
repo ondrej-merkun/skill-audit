@@ -43,6 +43,10 @@ async function resolveSlug(skill: Skill): Promise<string | null> {
   return null;
 }
 
+export async function hasSkillsShQueryInput(skill: Skill): Promise<boolean> {
+  return (await resolveSlug(skill)) !== null;
+}
+
 /** Fetch enrichment from skills.sh audit endpoint. Fail-silent, cached 24h. */
 export async function enrichSkillsSh(skill: Skill): Promise<SkillsShEnrichment | null> {
   const slug = await resolveSlug(skill);

@@ -855,6 +855,23 @@ describe('renderSummaryFooter', () => {
     expect(out).toContain('no metadata found');
   });
 
+  it('uses source outcomes instead of checkmarks when requested sources return no data', () => {
+    const result = makeScanResult({
+      enrichmentStatus: 'no-metadata',
+      enrichmentOutcomes: [
+        { source: 'skillsSh', status: 'no-metadata' },
+        { source: 'github', status: 'no-input' },
+        { source: 'depsdev', status: 'unavailable' },
+      ],
+    });
+    const out = stripAnsi(renderSummaryFooter(result, result.skills));
+    expect(out).toContain('skills.sh no metadata');
+    expect(out).toContain('GitHub no input');
+    expect(out).toContain('deps.dev unavailable');
+    expect(out).not.toContain('skills.sh ✓');
+    expect(out).not.toContain('deps.dev ✓');
+  });
+
   it('explains when enrichment lookup is unavailable', () => {
     const result = makeScanResult({ enrichmentStatus: 'unavailable' });
     const out = stripAnsi(renderSummaryFooter(result, result.skills));

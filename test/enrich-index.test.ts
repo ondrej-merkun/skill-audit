@@ -3,22 +3,37 @@ import type { Skill } from '../packages/cli/src/types.js';
 
 vi.mock('../packages/cli/src/enrich/skills-sh.js', () => ({
   enrichSkillsSh: vi.fn(),
+  hasSkillsShQueryInput: vi.fn(),
 }));
 vi.mock('../packages/cli/src/enrich/github.js', () => ({
   enrichGitHub: vi.fn(),
+  hasGitHubQueryInput: vi.fn(),
 }));
 vi.mock('../packages/cli/src/enrich/deps-dev.js', () => ({
   enrichDepsDev: vi.fn(),
+  hasDepsDevQueryInput: vi.fn(),
 }));
 
 const { enrichSkillsSh } = await import('../packages/cli/src/enrich/skills-sh.js');
+const { hasSkillsShQueryInput } = await import('../packages/cli/src/enrich/skills-sh.js');
 const { enrichGitHub } = await import('../packages/cli/src/enrich/github.js');
+const { hasGitHubQueryInput } = await import('../packages/cli/src/enrich/github.js');
 const { enrichDepsDev } = await import('../packages/cli/src/enrich/deps-dev.js');
-const { enrichSkill, enrichAll } = await import('../packages/cli/src/enrich/index.js');
+const { hasDepsDevQueryInput } = await import('../packages/cli/src/enrich/deps-dev.js');
+const {
+  enrichSkill,
+  enrichSkillWithOutcomes,
+  enrichAll,
+  skippedEnrichmentOutcomes,
+  summarizeEnrichmentOutcomes,
+} = await import('../packages/cli/src/enrich/index.js');
 
 const mockEnrichSkillsSh = vi.mocked(enrichSkillsSh);
 const mockEnrichGitHub = vi.mocked(enrichGitHub);
 const mockEnrichDepsDev = vi.mocked(enrichDepsDev);
+const mockHasSkillsShQueryInput = vi.mocked(hasSkillsShQueryInput);
+const mockHasGitHubQueryInput = vi.mocked(hasGitHubQueryInput);
+const mockHasDepsDevQueryInput = vi.mocked(hasDepsDevQueryInput);
 
 function makeSkill(overrides: Partial<Skill> = {}): Skill {
   return {
@@ -37,6 +52,9 @@ function makeSkill(overrides: Partial<Skill> = {}): Skill {
 describe('enrichSkill', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockHasSkillsShQueryInput.mockResolvedValue(true);
+    mockHasGitHubQueryInput.mockResolvedValue(true);
+    mockHasDepsDevQueryInput.mockResolvedValue(true);
   });
 
   it('should aggregate enrichment from all three sources', async () => {
@@ -101,9 +119,99 @@ describe('enrichSkill', () => {
   });
 });
 
+describe('enrichSkillWithOutcomes', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockHasSkillsShQueryInput.mockResolvedValue(true);
+    mockHasGitHubQueryInput.mockResolvedValue(true);
+    mockHasDepsDevQueryInput.mockResolvedValue(true);
+  });
+
+  it('tracks found data per source', async () => {
+    mockEnrichSkillsSh.mockResolvedValue({ gen: 'human', socketAlerts: 0, snyk: 'A' });
+    mockEnrichGitHub.mockResolvedValue({ stars: 100, ageDays: 365, contributors: 5 });
+    mockEnrichDepsDev.mockResolvedValue({ scorecardScore: 8.5, osvAdvisories: 0 });
+
+    const result = await enrichSkillWithOutcomes(makeSkill());
+
+    expect(result.enrichment.github).toEqual({ stars: 100, ageDays: 365, contributors: 5 });
+    expect(result.outcomes).toEqual([
+      { source: 'skillsSh', status: 'found' },
+      { source: 'github', status: 'found' },
+      { source: 'depsdev', status: 'found' },
+    ]);
+  });
+
+  it('tracks no remote metadata without adding data', async () => {
+    mockEnrichSkillsSh.mockResolvedValue(null);
+    mockEnrichGitHub.mockResolvedValue(null);
+    mockEnrichDepsDev.mockResolvedValue(null);
+
+    const result = await enrichSkillWithOutcomes(makeSkill());
+
+    expect(result.enrichment).toEqual({});
+    expect(result.outcomes).toEqual([
+      { source: 'skillsSh', status: 'no-metadata', reason: 'no metadata found' },
+      { source: 'github', status: 'no-metadata', reason: 'no metadata found' },
+      { source: 'depsdev', status: 'no-metadata', reason: 'no metadata found' },
+    ]);
+  });
+
+  it('tracks missing local query input separately from no remote metadata', async () => {
+    mockHasSkillsShQueryInput.mockResolvedValue(false);
+    mockHasGitHubQueryInput.mockResolvedValue(false);
+    mockHasDepsDevQueryInput.mockResolvedValue(false);
+
+    const result = await enrichSkillWithOutcomes(makeSkill());
+
+    expect(mockEnrichSkillsSh).not.toHaveBeenCalled();
+    expect(mockEnrichGitHub).not.toHaveBeenCalled();
+    expect(mockEnrichDepsDev).not.toHaveBeenCalled();
+    expect(result.enrichment).toEqual({});
+    expect(result.outcomes).toEqual([
+      { source: 'skillsSh', status: 'no-input', reason: 'no local metadata to query' },
+      { source: 'github', status: 'no-input', reason: 'no local metadata to query' },
+      { source: 'depsdev', status: 'no-input', reason: 'no local metadata to query' },
+    ]);
+  });
+
+  it('tracks timeout or provider errors as unavailable', async () => {
+    mockEnrichSkillsSh.mockRejectedValue(new Error('timeout'));
+    mockEnrichGitHub.mockResolvedValue(null);
+    mockEnrichDepsDev.mockRejectedValue(new Error('network'));
+
+    const result = await enrichSkillWithOutcomes(makeSkill());
+
+    expect(result.outcomes).toEqual([
+      { source: 'skillsSh', status: 'unavailable', reason: 'lookup failed or timed out' },
+      { source: 'github', status: 'no-metadata', reason: 'no metadata found' },
+      { source: 'depsdev', status: 'unavailable', reason: 'lookup failed or timed out' },
+    ]);
+  });
+
+  it('can summarize no-input, stale-cache, and offline source outcomes', () => {
+    expect(
+      summarizeEnrichmentOutcomes([
+        { source: 'skillsSh', status: 'no-input' },
+        { source: 'github', status: 'no-metadata' },
+        { source: 'depsdev', status: 'unavailable' },
+      ])
+    ).toBe('unavailable');
+    expect(summarizeEnrichmentOutcomes([{ source: 'github', status: 'stale-cache' }])).toBe(
+      'found'
+    );
+    expect(skippedEnrichmentOutcomes(['skillsSh'])).toEqual([
+      { source: 'skillsSh', status: 'skipped-offline', reason: 'offline mode is active' },
+    ]);
+  });
+});
+
 describe('enrichAll', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockHasSkillsShQueryInput.mockResolvedValue(true);
+    mockHasGitHubQueryInput.mockResolvedValue(true);
+    mockHasDepsDevQueryInput.mockResolvedValue(true);
   });
 
   it('should return an enrichment object per skill', async () => {

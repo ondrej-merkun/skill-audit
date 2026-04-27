@@ -17,11 +17,32 @@ vi.mock('../packages/cli/src/rules/engine.js', () => ({
 }));
 
 vi.mock('../packages/cli/src/enrich/index.js', () => ({
-  enrichAll: vi.fn(async (skills: Skill[]) => skills.map(() => ({}))),
+  enrichAllWithOutcomes: vi.fn(async (skills: Skill[]) =>
+    skills.map(() => ({
+      enrichment: {},
+      outcomes: [
+        { source: 'skillsSh', status: 'no-metadata' },
+        { source: 'github', status: 'no-metadata' },
+        { source: 'depsdev', status: 'no-metadata' },
+      ],
+    }))
+  ),
+  skippedEnrichmentOutcomes: vi.fn((sources: string[]) =>
+    sources.map((source) => ({
+      source,
+      status: 'skipped-offline',
+      reason: 'offline mode is active',
+    }))
+  ),
+  summarizeEnrichmentOutcomes: vi.fn((outcomes: Array<{ status: string }>) => {
+    if (outcomes.some((o) => o.status === 'found' || o.status === 'stale-cache')) return 'found';
+    if (outcomes.some((o) => o.status === 'unavailable')) return 'unavailable';
+    return 'no-metadata';
+  }),
 }));
 
 import { discoverAll } from '../packages/cli/src/discovery/index.js';
-import { enrichAll } from '../packages/cli/src/enrich/index.js';
+import { enrichAllWithOutcomes } from '../packages/cli/src/enrich/index.js';
 import { runRules } from '../packages/cli/src/rules/engine.js';
 import { runScan } from '../packages/cli/src/commands/scan.js';
 
@@ -74,7 +95,16 @@ describe('runScan flag wiring', () => {
       return true;
     });
     vi.mocked(runRules).mockResolvedValue([]);
-    vi.mocked(enrichAll).mockImplementation(async (skills) => skills.map(() => ({})));
+    vi.mocked(enrichAllWithOutcomes).mockImplementation(async (skills) =>
+      skills.map(() => ({
+        enrichment: {},
+        outcomes: [
+          { source: 'skillsSh', status: 'no-metadata' },
+          { source: 'github', status: 'no-metadata' },
+          { source: 'depsdev', status: 'no-metadata' },
+        ],
+      }))
+    );
   });
 
   afterEach(() => {
@@ -300,7 +330,7 @@ describe('runScan flag wiring', () => {
     expect(out).toContain('skills');
     expect(out).toMatch(/PASS|REVIEW|FAIL/);
     expect(out).not.toContain('Enrichment');
-    expect(enrichAll).not.toHaveBeenCalled();
+    expect(enrichAllWithOutcomes).not.toHaveBeenCalled();
   });
 
   it('--json takes precedence over --summary', async () => {
@@ -315,7 +345,7 @@ describe('runScan flag wiring', () => {
 
     await runScan({});
 
-    expect(enrichAll).toHaveBeenCalledWith(expect.any(Array), {
+    expect(enrichAllWithOutcomes).toHaveBeenCalledWith(expect.any(Array), {
       sources: ['skillsSh', 'github', 'depsdev'],
     });
   });
@@ -335,29 +365,53 @@ describe('runScan flag wiring', () => {
     expect(stdout).not.toContain('Scanning skills');
     expect(stderr).toContain('Scanning skills 1/2');
     expect(stderr).toContain('Scanning skills 2/2');
-    expect(stderr).toContain('Enriching with skills.sh, github, deps.dev');
+    expect(stderr).toContain('Enriching with skills.sh, GitHub, deps.dev');
+    expect(stderr).toContain('skills.sh no metadata');
+    expect(stderr).toContain('deps.dev no metadata');
+    expect(stderr).not.toContain('skills.sh ✓');
+    expect(stderr).not.toContain('deps.dev ✓');
   });
 
   it('default scan explains when selected enrichment sources find no metadata', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
-    vi.mocked(enrichAll).mockResolvedValue([{}]);
+    vi.mocked(enrichAllWithOutcomes).mockResolvedValue([
+      {
+        enrichment: {},
+        outcomes: [
+          { source: 'skillsSh', status: 'no-metadata' },
+          { source: 'github', status: 'no-metadata' },
+          { source: 'depsdev', status: 'no-metadata' },
+        ],
+      },
+    ]);
 
     await runScan({});
 
     const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('Enrichment');
-    expect(out).toContain('no metadata found');
+    expect(out).toContain('skills.sh no metadata');
+    expect(out).toContain('deps.dev no metadata');
   });
 
   it('default scan explains when aggregate enrichment lookup fails', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
-    vi.mocked(enrichAll).mockRejectedValue(new Error('timeout'));
+    vi.mocked(enrichAllWithOutcomes).mockResolvedValue([
+      {
+        enrichment: {},
+        outcomes: [
+          { source: 'skillsSh', status: 'unavailable' },
+          { source: 'github', status: 'unavailable' },
+          { source: 'depsdev', status: 'unavailable' },
+        ],
+      },
+    ]);
 
     await runScan({});
 
     const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('Enrichment');
-    expect(out).toContain('lookup failed or timed out');
+    expect(out).toContain('skills.sh unavailable');
+    expect(out).toContain('deps.dev unavailable');
   });
 
   it('--json requests all enrichment sources for machine output', async () => {
@@ -365,7 +419,7 @@ describe('runScan flag wiring', () => {
 
     await runScan({ json: true });
 
-    expect(enrichAll).toHaveBeenCalledWith(expect.any(Array), {
+    expect(enrichAllWithOutcomes).toHaveBeenCalledWith(expect.any(Array), {
       sources: ['skillsSh', 'github', 'depsdev'],
     });
   });
@@ -377,7 +431,7 @@ describe('runScan flag wiring', () => {
 
       await runScan({ html });
 
-      expect(enrichAll).toHaveBeenCalledWith(expect.any(Array), {
+      expect(enrichAllWithOutcomes).toHaveBeenCalledWith(expect.any(Array), {
         sources: ['skillsSh', 'github', 'depsdev'],
       });
     });

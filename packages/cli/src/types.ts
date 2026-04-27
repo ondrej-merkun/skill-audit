@@ -89,6 +89,22 @@ export type Enrichment = {
   depsdev?: DepsDevEnrichment;
 };
 
+export type EnrichmentSourceKey = 'skillsSh' | 'github' | 'depsdev';
+
+export type EnrichmentSourceStatus =
+  | 'found'
+  | 'stale-cache'
+  | 'no-input'
+  | 'no-metadata'
+  | 'unavailable'
+  | 'skipped-offline';
+
+export type EnrichmentSourceOutcome = {
+  source: EnrichmentSourceKey;
+  status: EnrichmentSourceStatus;
+  reason?: string;
+};
+
 export type EnrichmentStatus =
   | 'not-run'
   | 'skipped-offline'
@@ -112,6 +128,7 @@ export type SkillSummary = {
 export type ScannedSkill = Skill & {
   findings: Finding[];
   enrichment: Enrichment;
+  enrichmentOutcomes?: EnrichmentSourceOutcome[];
   summary: SkillSummary;
   ignored?: true;
 };
@@ -142,4 +159,5 @@ export type ScanResult = {
   skills: ScannedSkill[];
   summary: ScanSummary;
   enrichmentStatus?: EnrichmentStatus;
+  enrichmentOutcomes?: EnrichmentSourceOutcome[];
 };
