@@ -218,7 +218,7 @@ Output comparison contract:
     `node packages/cli/dist/index.js scan --include-marketplaces` against a temp
     fixture and inspect the first screen for clear labels.
 
-- [ ] **4** Consolidate marketplace docs, help, and cross-command regression
+- [x] **4** Consolidate marketplace docs, help, and cross-command regression
   coverage.
 
   After both commands support the opt-in flag, make the user-facing contract
