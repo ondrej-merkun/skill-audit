@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import type { AgentDiscovery, Skill } from '../types.js';
+import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
+import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
 const AGENT_ID = 'cross-agent';
@@ -56,7 +57,7 @@ const agentsMdSweepDiscovery: AgentDiscovery = {
     return true;
   },
 
-  async discoverSkills(): Promise<Skill[]> {
+  async discoverSkills(options: DiscoverSkillsOptions = {}): Promise<Skill[]> {
     const cwd = getCwd();
     const skills: Skill[] = [];
     const seen = new Set<string>();
@@ -65,19 +66,22 @@ const agentsMdSweepDiscovery: AgentDiscovery = {
       for (const filename of TARGET_FILENAMES) {
         const filePath = join(dir, filename);
         if (seen.has(filePath)) continue;
+        if (shouldSkipMarketplacePath(filePath, options.includeMarketplaces)) continue;
         if (!(await pathExists(filePath))) continue;
         seen.add(filePath);
 
-        skills.push({
-          id: makeId(filePath),
-          agentId: AGENT_ID,
-          name: filename,
-          path: filePath,
-          manifestPath: filePath,
-          format: 'agents-md',
-          scope: 'project',
-          treeSha256: await computeTreeSha256(filePath),
-        });
+        skills.push(
+          withInstallState({
+            id: makeId(filePath),
+            agentId: AGENT_ID,
+            name: filename,
+            path: filePath,
+            manifestPath: filePath,
+            format: 'agents-md',
+            scope: 'project',
+            treeSha256: await computeTreeSha256(filePath),
+          })
+        );
       }
     }
 

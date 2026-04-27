@@ -7,6 +7,7 @@ import {
   discoverAll,
   initDefaultPlugins,
   isPluginCachePath,
+  isPluginMarketplacePath,
   registerPlugin,
 } from '../packages/cli/src/discovery/index.js';
 import type { AgentDiscovery, Skill } from '../packages/cli/src/types.js';
@@ -19,6 +20,7 @@ const makeSkill = (overrides: Partial<Skill> = {}): Skill => ({
   manifestPath: null,
   format: 'SKILL.md',
   scope: 'user',
+  installState: 'installed',
   treeSha256: 'abc123',
   ...overrides,
 });
@@ -128,6 +130,62 @@ describe('discoverAll', () => {
     expect(selectedDiscoverSkills).toHaveBeenCalledTimes(1);
     expect(skippedIsInstalled).not.toHaveBeenCalled();
     expect(skippedDiscoverSkills).not.toHaveBeenCalled();
+  });
+
+  it('passes includeMarketplaces through to discovery plugins', async () => {
+    const discoverSkills = vi.fn(async () => [makeSkill()]);
+    registerPlugin({
+      id: 'plugin-a',
+      displayName: 'Plugin A',
+      isInstalled: async () => true,
+      discoverSkills,
+    });
+
+    await discoverAll({ includeMarketplaces: true });
+
+    expect(discoverSkills).toHaveBeenCalledWith({ includeMarketplaces: true });
+  });
+
+  it('filters marketplace inventory by default as a final registry guard', async () => {
+    const installedSkill = makeSkill({
+      id: 'installed',
+      path: '/home/user/.claude/plugins/vendor/tool/skills/audit',
+      treeSha256: 'installed-tree',
+    });
+    const marketplaceSkill = makeSkill({
+      id: 'marketplace',
+      path: '/home/user/.claude/plugins/marketplaces/vendor/tool/skills/audit',
+      installState: 'marketplace',
+      treeSha256: 'marketplace-tree',
+    });
+
+    registerPlugin({
+      id: 'plugin-a',
+      displayName: 'Plugin A',
+      isInstalled: async () => true,
+      discoverSkills: async () => [installedSkill, marketplaceSkill],
+    });
+
+    const skills = await discoverAll();
+    expect(skills).toEqual([installedSkill]);
+  });
+
+  it('includes and labels marketplace inventory when explicitly requested', async () => {
+    const marketplaceSkill = makeSkill({
+      id: 'marketplace',
+      path: '/home/user/.claude/plugins/marketplaces/vendor/tool/skills/audit',
+      treeSha256: 'marketplace-tree',
+    });
+
+    registerPlugin({
+      id: 'plugin-a',
+      displayName: 'Plugin A',
+      isInstalled: async () => true,
+      discoverSkills: async () => [marketplaceSkill],
+    });
+
+    const skills = await discoverAll({ includeMarketplaces: true });
+    expect(skills).toEqual([{ ...marketplaceSkill, installState: 'marketplace' }]);
   });
 
   it('deduplicates non-empty tree hashes and preserves duplicate paths', async () => {
@@ -289,6 +347,34 @@ describe('discoverAll', () => {
       {
         ...installedPlugin,
         alsoInstalledAt: [claudeCache.path, codexCache.path],
+      },
+    ]);
+  });
+
+  it('prefers installed paths over marketplace paths for duplicate content', async () => {
+    const marketplace = makeSkill({
+      id: 'marketplace-skill',
+      path: '/home/user/.claude/plugins/marketplaces/vendor/security-helper/skills/audit',
+      treeSha256: 'same-tree',
+    });
+    const installed = makeSkill({
+      id: 'installed-skill',
+      path: '/home/user/.claude/plugins/vendor/security-helper/skills/audit',
+      treeSha256: 'same-tree',
+    });
+
+    registerPlugin({
+      id: 'plugin-a',
+      displayName: 'Plugin A',
+      isInstalled: async () => true,
+      discoverSkills: async () => [marketplace, installed],
+    });
+
+    const skills = await discoverAll({ includeMarketplaces: true });
+    expect(skills).toEqual([
+      {
+        ...installed,
+        alsoInstalledAt: [marketplace.path],
       },
     ]);
   });
@@ -493,5 +579,27 @@ describe('isPluginCachePath', () => {
     expect(isPluginCachePath('/home/user/.claude/skills/cache/vendor/skill')).toBe(false);
     expect(isPluginCachePath('/home/user/.claude/plugins/vendor/cache/skill')).toBe(false);
     expect(isPluginCachePath('/home/user/.claude/plugins/vendor/skills/cache')).toBe(false);
+  });
+});
+
+describe('isPluginMarketplacePath', () => {
+  it('matches only adjacent plugins/marketplaces path segments', () => {
+    expect(isPluginMarketplacePath('/home/user/.claude/plugins/marketplaces/vendor/skill')).toBe(
+      true
+    );
+    expect(
+      isPluginMarketplacePath('C:\\Users\\user\\.codex\\plugins\\marketplaces\\vendor\\skill')
+    ).toBe(true);
+
+    expect(isPluginMarketplacePath('/home/user/.claude/skills/marketplaces/vendor/skill')).toBe(
+      false
+    );
+    expect(isPluginMarketplacePath('/home/user/.claude/marketplaces/vendor/skill')).toBe(false);
+    expect(isPluginMarketplacePath('/home/user/.claude/plugins/vendor/marketplaces/skill')).toBe(
+      false
+    );
+    expect(isPluginMarketplacePath('/home/user/.claude/plugins/vendor/skills/marketplaces')).toBe(
+      false
+    );
   });
 });

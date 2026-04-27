@@ -7,8 +7,12 @@ export interface AgentDiscovery {
   id: string;
   displayName: string;
   isInstalled(): Promise<boolean>;
-  discoverSkills(): Promise<Skill[]>;
+  discoverSkills(options?: DiscoverSkillsOptions): Promise<Skill[]>;
 }
+
+export type DiscoverSkillsOptions = {
+  includeMarketplaces?: boolean;
+};
 
 export type Skill = {
   id: string; // stable hash of agentId + path
@@ -31,6 +35,7 @@ export type Skill = {
     | 'gemini-command-toml'
     | 'gemini-agent-md';
   scope: 'user' | 'project' | 'managed';
+  installState?: 'installed' | 'marketplace';
   treeSha256: string;
   trusted?: boolean;
   metadata?: Record<string, unknown>;

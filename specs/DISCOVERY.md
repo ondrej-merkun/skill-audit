@@ -120,6 +120,14 @@ Report each as a `Skill` with `agentId: "cross-agent"` and
 3. When a project's `.claude/` directory contains a symlink to a
    user-global skill, follow the symlink and mark the skill with
    `isSymlink: true` in output.
+4. Plugin marketplace inventory is inactive by default. Any path whose
+   normalized segments contain adjacent `plugins` and `marketplaces`
+   segments is locally available marketplace payload, not an installed
+   or exposed skill. Default discovery must prune those subtrees before
+   reading prompt-bearing files and must filter any marketplace path an
+   individual plugin still emits. Callers may opt in to include these
+   skills; included rows carry `installState: "marketplace"`. All other
+   discovered skills default to `installState: "installed"`.
 
 ## Path expansion
 

@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import type { AgentDiscovery, Skill } from '../types.js';
+import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
+import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
 const AGENT_ID = 'gemini';
@@ -127,7 +128,7 @@ export async function parseGeminiExtensionManifest(
   };
 }
 
-async function walkFiles(root: string): Promise<string[]> {
+async function walkFiles(root: string, options: DiscoverSkillsOptions = {}): Promise<string[]> {
   const files: string[] = [];
 
   async function walk(dir: string): Promise<void> {
@@ -141,6 +142,7 @@ async function walkFiles(root: string): Promise<string[]> {
     for (const entry of entries) {
       const fullPath = join(dir, entry.name);
       if (entry.isDirectory()) {
+        if (shouldSkipMarketplacePath(fullPath, options.includeMarketplaces)) continue;
         await walk(fullPath);
       } else if (entry.isFile()) {
         files.push(fullPath);
@@ -153,8 +155,14 @@ async function walkFiles(root: string): Promise<string[]> {
   return files;
 }
 
-async function discoverExtensionManifests(dir: string, scope: Skill['scope']): Promise<Skill[]> {
-  const files = (await walkFiles(dir)).filter((file) => basename(file) === 'gemini-extension.json');
+async function discoverExtensionManifests(
+  dir: string,
+  scope: Skill['scope'],
+  options: DiscoverSkillsOptions = {}
+): Promise<Skill[]> {
+  const files = (await walkFiles(dir, options)).filter(
+    (file) => basename(file) === 'gemini-extension.json'
+  );
   const skills: Skill[] = [];
 
   for (const manifestPath of files) {
@@ -169,51 +177,65 @@ async function discoverExtensionManifests(dir: string, scope: Skill['scope']): P
     const parsed = await parseGeminiExtensionManifest(raw, extensionDir);
     if (parsed === null) continue;
 
-    skills.push({
-      id: makeId(extensionDir),
-      agentId: AGENT_ID,
-      name: parsed.name ?? basename(extensionDir),
-      path: extensionDir,
-      manifestPath,
-      format: 'gemini-extension-json',
-      scope,
-      treeSha256: await computeTreeSha256(extensionDir),
-      metadata: parsed.metadata,
-    });
+    skills.push(
+      withInstallState({
+        id: makeId(extensionDir),
+        agentId: AGENT_ID,
+        name: parsed.name ?? basename(extensionDir),
+        path: extensionDir,
+        manifestPath,
+        format: 'gemini-extension-json',
+        scope,
+        treeSha256: await computeTreeSha256(extensionDir),
+        metadata: parsed.metadata,
+      })
+    );
   }
 
   return skills;
 }
 
-async function discoverCommandTomlFiles(dir: string, scope: Skill['scope']): Promise<Skill[]> {
-  const files = (await walkFiles(dir)).filter((file) => file.endsWith('.toml'));
+async function discoverCommandTomlFiles(
+  dir: string,
+  scope: Skill['scope'],
+  options: DiscoverSkillsOptions = {}
+): Promise<Skill[]> {
+  const files = (await walkFiles(dir, options)).filter((file) => file.endsWith('.toml'));
   return Promise.all(
-    files.map(async (filePath) => ({
-      id: makeId(filePath),
-      agentId: AGENT_ID,
-      name: basename(filePath, '.toml'),
-      path: filePath,
-      manifestPath: filePath,
-      format: 'gemini-command-toml' as const,
-      scope,
-      treeSha256: await computeTreeSha256(filePath),
-    }))
+    files.map(async (filePath) =>
+      withInstallState({
+        id: makeId(filePath),
+        agentId: AGENT_ID,
+        name: basename(filePath, '.toml'),
+        path: filePath,
+        manifestPath: filePath,
+        format: 'gemini-command-toml' as const,
+        scope,
+        treeSha256: await computeTreeSha256(filePath),
+      })
+    )
   );
 }
 
-async function discoverAgentMarkdownFiles(dir: string, scope: Skill['scope']): Promise<Skill[]> {
-  const files = (await walkFiles(dir)).filter((file) => file.endsWith('.md'));
+async function discoverAgentMarkdownFiles(
+  dir: string,
+  scope: Skill['scope'],
+  options: DiscoverSkillsOptions = {}
+): Promise<Skill[]> {
+  const files = (await walkFiles(dir, options)).filter((file) => file.endsWith('.md'));
   return Promise.all(
-    files.map(async (filePath) => ({
-      id: makeId(filePath),
-      agentId: AGENT_ID,
-      name: basename(filePath, '.md'),
-      path: filePath,
-      manifestPath: filePath,
-      format: 'gemini-agent-md' as const,
-      scope,
-      treeSha256: await computeTreeSha256(filePath),
-    }))
+    files.map(async (filePath) =>
+      withInstallState({
+        id: makeId(filePath),
+        agentId: AGENT_ID,
+        name: basename(filePath, '.md'),
+        path: filePath,
+        manifestPath: filePath,
+        format: 'gemini-agent-md' as const,
+        scope,
+        treeSha256: await computeTreeSha256(filePath),
+      })
+    )
   );
 }
 
@@ -256,20 +278,26 @@ const geminiDiscovery: AgentDiscovery = {
     return pathExists(join(getHomeDir(), '.gemini'));
   },
 
-  async discoverSkills(): Promise<Skill[]> {
+  async discoverSkills(options: DiscoverSkillsOptions = {}): Promise<Skill[]> {
     const home = getHomeDir();
     const cwd = getCwd();
     const userBase = join(home, '.gemini');
     const projectBase = join(cwd, '.gemini');
     const skills: Skill[] = [];
 
-    skills.push(...(await discoverExtensionManifests(join(userBase, 'extensions'), 'user')));
-    skills.push(...(await discoverCommandTomlFiles(join(userBase, 'commands'), 'user')));
-    skills.push(...(await discoverAgentMarkdownFiles(join(userBase, 'agents'), 'user')));
+    skills.push(
+      ...(await discoverExtensionManifests(join(userBase, 'extensions'), 'user', options))
+    );
+    skills.push(...(await discoverCommandTomlFiles(join(userBase, 'commands'), 'user', options)));
+    skills.push(...(await discoverAgentMarkdownFiles(join(userBase, 'agents'), 'user', options)));
     skills.push(...(await discoverMcpJson(join(userBase, 'settings.json'), 'user')));
 
-    skills.push(...(await discoverExtensionManifests(join(projectBase, 'extensions'), 'project')));
-    skills.push(...(await discoverCommandTomlFiles(join(projectBase, 'commands'), 'project')));
+    skills.push(
+      ...(await discoverExtensionManifests(join(projectBase, 'extensions'), 'project', options))
+    );
+    skills.push(
+      ...(await discoverCommandTomlFiles(join(projectBase, 'commands'), 'project', options))
+    );
 
     return skills;
   },

@@ -6,6 +6,7 @@ import codexDiscovery from './codex.js';
 import copilotDiscovery from './copilot.js';
 import cursorDiscovery from './cursor.js';
 import geminiDiscovery from './gemini.js';
+import { isPluginMarketplacePath, withInstallState } from './marketplace.js';
 import { addModifiedAt } from './modified-at.js';
 
 // Registry starts empty so test files get a clean slate on import.
@@ -37,8 +38,18 @@ export function isPluginCachePath(pathLike: string): boolean {
   );
 }
 
+export { isPluginMarketplacePath };
+
 function selectPrimaryPath(paths: Iterable<string>): string {
   const sortedPaths = [...paths].sort();
+  const nonMarketplaceInstalledPath = sortedPaths.find(
+    (path) => !isPluginMarketplacePath(path) && !isPluginCachePath(path)
+  );
+  if (nonMarketplaceInstalledPath !== undefined) return nonMarketplaceInstalledPath;
+
+  const nonMarketplacePath = sortedPaths.find((path) => !isPluginMarketplacePath(path));
+  if (nonMarketplacePath !== undefined) return nonMarketplacePath;
+
   const nonCachePath = sortedPaths.find((path) => !isPluginCachePath(path));
   return nonCachePath ?? sortedPaths[0] ?? '';
 }
@@ -94,6 +105,7 @@ export function dedupeDiscoveredSkills(skills: Skill[]): Skill[] {
     output[group.outputIndex] = {
       ...primaryWithoutAliases,
       path: primaryPath,
+      installState: isPluginMarketplacePath(primaryPath) ? 'marketplace' : 'installed',
       ...(alsoInstalledAt.length > 0 ? { alsoInstalledAt } : {}),
     };
   }
@@ -124,6 +136,7 @@ export function initDefaultPlugins(): void {
  */
 export type DiscoverAllOptions = {
   agent?: string;
+  includeMarketplaces?: boolean;
   onProgress?: DiscoveryProgressCallback;
 };
 
@@ -158,13 +171,21 @@ export async function discoverAll(options: DiscoverAllOptions = {}): Promise<Ski
     }
 
     try {
-      const skills = await addModifiedAt(await plugin.discoverSkills());
-      results.push(...skills);
+      const discoverOptions =
+        options.includeMarketplaces === true ? { includeMarketplaces: true } : {};
+      const skills = await addModifiedAt(
+        (await plugin.discoverSkills(discoverOptions)).map(withInstallState)
+      );
+      const visibleSkills =
+        options.includeMarketplaces === true
+          ? skills
+          : skills.filter((skill) => !isPluginMarketplacePath(skill.path));
+      results.push(...visibleSkills);
       options.onProgress?.({
         type: 'agent-done',
         agentId: plugin.id,
         displayName: plugin.displayName,
-        skillCount: skills.length,
+        skillCount: visibleSkills.length,
       });
     } catch (err) {
       // Fail-silent: one broken plugin must not abort the entire scan

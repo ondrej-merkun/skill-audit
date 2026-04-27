@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, dirname, join, relative } from 'node:path';
-import type { AgentDiscovery, Skill } from '../types.js';
+import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
+import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
 import { fallbackSkillNameFromDirectory } from './names.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
@@ -66,7 +67,7 @@ async function skillFromFile(
   };
 }
 
-async function walkFiles(root: string): Promise<string[]> {
+async function walkFiles(root: string, options: DiscoverSkillsOptions = {}): Promise<string[]> {
   const files: string[] = [];
 
   async function walk(dir: string): Promise<void> {
@@ -80,6 +81,7 @@ async function walkFiles(root: string): Promise<string[]> {
     for (const entry of entries) {
       const fullPath = join(dir, entry.name);
       if (entry.isDirectory()) {
+        if (shouldSkipMarketplacePath(fullPath, options.includeMarketplaces)) continue;
         await walk(fullPath);
       } else if (entry.isFile()) {
         files.push(fullPath);
@@ -98,16 +100,26 @@ function pathSegments(root: string, filePath: string): string[] {
     .filter(Boolean);
 }
 
-async function discoverSkillDirs(dir: string, scope: Skill['scope']): Promise<Skill[]> {
-  const files = await walkFiles(dir);
+async function discoverSkillDirs(
+  dir: string,
+  scope: Skill['scope'],
+  options: DiscoverSkillsOptions = {}
+): Promise<Skill[]> {
+  const files = await walkFiles(dir, options);
   const manifests = files.filter((file) => basename(file) === 'SKILL.md');
   return Promise.all(
-    manifests.map((manifest) => skillFromDir(dirname(manifest), 'SKILL.md', scope, 'SKILL.md'))
+    manifests.map(async (manifest) =>
+      withInstallState(await skillFromDir(dirname(manifest), 'SKILL.md', scope, 'SKILL.md'))
+    )
   );
 }
 
-async function discoverPluginTree(dir: string, scope: Skill['scope']): Promise<Skill[]> {
-  const files = await walkFiles(dir);
+async function discoverPluginTree(
+  dir: string,
+  scope: Skill['scope'],
+  options: DiscoverSkillsOptions = {}
+): Promise<Skill[]> {
+  const files = await walkFiles(dir, options);
   const skills: Skill[] = [];
 
   for (const file of files) {
@@ -115,24 +127,34 @@ async function discoverPluginTree(dir: string, scope: Skill['scope']): Promise<S
     const segments = pathSegments(dir, file);
 
     if (name === 'SKILL.md') {
-      skills.push(await skillFromDir(dirname(file), 'SKILL.md', scope, 'SKILL.md'));
+      skills.push(
+        withInstallState(await skillFromDir(dirname(file), 'SKILL.md', scope, 'SKILL.md'))
+      );
     } else if (name.endsWith('.md') && segments.includes('commands')) {
-      skills.push(await skillFromFile(file, 'SKILL.md', scope));
+      skills.push(withInstallState(await skillFromFile(file, 'SKILL.md', scope)));
     } else if (name.endsWith('.md') && segments.includes('agents')) {
-      skills.push(await skillFromFile(file, 'agents-md', scope));
+      skills.push(withInstallState(await skillFromFile(file, 'agents-md', scope)));
     }
   }
 
   return skills;
 }
 
-async function discoverCommandFiles(dir: string, scope: Skill['scope']): Promise<Skill[]> {
-  const files = (await walkFiles(dir)).filter((file) => file.endsWith('.md'));
+async function discoverCommandFiles(
+  dir: string,
+  scope: Skill['scope'],
+  options: DiscoverSkillsOptions = {}
+): Promise<Skill[]> {
+  const files = (await walkFiles(dir, options)).filter((file) => file.endsWith('.md'));
   return Promise.all(files.map((f) => skillFromFile(f, 'SKILL.md', scope)));
 }
 
-async function discoverAgentEntries(dir: string, scope: Skill['scope']): Promise<Skill[]> {
-  const files = (await walkFiles(dir)).filter((file) => file.endsWith('.md'));
+async function discoverAgentEntries(
+  dir: string,
+  scope: Skill['scope'],
+  options: DiscoverSkillsOptions = {}
+): Promise<Skill[]> {
+  const files = (await walkFiles(dir, options)).filter((file) => file.endsWith('.md'));
   return Promise.all(
     files.map((file) => {
       if (basename(file) === 'AGENTS.md') {
@@ -233,17 +255,17 @@ const claudeCodeDiscovery: AgentDiscovery = {
     return pathExists(join(getHomeDir(), '.claude'));
   },
 
-  async discoverSkills(): Promise<Skill[]> {
+  async discoverSkills(options: DiscoverSkillsOptions = {}): Promise<Skill[]> {
     const home = getHomeDir();
     const cwd = getCwd();
     const skills: Skill[] = [];
 
     // User-scoped locations under ~/.claude/
     const userBase = join(home, '.claude');
-    skills.push(...(await discoverSkillDirs(join(userBase, 'skills'), 'user')));
-    skills.push(...(await discoverPluginTree(join(userBase, 'plugins'), 'user')));
-    skills.push(...(await discoverCommandFiles(join(userBase, 'commands'), 'user')));
-    skills.push(...(await discoverAgentEntries(join(userBase, 'agents'), 'user')));
+    skills.push(...(await discoverSkillDirs(join(userBase, 'skills'), 'user', options)));
+    skills.push(...(await discoverPluginTree(join(userBase, 'plugins'), 'user', options)));
+    skills.push(...(await discoverCommandFiles(join(userBase, 'commands'), 'user', options)));
+    skills.push(...(await discoverAgentEntries(join(userBase, 'agents'), 'user', options)));
 
     // User-scoped MCP servers from ~/.claude.json
     skills.push(...(await discoverMcpFromClaudeJson(join(home, '.claude.json'))));
@@ -251,10 +273,18 @@ const claudeCodeDiscovery: AgentDiscovery = {
     // Project-scoped: .claude/ subtree in cwd
     const projectClaudeDir = join(cwd, '.claude');
     if (await pathExists(projectClaudeDir)) {
-      skills.push(...(await discoverSkillDirs(join(projectClaudeDir, 'skills'), 'project')));
-      skills.push(...(await discoverPluginTree(join(projectClaudeDir, 'plugins'), 'project')));
-      skills.push(...(await discoverCommandFiles(join(projectClaudeDir, 'commands'), 'project')));
-      skills.push(...(await discoverAgentEntries(join(projectClaudeDir, 'agents'), 'project')));
+      skills.push(
+        ...(await discoverSkillDirs(join(projectClaudeDir, 'skills'), 'project', options))
+      );
+      skills.push(
+        ...(await discoverPluginTree(join(projectClaudeDir, 'plugins'), 'project', options))
+      );
+      skills.push(
+        ...(await discoverCommandFiles(join(projectClaudeDir, 'commands'), 'project', options))
+      );
+      skills.push(
+        ...(await discoverAgentEntries(join(projectClaudeDir, 'agents'), 'project', options))
+      );
     }
 
     // Project-scoped: .mcp.json
@@ -262,7 +292,7 @@ const claudeCodeDiscovery: AgentDiscovery = {
 
     // Project-scoped: .claude-plugin/plugin.json
     const claudePluginDir = join(cwd, '.claude-plugin');
-    skills.push(...(await discoverPluginTree(claudePluginDir, 'project')));
+    skills.push(...(await discoverPluginTree(claudePluginDir, 'project', options)));
 
     return skills;
   },

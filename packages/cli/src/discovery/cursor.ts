@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, join } from 'node:path';
-import type { AgentDiscovery, Skill } from '../types.js';
+import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
 const AGENT_ID = 'cursor';
@@ -112,7 +112,7 @@ const cursorDiscovery: AgentDiscovery = {
     return pathExists(join(getHomeDir(), '.cursor'));
   },
 
-  async discoverSkills(): Promise<Skill[]> {
+  async discoverSkills(_options: DiscoverSkillsOptions = {}): Promise<Skill[]> {
     const home = getHomeDir();
     const cwd = getCwd();
     const skills: Skill[] = [];

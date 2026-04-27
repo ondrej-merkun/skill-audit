@@ -307,6 +307,42 @@ describe('codex: fixture skill tree', () => {
     expect(byName.has('openai')).toBe(false);
   });
 
+  it('excludes Codex plugin marketplace inventory by default', async () => {
+    const marketplaceSkillDir = join(
+      tempHome,
+      'plugins',
+      'marketplaces',
+      'openai',
+      'available-plugin',
+      'skills',
+      'marketplace-helper'
+    );
+    await mkdir(marketplaceSkillDir, { recursive: true });
+    await writeFile(join(marketplaceSkillDir, 'SKILL.md'), '# Marketplace Helper');
+
+    const skills = await codexDiscovery.discoverSkills();
+    expect(skills.map((skill) => skill.name)).not.toContain('marketplace-helper');
+  });
+
+  it('labels Codex plugin marketplace inventory when explicitly included', async () => {
+    const marketplaceSkillDir = join(
+      tempHome,
+      'plugins',
+      'marketplaces',
+      'openai',
+      'available-plugin',
+      'skills',
+      'marketplace-helper'
+    );
+    await mkdir(marketplaceSkillDir, { recursive: true });
+    await writeFile(join(marketplaceSkillDir, 'SKILL.md'), '# Marketplace Helper');
+
+    const skills = await codexDiscovery.discoverSkills({ includeMarketplaces: true });
+    const marketplaceSkill = skills.find((skill) => skill.name === 'marketplace-helper');
+
+    expect(marketplaceSkill?.installState).toBe('marketplace');
+  });
+
   it('does not count plain .codex-plugin/plugin.json and still discovers nested leaves', async () => {
     const pluginDir = join(tempCwd, '.codex-plugin');
     const skillDir = join(pluginDir, 'skills', 'project-helper');

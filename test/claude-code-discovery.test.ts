@@ -100,6 +100,57 @@ describe('claude-code discovery plugin', () => {
     expect(skills.find((s) => s.name === 'reviewer')?.format).toBe('agents-md');
   });
 
+  it('excludes plugin marketplace inventory by default', async () => {
+    const installedDir = join(
+      tempHome,
+      '.claude',
+      'plugins',
+      'vendor',
+      'installed-tool',
+      'skills',
+      'installed-review'
+    );
+    const marketplaceDir = join(
+      tempHome,
+      '.claude',
+      'plugins',
+      'marketplaces',
+      'vendor',
+      'available-tool',
+      'skills',
+      'marketplace-review'
+    );
+    await mkdir(installedDir, { recursive: true });
+    await mkdir(marketplaceDir, { recursive: true });
+    await writeFile(join(installedDir, 'SKILL.md'), '# Installed Review');
+    await writeFile(join(marketplaceDir, 'SKILL.md'), '# Marketplace Review');
+
+    const skills = await claudeCodeDiscovery.discoverSkills();
+
+    expect(skills.map((s) => s.name)).toContain('installed-review');
+    expect(skills.map((s) => s.name)).not.toContain('marketplace-review');
+  });
+
+  it('labels plugin marketplace inventory when explicitly included', async () => {
+    const marketplaceDir = join(
+      tempHome,
+      '.claude',
+      'plugins',
+      'marketplaces',
+      'vendor',
+      'available-tool',
+      'skills',
+      'marketplace-review'
+    );
+    await mkdir(marketplaceDir, { recursive: true });
+    await writeFile(join(marketplaceDir, 'SKILL.md'), '# Marketplace Review');
+
+    const skills = await claudeCodeDiscovery.discoverSkills({ includeMarketplaces: true });
+    const marketplaceSkill = skills.find((s) => s.name === 'marketplace-review');
+
+    expect(marketplaceSkill?.installState).toBe('marketplace');
+  });
+
   it('discovers commands from ~/.claude/commands/', async () => {
     const commandsDir = join(tempHome, '.claude', 'commands');
     await mkdir(commandsDir, { recursive: true });

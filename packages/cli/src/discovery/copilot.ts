@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readdir, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, join } from 'node:path';
-import type { AgentDiscovery, Skill } from '../types.js';
+import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
 const AGENT_ID = 'copilot';
@@ -118,7 +118,7 @@ const copilotDiscovery: AgentDiscovery = {
     return pathExists(join(getHomeDir(), '.copilot'));
   },
 
-  async discoverSkills(): Promise<Skill[]> {
+  async discoverSkills(_options: DiscoverSkillsOptions = {}): Promise<Skill[]> {
     const home = getHomeDir();
     const cwd = getCwd();
     const skills: Skill[] = [];
