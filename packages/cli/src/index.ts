@@ -4,6 +4,8 @@ import type { ExplainOptions } from './commands/explain.js';
 import { runIgnore } from './commands/ignore.js';
 import { runList } from './commands/list.js';
 import type { ListOptions } from './commands/list.js';
+import { runLlmAdd, runLlmCheck, runLlmList } from './commands/llm.js';
+import type { LlmAddOptions, LlmCheckOptions, LlmListOptions } from './commands/llm.js';
 import { runScan } from './commands/scan.js';
 import type { ScanOptions } from './commands/scan.js';
 
@@ -98,6 +100,63 @@ program
   .description('Add a skill to the ignore list (skipped on subsequent scans)')
   .action((nameOrId: string) => {
     runIgnore(nameOrId).catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[skill-audit] fatal: ${msg}\n`);
+      process.exit(2);
+    });
+  });
+
+const llm = program.command('llm').description('Manage local LLM connections');
+
+llm
+  .command('add <name>')
+  .description('Store a named local OpenAI-compatible model configuration')
+  .requiredOption('--base-url <url>', 'loopback OpenAI-compatible server base URL')
+  .requiredOption('--model <id>', 'local model id')
+  .option('--provider <provider>', 'provider type', 'openai-compatible')
+  .option('--timeout <ms>', 'health-check timeout in milliseconds')
+  .option('--context-tokens <tokens>', 'maximum context/token budget')
+  .option('--disabled', 'store the model as disabled')
+  .action((name: string, cmdOpts: Record<string, unknown>) => {
+    const options: Partial<LlmAddOptions> = {
+      provider: typeof cmdOpts.provider === 'string' ? cmdOpts.provider : undefined,
+      baseUrl: typeof cmdOpts.baseUrl === 'string' ? cmdOpts.baseUrl : undefined,
+      model: typeof cmdOpts.model === 'string' ? cmdOpts.model : undefined,
+      timeout: typeof cmdOpts.timeout === 'string' ? cmdOpts.timeout : undefined,
+      contextTokens: typeof cmdOpts.contextTokens === 'string' ? cmdOpts.contextTokens : undefined,
+      disabled: cmdOpts.disabled === true,
+    };
+    runLlmAdd(name, options).catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[skill-audit] fatal: ${msg}\n`);
+      process.exit(2);
+    });
+  });
+
+llm
+  .command('list')
+  .description('List configured local models')
+  .option('--json', 'emit JSON array to stdout')
+  .action((cmdOpts: Record<string, unknown>) => {
+    const options: Partial<LlmListOptions> = {
+      json: cmdOpts.json === true,
+    };
+    runLlmList(options).catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[skill-audit] fatal: ${msg}\n`);
+      process.exit(2);
+    });
+  });
+
+llm
+  .command('check <name>')
+  .description('Verify connectivity for one configured local model')
+  .option('--json', 'emit JSON object to stdout')
+  .action((name: string, cmdOpts: Record<string, unknown>) => {
+    const options: Partial<LlmCheckOptions> = {
+      json: cmdOpts.json === true,
+    };
+    runLlmCheck(name, options).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
       process.stderr.write(`[skill-audit] fatal: ${msg}\n`);
       process.exit(2);
