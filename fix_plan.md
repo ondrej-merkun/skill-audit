@@ -132,7 +132,7 @@ Output comparison contract:
   - Build the CLI and smoke-test default `list` and `scan` against a temp
     project/home containing both installed and marketplace skills.
 
-- [ ] **2** Add `list --include-marketplaces` with compact install-state
+- [x] **2** Add `list --include-marketplaces` with compact install-state
   labeling.
 
   The `list` command should keep its installed-only default, then expose a clear
