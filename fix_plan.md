@@ -532,7 +532,7 @@ Output comparison contract:
     `node packages/cli/dist/index.js llm list`, and
     `node packages/cli/dist/index.js llm check <name>`.
 
-- [ ] **11** Add opt-in single-model LLM review to `scan`.
+- [x] **11** Add opt-in single-model LLM review to `scan`.
 
   Once a local model can be configured and checked, `scan` should be able to ask
   exactly one selected local model for a bounded second opinion on discovered
