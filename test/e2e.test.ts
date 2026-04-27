@@ -622,6 +622,13 @@ describe('e2e: scan flags', () => {
       const listed = JSON.parse(listRun.stdout) as Array<{ name: string }>;
       expect(listed.map((skill) => skill.name).sort()).toEqual(['codex-safe', 'date-parser']);
 
+      const humanListDefault = await runCli(['list'], env);
+      const humanListDefaultOut = stripAnsi(humanListDefault.stdout);
+      expect(humanListDefault.code).toBe(0);
+      expect(humanListDefaultOut).not.toContain('State');
+      expect(humanListDefaultOut).not.toContain('marketplace-override');
+      expect(humanListDefaultOut).not.toContain('codex-marketplace-override');
+
       const listWithMarketplaces = await runCli(['list', '--include-marketplaces', '--json'], env);
       expect(listWithMarketplaces.code).toBe(0);
       expect(listWithMarketplaces.stderr).toBe('');
@@ -654,6 +661,7 @@ describe('e2e: scan flags', () => {
         'codex-safe',
         'date-parser',
       ]);
+      expect(result.skills.every((skill) => skill.install_state === 'installed')).toBe(true);
       expect(scanRun.stdout).not.toContain('marketplace-override');
       expect(scanRun.stdout).not.toContain('codex-marketplace-override');
 

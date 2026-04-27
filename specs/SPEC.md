@@ -213,6 +213,7 @@ interface Skill {
     | 'gemini-agent-md';
   scope: 'user' | 'project' | 'managed';
   treeSha256: string;                // for allowlist matching
+  installState?: 'installed' | 'marketplace';
   alsoInstalledAt?: string[];         // duplicate paths for same content hash
   metadata?: Record<string, unknown>; // agent-specific manifest details
 }
@@ -223,7 +224,7 @@ Adding a new agent = adding one file and registering in `discovery/index.ts`. No
 
 | Agent | User-global paths | Project-local | Manifest |
 |---|---|---|---|
-| **Claude Code** | `~/.claude/skills/*/SKILL.md`; `~/.claude/plugins/<marketplace>/<plugin>/skills/<skill>/SKILL.md` **(recursive — walk to any depth where a SKILL.md is present)**; `~/.claude/plugins/<marketplace>/<plugin>/{agents,commands}/**`; `~/.claude/commands/*.md`; `~/.claude/agents/*.md`; MCP in `~/.claude.json` (inc. `projects.<abs-path>.mcpServers`) | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.mcp.json`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` | `SKILL.md` (YAML+MD), `plugin.json`, `.mcp.json` |
+| **Claude Code** | `~/.claude/skills/*/SKILL.md`; installed plugin payloads under `~/.claude/plugins/<marketplace>/<plugin>/` **(recursive — walk to any depth where a SKILL.md is present)**; `~/.claude/plugins/<marketplace>/<plugin>/{agents,commands}/**`; `~/.claude/commands/*.md`; `~/.claude/agents/*.md`; MCP in `~/.claude.json` (inc. `projects.<abs-path>.mcpServers`). Inactive marketplace inventory under `plugins/marketplaces/` is skipped unless `--include-marketplaces` is set. | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.mcp.json`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` | `SKILL.md` (YAML+MD), `plugin.json`, `.mcp.json` |
 | **OpenAI Codex** | `~/.codex/AGENTS.md`, `~/.codex/AGENTS.override.md`, `~/.codex/config.toml`, `~/.codex/skills/`, `~/.codex/plugins/`, `~/.codex/prompts/`. `$CODEX_HOME` override. | `AGENTS.md` (walked up), `.codex/config.toml` (if trusted) | `AGENTS.md`, `SKILL.md`, TOML `[mcp_servers.*]` |
 | **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, legacy `.cursorrules` | `.mdc`, JSON |
 | **Gemini CLI** | `~/.gemini/extensions/*/gemini-extension.json`, `~/.gemini/commands/*.toml`, `~/.gemini/agents/`, `~/.gemini/settings.json` | `.gemini/extensions/`, `.gemini/commands/`, `GEMINI.md` | `gemini-extension.json` (JSON), `.toml` |
@@ -232,11 +233,16 @@ Adding a new agent = adding one file and registering in `discovery/index.ts`. No
 | **Cline** | VS Code `globalStorage/saoudrizwan.claude-dev/` | `.clinerules/*.md`, legacy `.clinerules`, cross-reads `.cursorrules`, `AGENTS.md`, `CLAUDE.md` | `.md` w/ YAML FM |
 | **Cross-agent (AGENTS.md sweep)** | — | `AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `CONVENTIONS.md` (catches 7+ agents in one pass) | plain `.md` |
 
-**Discovery depth rule.** When a path contains "plugins" or
-"marketplace", walk the full tree and emit one Skill per leaf
-SKILL.md / plugin.json / command .md, not one Skill per intermediate
-directory. On a machine with a marketplace installed, this produces
-hundreds of skills, not tens.
+**Discovery depth rule.** When an installed plugin path contains "plugins",
+walk the full tree and emit one Skill per leaf SKILL.md / plugin.json /
+command .md, not one Skill per intermediate directory.
+
+**Marketplace inventory rule.** A path with adjacent `plugins` and
+`marketplaces` segments is inactive local marketplace inventory, not an
+installed or exposed skill. Default `scan` and `list` prune those subtrees
+before reading prompt-bearing files. `--include-marketplaces` opts in and labels
+those rows with `installState: "marketplace"` / `install_state: "marketplace"`.
+All other discovered skills default to `installed`.
 
 **Active cache rule.** Plugin cache directories are inventory until an
 enabled plugin/config/source proves the cached payload is exposed to an
@@ -528,6 +534,7 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 | `--json` | Machine-readable per the schema below |
 | `--html <file>` | Standalone HTML report |
 | `--summary` | 3-line output for CI logs: `47 skills · 8 compromised · FAIL` |
+| `--include-marketplaces` | Include inactive local marketplace inventory and label rows as marketplace |
 
 ### JSON schema (contract — stable from v0.1)
 ```json
@@ -540,6 +547,7 @@ Single standalone HTML file (inlined CSS + JS). Layout:
     "agent_id": "claude-code",
     "name": "polymarket-trader",
     "path": "/Users/.../skills/polymarket-trader",
+    "install_state": "installed",
     "tree_sha256": "...",
     "allowlisted": false,
     "findings": [{
@@ -567,11 +575,12 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 |---|---|
 | `skill-audit` / `skill-audit scan` | Default — discover and scan all agents, TUI output |
 | `skill-audit scan --agent claude-code` | Restrict to one agent |
-| `skill-audit scan <path>` | Scan a single skill directory |
+| `skill-audit scan --include-marketplaces` | Include inactive local marketplace inventory and label it separately |
 | `skill-audit scan --json` / `--html <file>` / `--summary` | Output formats |
 | `skill-audit scan --offline` | Skip all enrichment |
 | `skill-audit scan --strict` | REVIEW becomes FAIL; exit non-zero |
-| `skill-audit list` | List discovered skills without scanning (fast inventory) |
+| `skill-audit list` | List installed or exposed skills without scanning (fast inventory) |
+| `skill-audit list --include-marketplaces` | Also list inactive local marketplace inventory |
 | `skill-audit explain <skill-name-or-id>` | Detail view (mockup above) |
 | `skill-audit ignore <skill-name>` | Append skill's tree sha256 to `~/.config/skill-audit/ignore.yaml` |
 

@@ -73,9 +73,11 @@ skill-audit explain obfuscated-eval-skill --offline
 skill-audit scan                                      # default scan
 skill-audit scan --offline                           # local-only, no enrichment
 skill-audit scan --agent claude-code                 # restrict discovery
+skill-audit scan --include-marketplaces              # include inactive local marketplace inventory
 skill-audit scan --json -o skill-audit-report.json   # machine-readable report
 skill-audit scan --html skill-audit-report.html      # standalone HTML report
 skill-audit list                                     # inventory without scanning
+skill-audit list --include-marketplaces              # show installed and inactive marketplace skills
 skill-audit ignore <name>                            # suppress a reviewed tree hash
 ```
 
@@ -89,6 +91,11 @@ Codex, Copilot, Cursor, Gemini CLI, and cross-agent instruction files such as
 exfiltration, filesystem access, code execution, obfuscation, hardcoded
 secrets, git-history access, dependency risk, and skill-specific malware
 patterns.
+
+Installed or currently exposed skills are the default scan and list surface.
+Plugin marketplace payloads under `plugins/marketplaces/` are inactive local
+inventory; include them only with `--include-marketplaces`, where output labels
+rows as `installed` or `marketplace`.
 
 Detailed reference:
 

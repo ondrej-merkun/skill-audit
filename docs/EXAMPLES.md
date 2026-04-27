@@ -31,6 +31,17 @@ skill-audit scan --agent codex
 skill-audit scan --agent cursor
 ```
 
+Marketplace payloads under `plugins/marketplaces/` are inactive local
+inventory and are skipped by default. Include them only when you want to inspect
+uninstalled marketplace content:
+
+```bash
+skill-audit list --include-marketplaces
+skill-audit scan --include-marketplaces --offline
+```
+
+Opt-in output labels rows as `installed` or `marketplace`.
+
 ## JSON Output
 
 Emit schema-versioned JSON to stdout for another tool to consume:

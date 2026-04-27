@@ -14,6 +14,11 @@ first screen while preserving the details users need after their first scan.
 | **Gemini CLI** | `~/.gemini/extensions/`, `~/.gemini/commands/`, `~/.gemini/agents/`, `~/.gemini/settings.json` | `.gemini/extensions/`, `.gemini/commands/`, `GEMINI.md` |
 | **Cross-agent sweep** | - | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.windsurfrules`, `CONVENTIONS.md` (walks parents) |
 
+By default, `scan` and `list` include only installed or currently exposed
+skills. Plugin marketplace payloads under `plugins/marketplaces/` are inactive
+local inventory and appear only with `--include-marketplaces`; opt-in rows are
+labeled `installed` or `marketplace`.
+
 ## Where It Fits
 
 `skill-audit` is meant to be the fast local first pass: inventory the agent
@@ -33,7 +38,9 @@ produce shareable CLI output without an account.
 ```bash
 skill-audit scan               # scan all discovered skills (default)
 skill-audit scan --json -o skill-audit-report.json
-skill-audit list               # list all skills without scanning
+skill-audit scan --include-marketplaces
+skill-audit list               # list installed skills without scanning
+skill-audit list --include-marketplaces
 skill-audit explain <name>     # full detail view for one skill
 skill-audit ignore <name>      # add a skill's treeSha256 to your ignore list
 ```
@@ -43,6 +50,7 @@ skill-audit ignore <name>      # add a skill's treeSha256 to your ignore list
 | `--json` | Emit machine-readable JSON (schema v1.0) |
 | `--summary` | One-line summary footer only |
 | `--agent <id>` | Restrict to one agent (`claude-code`, `codex`, `copilot`, `cursor`, `gemini`, `cross-agent`) |
+| `--include-marketplaces` | Include inactive local marketplace inventory and label rows as `marketplace` |
 | `-o, --output <file>` | Write the selected non-HTML scan output to file |
 | `--offline` | Skip optional enrichment lookups to `skills.sh`, GitHub, and `deps.dev` |
 | `--strict` | Treat REVIEW as FAIL for exit-code purposes |
