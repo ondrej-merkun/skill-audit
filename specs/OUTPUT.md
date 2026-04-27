@@ -42,6 +42,25 @@ ship as the hero GIF).
           "cwe": ["CWE-200"]
         }
       ],
+      "llm_reviews": [
+        {
+          "model_name": "llama-local",
+          "provider": "openai-compatible",
+          "model": "llama3.1",
+          "status": "ok",
+          "prompt_version": "2026-04-28.single-model-v1",
+          "findings": [
+            {
+              "severity": "high",
+              "category": "prompt-injection",
+              "confidence": 0.82,
+              "rationale": "The model-specific review found an override instruction.",
+              "file": "SKILL.md",
+              "suggested_fix": "Remove the override instruction."
+            }
+          ]
+        }
+      ],
       "enrichment": {
         "skills_sh": {
           "gen": "Critical",
@@ -94,6 +113,12 @@ Field notes:
 - `install_state` is always present and is `"installed"` for active or exposed
   skills, or `"marketplace"` for inactive local marketplace inventory included
   through `--include-marketplaces`.
+- `llm_reviews` is present only when `scan --llm ...` requested local model
+  review. It preserves one record per selected model, ordered by model name.
+  `status` is `"not-run" | "ok" | "unavailable" | "timeout" |
+  "invalid-response" | "skipped-offline"`. Findings are model-specific second
+  opinions and do not change deterministic rule findings or scan exit codes in
+  schema v1.0.
 - `modified_at` is present only when the scanner can read a filesystem mtime
   for the skill manifest or file. It is an ISO 8601 timestamp and is not an
   install or creation time.
@@ -148,6 +173,31 @@ When marketplace rows are included, human scan output adds compact
 includes the same state as `install_state`. Marketplace findings participate in
 scan counts, risk ordering, and exit code decisions only because the user opted
 in.
+
+## Local LLM review output contract
+
+Local LLM review is disabled unless `scan --llm <name>` or an equivalent
+multi-model selection is passed. When enabled, every scan output keeps
+deterministic scanner findings visible as the baseline and shows LLM review as
+a separate comparison layer.
+
+- Pretty output adds a compact `LLM REVIEW` column only when LLM review ran.
+  Each cell shows per-model status and, for successful models, the highest
+  model finding severity plus finding count.
+- Summary output adds a compact `LLM review` line with per-model status and
+  total model finding counts by highest severity.
+- JSON output includes `skills[].llm_reviews[]` with stable snake_case fields:
+  `model_name`, `provider`, `model`, `status`, `prompt_version`, `findings`,
+  and optional `error`.
+- HTML reports include a model comparison view and per-skill detail records
+  grouped by model. The local `file://` report must work without network
+  access.
+- Agreement is shown by repeated model-specific findings on the same skill or
+  file; JSON keeps the underlying model records instead of merging or averaging
+  confidence values. Disagreement remains visible as model-specific findings,
+  statuses, and confidence values.
+- If every selected model is skipped, unavailable, timed out, or invalid, the
+  output says so and still renders deterministic findings normally.
 
 ## Visible data contract
 

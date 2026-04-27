@@ -3,6 +3,7 @@ import Table from 'cli-table3';
 import { formatAgentName } from '../agent-names.js';
 import type { ScanResult, ScannedSkill } from '../types.js';
 import { installStateLabel } from './install-state.js';
+import { formatLlmReviewInline } from './llm.js';
 import { sortScanSkills } from './sort.js';
 import { renderSummaryFooter } from './summary.js';
 
@@ -112,6 +113,7 @@ export function renderTableToString(result: ScanResult): string {
   const showInstallStateColumn = skills.some(
     (skill) => installStateLabel(skill.installState) === 'marketplace'
   );
+  const showLlmColumn = skills.some((skill) => skill.llmReviews !== undefined);
   const agentCount = agents.length;
   const durationS = (scan.durationMs / 1000).toFixed(1);
   const lines: string[] = [];
@@ -137,6 +139,7 @@ export function renderTableToString(result: ScanResult): string {
     ...(showInstallStateColumn ? [chalk.bold('STATE')] : []),
     chalk.bold('VERDICT'),
     chalk.bold('SCORE'),
+    ...(showLlmColumn ? [chalk.bold('LLM REVIEW')] : []),
     chalk.bold('TOP ISSUE'),
   ];
   if (showEnrichmentColumn) {
@@ -162,6 +165,7 @@ export function renderTableToString(result: ScanResult): string {
       ...(showInstallStateColumn ? [chalk.dim(installStateLabel(skill.installState))] : []),
       colorVerdict(skill),
       colorScore(skill),
+      ...(showLlmColumn ? [formatLlmReviewInline(skill.llmReviews)] : []),
       topIssue(skill),
     ];
     if (showEnrichmentColumn) {

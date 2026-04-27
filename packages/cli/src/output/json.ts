@@ -1,4 +1,11 @@
-import type { Enrichment, Finding, ScanResult, ScannedSkill } from '../types.js';
+import type {
+  Enrichment,
+  Finding,
+  LlmReviewFinding,
+  LlmReviewResult,
+  ScanResult,
+  ScannedSkill,
+} from '../types.js';
 import { installStateLabel } from './install-state.js';
 import { sortScanSkills } from './sort.js';
 
@@ -42,6 +49,29 @@ function serializeEnrichment(e: Enrichment): object {
   return out;
 }
 
+function serializeLlmFinding(f: LlmReviewFinding): object {
+  return {
+    severity: f.severity,
+    category: f.category,
+    confidence: f.confidence,
+    rationale: f.rationale,
+    ...(f.file !== undefined ? { file: f.file } : {}),
+    ...(f.suggestedFix !== undefined ? { suggested_fix: f.suggestedFix } : {}),
+  };
+}
+
+function serializeLlmReview(review: LlmReviewResult): object {
+  return {
+    model_name: review.modelName,
+    provider: review.provider,
+    model: review.model,
+    status: review.status,
+    prompt_version: review.promptVersion,
+    findings: review.findings.map(serializeLlmFinding),
+    ...(review.error !== undefined ? { error: review.error } : {}),
+  };
+}
+
 function serializeSkill(s: ScannedSkill): object {
   return {
     id: s.id,
@@ -57,6 +87,7 @@ function serializeSkill(s: ScannedSkill): object {
     allowlisted: s.summary.allowlisted,
     ignored: s.ignored === true,
     findings: s.findings.map(serializeFinding),
+    ...(s.llmReviews !== undefined ? { llm_reviews: s.llmReviews.map(serializeLlmReview) } : {}),
     enrichment: serializeEnrichment(s.enrichment),
     summary: {
       critical: s.summary.critical,

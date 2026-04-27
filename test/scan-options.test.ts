@@ -940,12 +940,21 @@ describe('runScan flag wiring', () => {
 
       const parsed = JSON.parse(stdoutChunks.join(''));
       expect(parsed.schema_version).toBe('1.0');
-      expect(parsed.skills[0]).not.toHaveProperty('llm_reviews');
+      expect(parsed.skills[0].llm_reviews).toEqual([
+        {
+          model_name: 'reviewer',
+          provider: 'openai-compatible',
+          model: 'local-reviewer',
+          status: 'invalid-response',
+          prompt_version: '2026-04-28.single-model-v1',
+          findings: [],
+        },
+      ]);
       expect(stripAnsi(stderrChunks.join(''))).toContain('reviewer invalid-response');
     });
   });
 
-  it('--summary --llm keeps stdout compact and puts review status on stderr', async () => {
+  it('--summary --llm includes compact model comparison and keeps progress on stderr', async () => {
     await withTempDir(async (dir) => {
       process.env['XDG_CONFIG_HOME'] = dir;
       await writeLlmConfig(dir);
@@ -959,12 +968,12 @@ describe('runScan flag wiring', () => {
       await runScan({ summary: true, llm: 'reviewer', llmFetchImpl: fetchImpl });
 
       expect(stripAnsi(stdoutChunks.join(''))).toMatch(/PASS|REVIEW|FAIL/);
-      expect(stripAnsi(stdoutChunks.join(''))).not.toContain('LLM review');
+      expect(stripAnsi(stdoutChunks.join(''))).toContain('LLM review: reviewer ok (0)');
       expect(stripAnsi(stderrChunks.join(''))).toContain('reviewer ok (0 LLM-only findings)');
     });
   });
 
-  it('--html --llm writes HTML without adding LLM fields before the output contract task', async () => {
+  it('--html --llm writes local model comparison output', async () => {
     await withTempDir(async (dir) => {
       process.env['XDG_CONFIG_HOME'] = dir;
       await writeLlmConfig(dir);
@@ -980,7 +989,8 @@ describe('runScan flag wiring', () => {
 
       const htmlOut = await readFile(html, 'utf-8');
       expect(htmlOut).toContain('<html');
-      expect(htmlOut).not.toContain('llmReviews');
+      expect(htmlOut).toContain('id="llm-comparison"');
+      expect(htmlOut).toContain('llmReviews');
       expect(stripAnsi(stderrChunks.join(''))).toContain('report written');
     });
   });

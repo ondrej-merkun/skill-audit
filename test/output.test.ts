@@ -11,7 +11,7 @@ import {
 import { renderJson } from '../packages/cli/src/output/json.js';
 import { sortScanSkills } from '../packages/cli/src/output/sort.js';
 import { calculateCompromisedPercent } from '../packages/cli/src/percent.js';
-import type { ScanResult, ScannedSkill } from '../packages/cli/src/types.js';
+import type { LlmReviewResult, ScanResult, ScannedSkill } from '../packages/cli/src/types.js';
 
 function makeSkill(overrides: Partial<ScannedSkill> = {}): ScannedSkill {
   return {
@@ -68,6 +68,18 @@ function makeFinding(severity: ScannedSkill['findings'][number]['severity']) {
     message: `${severity} finding`,
     fix: 'Fix it.',
     cwe: [],
+  };
+}
+
+function makeLlmReview(overrides: Partial<LlmReviewResult> = {}): LlmReviewResult {
+  return {
+    modelName: 'alpha',
+    provider: 'openai-compatible',
+    model: 'alpha-local',
+    status: 'ok',
+    promptVersion: '2026-04-28.single-model-v1',
+    findings: [],
+    ...overrides,
   };
 }
 
@@ -345,6 +357,11 @@ function getRow(document: FakeDocument, agentId: string): FakeElement {
   return row;
 }
 
+function elementText(node: FakeNode): string {
+  if (node instanceof FakeTextNode) return node.textContent;
+  return [node.textContent, ...node.children.map((child) => elementText(child))].join('');
+}
+
 describe('sortScanSkills', () => {
   it('orders skills by score, verdict, highest finding severity, then identity', () => {
     const skills = [
@@ -603,6 +620,40 @@ describe('renderTableToString', () => {
     expect(out).toContain('GitHub=10 stars');
     expect(out).toContain('contributors unknown');
     expect(out).not.toContain('0 contributors');
+  });
+
+  it('shows compact per-model LLM review status and highest severity', () => {
+    const result = makeScanResult({
+      skills: [
+        makeSkill({
+          llmReviews: [
+            makeLlmReview({
+              modelName: 'alpha',
+              findings: [
+                {
+                  severity: 'high',
+                  category: 'prompt-injection',
+                  confidence: 0.82,
+                  rationale: 'Override instruction.',
+                  file: 'SKILL.md',
+                },
+              ],
+            }),
+            makeLlmReview({
+              modelName: 'beta',
+              model: 'beta-local',
+              status: 'unavailable',
+              findings: [],
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const out = stripAnsi(renderTableToString(result));
+    expect(out).toContain('LLM REVIEW');
+    expect(out).toContain('alpha high (1)');
+    expect(out).toContain('beta unavailable');
   });
 
   it('sorts FAIL rows before REVIEW and PASS', () => {
@@ -914,6 +965,102 @@ describe('renderSummaryFooter', () => {
     expect(out).toContain('Enrichment');
     expect(out).toContain('deps.dev');
   });
+
+  it('shows LLM review comparison in detailed and compact summaries', () => {
+    const reviewedSkill = makeSkill({
+      llmReviews: [
+        makeLlmReview({
+          modelName: 'alpha',
+          findings: [
+            {
+              severity: 'critical',
+              category: 'prompt-injection',
+              confidence: 0.9,
+              rationale: 'Critical override.',
+            },
+          ],
+        }),
+        makeLlmReview({ modelName: 'beta', model: 'beta-local', status: 'timeout' }),
+      ],
+    });
+    const result = makeScanResult({ skills: [reviewedSkill] });
+
+    const footer = stripAnsi(renderSummaryFooter(result, [reviewedSkill]));
+    expect(footer).toContain('LLM review');
+    expect(footer).toContain('alpha ok critical:1');
+    expect(footer).toContain('beta timeout (0)');
+
+    const compact = stripAnsi(renderSummaryCompact(result));
+    expect(compact).toContain('LLM review: alpha ok critical:1');
+    expect(compact).toContain('beta timeout (0)');
+  });
+
+  it('shows compact consensus only when models agree on a skill finding', () => {
+    const agreeingSkill = makeSkill({
+      name: 'agreeing-skill',
+      llmReviews: [
+        makeLlmReview({
+          modelName: 'alpha',
+          findings: [
+            {
+              severity: 'high',
+              category: 'prompt-injection',
+              confidence: 0.8,
+              rationale: 'Override.',
+              file: 'SKILL.md',
+            },
+          ],
+        }),
+        makeLlmReview({
+          modelName: 'beta',
+          findings: [
+            {
+              severity: 'high',
+              category: 'prompt-injection',
+              confidence: 0.7,
+              rationale: 'Same issue.',
+              file: 'SKILL.md',
+            },
+          ],
+        }),
+      ],
+    });
+    const disagreeingSkill = makeSkill({
+      name: 'disagreeing-skill',
+      llmReviews: [
+        makeLlmReview({
+          modelName: 'alpha',
+          findings: [
+            {
+              severity: 'low',
+              category: 'network',
+              confidence: 0.6,
+              rationale: 'Network concern.',
+              file: 'net.js',
+            },
+          ],
+        }),
+        makeLlmReview({
+          modelName: 'beta',
+          findings: [
+            {
+              severity: 'medium',
+              category: 'dependency',
+              confidence: 0.65,
+              rationale: 'Dependency concern.',
+              file: 'package.json',
+            },
+          ],
+        }),
+      ],
+    });
+    const result = makeScanResult({ skills: [agreeingSkill, disagreeingSkill] });
+
+    const compact = stripAnsi(renderSummaryCompact(result));
+    expect(compact).toContain('LLM review: alpha ok high:2  beta ok high:2');
+    expect(compact).toContain('LLM consensus: agreeing-skill/SKILL.md high (2 models)');
+    expect(compact).not.toContain('disagreeing-skill/net.js low (2 models)');
+  });
 });
 
 describe('renderSummaryCompact', () => {
@@ -1129,6 +1276,80 @@ describe('renderJson', () => {
     expect(Object.keys(enrich)).toEqual(['skills_sh', 'github', 'deps_dev']);
   });
 
+  it('serializes LLM reviews with stable snake_case fields', () => {
+    const result = makeScanResult({
+      skills: [
+        makeSkill({
+          llmReviews: [
+            makeLlmReview({
+              modelName: 'alpha',
+              findings: [
+                {
+                  severity: 'high',
+                  category: 'prompt-injection',
+                  confidence: 0.82,
+                  rationale: 'Override instruction.',
+                  file: 'SKILL.md',
+                  suggestedFix: 'Remove the override.',
+                },
+              ],
+            }),
+            makeLlmReview({
+              modelName: 'beta',
+              model: 'beta-local',
+              status: 'invalid-response',
+              findings: [],
+              error: 'bad JSON',
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const json = JSON.parse(renderJson(result));
+    expect(json.skills[0].llm_reviews).toEqual([
+      {
+        model_name: 'alpha',
+        provider: 'openai-compatible',
+        model: 'alpha-local',
+        status: 'ok',
+        prompt_version: '2026-04-28.single-model-v1',
+        findings: [
+          {
+            severity: 'high',
+            category: 'prompt-injection',
+            confidence: 0.82,
+            rationale: 'Override instruction.',
+            file: 'SKILL.md',
+            suggested_fix: 'Remove the override.',
+          },
+        ],
+      },
+      {
+        model_name: 'beta',
+        provider: 'openai-compatible',
+        model: 'beta-local',
+        status: 'invalid-response',
+        prompt_version: '2026-04-28.single-model-v1',
+        findings: [],
+        error: 'bad JSON',
+      },
+    ]);
+    expect(Object.keys(json.skills[0]).slice(0, 11)).toEqual([
+      'id',
+      'agent_id',
+      'name',
+      'path',
+      'install_state',
+      'tree_sha256',
+      'allowlisted',
+      'ignored',
+      'findings',
+      'llm_reviews',
+      'enrichment',
+    ]);
+  });
+
   it('serializes deps.dev scorecard_score as null when unavailable', () => {
     const result = makeScanResult({
       skills: [makeSkill({ enrichment: { depsdev: { osvAdvisories: 0, scorecardScore: null } } })],
@@ -1312,6 +1533,84 @@ describe('renderHtml', () => {
     expect(html).toContain('aria-pressed="false"');
     expect(html).toContain('"claude-code":"Claude Code"');
     expect(html).toContain('>unknown-agent</td>');
+  });
+
+  it('renders model comparison and per-model LLM findings in HTML', async () => {
+    const { renderHtml } = await import('../packages/cli/src/output/html.js');
+    const html = renderHtml(
+      makeScanResult({
+        skills: [
+          makeSkill({
+            name: 'reviewed-skill',
+            llmReviews: [
+              makeLlmReview({
+                modelName: 'alpha',
+                findings: [
+                  {
+                    severity: 'high',
+                    category: 'prompt-injection',
+                    confidence: 0.82,
+                    rationale: 'The instruction asks the model to ignore policy.',
+                    file: 'SKILL.md',
+                  },
+                ],
+              }),
+              makeLlmReview({
+                modelName: 'beta',
+                model: 'beta-local',
+                status: 'invalid-response',
+                findings: [],
+              }),
+            ],
+          }),
+        ],
+      })
+    );
+
+    expect(html).toContain('id="llm-comparison"');
+    expect(html).toContain('<th>LLM Review</th>');
+    expect(html).toContain('alpha');
+    expect(html).toContain('high');
+    expect(html).toContain('invalid-response');
+    expect(html).toContain('"llmReviews"');
+    expect(html).not.toContain('llm_reviews');
+  });
+
+  it('opens HTML detail panel with LLM findings grouped by model', async () => {
+    const { renderHtml } = await import('../packages/cli/src/output/html.js');
+    const html = renderHtml(
+      makeScanResult({
+        skills: [
+          makeSkill({
+            name: 'reviewed-skill',
+            llmReviews: [
+              makeLlmReview({
+                modelName: 'alpha',
+                findings: [
+                  {
+                    severity: 'high',
+                    category: 'prompt-injection',
+                    confidence: 0.82,
+                    rationale: 'The instruction asks the model to ignore policy.',
+                    file: 'SKILL.md',
+                  },
+                ],
+              }),
+            ],
+          }),
+        ],
+      })
+    );
+    const document = executeHtmlReportScript(html);
+    const row = getRow(document, 'claude-code');
+
+    row.click();
+
+    const panelText = elementText(getElementById(document, 'panel-findings'));
+    expect(panelText).toContain('LLM Review');
+    expect(panelText).toContain('alpha');
+    expect(panelText).toContain('confidence 82%');
+    expect(panelText).toContain('The instruction asks the model to ignore policy.');
   });
 
   it('filters rows from the agent sidebar and keeps row expansion working', async () => {

@@ -10,6 +10,7 @@ import type {
   Severity,
 } from '../types.js';
 import { installStateLabel } from './install-state.js';
+import { formatLlmComparisonSummary, formatLlmConsensusSummary } from './llm.js';
 import { sortScanSkills } from './sort.js';
 
 const C_CRITICAL = chalk.hex('#FF4444');
@@ -166,6 +167,15 @@ export function renderSummaryFooter(
     lines.push(`  ${label('Enrichment')} lookup failed or timed out`);
   }
 
+  const llmSummary = formatLlmComparisonSummary(riskOrderedSkills);
+  if (llmSummary !== null) {
+    lines.push(`  ${label('LLM review')} ${llmSummary}`);
+  }
+  const llmConsensus = formatLlmConsensusSummary(riskOrderedSkills);
+  if (llmConsensus !== null) {
+    lines.push(`  ${label('LLM consensus')} ${llmConsensus}`);
+  }
+
   lines.push(`  ${label('Duration')} ${durationFull}s`);
   lines.push('');
 
@@ -204,12 +214,16 @@ export function renderSummaryCompact(result: ScanResult): string {
       ? `${C_CRITICAL(String(summary.compromised))} compromised (${formatCompromisedPercent(summary.percentCompromised)}%)`
       : '0 compromised';
 
+  const llmSummary = formatLlmComparisonSummary(skills);
+  const llmConsensus = formatLlmConsensusSummary(skills);
   const lines = [
     `${summary.skillsScanned} skills · ${compromisedPart} · ${verdictColored}`,
     ...(hasMarketplace
       ? [`installed: ${states.installed} · marketplace: ${states.marketplace}`]
       : []),
     compactSeverityBreakdown(stats),
+    ...(llmSummary !== null ? [`LLM review: ${llmSummary}`] : []),
+    ...(llmConsensus !== null ? [`LLM consensus: ${llmConsensus}`] : []),
     `Scanned in ${(scan.durationMs / 1000).toFixed(2)}s`,
   ];
   return `${lines.join('\n')}\n`;

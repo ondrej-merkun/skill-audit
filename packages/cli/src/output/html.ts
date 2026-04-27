@@ -1,7 +1,8 @@
 import { formatAgentName } from '../agent-names.js';
 import { formatCompromisedPercent } from '../percent.js';
-import type { ScanResult, ScannedSkill } from '../types.js';
+import type { ScanResult, ScannedSkill, Severity } from '../types.js';
 import { installStateLabel } from './install-state.js';
+import { collectLlmComparisons, collectLlmConsensus, highestLlmSeverity } from './llm.js';
 import { sortScanSkills } from './sort.js';
 
 function escapeHtml(s: string): string {
@@ -70,16 +71,96 @@ function renderEnrichmentCells(skill: ScannedSkill): string {
   return rows.join('');
 }
 
+function severityClass(severity: Severity): string {
+  return `sev sev-${severity}`;
+}
+
+function renderLlmReviewCells(skill: ScannedSkill): string {
+  if (skill.llmReviews === undefined || skill.llmReviews.length === 0) {
+    return '<div class="llm-missing">—</div>';
+  }
+
+  return skill.llmReviews
+    .map((review) => {
+      if (review.status !== 'ok') {
+        return `<div class="llm-row"><span>${escapeHtml(review.modelName)}</span> ${escapeHtml(review.status)}</div>`;
+      }
+      const highest = highestLlmSeverity(review);
+      const findingText =
+        review.findings.length === 1 ? '1 finding' : `${review.findings.length} findings`;
+      const label =
+        highest === null
+          ? 'ok · 0 findings'
+          : `ok · <strong class="${severityClass(highest)}">${escapeHtml(highest)}</strong> · ${findingText}`;
+      return `<div class="llm-row"><span>${escapeHtml(review.modelName)}</span> ${label}</div>`;
+    })
+    .join('');
+}
+
+function renderLlmOverview(skills: ScannedSkill[]): string {
+  const comparisons = collectLlmComparisons(skills);
+  if (comparisons.length === 0) return '';
+  const consensus = collectLlmConsensus(skills);
+  const cards = comparisons
+    .map((comparison) => {
+      const statusText = Object.entries(comparison.statuses)
+        .filter(([, count]) => count > 0)
+        .map(([status, count]) => `${status}: ${count}`)
+        .join(' · ');
+      const severityText =
+        comparison.findings === 0
+          ? '0 findings'
+          : Object.entries(comparison.severities)
+              .filter(([, count]) => count > 0)
+              .map(([severity, count]) => `${severity}: ${count}`)
+              .join(' · ');
+      return `<section class="llm-card">
+        <h3>${escapeHtml(comparison.modelName)}</h3>
+        <div>${escapeHtml(comparison.provider)} · ${escapeHtml(comparison.model)}</div>
+        <div>${escapeHtml(statusText)}</div>
+        <div>${escapeHtml(severityText)}</div>
+      </section>`;
+    })
+    .join('');
+  const consensusRows =
+    consensus.length === 0
+      ? ''
+      : `<div class="llm-consensus"><strong>Consensus</strong>${consensus
+          .slice(0, 3)
+          .map(
+            (group) =>
+              `<div>${escapeHtml(group.skillName)} · ${escapeHtml(group.file)} · ${escapeHtml(group.severity)} · ${group.models.length} models</div>`
+          )
+          .join('')}</div>`;
+  return `<section id="llm-comparison" aria-label="LLM review comparison">
+    <h2>LLM Review</h2>
+    <div class="llm-grid">${cards}</div>
+    ${consensusRows}
+  </section>`;
+}
+
 function redactPaths(skills: ScannedSkill[]): ScannedSkill[] {
   return skills.map((s) => {
-    const { llmReviews: _llmReviews, ...skill } = s;
-    return {
-      ...skill,
+    const redacted = {
+      ...s,
       path: '[redacted]',
-      findings: skill.findings.map((f) => ({
+      findings: s.findings.map((f) => ({
         ...f,
         file: f.file.replace(/.*\//, '[redacted]/'),
         snippet: '[redacted]',
+      })),
+    };
+    if (s.llmReviews === undefined) return redacted;
+    return {
+      ...redacted,
+      llmReviews: s.llmReviews.map((review) => ({
+        ...review,
+        findings: review.findings.map((finding) => ({
+          ...finding,
+          ...(finding.file !== undefined
+            ? { file: finding.file.replace(/.*\//, '[redacted]/') }
+            : {}),
+        })),
       })),
     };
   });
@@ -87,10 +168,7 @@ function redactPaths(skills: ScannedSkill[]): ScannedSkill[] {
 
 export function renderHtml(result: ScanResult): string {
   const sorted = sortScanSkills(result.skills);
-  const publicSorted = sorted.map((skill) => {
-    const { llmReviews: _llmReviews, ...publicSkill } = skill;
-    return publicSkill;
-  });
+  const publicSorted = sorted;
 
   const agentIds = [
     ...new Set([...result.agents.map((a) => a.id), ...sorted.map((skill) => skill.agentId)]),
@@ -110,6 +188,7 @@ export function renderHtml(result: ScanResult): string {
   const showInstallState = sorted.some(
     (skill) => installStateLabel(skill.installState) === 'marketplace'
   );
+  const showLlmReview = sorted.some((skill) => skill.llmReviews !== undefined);
 
   // Embed scan data as JSON for client-side consumption (all strings are server-generated)
   const jsonData = JSON.stringify({ result: { ...result, skills: publicSorted } });
@@ -136,6 +215,7 @@ export function renderHtml(result: ScanResult): string {
       <td style="font-weight:600;color:${color}">${sk.summary.score}</td>
       <td>${sk.summary.critical}C ${sk.summary.high}H ${sk.summary.medium}M ${sk.summary.low}L</td>
       <td class="enrichment-cell">${renderEnrichmentCells(sk)}</td>
+      ${showLlmReview ? `<td class="llm-cell">${renderLlmReviewCells(sk)}</td>` : ''}
       <td class="top-issue">${escapeHtml(topIssue)}</td>
     </tr>`;
     })
@@ -179,6 +259,15 @@ td{padding:10px 12px;vertical-align:middle}
 .enrichment-cell{font-size:12px;line-height:1.45;color:#374151;min-width:230px}
 .enrichment-cell span{display:inline-block;min-width:54px;color:#6b7280}
 .enrichment-missing{color:#9ca3af}
+.llm-cell{font-size:12px;line-height:1.45;color:#374151;min-width:160px}
+.llm-row span{display:inline-block;min-width:54px;color:#6b7280}
+.llm-missing{color:#9ca3af}
+#llm-comparison{background:#fff;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:12px;padding:12px}
+#llm-comparison h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;margin-bottom:8px}
+.llm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.llm-card{border:1px solid #e5e7eb;border-radius:6px;padding:10px;color:#374151;font-size:12px;line-height:1.5}
+.llm-card h3{font-size:13px;color:#111827;margin-bottom:2px}
+.llm-consensus{border-top:1px solid #e5e7eb;margin-top:10px;padding-top:10px;color:#374151;font-size:12px;line-height:1.5}
 .tag-ignored,.tag-allow,.tag-state{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;margin-left:6px;vertical-align:middle}
 .tag-ignored{background:#fef3c7;color:#92400e}
 .tag-allow{background:#d1fae5;color:#065f46}
@@ -205,6 +294,14 @@ td{padding:10px 12px;vertical-align:middle}
 .enrichment-row{font-size:13px;margin-bottom:6px;color:#374151}
 .enrichment-row.missing{color:#9ca3af}
 .enrichment-source{display:inline-block;min-width:72px;color:#6b7280}
+.llm-review{border-top:1px solid #e5e7eb;margin-top:14px;padding-top:14px}
+.llm-review h3{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;margin-bottom:8px}
+.llm-model{border:1px solid #e5e7eb;border-radius:6px;padding:10px;margin-bottom:8px}
+.llm-model-header{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.llm-model-name{font-weight:600}
+.llm-model-meta{font-size:12px;color:#6b7280}
+.llm-finding{border-top:1px solid #f3f4f6;padding-top:8px;margin-top:8px;font-size:13px}
+.llm-rationale{margin-top:4px;color:#374151}
 #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.15);z-index:199}
 #overlay.visible{display:block}
 `;
@@ -321,6 +418,81 @@ function makeEnrichmentEl(enrichment){
   return wrap;
 }
 
+function makeLlmEl(reviews){
+  if(!reviews || reviews.length === 0) return null;
+
+  var wrap = document.createElement('div');
+  wrap.className = 'llm-review';
+
+  var title = document.createElement('h3');
+  title.textContent = 'LLM Review';
+  wrap.appendChild(title);
+
+  reviews.forEach(function(review){
+    var model = document.createElement('div');
+    model.className = 'llm-model';
+
+    var header = document.createElement('div');
+    header.className = 'llm-model-header';
+
+    var name = document.createElement('span');
+    name.className = 'llm-model-name';
+    name.textContent = review.modelName;
+    header.appendChild(name);
+
+    var status = document.createElement('span');
+    status.className = 'sev sev-' + (review.status === 'ok' ? 'info' : 'medium');
+    status.textContent = review.status;
+    header.appendChild(status);
+    model.appendChild(header);
+
+    var meta = document.createElement('div');
+    meta.className = 'llm-model-meta';
+    meta.textContent = review.provider + ' · ' + review.model + ' · prompt ' + review.promptVersion;
+    model.appendChild(meta);
+
+    if(review.findings && review.findings.length > 0){
+      review.findings.forEach(function(finding){
+        var findingEl = document.createElement('div');
+        findingEl.className = 'llm-finding';
+
+        var sev = document.createElement('span');
+        sev.className = 'sev sev-' + finding.severity;
+        sev.textContent = finding.severity;
+        findingEl.appendChild(sev);
+
+        var confidence = document.createElement('span');
+        confidence.className = 'llm-model-meta';
+        confidence.textContent = ' confidence ' + Math.round(finding.confidence * 100) + '%';
+        findingEl.appendChild(confidence);
+
+        var rationale = document.createElement('div');
+        rationale.className = 'llm-rationale';
+        rationale.textContent = finding.rationale;
+        findingEl.appendChild(rationale);
+
+        if(finding.file){
+          var file = document.createElement('div');
+          file.className = 'llm-model-meta';
+          file.textContent = finding.file;
+          findingEl.appendChild(file);
+        }
+
+        model.appendChild(findingEl);
+      });
+    } else {
+      var none = document.createElement('div');
+      none.className = 'llm-model-meta';
+      none.textContent = 'No LLM-only findings.';
+      model.appendChild(none);
+    }
+
+    wrap.appendChild(model);
+  });
+
+  return wrap;
+}
+
 function openPanel(idx){
   var sk = skills[idx];
   if(!sk) return;
@@ -353,6 +525,9 @@ function openPanel(idx){
 
   var enrichmentEl = makeEnrichmentEl(sk.enrichment);
   if(enrichmentEl) findingsEl.appendChild(enrichmentEl);
+
+  var llmEl = makeLlmEl(sk.llmReviews);
+  if(llmEl) findingsEl.appendChild(llmEl);
 
   document.getElementById('panel').classList.add('open');
   document.getElementById('overlay').classList.add('visible');
@@ -458,6 +633,7 @@ document.getElementById('btn-share').addEventListener('click', function(){
       <button class="btn" id="btn-download">Download JSON</button>
       <button class="btn btn-danger" id="btn-share">Share (redacted)</button>
     </div>
+    ${renderLlmOverview(sorted)}
     <table>
       <thead>
         <tr>
@@ -467,6 +643,7 @@ document.getElementById('btn-share').addEventListener('click', function(){
           <th>Score</th>
           <th>Findings</th>
           <th>Enrichment</th>
+          ${showLlmReview ? '<th>LLM Review</th>' : ''}
           <th>Top Issue</th>
         </tr>
       </thead>
