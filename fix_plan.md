@@ -676,7 +676,7 @@ Output comparison contract:
   - Smoke-test the built CLI with two fake local model responses and inspect the
     first screen for clear model labels.
 
-- [ ] **14** Document the local LLM workflow and end-to-end safety boundaries.
+- [x] **14** Document the local LLM workflow and end-to-end safety boundaries.
 
   After the local LLM connection, scan integration, multi-model orchestration,
   and comparison output exist, docs and specs need to explain the complete
