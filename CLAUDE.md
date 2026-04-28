@@ -18,7 +18,6 @@ from — see the instructions at the top of that file.
 - GitHub handle: `ondrej-merkun`
 - GitHub repository: `https://github.com/ondrej-merkun/skill-audit`
 - npm package name: `skill-audit`
-- Author byline (README, blog, HN): "Ondrej Merkun"
 
 Never guess these from paths, filesystem layout, or commit metadata.
 If a task needs a personal handle, package name, or byline, pull it

@@ -1,4 +1,4 @@
-# SECTION 2 — MVP spec and implementation plan
+# skill-audit MVP spec and implementation plan
 
 ## 1. Name and positioning
 
@@ -582,7 +582,7 @@ your interpretation.
 
 This skill file ships inside the repo at `packages/skill/SKILL.md` and is copy-pasted into skills.sh + agentskill.sh registries on launch. Because it just invokes `npx`, it's inherently kept up to date.
 
-## 11. Risk assessment
+## 9. Risk assessment
 
 ### False-positive risk
 Highest-probability failure mode. The `PI-*` rules trigger on security-education skills (Trail of Bits, OWASP, ironically many skill-security-auditor skills themselves). Snyk's own blog mocks a competitor that flagged its own rule files. Mitigations baked into MVP:

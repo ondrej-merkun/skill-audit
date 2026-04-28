@@ -1,14 +1,8 @@
 # specs/ — source of truth
 
-`SPEC.md` in this folder is the authoritative specification for the
-`skill-audit` MVP. Ralph references it directly by section number when
+`SPEC.md` in this folder is the authoritative specification for `skill-audit`.
+Ralph references it directly by section number when
 implementing tasks from `fix_plan.md`.
-
-**Before starting this kit, copy your spec file into this folder:**
-
-```bash
-cp "Skillaudit__Weekend_Plan_for_a_Local-First_Agent-Skill_Scanner.md" specs/SPEC.md
-```
 
 ## Section index (for Ralph)
 
@@ -17,17 +11,15 @@ that section, not the whole file. Token economy.
 
 | Section | Topic |
 |---|---|
-| §1 | Competitive landscape, positioning, launch number attribution |
-| §2 | Name, tagline, tech stack, distribution |
+| §1 | Name and positioning |
+| §2 | Architecture, tech stack, and distribution |
 | §3 | Discovery layer — plugin architecture, canonical install paths |
 | §4 | Local static analysis — 27 rule catalog, scoring, allowlist |
 | §5 | Cloud enrichment — skills.sh, GitHub, deps.dev |
 | §6 | Output & UX — hero screenshot, detail view, HTML report, JSON schema |
 | §7 | Core commands and UX flow, exit codes |
 | §8 | Claude Code skill wrapper (packages/skill/SKILL.md) |
-| §9 | Go-to-market, README design, hero GIF |
-| §10 | MVP scope |
-| §11 | Risk assessment |
+| §9 | Risk assessment |
 
 ## Rule-authoring quick reference
 
