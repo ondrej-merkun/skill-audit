@@ -1,78 +1,3 @@
-# Skillaudit: a weekend plan for a local-first agent-skill scanner
-
-**Bottom line up front.** Build it, ship it this weekend, and name it **`skill-audit`** (or `skill-audit` on npm). The market has a real gap: Snyk's `agent-scan` is the only production-grade tool that auto-discovers skills across multiple agents in one command, but it requires a cloud token, transmits skill contents to Snyk, and is closed to contributions. Every other existing tool handles one skill or one directory at a time. A local-first, zero-auth, multi-agent CLI with a polished TUI and a credible 36%-of-skills-are-vulnerable launch hook (Snyk ToxicSkills, Feb 2026) is a genuinely open slot. The full spec below is ready to code from.
-
----
-
-# SECTION 1 — Competitive landscape and prior art
-
-## What actually exists today
-
-Research surfaced ~20 tools clustered in four archetypes. The **only tool that matches the "scan all skills across multiple agents in one command" description is Snyk `agent-scan` / `mcp-scan`** — and it has real gaps you can exploit.
-
-### The competitive map
-
-| Tool | Form factor | Multi-agent auto-discovery? | Scans skills or config? | Local vs cloud | Maintenance |
-|---|---|---|---|---|---|
-| **Snyk `agent-scan` / `mcp-scan`** | Python CLI + MCP + daemon | ✅ Claude Code, Cursor, Windsurf, VS Code, Gemini CLI, Amp, Codex, Amazon Q, Kiro, Antigravity, OpenClaw | Both MCP + skills | **Hybrid cloud** — requires `SNYK_TOKEN`, transmits skill contents | 2.2k⭐, v0.4.17 on Apr 22 2026, 69 releases. Closed to external contributions. |
-| **Cisco `skill-scanner`** | Python CLI | ❌ (`scan-all --recursive` on a path) | Skill content | Hybrid (LLM + VT + AI Defense optional) | 1.4k⭐, v2.0.3, actively maintained |
-| **HarmonicSecurity `claudit-sec`** | Bash/PS1 | Claude Desktop + Claude Code only | Config (MCP, extensions, plugins) | Local only | Recent, Harmonic Security-backed |
-| **fubak `ferret-scan`** | Node.js CLI | Scans current directory (many agent configs) | Skill + CLI configs | Local | Active, npm-published |
-| **alirezarezvani `skill-security-auditor`** | Claude skill + Python | ❌ (point at one skill) | Skill content | Local heuristic | 11k⭐ parent repo |
-| **`luongnv89/asm`** | CLI/TUI package-manager | ✅ 10+ agents (but basic pattern audit) | Skill content | Local | Active |
-| **Cisco + pors + dabit3 + NMitchem + multiple SkillGuard forks + mattchan/skill-security-audit-dashboard + LLMSecurity/skillguard + obielin/skillguard + SkillLens + SkillAudit (vercel) + trailofbits/skills + wrsmith108 + Dilaz + netresearch** | Various | ❌ All single-path or single-skill | Mostly skill content | Mixed | Mixed |
-| **`gh skill` (GitHub CLI v2.90+)** | Official `gh` extension | N/A — package manager only (install/preview/search/update/publish) | None | None | Official, Apr 2026 |
-| **skills.sh / agentskill.sh** | Hosted registries | N/A — server-side scanning | Registry skills | Cloud | Active |
-| **Repello SkillCheck** | Browser upload | ❌ | Skill content | Cloud | Active (no API) |
-
-### The critical positioning gap
-
-**No existing tool combines these:** (1) scans installed agent skills/plugins/MCP configs across common CLI agents in one command, (2) runs fully local by default with no cloud token, (3) ships as `npx`-installable with a polished TUI, (4) is open-source and welcomes community rules.
-
-Snyk covers (1) but fails (2) and (4). Cisco has the richest detection engine but fails (1). Ferret covers `pwd` but not global install roots. HarmonicSecurity is Anthropic-only. Every other tool requires manual per-skill invocation. **That's the slot.**
-
-### What cloud-enrichment APIs are actually usable
-
-Not many, and fewer have real docs. Recommended tier list:
-
-**Tier 1 — wire these in:**
-- **`add-skill.vercel.sh/audit`** — undocumented JSON endpoint powering skills.sh. Returns Gen + Socket + Snyk verdicts per skill slug in one call, no auth. Cache 24h, 5s timeout, fail-silent. Highest-value single enrichment call.
-- **GitHub API** (optional PAT) — reputation signals: stars, age, maintainer account age, contributor count, last release. Use ETag caching to survive 60/hr unauth limit.
-- **deps.dev** — unified OSSF Scorecard + OSV vulnerabilities for any npm/PyPI dep a skill bundles. No auth, no rate limit.
-
-**Tier 2 — opt-in:**
-- **agentskill.sh** API — MIT-licensed, public, broader coverage (110k+ skills) with a clean 0-100 score across 12 threat categories.
-- **Socket MCP** (`https://mcp.socket.dev/`) — no-auth remote MCP for deep dep scoring.
-- **VirusTotal** (user key) — hash-based corroboration on bundled binaries.
-
-**Avoid:**
-- **Snyk REST directly** — redundant with the skills.sh feed, requires token, sends telemetry.
-- **Repello SkillCheck** — browser-only, ToS disallows automation.
-- **Anthropic / OpenAI / Cursor / Windsurf / Gemini registries** — none expose public query APIs.
-
-### The launch number is real and citable
-
-Snyk Labs published **ToxicSkills** on Feb 5 2026 (n=3,984 skills from ClawHub + skills.sh, authors Beurer-Kellner et al.):
-
-- **36.82%** have at least one security flaw
-- **13.4%** contain a critical issue
-- **76 confirmed malicious payloads**, **91%** of which combine prompt injection with traditional malware
-
-Citable URL: `https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/`. **Use the 36% number, but attribute it to Snyk — don't claim it as your own finding.** HN will punish a misattributed statistic.
-
-### What made comparable tools go viral
-
-The pattern is consistent across **npm audit, snyk, trivy, gitleaks, semgrep, npkill, degit, bun, ripgrep, httpie**:
-
-1. **Compound name** (`gitleaks`, `bundle-audit`, `npkill`) or **invented 4-5 letter word** (`trivy`, `snyk`, `bun`) — self-documenting or brandable.
-2. **Zero-friction install** — `npx <tool>` beats everything. `brew install` is second.
-3. **A 5-second hero asset** showing command → spinner → colorized result → actionable footer. The GIF is non-negotiable.
-4. **A credible stat in the HN title** ("30x faster", "36% of skills vulnerable") paired with a clean product-name-first framing.
-5. **Rule ecosystem as moat** — semgrep and gitleaks won long-term because community PRs extended detection.
-6. **Severity colors (red/orange/yellow/green) + a summary footer with 2-3 `→ next command` lines** — the lifted pattern from every successful scanner.
-
----
-
 # SECTION 2 — MVP spec and implementation plan
 
 ## 1. Name and positioning
@@ -84,27 +9,13 @@ The executable is `skill-audit`; the npm package is `skill-audit`, so one-off ru
 
 Backup picks if `skill-audit` is taken at publish time: `skillprobe`, `agentscan` (conflicts with Snyk's binary — skip), `skillsleuth`, `skylint`. The user's past affinity for `vibe-check` works here but doesn't signal "security" strongly enough — reserve for a related tool.
 
-### Tagline
-**"Scan every AI agent skill on your machine for prompt injection and malicious code. Local, fast, zero-config."**
-
-### Elevator pitch (README lede)
-> Agent skills are the new npm. Snyk's ToxicSkills study (Feb 2026) found **36% of agent skills ship with a security flaw**, 13% with a critical one. Most existing scanners demand a cloud account, scan one skill at a time, or only cover Claude. `skill-audit` runs locally in two seconds, discovers skills across Claude Code, Cursor, Codex, Gemini CLI, Copilot, and cross-agent project instruction files, and hands you a colorized verdict table. `npx skill-audit` is the whole install.
-
-### Target audience
-- **Primary:** individual developers who've pasted 5–50 skills into `~/.claude/skills/` and `~/.codex/` and have no idea what any of them do.
-- **Secondary:** security-conscious engineers at startups who want a pre-commit / CI check before merging skill additions.
-- **Explicitly NOT:** enterprise security teams — they'll buy Snyk. Don't compete there.
-
 ## 2. Architecture and tech stack
 
 ### Language: **TypeScript on Node.js 20+**
 Justification, in order of weight:
 1. **`npx skill-audit` is the single most-important distribution channel.** Every Claude Code / Cursor / Codex user already has Node. Zero onboarding.
-2. User is most proficient in TS/Node — weekend scope demands it.
-3. Excellent TUI ecosystem (`ink`, `chalk`, `cli-table3`, `listr2`, `ora`) in a single runtime.
-4. Single `package.json` publish; no cross-compiled binaries.
-
-Tradeoffs: slightly slower startup than Go/Rust; not an issue at MVP scale (hundreds of skills, not thousands of files). **Do not pick Python** — it splits the install story (pipx vs pip) and loses half the "easy install" advantage.
+2. Excellent TUI ecosystem (`ink`, `chalk`, `cli-table3`, `listr2`, `ora`) in a single runtime.
+3. Single `package.json` publish; no cross-compiled binaries.
 
 ### Build and tooling
 - **Package manager:** `pnpm` (faster, cleaner lockfile).
@@ -123,7 +34,7 @@ Tradeoffs: slightly slower startup than Go/Rust; not an issue at MVP scale (hund
 
 ### Distribution
 1. **Primary:** `npm publish` → `npx skill-audit` and `pnpm dlx skill-audit` work instantly.
-2. **GitHub Action wrapper:** `uses: ondrej-merkun/skill-audit@v1` — thin composite action, highest-leverage distribution per the gitleaks playbook.
+2. **GitHub Action wrapper:** `uses: ondrej-merkun/skill-audit@v1` — thin composite action.
 
 ### Directory layout
 ```
@@ -169,7 +80,7 @@ skill-audit/
 │   │   │   └── allowlist/
 │   │   │       └── anthropic-skills.json
 │   │   └── package.json
-│   └── skill/                      # the Claude Code skill wrapper
+│   └── skill/                      # the agent skill wrapper
 │       └── SKILL.md
 ├── scripts/
 │   └── vendor-allowlist.ts         # regenerates sha256 tree for official skills
@@ -437,7 +348,6 @@ Before changing these integrations, verify the current external contract:
 ## 6. Output and UX layer — this is where we win
 
 ### The hero screenshot
-Hand-tune everything below to look good in a 720p Twitter card.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────┐
@@ -470,11 +380,11 @@ Hand-tune everything below to look good in a 720p Twitter card.
 ```
 
 **Design notes.**
-- Exactly two emoji types: severity dots (`🔴🟠🟡🟢`) and the checkmark (`✓`). No broom, shield, magnifier — those tank credibility with security audiences.
+- Exactly two emoji types: severity dots (`🔴🟠🟡🟢`) and the checkmark (`✓`).
 - Palette: critical red `#FF4444`, high orange `#FF8C00`, medium yellow `#FFD700`, pass teal `#4EC9B0`. Grey `#8B8B8B` for file paths.
 - Never center-align columns. Severity is a fixed 6-char column.
-- Always end with 2-3 arrow-prefixed next-commands. This is the single most-copied footer pattern across `snyk test`, `semgrep scan`, `npm audit`, `trivy image`.
-- Include the percentage ("17% of installed") — it's the screenshot-bait stat.
+- Always end with 2-3 arrow-prefixed next-commands.
+- Include the percentage ("17% of installed").
 
 ### Detail view — `skill-audit explain <skill>`
 
@@ -633,7 +543,7 @@ Scan review stays bounded and redacted:
   `invalid-response`, and `skipped-offline` stay visible. A failed model must
   not hide deterministic findings or other models' completed reviews.
 
-## 8. Claude Code skill wrapper
+## 8. Agent skill wrapper
 
 Minimal — a thin `SKILL.md` that invokes the CLI. The whole point is to be the skill that audits other skills.
 
@@ -672,107 +582,6 @@ your interpretation.
 
 This skill file ships inside the repo at `packages/skill/SKILL.md` and is copy-pasted into skills.sh + agentskill.sh registries on launch. Because it just invokes `npx`, it's inherently kept up to date.
 
-## 9. Go-to-market and viral strategy
-
-### README design
-Follow the **ripgrep + bun** template:
-1. Centered 180px logo (red magnifying glass icon).
-2. `# skill-audit` in H1.
-3. One-line tagline directly under.
-4. Badges: npm version, CI, license. No badge overkill.
-5. The Snyk 36% stat in a blockquote with proper attribution + link.
-6. **`npx skill-audit`** one-liner above the fold.
-7. The hero GIF immediately after install.
-8. "What it scans" table listing supported agents.
-9. Example `--json` output (folded in a `<details>`).
-10. Rule catalog link.
-11. FAQ / philosophy section last ("Why local-only?", "How does this compare to Snyk?").
-
-Keep it under 400 lines. Rich Harris's degit README is the spiritual template — minimalism reads as confidence.
-
-### Hero GIF storyboard (5 seconds, looped)
-Record with `vhs` or `asciinema+agg` — `.gif`, max 800kb, dark terminal.
-
-- **0.0s** Clean `$` prompt.
-- **0.3s** Type `npx skill-audit` and hit Enter.
-- **0.8s** Spinner: `⠋ Scanning 47 skills across 4 agents...`
-- **1.5s** Table renders row-by-row (not all at once — looks faster).
-- **3.0s** Summary footer lands: `8 of 47 skills compromised (17%)` in red.
-- **4.0s** Last line: `→ skill-audit explain polymarket-trader`
-- **4.8s** Hold, loop.
-
-The **17% personal stat** is the viral hook. People screenshot their own result.
-
-### HN launch
-
-**Title (pick one, tested against the HN taste of late 2025/2026):**
-
-1. **⭐ `Show HN: Skillaudit – npm audit for AI agent skills`**
-   Best default. "X but for Y" pattern reliably outperforms. Product-name-first. No stat to defend.
-
-2. `Show HN: Skillaudit – scan Claude/Cursor agent skills for prompt injection and malware`
-   Longer but descriptive; strong for non-HN surfaces.
-
-3. `Show HN: 1 in 3 agent skills has a security flaw (Snyk). I built the scanner for yours.`
-   High-CTR but risks "I built *the* scanner" being read as overclaim. Only works if the launch blog post has your own numbers from running on a real corpus.
-
-**Do NOT post:** *"I found 36% of AI agent skills have prompt injection"* — (a) the 36% is Snyk's, (b) it's "any flaw" not "prompt injection specifically", (c) HN will eat you for misattribution.
-
-**Timing.** Tuesday or Wednesday, 8:30-9:30am Pacific. Have your author comment pre-written: "Author here — happy to answer. Quick notes: this is deterministic pattern matching inspired by Snyk's `mcp-scan` engine. I run no cloud services; enrichment comes from the free skills.sh and GitHub APIs. The Snyk 36% stat is from their Feb ToxicSkills paper [link]. Known false-positive risk: security-education skills trip prompt-injection rules — there's an allowlist for that."
-
-### Other channels (in order of ROI)
-- **Twitter/X thread** from your launch account: 5 tweets, each with one screenshot. Thread closes with the npx one-liner. Tag `@snyksec`, `@AnthropicAI`, relevant DevRel.
-- **r/ClaudeAI** — post the TUI screenshot + install line. Low effort, high receptivity.
-- **r/LocalLLaMA** — emphasize local-only, no-cloud angle.
-- **Bluesky** — DevRel-heavy, friendly to OSS launches.
-- **Claude Code Discord / Cursor Discord** — post in `#showcase` or equivalent.
-- **dev.to** post: "I scanned 500 agent skills on my laptop. Here's what I found." — include your own numbers and cite Snyk. This is the blog post that justifies HN title 3 if you use it.
-- **GitHub Action** published day 1 — this is what drives week-2 adoption as people add it to CI.
-
-### Keeping scope tight
-The "now I own a product" trap is real. Pre-commit these to yourself:
-1. **Do not list unsupported features** in the README. Don't promise.
-2. **Issues triaged in weekly batches, not daily.** Auto-responder: "Thanks — I batch-review Sundays."
-3. **No contributor CLA. Apache-2.0.** Zero process friction for PRs.
-4. **No telemetry, ever.** Say it explicitly in the README. This is a feature.
-5. **No landing page V1.** The GitHub README + a `skill-audit.dev` redirect is enough for the first month.
-
-## 10. MVP scope
-
-### In scope (weekend build, 2-3 days focused)
-
-**Day 1 — core scanner (8h).**
-- Project scaffold (pnpm workspace + tsup + commander + biome).
-- Discovery for 3 agents: Claude Code skills/plugins/commands/agents + MCP sweep, Cursor rules + MCP, cross-cutting AGENTS.md/SKILL.md walker catching Codex + Copilot + Gemini + Windsurf + Cline.
-- Regex-only rule engine for all 27 rules.
-- Scoring + verdict logic + mandatory-fail overrides.
-- Anthropic allowlist (hand-curated for the ~17 official skills).
-- Basic TUI (cli-table3 + chalk + ora) and `--json` output.
-- 20 fixture tests (10 malicious, 10 benign).
-
-**Day 2 — enrichment + polish (8h).**
-- skills.sh + GitHub + deps.dev enrichment with cache.
-- `explain <skill>` detail view.
-- `list` and `ignore` commands.
-- HTML report (single-file).
-- Color/alignment polish — achieve the hero-screenshot mockup exactly.
-- `--strict`, `--summary`, `--offline`, `--agent=<id>`, `--fail-on=<band>` flags.
-- Optional Semgrep shell-out (if binary present).
-
-**Day 3 — launch assets + distribute (6h).**
-- Record the hero GIF (budget 90 min — iterate 4-5 takes with `vhs`).
-- README (~250 lines) with all sections above.
-- Claude Code skill wrapper (`packages/skill/SKILL.md`).
-- GitHub Action composite (`action.yml`).
-- `npm publish`.
-- Schedule HN post for Tuesday 9am PT.
-- Write the author-comment + companion blog post.
-
-### Out of scope (do NOT build)
-This spec describes the supported CLI surface only. Do not add commands, output
-formats, discovery families, hosted services, auto-fix flows, remote rule loading,
-custom rule formats, or plugin autoloading from the internet without a new spec.
-
 ## 11. Risk assessment
 
 ### False-positive risk
@@ -783,50 +592,12 @@ Highest-probability failure mode. The `PI-*` rules trigger on security-education
 4. `--no-prompt-injection-rules` escape hatch for power users.
 5. README explicitly documents expected FPR of ~5-10% on legitimate security skills before allowlist, ~2% after. Honesty is the only defense.
 
-### Maintenance burden
-Mitigations:
-1. Ship rules **in the npm bundle, not from a remote repo.** Regex rules work offline, forever.
-2. Allowlist is a **static JSON file regenerated manually per release.** No runtime fetches.
-3. The Claude Code skill calls `npx skill-audit@latest` — always pulls the current version; zero skill-file maintenance.
-4. Batch issue triage — weekly, not daily.
-5. Pin CI to a known-good Node 20 + a quarterly bump.
-
-### Competitive risk
-What if Anthropic ships native skill scanning next month?
-- **Their scope will be Anthropic-only.** `skill-audit`'s cross-agent coverage still matters.
-- **Their UX will be dashboard-first, not CLI-first.** `npx skill-audit` in a Makefile and in CI remains useful.
-- **Pre-install review is different from periodic audit.** A persistent gap.
-
-What if Snyk open-sources a local-only mode?
-- That's the most dangerous scenario. Hedge by keeping code small (~2k LOC), docs excellent, and being the friendly local-first alternative to a commercial product. Snyk would still require a signup funnel to monetize.
-
 ### Legal/ToS risk
 - **skills.sh `/audit` endpoint** is undocumented but consumed by Vercel's own tooling and forks. Risk: silent deprecation. Mitigation: graceful HTML-scrape fallback + cache + never block on failure. Identify with honest User-Agent. Do not hammer.
 - **agentskill.sh** — MIT-licensed CLI and explicit "public API" statement; no risk.
 - **Repello** — do NOT automate. Link out only.
 - **Snyk** — use `mcp-scan` OSS directly if you ever want to shell out, never the authenticated Snyk REST.
 - **GitHub API** — fully documented, identify with User-Agent, respect rate limits via ETag. Zero risk.
-- **Trademark.** Avoid product names containing "Snyk", "Claude", "Anthropic", "Cursor", "GitHub", or "Copilot" in the binary name. `skill-audit` is safely generic.
 - **Published rules reference CVE/CWE IDs** — public-domain, unlimited reuse.
 
 ---
-
-# Final call-to-action checklist
-
-- [ ] Claim `skill-audit` on npm + GitHub repo slug before writing code
-- [ ] Scaffold: pnpm + tsup + commander + biome + vitest
-- [ ] Implement discovery for Claude Code + Cursor + AGENTS.md sweep + Copilot
-- [ ] Implement 27-rule regex engine + scoring + allowlist
-- [ ] Wire skills.sh + GitHub + deps.dev enrichment behind a cache
-- [ ] Build TUI to match the hero mockup precisely
-- [ ] `--json`, `--html`, `--summary`, `--offline`, `--strict`, `--agent`, `--fail-on` flags
-- [ ] `scan`, `list`, `explain`, `ignore` commands
-- [ ] Ship the Claude Code skill wrapper and GitHub Action
-- [ ] Record a 5-second hero GIF
-- [ ] Write the README (~250 lines, ripgrep/bun-shaped)
-- [ ] `npm publish`
-- [ ] Schedule HN post: *"Show HN: Skillaudit – npm audit for AI agent skills"* for Tuesday 9am PT
-- [ ] Pre-write the author comment citing Snyk ToxicSkills correctly
-- [ ] Set up weekly issue triage; no daily Slack-like obligation
-
-**Start Saturday morning. Ship by Tuesday afternoon. Don't expand scope once shipped.**
