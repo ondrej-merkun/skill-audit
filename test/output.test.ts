@@ -77,7 +77,7 @@ function makeLlmReview(overrides: Partial<LlmReviewResult> = {}): LlmReviewResul
     provider: 'openai-compatible',
     model: 'alpha-local',
     status: 'ok',
-    promptVersion: '2026-04-28.single-model-v1',
+    promptVersion: '2026-04-28.schema-v2',
     findings: [],
     ...overrides,
   };
@@ -1313,7 +1313,7 @@ describe('renderJson', () => {
         provider: 'openai-compatible',
         model: 'alpha-local',
         status: 'ok',
-        prompt_version: '2026-04-28.single-model-v1',
+        prompt_version: '2026-04-28.schema-v2',
         findings: [
           {
             severity: 'high',
@@ -1330,7 +1330,7 @@ describe('renderJson', () => {
         provider: 'openai-compatible',
         model: 'beta-local',
         status: 'invalid-response',
-        prompt_version: '2026-04-28.single-model-v1',
+        prompt_version: '2026-04-28.schema-v2',
         findings: [],
         error: 'bad JSON',
       },

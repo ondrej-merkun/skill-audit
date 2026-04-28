@@ -42,13 +42,19 @@ function validChatCompletionsResponse(value: unknown): boolean {
   return Array.isArray(choices);
 }
 
+// 30s - intentionally long as cold-starting a local LLM can genuinely take a while
+const DEFAULT_LLM_LOAD_TIMEOUT_MS = 30_000;
+
 export async function checkOpenAiCompatibleConnection(
   config: LocalLlmConfig,
   fetchImpl: FetchLike = fetch
 ): Promise<LlmHealthResult> {
   const startedAt = Date.now();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.timeoutMs ?? 5000);
+  const timeout = setTimeout(
+    () => controller.abort(),
+    config.timeoutMs ?? DEFAULT_LLM_LOAD_TIMEOUT_MS
+  );
 
   try {
     const response = await fetchImpl(chatCompletionsUrl(config.baseUrl), {

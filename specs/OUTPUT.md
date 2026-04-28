@@ -48,7 +48,7 @@ ship as the hero GIF).
           "provider": "openai-compatible",
           "model": "llama3.1",
           "status": "ok",
-          "prompt_version": "2026-04-28.single-model-v1",
+          "prompt_version": "2026-04-28.schema-v2",
           "findings": [
             {
               "severity": "high",

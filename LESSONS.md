@@ -126,6 +126,13 @@ without a commit message explaining why it no longer applies.
   When a smoke test starts an in-process server, use async child processes or a
   separate server process so the server can answer while the CLI runs.
 
+- **L1.20 — Do not run multiple Vitest invocations in parallel.** _LLM review
+  reliability bug verification launched two `pnpm test -- <file>` commands at
+  once; each expanded to the full configured suite and produced unrelated temp
+  directory/cache noise in enrichment tests._
+  Use `pnpm exec vitest run <file>` for focused tests, and run full-suite
+  verification as one sequential `pnpm test`.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

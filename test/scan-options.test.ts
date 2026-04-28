@@ -946,11 +946,71 @@ describe('runScan flag wiring', () => {
           provider: 'openai-compatible',
           model: 'local-reviewer',
           status: 'invalid-response',
-          prompt_version: '2026-04-28.single-model-v1',
+          prompt_version: '2026-04-28.schema-v2',
           findings: [],
         },
       ]);
       expect(stripAnsi(stderrChunks.join(''))).toContain('reviewer invalid-response');
+    });
+  });
+
+  it('--llm handles local model no-op findings and valid findings consistently', async () => {
+    await withTempDir(async (dir) => {
+      process.env['XDG_CONFIG_HOME'] = dir;
+      await writeLlmConfig(dir);
+      vi.mocked(discoverAll).mockResolvedValue([
+        makeSkill({ id: 'noop-skill', name: 'noop-skill' }),
+        makeSkill({ id: 'real-finding', name: 'real-finding' }),
+      ]);
+      const fetchImpl: LlmReviewFetch = async (_url, init) => {
+        const request = JSON.parse(init.body) as {
+          messages: Array<{ role: string; content: string }>;
+        };
+        const userMessage = request.messages.find((message) => message.role === 'user');
+        const payload = JSON.parse(userMessage?.content ?? '{}').payload as {
+          skill: { name: string };
+        };
+        const content =
+          payload.skill.name === 'noop-skill'
+            ? JSON.stringify({
+                findings: [
+                  {
+                    category: 'prompt-injection',
+                    suggested_fix: '',
+                    file: '',
+                    rationale: '',
+                    confidence: 0,
+                    severity: 'info',
+                  },
+                ],
+              })
+            : JSON.stringify({
+                findings: [
+                  {
+                    severity: 'low',
+                    category: 'dependency',
+                    confidence: 0.8,
+                    rationale:
+                      'The skill uses Ansible, which is not explicitly listed in the dependencies.',
+                    file: '',
+                    suggested_fix:
+                      'Update the dependency to a specific version or use a more secure package manager.',
+                  },
+                ],
+              });
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ choices: [{ message: { content } }] }),
+        };
+      };
+
+      await runScan({ llm: 'reviewer', llmFetchImpl: fetchImpl });
+
+      const errOut = stripAnsi(stderrChunks.join(''));
+      expect(errOut).toContain('noop-skill: reviewer ok (0 LLM-only findings)');
+      expect(errOut).toContain('real-finding: reviewer ok (1 LLM-only finding)');
+      expect(errOut).not.toContain('invalid-response');
     });
   });
 

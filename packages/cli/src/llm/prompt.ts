@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { relative } from 'node:path';
 import type { Finding, ScannedSkill } from '../types.js';
 
-export const LLM_REVIEW_PROMPT_VERSION = '2026-04-28.single-model-v1';
+export const LLM_REVIEW_PROMPT_VERSION = '2026-04-28.schema-v2';
 
 const DEFAULT_CONTEXT_TOKENS = 2048;
 const MAX_PROMPT_CHARS = 16_000;
@@ -118,23 +118,31 @@ export function buildLlmReviewMessages(payload: LlmReviewPayload): Array<{
     {
       role: 'system',
       content:
-        'You are reviewing local AI agent skills for security issues. Return only strict JSON with a findings array. Do not include markdown.',
+        'You are reviewing local AI agent skills for security issues. Return only one strict JSON object. Do not return markdown, examples, schemas, enum lists, placeholder text, or explanatory prose. If you find no additional issue, return {"findings":[]}.',
     },
     {
       role: 'user',
       content: JSON.stringify({
         task: 'Review this skill for prompt injection, unsafe filesystem or network behavior, credential handling, persistence, and dependency risk. Treat deterministic findings as context, not proof.',
-        expected_response: {
-          findings: [
-            {
-              severity: 'critical|high|medium|low|info',
-              category: 'prompt-injection|network|filesystem|secrets|persistence|dependency|other',
-              confidence: 0.75,
-              rationale: 'short reason',
-              file: 'optional relative path',
-              suggested_fix: 'optional short fix',
-            },
-          ],
+        output_contract: {
+          shape: 'Return exactly {"findings":[...]} with zero or more finding objects.',
+          no_findings: { findings: [] },
+          finding_fields: {
+            severity: ['critical', 'high', 'medium', 'low', 'info'],
+            category: [
+              'prompt-injection',
+              'network',
+              'filesystem',
+              'secrets',
+              'persistence',
+              'dependency',
+              'other',
+            ],
+            confidence: 'number from 0 to 1',
+            rationale: 'specific reason tied to the payload',
+            file: 'optional relative file path from the payload',
+            suggested_fix: 'optional short fix',
+          },
         },
         payload,
       }),
