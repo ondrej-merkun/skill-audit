@@ -39,6 +39,7 @@ coverage/
 tasks/
 
 # Graphify. Keep graph outputs, skip heavy/local-only files
+graphify-out/graph.html
 
 # optional: commit for shared extraction speed, skip to keep repo small
 graphify-out/cache/
