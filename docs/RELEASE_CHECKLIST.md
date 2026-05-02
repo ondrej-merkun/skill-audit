@@ -55,8 +55,11 @@ contains findings.
 Verify the packed npm contents:
 
 ```bash
-pnpm --filter @ondrej-merkun/skill-audit pack --dry-run
-cd packages/cli && npm publish --dry-run --access public
+(
+  cd packages/cli
+  npm pack --dry-run
+  npm publish --dry-run --access public
+)
 ```
 
 The dry run must include `dist/`, `package.json`, `README.md`, `LICENSE`, and
@@ -105,8 +108,9 @@ package page shows provenance or trusted-publishing metadata for the release.
 Create and push a version tag only after the checks above pass:
 
 ```bash
-git tag v0.1.1
-git push origin v0.1.1
+VERSION=$(node -p "require('./packages/cli/package.json').version")
+git tag "v${VERSION}"
+git push origin "v${VERSION}"
 ```
 
 Use the actual package version from

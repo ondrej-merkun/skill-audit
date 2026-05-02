@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { Script, createContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 import stripAnsi from './helpers/strip-ansi.js';
@@ -12,6 +14,11 @@ import { renderJson } from '../packages/cli/src/output/json.js';
 import { sortScanSkills } from '../packages/cli/src/output/sort.js';
 import { calculateCompromisedPercent } from '../packages/cli/src/percent.js';
 import type { LlmReviewResult, ScanResult, ScannedSkill } from '../packages/cli/src/types.js';
+
+const PACKAGE_JSON = JSON.parse(
+  readFileSync(fileURLToPath(new URL('../packages/cli/package.json', import.meta.url)), 'utf-8')
+) as { version: string };
+const PACKAGE_VERSION = PACKAGE_JSON.version;
 
 function makeSkill(overrides: Partial<ScannedSkill> = {}): ScannedSkill {
   return {
@@ -43,7 +50,11 @@ function makeSkill(overrides: Partial<ScannedSkill> = {}): ScannedSkill {
 function makeScanResult(overrides: Partial<ScanResult> = {}): ScanResult {
   return {
     schemaVersion: '1.0',
-    scan: { startedAt: '2024-01-01T00:00:00.000Z', durationMs: 1320, toolVersion: '0.1.1' },
+    scan: {
+      startedAt: '2024-01-01T00:00:00.000Z',
+      durationMs: 1320,
+      toolVersion: PACKAGE_VERSION,
+    },
     agents: [{ id: 'claude-code', installed: true, skillsScanned: 1 }],
     skills: [makeSkill()],
     summary: {
@@ -1127,7 +1138,7 @@ describe('renderJson', () => {
     const json = JSON.parse(renderJson(makeScanResult()));
     expect(json.scan.started_at).toBe('2024-01-01T00:00:00.000Z');
     expect(json.scan.duration_ms).toBe(1320);
-    expect(json.scan.tool_version).toBe('0.1.1');
+    expect(json.scan.tool_version).toBe(PACKAGE_VERSION);
   });
 
   it('serializes agents with snake_case skills_scanned', () => {
