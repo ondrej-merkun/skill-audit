@@ -5,10 +5,6 @@ description: Documents optional setup commands for humans.
 
 # Dependency Notes
 
-For human setup, install the optional formatter before packaging:
+For human setup, run optional formatter configuration before packaging:
 
-```bash
-pip install black
-```
-
-No npm install needed during skill execution.
+Use the repository's standard formatter configuration.
