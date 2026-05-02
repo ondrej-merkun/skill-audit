@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { matchesGlob, runPatternWithTimeout, runRules } from '../packages/cli/src/rules/engine.js';
+import { matchesGlob, runPatternWithSafetyPreflight, runRules } from '../packages/cli/src/rules/engine.js';
 import type { Rule } from '../packages/cli/src/types.js';
 
 describe('matchesGlob', () => {
@@ -29,20 +29,20 @@ describe('matchesGlob', () => {
   });
 });
 
-describe('runPatternWithTimeout', () => {
+describe('runPatternWithSafetyPreflight', () => {
   it('returns matches for a simple pattern', async () => {
-    const matches = await runPatternWithTimeout(/hello/i, 'say Hello world');
+    const matches = await runPatternWithSafetyPreflight(/hello/i, 'say Hello world');
     expect(matches.length).toBe(1);
     expect(matches[0]?.text).toBe('Hello');
   });
 
   it('returns multiple matches', async () => {
-    const matches = await runPatternWithTimeout(/\d+/, 'foo 1 bar 2 baz 3');
+    const matches = await runPatternWithSafetyPreflight(/\d+/, 'foo 1 bar 2 baz 3');
     expect(matches.length).toBe(3);
   });
 
   it('returns empty array when no match', async () => {
-    const matches = await runPatternWithTimeout(/xyz/, 'hello world');
+    const matches = await runPatternWithSafetyPreflight(/xyz/, 'hello world');
     expect(matches.length).toBe(0);
   });
 
@@ -50,7 +50,7 @@ describe('runPatternWithTimeout', () => {
     // Catastrophic backtracking pattern on adversarial input.
     const catastrophic = /(a+)+b/;
     const adversarial = 'a'.repeat(25); // no 'b' forces backtracking
-    const matches = await runPatternWithTimeout(catastrophic, adversarial, 50);
+    const matches = await runPatternWithSafetyPreflight(catastrophic, adversarial);
     // Should return empty before executing the unsafe pattern.
     expect(matches).toEqual([]);
   }, 5000);
