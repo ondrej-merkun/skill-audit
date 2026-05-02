@@ -6,7 +6,7 @@
 
 <p align="center">
   Scan every AI agent skill on your machine for prompt injection and malicious code.<br/>
-  Local scanning, zero-config.
+  Fast local rules by default, with optional local LLM review for deeper context.
 </p>
 
 <p align="center">
@@ -23,13 +23,25 @@
 configs, and project instruction files. It discovers content exposed to Claude
 Code, OpenAI Codex, GitHub Copilot, Cursor, Gemini CLI, and cross-agent project
 files, then shows the riskiest result first in a colorized verdict table.
+When you want a deeper semantic pass, add optional local LLM review over the
+same discovered skills, deterministic findings, relevant file paths, and capped
+snippets.
 
 ```bash
 npx skill-audit
 ```
 
-Rule scanning runs on your machine. This version does not perform enrichment
-lookups in the user-facing CLI.
+Need the deeper local review?
+
+```bash
+skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model llama3.1
+skill-audit scan --llm local
+```
+
+Default rule scanning runs on your machine with no model calls. Optional local
+LLM review uses your loopback OpenAI-compatible server, labels model findings
+separately from rule findings, and does not require a cloud account or remote
+model. This version does not perform enrichment lookups in the user-facing CLI.
 
 ## Install
 
@@ -69,19 +81,39 @@ skill-audit explain obfuscated-eval-skill
 
 ## Common Commands
 
+Scan and filter:
+
 ```bash
-skill-audit scan                                      # default scan
-skill-audit scan --agent claude-code                 # restrict discovery
+skill-audit                                          # default scan
+skill-audit scan --agent claude-code                 # restrict discovery to one agent
 skill-audit scan --include-marketplaces              # include inactive local marketplace inventory
-skill-audit scan --json -o skill-audit-report.json   # machine-readable report
+```
+
+Write reports:
+
+```bash
+skill-audit scan --json -o skill-audit-report.json   # machine-readable JSON
+skill-audit scan --summary -o skill-audit-summary.txt # compact text summary
 skill-audit scan --html skill-audit-report.html      # standalone HTML report
+```
+
+Add local LLM review:
+
+```bash
 skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model llama3.1
 skill-audit llm list                                 # configured local models
 skill-audit llm check local                          # local model health check
 skill-audit scan --llm local                         # add local LLM review
 skill-audit scan --llm local --llm qwen              # compare multiple local models
+skill-audit scan --llm all --html skill-audit-report.html
+```
+
+Inventory and follow up:
+
+```bash
 skill-audit list                                     # inventory without scanning
 skill-audit list --include-marketplaces              # show installed and inactive marketplace skills
+skill-audit explain <name>                           # inspect one result
 skill-audit ignore <name>                            # suppress a reviewed tree hash
 ```
 
