@@ -1,7 +1,7 @@
 # Graph Report - skillaudit  (2026-05-03)
 
 ## Corpus Check
-- 157 files · ~82,916 words
+- 157 files · ~82,973 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -50,16 +50,16 @@
 10. `computeTreeSha256()` - 11 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `parse()` --calls--> `readPackageVersion()`  [INFERRED]
-  test/fixtures/benign/date-parser/parse.py → packages/cli/src/version.ts
-- `fetchImpl()` --calls--> `checkOpenAiCompatibleConnection()`  [INFERRED]
-  test/scan-options.test.ts → packages/cli/src/llm/openai-compatible.ts
-- `readFile()` --calls--> `readIgnoreListContent()`  [INFERRED]
-  test/fixtures/malicious/remote-import-skill/utils.js → packages/cli/src/allowlist/ignore.ts
-- `readFile()` --calls--> `discoverMcpJson()`  [INFERRED]
-  test/fixtures/malicious/remote-import-skill/utils.js → packages/cli/src/discovery/cursor.ts
-- `readFile()` --calls--> `discoverExtensionManifests()`  [INFERRED]
-  test/fixtures/malicious/remote-import-skill/utils.js → packages/cli/src/discovery/gemini.ts
+- `readPackageVersion()` --calls--> `parse()`  [INFERRED]
+  packages/cli/src/version.ts → test/fixtures/benign/date-parser/parse.py
+- `checkOpenAiCompatibleConnection()` --calls--> `fetchImpl()`  [INFERRED]
+  packages/cli/src/llm/openai-compatible.ts → test/scan-options.test.ts
+- `readIgnoreListContent()` --calls--> `readFile()`  [INFERRED]
+  packages/cli/src/allowlist/ignore.ts → test/fixtures/malicious/remote-import-skill/utils.js
+- `discoverMcpJson()` --calls--> `readFile()`  [INFERRED]
+  packages/cli/src/discovery/cursor.ts → test/fixtures/malicious/remote-import-skill/utils.js
+- `discoverExtensionManifests()` --calls--> `readFile()`  [INFERRED]
+  packages/cli/src/discovery/gemini.ts → test/fixtures/malicious/remote-import-skill/utils.js
 
 ## Communities
 
@@ -117,7 +117,7 @@ Nodes (1): runCli()
 
 ### Community 13 - "Community 13"
 Cohesion: 0.28
-Nodes (10): extractSnippet(), globalPattern(), hasNestedQuantifier(), isNestedScanRoot(), isPromptBearingCommandOrAgentDir(), isSafeRegexInput(), lineCol(), runPatternWithTimeout() (+2 more)
+Nodes (10): extractSnippet(), globalPattern(), hasNestedQuantifier(), isNestedScanRoot(), isPromptBearingCommandOrAgentDir(), isSafeRegexInput(), lineCol(), runPatternWithSafetyPreflight() (+2 more)
 
 ### Community 14 - "Community 14"
 Cohesion: 0.54

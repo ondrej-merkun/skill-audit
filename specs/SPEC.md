@@ -30,7 +30,7 @@ Justification, in order of weight:
   - `ora` for spinners
   - `listr2` for the multi-step scan pipeline
   - **Do not** reach for `ink` (React) at MVP — adds 200kb of deps and complicates output modes.
-- **Regex engine:** Node's native `RegExp` with a safety wrapper that caps runtime per pattern (prevents catastrophic backtracking).
+- **Regex engine:** Node's native `RegExp` with a safety preflight that caps scanned content size and rejects unsafe nested-quantifier patterns before matching.
 - **Semgrep integration:** shell-out to `semgrep --config ./rules --json` *only if* `semgrep` binary is on PATH. Gracefully skip AST rules otherwise and emit a note. This keeps zero-install pure regex as the default.
 - **Testing:** `vitest` for unit + snapshot. Keep ~30 rule tests with example malicious/benign fixtures.
 - **Lint/format:** `biome` (faster than eslint+prettier, single config).
@@ -280,7 +280,7 @@ unzip\s+-P\s+["']?\S+["']?\s+\S+\.zip
 warm cache on a 2020-era laptop. If a design choice pushes past
 this, redesign before shipping. Worker-thread-per-regex is NOT
 acceptable at this scale — batch regex execution per file, or
-keep execution in the main thread with a simpler timeout strategy
+keep execution in the main thread with a simpler safety strategy
 (e.g. pre-flight length/complexity caps on user-sourced content).
 
 ## 5. Cloud enrichment layer
