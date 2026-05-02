@@ -27,8 +27,16 @@ When you want a deeper semantic pass, add optional local LLM review over the
 same discovered skills, deterministic findings, relevant file paths, and capped
 snippets.
 
+Run a one-off scan with `npx`, or install the `skill-audit` binary globally
+before using the commands below, including local LLM review.
+
 ```bash
+# One-off scan
 npx @ondrej-merkun/skill-audit
+
+# Install globally
+npm install -g @ondrej-merkun/skill-audit
+skill-audit
 ```
 
 Need the deeper local review?
@@ -42,17 +50,6 @@ Default rule scanning runs on your machine with no model calls. Optional local
 LLM review uses your loopback OpenAI-compatible server, labels model findings
 separately from rule findings, and does not require a cloud account or remote
 model. This version does not perform enrichment lookups in the user-facing CLI.
-
-## Install
-
-```bash
-# One-off scan
-npx @ondrej-merkun/skill-audit
-
-# Or install globally
-npm install -g @ondrej-merkun/skill-audit
-skill-audit
-```
 
 ## Read The First Result
 
