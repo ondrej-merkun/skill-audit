@@ -1,6 +1,6 @@
 # Ralph loop artifacts
 logs/
-.ralph/
+.ralph/logs/
 
 # Node / pnpm
 node_modules/
@@ -34,7 +34,6 @@ coverage/
 .env.*.local
 !test/fixtures/**/.env
 
-.postmortem
 .codex
 tasks/
 

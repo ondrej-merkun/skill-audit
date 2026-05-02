@@ -1,4 +1,4 @@
-# fix_plan.md — skill-audit task list
+# .ralph/fix_plan.md — skill-audit task list
 
 Ralph picks the **first unchecked task** from this list each iteration.
 Order matters — dependencies flow top-to-bottom. Do not reorder.

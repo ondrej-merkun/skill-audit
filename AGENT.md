@@ -7,7 +7,7 @@ and structure code in this repo. Keep it short and keep it accurate.
 distilled record of how previous runs broke, with explicit rules to
 avoid repeating the same mistakes. If your current task produces a
 new lesson, append a bullet there in the SAME commit as the fix
-(see `PROMPT.md` step 4b).
+(see `.ralph/PROMPT.md` step 4b).
 
 ## Tech stack (do not drift)
 
@@ -235,11 +235,11 @@ A task is done when:
     package metadata, or trusted-publishing settings: verify the external
     owner/repo/workflow/package target exists. Do not assemble GitHub URLs
     from partial identity fields.
-13. You've updated `fix_plan.md` checkbox.
+13. You've updated `.ralph/fix_plan.md` checkbox.
 14. You've committed both the feature and the checkbox change.
 
 ## When the spec and AGENT.md disagree
 
 The spec (`specs/SPEC.md`) wins on *what* to build. AGENT.md wins on
 *how* to structure the code. If they genuinely conflict, prefer the
-spec and add a note in `fix_plan.md` under "Spec-vs-AGENT conflicts".
+spec and add a note in `.ralph/fix_plan.md` under "Spec-vs-AGENT conflicts".

@@ -2,11 +2,11 @@
 
 `SPEC.md` in this folder is the authoritative specification for `skill-audit`.
 Ralph references it directly by section number when
-implementing tasks from `fix_plan.md`.
+implementing tasks from `.ralph/fix_plan.md`.
 
 ## Section index (for Ralph)
 
-When a `fix_plan.md` task says "per spec §X", Ralph should read only
+When a `.ralph/fix_plan.md` task says "per spec §X", Ralph should read only
 that section, not the whole file. Token economy.
 
 | Section | Topic |

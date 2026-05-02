@@ -18,16 +18,16 @@ listed below.
    `skill-audit`), spec-revision marker, gotchas, and the same
    done-means checklist. The Identity section is canonical — never
    guess handles or names from filesystem paths.
-4. **`PROMPT.md`** — Ralph loop protocol. Read in full at the start of
+4. **`.ralph/PROMPT.md`** — Ralph loop protocol. Read in full at the start of
    each iteration. Step 4b ("Capture any new lesson") is the hook
    that keeps `LESSONS.md` current.
-5. **`fix_plan.md`** — the prioritized task list. Pick the **first
+5. **`.ralph/fix_plan.md`** — the prioritized task list. Pick the **first
    unchecked task** (`- [ ]`), implement only that one, commit, exit.
 
 ## Spec & task references
 
 - Full spec: `specs/SPEC.md` (current rev: 2026-04-26 post-mortem v2).
-- `fix_plan.md` contains the current post-mortem fix queue ordered by
+- `.ralph/fix_plan.md` contains the current post-mortem fix queue ordered by
   implementation dependency.
 
 ## Build / test / lint commands (verbatim)
@@ -44,7 +44,7 @@ pnpm typecheck        # tsc --noEmit — must pass on every package
 ## Hard rules (loop-driver agnostic)
 
 - **One task per iteration.** No freelance refactoring, no
-  "while I'm here". The orphan exception in `PROMPT.md` is the only
+  "while I'm here". The orphan exception in `.ralph/PROMPT.md` is the only
   permitted cleanup.
 - **Never weaken a rule to make a test pass.**
 - **Never delete a failing test** — fix it.
@@ -59,11 +59,11 @@ pnpm typecheck        # tsc --noEmit — must pass on every package
 
 ## Loop driver scripts
 
-- Claude Code: `scripts/run-ralph.sh`
-- Codex CLI: `scripts/run-ralph-codex.sh`
+- Claude Code: `.ralph/run-ralph-claude.sh`
+- Codex CLI: `.ralph/run-ralph-codex.sh`
 
 Both are time-bounded; both stop cleanly between iterations once the
-budget elapses or `fix_plan.md` reaches `ALL TASKS COMPLETE`. They
+budget elapses or `.ralph/fix_plan.md` reaches `ALL TASKS COMPLETE`. They
 never kill an iteration mid-flight.
 
 ## graphify

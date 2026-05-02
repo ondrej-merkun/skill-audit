@@ -8,12 +8,18 @@
 #   - HumanLayer "A Brief History of Ralph" — prefer bash loop over stop-hook plugin
 #
 # Usage:
-#   MAX_HOURS=8 ./scripts/run-ralph.sh              # run for ~8 hours
-#   MAX_HOURS=3.5 ./scripts/run-ralph.sh            # fractional OK
-#   MAX_MINUTES=420 ./scripts/run-ralph.sh          # same as MAX_HOURS=7
-#   MAX_HOURS=8 DRY_RUN=1 ./scripts/run-ralph.sh    # preview without calling claude
+#   MAX_HOURS=8 ./.ralph/run-ralph-claude.sh              # run for ~8 hours
+#   MAX_HOURS=3.5 ./.ralph/run-ralph-claude.sh            # fractional OK
+#   MAX_MINUTES=420 ./.ralph/run-ralph-claude.sh          # same as MAX_HOURS=7
+#   MAX_HOURS=8 DRY_RUN=1 ./.ralph/run-ralph-claude.sh    # preview without calling claude
 
 set -uo pipefail
+
+RALPH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$RALPH_DIR/.." && pwd)"
+PROMPT_FILE="$RALPH_DIR/PROMPT.md"
+FIX_PLAN_FILE="$RALPH_DIR/fix_plan.md"
+cd "$REPO_ROOT"
 
 # --- Config ---------------------------------------------------------------
 MAX_HOURS="${MAX_HOURS:-}"                   # primary budget (decimal OK)
@@ -21,7 +27,7 @@ MAX_MINUTES="${MAX_MINUTES:-}"               # alternative finer-grained
 MAX_ITERATIONS="${MAX_ITERATIONS:-1000}"     # hard safety cap, not primary limit
 SLEEP_BETWEEN="${SLEEP_BETWEEN:-5}"
 CLAUDE_ARGS="${CLAUDE_ARGS:---dangerously-skip-permissions}"
-LOG_DIR="${LOG_DIR:-logs}"
+LOG_DIR="${LOG_DIR:-$RALPH_DIR/logs}"
 LOG_FILE="${LOG_DIR}/ralph.log"
 DONE_MARKER="ALL TASKS COMPLETE"
 
@@ -39,9 +45,9 @@ if (( BUDGET_SECONDS <= 0 )); then
 ❌ Must set MAX_HOURS or MAX_MINUTES.
 
 Examples:
-  MAX_HOURS=8 ./scripts/run-ralph.sh          # run for 8 hours
-  MAX_HOURS=3.5 ./scripts/run-ralph.sh        # fractional OK
-  MAX_MINUTES=420 ./scripts/run-ralph.sh      # 7 hours in minutes
+  MAX_HOURS=8 ./.ralph/run-ralph-claude.sh          # run for 8 hours
+  MAX_HOURS=3.5 ./.ralph/run-ralph-claude.sh        # fractional OK
+  MAX_MINUTES=420 ./.ralph/run-ralph-claude.sh      # 7 hours in minutes
 
 The loop exits cleanly between iterations once the budget is exhausted;
 it will NOT kill a running iteration mid-flight.
@@ -59,8 +65,8 @@ if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
 fi
 
 command -v claude >/dev/null || { echo "❌ claude CLI not on PATH"; exit 1; }
-[[ -f PROMPT.md ]]   || { echo "❌ PROMPT.md not found in $(pwd)"; exit 1; }
-[[ -f fix_plan.md ]] || { echo "❌ fix_plan.md not found"; exit 1; }
+[[ -f "$PROMPT_FILE" ]]   || { echo "❌ $PROMPT_FILE not found"; exit 1; }
+[[ -f "$FIX_PLAN_FILE" ]] || { echo "❌ $FIX_PLAN_FILE not found"; exit 1; }
 
 mkdir -p "$LOG_DIR"
 
@@ -92,7 +98,7 @@ echo "   Budget:         $(human_duration "$BUDGET_SECONDS")"
 echo "   Will stop by:   $(fmt_epoch "$END_TIME")"
 echo "   Iteration cap:  $MAX_ITERATIONS (safety backstop only)"
 echo "   Log:            $LOG_FILE"
-echo "   Stop early:     Ctrl-C (or pkill -f run-ralph.sh from another terminal)"
+echo "   Stop early:     Ctrl-C (or pkill -f run-ralph-claude.sh from another terminal)"
 echo ""
 
 iter=0
@@ -122,12 +128,12 @@ while true; do
   fi
 
   # --- All tasks done?
-  if grep -qE "^[[:space:]]*${DONE_MARKER}[[:space:]]*\$" fix_plan.md; then
-    echo "✅ [$(date -u +%FT%TZ)] fix_plan.md contains '$DONE_MARKER'."
+  if grep -qE "^[[:space:]]*${DONE_MARKER}[[:space:]]*\$" "$FIX_PLAN_FILE"; then
+    echo "✅ [$(date -u +%FT%TZ)] .ralph/fix_plan.md contains '$DONE_MARKER'."
     echo "   Finished in $(human_duration "$elapsed") after $((iter-1)) iterations. Exiting."
     exit 0
   fi
-  if ! grep -qE '^\s*-\s*\[\s\]' fix_plan.md; then
+  if ! grep -qE '^\s*-\s*\[\s\]' "$FIX_PLAN_FILE"; then
     echo "✅ No unchecked tasks remain. Finished in $(human_duration "$elapsed"). Exiting."
     exit 0
   fi
@@ -137,16 +143,16 @@ while true; do
     | tee -a "$LOG_FILE"
 
   if [[ "${DRY_RUN:-0}" == "1" ]]; then
-    echo "(DRY_RUN) would invoke: cat PROMPT.md | claude -p $CLAUDE_ARGS" | tee -a "$LOG_FILE"
+    echo "(DRY_RUN) would invoke: cat .ralph/PROMPT.md | claude -p $CLAUDE_ARGS" | tee -a "$LOG_FILE"
     sleep 2
   else
-    if ! cat PROMPT.md | claude -p $CLAUDE_ARGS 2>&1 | tee -a "$LOG_FILE"; then
+    if ! cat "$PROMPT_FILE" | claude -p $CLAUDE_ARGS 2>&1 | tee -a "$LOG_FILE"; then
       echo "⚠️  [$ts] claude exited non-zero on iter $iter. Continuing." | tee -a "$LOG_FILE"
     fi
   fi
 
   # --- Commit straggler changes Ralph forgot to commit (defensive)
-  if ! git diff --quiet || ! git diff --cached --quiet; then
+  if [[ "${DRY_RUN:-0}" != "1" ]] && { ! git diff --quiet || ! git diff --cached --quiet; }; then
     git add -A && git commit -m "ralph: iter ${iter} stragglers" >> "$LOG_FILE" 2>&1 || true
   fi
 

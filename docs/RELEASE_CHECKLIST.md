@@ -65,8 +65,8 @@ Verify the packed npm contents:
 
 The dry run must include `dist/`, `package.json`, `README.md`, `LICENSE`, and
 `CHANGELOG.md`, including `dist/index.d.ts` and `dist/index.d.cts`, and must
-not include loop-driver files such as `fix_plan.md`, `PROMPT.md`, `AGENT.md`,
-or test fixtures. The publish dry-run must not print npm manifest
+not include loop-driver files such as `.ralph/fix_plan.md`,
+`.ralph/PROMPT.md`, `AGENT.md`, or test fixtures. The publish dry-run must not print npm manifest
 auto-correction warnings.
 
 ## Markdown Links And Paths

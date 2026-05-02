@@ -161,7 +161,7 @@ without a commit message explaining why it no longer applies.
   review surfaced it until scan results were wrong._
   When you face a path/format ambiguity, either (a) ask the user, or
   (b) pick the more thorough interpretation AND log the choice under
-  "Decisions made during implementation" in `fix_plan.md`.
+  "Decisions made during implementation" in `.ralph/fix_plan.md`.
 
 - **L2.3 — Spec invariants must become types and cross-boundary tests.** _Post-mortem
   issue 1: dedupe by `treeSha256` lived in `specs/DISCOVERY.md`, but
@@ -224,7 +224,7 @@ without a commit message explaining why it no longer applies.
   pass" and left both in place._
   "One task per loop" forbids freelance cleanup, but NOT cleanup of a
   file that THIS task directly supersedes. Delete the predecessor in
-  the same commit. See `PROMPT.md § Orphan exception`.
+  the same commit. See `.ralph/PROMPT.md § Orphan exception`.
 
 ## 6. Loop hygiene
 
@@ -333,7 +333,7 @@ without a commit message explaining why it no longer applies.
 
 - Generic best-practice advice ("write tests"). Only hard-won, project-
   specific lessons.
-- Things already enforced by `CLAUDE.md` / `AGENT.md` / `PROMPT.md`. If
+- Things already enforced by `CLAUDE.md` / `AGENT.md` / `.ralph/PROMPT.md`. If
   the rule is mechanical and can be checked, codify it there — LESSONS.md
   is the narrative companion, not the enforcement mechanism.
 - Resolved bugs with no general lesson. Those belong in commit messages.

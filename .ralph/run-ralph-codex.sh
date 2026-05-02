@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Ralph Wiggum loop for skill-audit — CODEX edition, time-bounded.
-# Mirror of scripts/run-ralph.sh but invokes Codex CLI instead of Claude.
+# Mirror of .ralph/run-ralph-claude.sh but invokes Codex CLI instead of Claude.
 # Runs until MAX_HOURS (or MAX_MINUTES) of wall-clock time has elapsed.
 # Checks budget at the top of each iteration. Never kills mid-iteration.
 #
@@ -9,13 +9,13 @@
 #   - HumanLayer "A Brief History of Ralph"
 #
 # Usage:
-#   MAX_HOURS=8 ./scripts/run-ralph-codex.sh             # run for ~8 hours
-#   MAX_HOURS=3.5 ./scripts/run-ralph-codex.sh           # fractional OK
-#   MAX_MINUTES=420 ./scripts/run-ralph-codex.sh         # same as MAX_HOURS=7
-#   MAX_HOURS=8 DRY_RUN=1 ./scripts/run-ralph-codex.sh   # preview without calling codex
-#   CODEX_MODEL=gpt-5-codex MAX_HOURS=4 ./scripts/run-ralph-codex.sh
+#   MAX_HOURS=8 ./.ralph/run-ralph-codex.sh             # run for ~8 hours
+#   MAX_HOURS=3.5 ./.ralph/run-ralph-codex.sh           # fractional OK
+#   MAX_MINUTES=420 ./.ralph/run-ralph-codex.sh         # same as MAX_HOURS=7
+#   MAX_HOURS=8 DRY_RUN=1 ./.ralph/run-ralph-codex.sh   # preview without calling codex
+#   CODEX_MODEL=gpt-5-codex MAX_HOURS=4 ./.ralph/run-ralph-codex.sh
 #
-# Differences from run-ralph.sh (Claude version):
+# Differences from .ralph/run-ralph-claude.sh (Claude version):
 #   - Invokes `codex exec` instead of `claude -p`
 #   - Uses --full-auto (= --ask-for-approval never + --sandbox workspace-write)
 #     instead of Claude's --dangerously-skip-permissions
@@ -24,7 +24,7 @@
 #     forces every iteration through the straggler fallback. See LESSONS.md.
 #   - Pre-flight checks for OPENAI_API_KEY (or codex login) instead of
 #     ANTHROPIC_API_KEY
-#   - Reads PROMPT.md via stdin redirection (avoids ARG_MAX on long prompts)
+#   - Reads .ralph/PROMPT.md via stdin redirection (avoids ARG_MAX on long prompts)
 #   - Sets NO_COLOR=1 inside the loop so logs don't accumulate ANSI cruft
 #   - CODEX_MODEL env var pins the model (default: gpt-5.5)
 #   - CODEX_EFFORT env var sets reasoning effort (default: medium); passed
@@ -33,6 +33,12 @@
 #     the loop aborts when the agent is clearly stuck (default: 2)
 
 set -uo pipefail
+
+RALPH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$RALPH_DIR/.." && pwd)"
+PROMPT_FILE="$RALPH_DIR/PROMPT.md"
+FIX_PLAN_FILE="$RALPH_DIR/fix_plan.md"
+cd "$REPO_ROOT"
 
 # --- Config ---------------------------------------------------------------
 MAX_HOURS="${MAX_HOURS:-}"                   # primary budget (decimal OK)
@@ -43,7 +49,7 @@ CODEX_MODEL="${CODEX_MODEL:-gpt-5.5}"        # model pin (default: gpt-5.5)
 CODEX_EFFORT="${CODEX_EFFORT:-medium}"       # reasoning effort (default: medium)
 CODEX_ARGS="${CODEX_ARGS:---full-auto --skip-git-repo-check --add-dir $PWD/.git}"
 STRAGGLER_LIMIT="${STRAGGLER_LIMIT:-2}"      # consecutive stragglers before aborting
-LOG_DIR="${LOG_DIR:-logs}"
+LOG_DIR="${LOG_DIR:-$RALPH_DIR/logs}"
 LOG_FILE="${LOG_DIR}/ralph-codex.log"
 DONE_MARKER="ALL TASKS COMPLETE"
 
@@ -60,9 +66,9 @@ if (( BUDGET_SECONDS <= 0 )); then
 ❌ Must set MAX_HOURS or MAX_MINUTES.
 
 Examples:
-  MAX_HOURS=8 ./scripts/run-ralph-codex.sh           # run for 8 hours
-  MAX_HOURS=3.5 ./scripts/run-ralph-codex.sh         # fractional OK
-  MAX_MINUTES=420 ./scripts/run-ralph-codex.sh       # 7 hours in minutes
+  MAX_HOURS=8 ./.ralph/run-ralph-codex.sh           # run for 8 hours
+  MAX_HOURS=3.5 ./.ralph/run-ralph-codex.sh         # fractional OK
+  MAX_MINUTES=420 ./.ralph/run-ralph-codex.sh       # 7 hours in minutes
 
 The loop exits cleanly between iterations once the budget is exhausted;
 it will NOT kill a running iteration mid-flight.
@@ -87,8 +93,8 @@ if [[ -z "${OPENAI_API_KEY:-}" ]]; then
 fi
 
 command -v codex >/dev/null || { echo "❌ codex CLI not on PATH"; exit 1; }
-[[ -f PROMPT.md ]]   || { echo "❌ PROMPT.md not found in $(pwd)"; exit 1; }
-[[ -f fix_plan.md ]] || { echo "❌ fix_plan.md not found"; exit 1; }
+[[ -f "$PROMPT_FILE" ]]   || { echo "❌ $PROMPT_FILE not found"; exit 1; }
+[[ -f "$FIX_PLAN_FILE" ]] || { echo "❌ $FIX_PLAN_FILE not found"; exit 1; }
 [[ -f AGENTS.md ]]   || echo "⚠️  AGENTS.md missing — Codex won't auto-load instructions."
 
 mkdir -p "$LOG_DIR"
@@ -154,12 +160,12 @@ while true; do
   fi
 
   # --- All tasks done?
-  if grep -qE "^[[:space:]]*${DONE_MARKER}[[:space:]]*\$" fix_plan.md; then
-    echo "✅ [$(date -u +%FT%TZ)] fix_plan.md contains '$DONE_MARKER'."
+  if grep -qE "^[[:space:]]*${DONE_MARKER}[[:space:]]*\$" "$FIX_PLAN_FILE"; then
+    echo "✅ [$(date -u +%FT%TZ)] .ralph/fix_plan.md contains '$DONE_MARKER'."
     echo "   Finished in $(human_duration "$elapsed") after $((iter-1)) iterations. Exiting."
     exit 0
   fi
-  if ! grep -qE '^\s*-\s*\[\s\]' fix_plan.md; then
+  if ! grep -qE '^\s*-\s*\[\s\]' "$FIX_PLAN_FILE"; then
     echo "✅ No unchecked tasks remain. Finished in $(human_duration "$elapsed"). Exiting."
     exit 0
   fi
@@ -169,7 +175,7 @@ while true; do
     | tee -a "$LOG_FILE"
 
   if [[ "${DRY_RUN:-0}" == "1" ]]; then
-    echo "(DRY_RUN) would invoke: codex exec $CODEX_ARGS ${CODEX_MODEL:+--model $CODEX_MODEL} ${CODEX_EFFORT:+-c model_reasoning_effort=\"$CODEX_EFFORT\"} < PROMPT.md" \
+    echo "(DRY_RUN) would invoke: codex exec $CODEX_ARGS ${CODEX_MODEL:+--model $CODEX_MODEL} ${CODEX_EFFORT:+-c model_reasoning_effort=\"$CODEX_EFFORT\"} < .ralph/PROMPT.md" \
       | tee -a "$LOG_FILE"
     sleep 2
   else
@@ -178,7 +184,7 @@ while true; do
     # --json + jq filter drops exec_command_output_delta (file/shell
     # content firehose) and agent_reasoning_* events; keeps run/conclude.
     set -o pipefail
-    NO_COLOR=1 codex exec --json $CODEX_ARGS ${CODEX_MODEL:+--model "$CODEX_MODEL"} ${CODEX_EFFORT:+-c model_reasoning_effort="$CODEX_EFFORT"} < PROMPT.md 2>>"$LOG_FILE" \
+    NO_COLOR=1 codex exec --json $CODEX_ARGS ${CODEX_MODEL:+--model "$CODEX_MODEL"} ${CODEX_EFFORT:+-c model_reasoning_effort="$CODEX_EFFORT"} < "$PROMPT_FILE" 2>>"$LOG_FILE" \
       | jq -rc 'select((.type // .msg.type // "") | IN("agent_message","exec_command_begin","exec_command_end","task_started","task_complete","error","item.completed"))' \
       | tee -a "$LOG_FILE"
     rc=${PIPESTATUS[0]}
@@ -193,13 +199,13 @@ while true; do
   #     because it can't write to .git, or it's reading the same task each
   #     iteration without flipping the checkbox. We bail loudly rather than
   #     silently masking the failure with `|| true`.
-  if ! git diff --quiet || ! git diff --cached --quiet; then
+  if [[ "${DRY_RUN:-0}" != "1" ]] && { ! git diff --quiet || ! git diff --cached --quiet; }; then
     if git add -A && git commit -m "ralph-codex: iter ${iter} stragglers" >> "$LOG_FILE" 2>&1; then
       straggler_streak=$(( straggler_streak + 1 ))
       echo "⚠️  [$ts] iter $iter committed via straggler fallback — agent did not commit cleanly (streak: $straggler_streak/$STRAGGLER_LIMIT)" \
         | tee -a "$LOG_FILE"
       if (( straggler_streak >= STRAGGLER_LIMIT )); then
-        echo "🛑 [$ts] $straggler_streak consecutive straggler iterations — loop is likely stuck. Inspect fix_plan.md and recent commits, then restart. Exiting." \
+        echo "🛑 [$ts] $straggler_streak consecutive straggler iterations — loop is likely stuck. Inspect .ralph/fix_plan.md and recent commits, then restart. Exiting." \
           | tee -a "$LOG_FILE"
         exit 2
       fi

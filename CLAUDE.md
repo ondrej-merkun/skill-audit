@@ -5,8 +5,8 @@ Codex, Gemini, Windsurf, Cline) for prompt injection and malicious code.
 Local-first, zero-auth, published as `@ondrej-merkun/skill-audit` with the
 `skill-audit` bin.
 
-Full spec: **`specs/SPEC.md`**. Ralph loop protocol: **`PROMPT.md`**.
-Workflow conventions: **`AGENT.md`**. Task list / progress: **`fix_plan.md`**.
+Full spec: **`specs/SPEC.md`**. Ralph loop protocol: **`.ralph/PROMPT.md`**.
+Workflow conventions: **`AGENT.md`**. Task list / progress: **`.ralph/fix_plan.md`**.
 **Hard-won lessons (READ AT SESSION START): `LESSONS.md`.** Append a new
 bullet there whenever a task teaches something a future run would benefit
 from — see the instructions at the top of that file.
@@ -36,7 +36,7 @@ commander, chalk v5, cli-table3, ora, listr2, vitest, biome.
 
 Do NOT add: ink, react, yargs, jest, eslint, prettier, axios (use native
 fetch), lodash, or anything needing `node-gyp`. If a new dep is genuinely
-needed, note it in `fix_plan.md` under "Dependencies added".
+needed, note it in `.ralph/fix_plan.md` under "Dependencies added".
 
 ## Commands (exact strings — use verbatim)
 
@@ -157,7 +157,7 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
     against adjacent labels and the visible frame.
 12. For any task that changes generated HTML interactions: verify a
     click/keyboard interaction in a DOM/browser environment.
-13. `fix_plan.md` checkbox flipped to `- [x]`.
+13. `.ralph/fix_plan.md` checkbox flipped to `- [x]`.
 14. Two conventional commits: one for the feature, one for the checkbox.
 
 ## Never
@@ -165,12 +165,12 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
 - Commit secrets (test fixtures in `test/fixtures/` are fine — those are
   meant to look like secrets, for detection testing).
 - Delete a failing test — fix it.
-- Add a dependency without recording it in `fix_plan.md`.
+- Add a dependency without recording it in `.ralph/fix_plan.md`.
 - Fetch rules from the internet at runtime — rules ship in the bundle.
-- Touch `scripts/run-ralph.sh` unless Ralph is explicitly asked to.
+- Touch `.ralph/run-ralph-claude.sh` unless Ralph is explicitly asked to.
 
 ## When spec and conventions disagree
 
 `specs/SPEC.md` wins on *what* to build. `CLAUDE.md` / `AGENT.md` win on
-*how* to structure the code. Genuine conflicts go in `fix_plan.md` under
+*how* to structure the code. Genuine conflicts go in `.ralph/fix_plan.md` under
 "Spec-vs-convention conflicts" and default to the spec.

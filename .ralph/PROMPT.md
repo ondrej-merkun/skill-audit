@@ -16,12 +16,12 @@ Read, in this order:
    about to step in.
 2. `AGENT.md` — how to build, test, and commit in this repo.
 3. `CLAUDE.md` — project identity, spec revision, and gotchas.
-4. `fix_plan.md` — the prioritized task list with checkboxes.
+4. `.ralph/fix_plan.md` — the prioritized task list with checkboxes.
 5. `git log --oneline -20` — what past iterations have already done.
 
 ### 2. Pick ONE task
 
-Scan `fix_plan.md` top-to-bottom. Find the **first task with an unchecked
+Scan `.ralph/fix_plan.md` top-to-bottom. Find the **first task with an unchecked
 box `- [ ]`**. That is your task for this iteration. Do not pick a later
 task even if it seems easier — the plan is prioritized for a reason
 (dependencies).
@@ -35,7 +35,7 @@ scan/report output, read `specs/OUTPUT.md`. Those files hold cross-cutting
 contracts that individual task text may not restate.
 
 If there are zero unchecked tasks, append the exact string
-`ALL TASKS COMPLETE` as a new line at the end of `fix_plan.md`, commit
+`ALL TASKS COMPLETE` as a new line at the end of `.ralph/fix_plan.md`, commit
 that, and exit. The outer loop will detect this and stop.
 
 ### 3. Implement ONE task, not more
@@ -85,7 +85,7 @@ Rules for implementation:
   scanner/tester packages, quoted hostile prompts, fenced examples, and rule
   documentation whenever the pattern could otherwise match attack vocabulary.
 - Do not add dependencies beyond those listed in `AGENT.md` without a
-  compelling reason. If you do add one, note it in `fix_plan.md` under
+  compelling reason. If you do add one, note it in `.ralph/fix_plan.md` under
   "Dependencies added".
 - Do not scaffold "while you're at it". Do not create empty placeholder
   files for future tasks. Only touch what this task needs.
@@ -106,7 +106,7 @@ pnpm build 2>&1 | grep -iE 'warn|error'  # must emit nothing
 
 If any fail, fix them before committing. Do not commit broken builds.
 If you genuinely can't fix (e.g. a dependency install is failing for
-infra reasons), document the exact failure in `fix_plan.md` as a
+infra reasons), document the exact failure in `.ralph/fix_plan.md` as a
 blocker and exit without committing code changes.
 
 For user-facing command or report tasks, run the built command against real
@@ -129,7 +129,7 @@ the task.
 
 Before you commit, ask: *"Did this task teach me something a future
 iteration would benefit from, that isn't already in `AGENT.md` /
-`CLAUDE.md` / `PROMPT.md`?"* Typical triggers:
+`CLAUDE.md` / `.ralph/PROMPT.md`?"* Typical triggers:
 
 - A verification step you nearly skipped, that caught a real bug.
 - A spec ambiguity you had to resolve (record the resolution).
@@ -158,7 +158,7 @@ chore: bump pnpm-lock
 
 ### 6. Check off the task
 
-Edit `fix_plan.md`: change the `- [ ]` to `- [x]` on the task you just
+Edit `.ralph/fix_plan.md`: change the `- [ ]` to `- [x]` on the task you just
 finished. Commit that as a separate commit:
 ```
 chore(plan): complete <task-name>
@@ -197,7 +197,7 @@ spec), prefer the choice that is:
 2. Closer to what `SPEC.md` says literally.
 3. Easier to reverse.
 
-Document the decision in a comment in the code and in `fix_plan.md`
+Document the decision in a comment in the code and in `.ralph/fix_plan.md`
 under a "Decisions made during implementation" section.
 
 Go.
