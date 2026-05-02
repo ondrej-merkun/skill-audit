@@ -15,10 +15,6 @@ function cacheDir(source: string): string {
   return join(homedir(), '.cache', 'skill-audit', source);
 }
 
-function legacyCacheDir(source: string): string {
-  return join(homedir(), '.cache', 'skillaudit', source);
-}
-
 function cacheKey(key: string): string {
   // Derive a filesystem-safe filename from the key (usually a URL)
   return `${createHash('sha256').update(key).digest('hex')}.json`;
@@ -37,19 +33,17 @@ export type CacheGetResult<T> = {
  */
 export async function cacheGet<T>(source: string, key: string): Promise<CacheGetResult<T> | null> {
   const filename = cacheKey(key);
-  for (const dir of [cacheDir(source), legacyCacheDir(source)]) {
-    try {
-      const raw = await readFile(join(dir, filename), 'utf8');
-      const entry: CacheEntry<T> = JSON.parse(raw) as CacheEntry<T>;
-      const stale = Date.now() - entry.cachedAt > TTL_MS;
-      return {
-        data: entry.data,
-        stale,
-        ...(entry.etag !== undefined ? { etag: entry.etag } : {}),
-      };
-    } catch {
-      // Try the next cache location.
-    }
+  try {
+    const raw = await readFile(join(cacheDir(source), filename), 'utf8');
+    const entry: CacheEntry<T> = JSON.parse(raw) as CacheEntry<T>;
+    const stale = Date.now() - entry.cachedAt > TTL_MS;
+    return {
+      data: entry.data,
+      stale,
+      ...(entry.etag !== undefined ? { etag: entry.etag } : {}),
+    };
+  } catch {
+    // Cache miss or malformed cache file.
   }
   return null;
 }

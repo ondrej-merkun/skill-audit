@@ -92,10 +92,10 @@ describe('runScan: multi-skill fixture coverage', () => {
 
     originalHome = process.env['HOME'];
     originalUserProfile = process.env['USERPROFILE'];
-    originalCwd = process.env['SKILLAUDIT_CWD'];
+    originalCwd = process.env['SKILL_AUDIT_CWD'];
     process.env['HOME'] = tempHome;
     process.env['USERPROFILE'] = tempHome;
-    process.env['SKILLAUDIT_CWD'] = tempCwd;
+    process.env['SKILL_AUDIT_CWD'] = tempCwd;
 
     stdoutChunks = [];
     stderrChunks = [];
@@ -121,9 +121,9 @@ describe('runScan: multi-skill fixture coverage', () => {
       process.env['USERPROFILE'] = originalUserProfile;
     }
     if (originalCwd === undefined) {
-      delete process.env['SKILLAUDIT_CWD'];
+      delete process.env['SKILL_AUDIT_CWD'];
     } else {
-      process.env['SKILLAUDIT_CWD'] = originalCwd;
+      process.env['SKILL_AUDIT_CWD'] = originalCwd;
     }
     process.exitCode = undefined;
     vi.restoreAllMocks();

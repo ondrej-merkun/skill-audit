@@ -53,15 +53,15 @@ describe('cline discovery plugin', () => {
   let originalAppData: string | undefined;
 
   beforeEach(async () => {
-    tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-cline-home-'));
-    tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-cline-cwd-'));
+    tempHome = await mkdtemp(join(tmpdir(), 'skill-audit-cline-home-'));
+    tempCwd = await mkdtemp(join(tmpdir(), 'skill-audit-cline-cwd-'));
     originalHome = process.env['HOME'];
-    originalSkillauditCwd = process.env['SKILLAUDIT_CWD'];
+    originalSkillauditCwd = process.env['SKILL_AUDIT_CWD'];
     originalClineDir = process.env['CLINE_DIR'];
     originalXdgConfigHome = process.env['XDG_CONFIG_HOME'];
     originalAppData = process.env['APPDATA'];
     process.env['HOME'] = tempHome;
-    process.env['SKILLAUDIT_CWD'] = tempCwd;
+    process.env['SKILL_AUDIT_CWD'] = tempCwd;
     process.env['XDG_CONFIG_HOME'] = join(tempHome, '.config');
     process.env['APPDATA'] = join(tempHome, 'AppData', 'Roaming');
     delete process.env['CLINE_DIR'];
@@ -74,9 +74,9 @@ describe('cline discovery plugin', () => {
       process.env['HOME'] = originalHome;
     }
     if (originalSkillauditCwd === undefined) {
-      delete process.env['SKILLAUDIT_CWD'];
+      delete process.env['SKILL_AUDIT_CWD'];
     } else {
-      process.env['SKILLAUDIT_CWD'] = originalSkillauditCwd;
+      process.env['SKILL_AUDIT_CWD'] = originalSkillauditCwd;
     }
     if (originalClineDir === undefined) {
       delete process.env['CLINE_DIR'];

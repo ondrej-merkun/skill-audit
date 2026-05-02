@@ -45,7 +45,7 @@ TMP_HOME="$(mktemp -d)"
 TMP_PROJECT="$(mktemp -d)"
 HOME="$TMP_HOME" \
 USERPROFILE="$TMP_HOME" \
-SKILLAUDIT_CWD="$TMP_PROJECT" \
+SKILL_AUDIT_CWD="$TMP_PROJECT" \
 node packages/cli/dist/index.js scan --summary
 ```
 

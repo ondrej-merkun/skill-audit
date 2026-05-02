@@ -54,7 +54,7 @@ body:
     id: file-formats
     attributes:
       label: File formats
-      description: List the files skillaudit should scan and note which ones are active versus cache-only.
+      description: List the files skill-audit should scan and note which ones are active versus cache-only.
       placeholder: |
         SKILL.md
         agent.json

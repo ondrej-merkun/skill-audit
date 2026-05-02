@@ -53,12 +53,12 @@ describe('loadIgnoreList', () => {
     expect(result.has('sha256withcomment  # comment here')).toBe(false);
   });
 
-  it('should read legacy skillaudit ignore lists when the new path is absent', async () => {
-    const legacyDir = join(tempConfigDir, 'skillaudit');
-    await mkdir(legacyDir, { recursive: true });
+  it('should read existing ignore lists from the configured path', async () => {
+    const skillAuditDir = join(tempConfigDir, 'skill-audit');
+    await mkdir(skillAuditDir, { recursive: true });
     await writeFile(
-      join(legacyDir, 'ignore.yaml'),
-      '# legacy skillaudit ignore list\nignored:\n  - legacyhash  # old-skill\n',
+      join(skillAuditDir, 'ignore.yaml'),
+      '# legacy skill-audit ignore list\nignored:\n  - legacyhash  # old-skill\n',
       'utf-8'
     );
 
@@ -91,19 +91,19 @@ describe('appendToIgnoreList', () => {
     expect(result.size).toBe(1);
   });
 
-  it('should migrate legacy entries when appending to the new path', async () => {
-    const legacyDir = join(tempConfigDir, 'skillaudit');
-    await mkdir(legacyDir, { recursive: true });
+  it('should keep previously stored ignore entries when appending', async () => {
+    const skillAuditDir = join(tempConfigDir, 'skill-audit');
+    await mkdir(skillAuditDir, { recursive: true });
     await writeFile(
-      join(legacyDir, 'ignore.yaml'),
-      '# legacy skillaudit ignore list\nignored:\n  - legacyhash  # old-skill\n',
+      join(skillAuditDir, 'ignore.yaml'),
+      '# skill-audit ignore list\nignored:\n  - existinghash  # existing-skill\n',
       'utf-8'
     );
 
     await appendToIgnoreList('newhash', 'new-skill');
 
     const result = await loadIgnoreList();
-    expect(result.has('legacyhash')).toBe(true);
+    expect(result.has('existinghash')).toBe(true);
     expect(result.has('newhash')).toBe(true);
   });
 });

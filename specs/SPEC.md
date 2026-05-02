@@ -9,7 +9,7 @@ is scoped as `@ondrej-merkun/skill-audit`.
 The executable is `skill-audit`; the npm package is `@ondrej-merkun/skill-audit`, so one-off runs use `npx @ondrej-merkun/skill-audit`.
 
 The unscoped `skill-audit` package name was blocked at publish time as too
-similar to `skillaudit`, so the package is scoped instead of changing the
+similar to the scoped distribution model, so the package is scoped instead of
 CLI or binary name.
 
 ## 2. Architecture and tech stack

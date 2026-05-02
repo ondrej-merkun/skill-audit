@@ -63,13 +63,13 @@ describe('cache', () => {
     expect(result?.etag).toBe('"abc123"');
   });
 
-  it('reads legacy skillaudit cache entries when the new cache path is empty', async () => {
+  it('reads cache entries when cache file exists', async () => {
     const key = 'legacy-key';
     const filename = `${createHash('sha256').update(key).digest('hex')}.json`;
-    const legacyDir = join(testHome, '.cache', 'skillaudit', 'github');
-    await mkdir(legacyDir, { recursive: true });
+    const cacheDir = join(testHome, '.cache', 'skill-audit', 'github');
+    await mkdir(cacheDir, { recursive: true });
     await writeFile(
-      join(legacyDir, filename),
+      join(cacheDir, filename),
       JSON.stringify({ data: { stars: 12 }, cachedAt: Date.now() }),
       'utf-8'
     );

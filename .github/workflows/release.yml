@@ -50,8 +50,8 @@ jobs:
       - name: Check clean build output
         run: |
           set -o pipefail
-          pnpm build:release 2>&1 | tee /tmp/skillaudit-build.log
-          if grep -iE 'warn|error' /tmp/skillaudit-build.log; then
+          pnpm build:release 2>&1 | tee /tmp/skill-audit-build.log
+          if grep -iE 'warn|error' /tmp/skill-audit-build.log; then
             exit 1
           fi
 

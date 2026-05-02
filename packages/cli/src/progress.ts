@@ -63,7 +63,7 @@ export function selectProgressMode(options: ProgressModeOptions): ProgressMode {
 }
 
 export function supportsUnicode(env: NodeJS.ProcessEnv = process.env): boolean {
-  if (isTruthyEnv(env.SKILLAUDIT_ASCII)) return false;
+  if (isTruthyEnv(env.SKILL_AUDIT_ASCII)) return false;
   if (env.TERM === 'dumb') return false;
   if (process.platform !== 'win32') return true;
   return env.WT_SESSION !== undefined || env.TERM_PROGRAM === 'vscode';

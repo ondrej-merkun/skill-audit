@@ -119,7 +119,7 @@ export const SKILL_PASSWORD_ZIP: Rule = {
 // SKILL-MEMORY-WRITE (High)
 // Writing to agent config/memory dirs or appending to context-injection files
 // ---------------------------------------------------------------------------
-const agentContextWriteTarget = String.raw`(?:~[/\\]\.(?:claude|cursor)[/\\]|~[/\\]\.codex[/\\](?:AGENTS(?:\.override)?\.md|config\.toml)\b|(?:^|[\s"'=:(>/])\.codex[/\\]config\.toml\b|~[/\\]\.gemini[/\\](?:settings\.json\b|agents[/\\])|~[/\\]\.agents[/\\]skills[/\\]|(?:^|[\s"'=:(>/])(?:CLAUDE|AGENTS|GEMINI)\.md\b|(?:^|[\s"'=:(>/])AGENTS\.override\.md\b|\.cursorrules\b|\.windsurfrules\b|\.config[/\\](?:skill-audit|skillaudit)\b)`;
+const agentContextWriteTarget = String.raw`(?:~[/\\]\.(?:claude|cursor)[/\\]|~[/\\]\.codex[/\\](?:AGENTS(?:\.override)?\.md|config\.toml)\b|(?:^|[\s"'=:(>/])\.codex[/\\]config\.toml\b|~[/\\]\.gemini[/\\](?:settings\.json\b|agents[/\\])|~[/\\]\.agents[/\\]skills[/\\]|(?:^|[\s"'=:(>/])(?:CLAUDE|AGENTS|GEMINI)\.md\b|(?:^|[\s"'=:(>/])AGENTS\.override\.md\b|\.cursorrules\b|\.windsurfrules\b|\.config[/\\]skill-audit\b)`;
 const writeOperation = String.raw`(?:(?:[Ww]rite|[Aa]ppend|[Ee]cho|[Pp]rintf)\b|[Cc]at\s+>>?|[Tt]ee(?:\s+-a)?\b)`;
 const fsWriteOperation = [
   String.raw`fs\.(?:writeFile|appendFile)(?:Sync)?\s*\([^#\n]*${agentContextWriteTarget}`,

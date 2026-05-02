@@ -10,18 +10,18 @@ describe('agents-md-sweep discovery plugin', () => {
   let originalSkillauditCwd: string | undefined;
 
   beforeEach(async () => {
-    tempBase = await mkdtemp(join(tmpdir(), 'skillaudit-sweep-base-'));
+    tempBase = await mkdtemp(join(tmpdir(), 'skill-audit-sweep-base-'));
     tempCwd = join(tempBase, 'project');
     await mkdir(tempCwd, { recursive: true });
-    originalSkillauditCwd = process.env['SKILLAUDIT_CWD'];
-    process.env['SKILLAUDIT_CWD'] = tempCwd;
+    originalSkillauditCwd = process.env['SKILL_AUDIT_CWD'];
+    process.env['SKILL_AUDIT_CWD'] = tempCwd;
   });
 
   afterEach(async () => {
     if (originalSkillauditCwd === undefined) {
-      delete process.env['SKILLAUDIT_CWD'];
+      delete process.env['SKILL_AUDIT_CWD'];
     } else {
-      process.env['SKILLAUDIT_CWD'] = originalSkillauditCwd;
+      process.env['SKILL_AUDIT_CWD'] = originalSkillauditCwd;
     }
     await rm(tempBase, { recursive: true, force: true });
   });

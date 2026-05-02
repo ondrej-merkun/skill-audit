@@ -10,20 +10,11 @@ function getIgnoreListPath(): string {
   return join(getConfigDir(), 'skill-audit', 'ignore.yaml');
 }
 
-function getLegacyIgnoreListPath(): string {
-  const configDir = process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config');
-  return join(configDir, 'skillaudit', 'ignore.yaml');
-}
-
 async function readIgnoreListContent(): Promise<string | null> {
   try {
     return await readFile(getIgnoreListPath(), 'utf-8');
   } catch {
-    try {
-      return await readFile(getLegacyIgnoreListPath(), 'utf-8');
-    } catch {
-      return null;
-    }
+    return null;
   }
 }
 
