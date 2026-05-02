@@ -285,7 +285,7 @@ README and into the hero GIF. Column widths are fixed.
 
   →  skill-audit explain polymarket-trader    See full findings
   →  skill-audit ignore aws-helper            Allowlist a false positive
-  →  skill-audit --html report.html           Generate shareable HTML
+  →  skill-audit --html report.html           Generate HTML report (contains full findings)
 
   Want the details? https://skill-audit.dev/rules
 ```
