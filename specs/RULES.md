@@ -4,7 +4,7 @@ This file quotes the regex patterns from `SPEC.md` §4 verbatim. Ralph
 implements rules against this file so it doesn't have to re-read the
 whole spec on every rule iteration.
 
-The full catalog is 27 rules across 9 categories. Only the highest-
+The full catalog is 46 rules across 9 categories. Only the highest-
 signal patterns are reproduced here in full; others are summarized.
 When in doubt, read `SPEC.md` §4.
 
@@ -135,12 +135,14 @@ Read `SPEC.md` §4 for these — they follow the same shape as above.
 JS eval/Function(), child_process with shell:true, pickle/yaml.load,
 backtick command substitution.
 
-**Network (4 more):** outbound non-local IP literal, known-exfil webhooks
-(`requestbin`, `webhook.site`, raw pastebin), raw socket creation,
-DNS lookups to unusual TLDs (`.xyz`, `.tk`, `.top`, IP-literal).
+**Network (5 more):** cloud credential metadata endpoints, outbound non-local
+IP literal, known-exfil webhooks (`requestbin`, `webhook.site`, raw pastebin),
+raw socket creation, DNS lookups to unusual TLDs (`.xyz`, `.tk`, `.top`,
+IP-literal).
 
-**Filesystem (3 more):** macOS keychain access, reads of `.env` files,
-relative paths escaping `cwd` (`../../..`).
+**Filesystem (5 more):** browser credential/cookie stores, macOS keychain
+access, reads of `.env` files, relative paths escaping `cwd` (`../../..`),
+destructive deletes of home, root, credential directories, or `.git`.
 
 **Prompt injection (5 more):** jailbreak phrases ("DAN", "developer
 mode"), hidden HTML comments with instructions, white-on-white CSS
@@ -151,15 +153,16 @@ content does another), privilege-escalation instructions ("use sudo",
 **Git/history (2):** reads of `~/.git-credentials` / `git config
 --global`, scanning git history for secrets.
 
-**Dependencies (5):** unpinned PyPI/npm deps resolving to typo-adjacent
+**Dependencies (6):** unpinned PyPI/npm deps resolving to typo-adjacent
 names, `npm install` in postinstall scripts, known typosquats (use a
 short bundled list), inline `pip install` / `npm install` in skill
-code, `import` / `require` from remote URLs.
+code, `import` / `require` from remote URLs, MCP config startup commands that
+download and execute remote content.
 
-**Obfuscation (5):** base64 literals > 200 bytes, hex literals > 200
-bytes, `eval(atob(...))` / `exec(base64.b64decode(...))`, string
-concatenation constructing shell commands, homoglyph characters in
-identifiers.
+**Obfuscation (6):** base64 literals > 200 bytes, hex literals > 200
+bytes, `eval(atob(...))` / `exec(base64.b64decode(...))`, shell or PowerShell
+decode-and-execute chains, string concatenation constructing shell commands,
+homoglyph characters in identifiers.
 
 **Skill-specific (3 more):** `SKILL-FETCH-AND-EXEC` (fetch-then-run in
 SKILL.md), `SKILL-DISABLE-SAFETY` (instructions to bypass user

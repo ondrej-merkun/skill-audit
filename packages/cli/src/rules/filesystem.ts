@@ -36,6 +36,48 @@ export const FS_CREDSTORE: Rule = {
   cwe: ['CWE-522'],
 };
 
+// FS-BROWSER-CREDENTIALSTORE: exact browser credential/cookie store paths.
+const browserStoreHomePrefix = '(?:~|\\$HOME|\\$\\{HOME\\})\\/';
+const browserStoreTerminator = '(?![A-Za-z0-9._/-]| [A-Za-z0-9._-])';
+const chromiumConfigRoot =
+  '(?:Library\\/Application Support\\/(?:Google\\/Chrome|Chromium)|\\.config\\/(?:google-chrome|chromium))';
+const chromiumBrowserStorePattern = new RegExp(
+  [
+    browserStoreHomePrefix,
+    chromiumConfigRoot,
+    '\\/',
+    '(?:(?:Default|Profile [0-9]+|Guest Profile)\\/(?:Login Data|(?:Network\\/)?Cookies)|Local State)',
+    browserStoreTerminator,
+  ].join('')
+);
+const firefoxBrowserStorePattern = new RegExp(
+  [
+    browserStoreHomePrefix,
+    '(?:Library\\/Application Support\\/Firefox\\/Profiles|\\.mozilla\\/firefox)',
+    '\\/[^\\/\\s]+\\/(?:key4\\.db|logins\\.json|cookies\\.sqlite)',
+    browserStoreTerminator,
+  ].join('')
+);
+const safariBrowserStorePattern = new RegExp(
+  [
+    browserStoreHomePrefix,
+    'Library\\/(?:Cookies\\/Cookies\\.binarycookies|Containers\\/com\\.apple\\.Safari\\/Data\\/Library\\/(?:Cookies\\/Cookies\\.binarycookies|Safari\\/LocalStorage)|Safari\\/LocalStorage)',
+    browserStoreTerminator,
+  ].join('')
+);
+
+export const FS_BROWSER_CREDENTIALSTORE: Rule = {
+  id: 'FS-BROWSER-CREDENTIALSTORE',
+  category: 'filesystem',
+  severity: 'critical',
+  appliesTo: ['*.py', '*.sh', '*.bash', '*.js', '*.ts', '*.mjs', '*.md'],
+  patterns: [chromiumBrowserStorePattern, firefoxBrowserStorePattern, safariBrowserStorePattern],
+  prepareContent: maskSecurityEducationExampleContext,
+  message: 'Access to a browser credential or cookie store path detected.',
+  fix: 'Remove references to browser Login Data, Cookies, Local State, Firefox profile databases, or Safari cookie/storage paths.',
+  cwe: ['CWE-522'],
+};
+
 // FS-KEYCHAIN-ACCESS: programmatic access to macOS Keychain or system credential managers
 const securityCliPattern = /\bsecurity\s+find-(?:generic|internet)-password\b/;
 const pythonKeyringPattern = /\bkeyring\.get_password\s*\(/;
@@ -103,6 +145,7 @@ export const FS_BOUNDARY_ESCAPE: Rule = {
 
 export const FILESYSTEM_RULES: Rule[] = [
   FS_CREDSTORE,
+  FS_BROWSER_CREDENTIALSTORE,
   FS_KEYCHAIN_ACCESS,
   FS_DOTENV_READ,
   FS_BOUNDARY_ESCAPE,

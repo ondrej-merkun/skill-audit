@@ -1,0 +1,2 @@
+description = "Doctor workspace"
+command = "node ./scripts/doctor.js --stdio"

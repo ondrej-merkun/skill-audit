@@ -32,6 +32,78 @@ export const NET_EXFIL_ENV: Rule = {
   cwe: ['CWE-200'],
 };
 
+// NET-CLOUD-METADATA-CREDENTIALS: access to cloud credential metadata endpoints
+const awsCredentialMetadataPath = [
+  '169\\.254\\.169\\.254',
+  '\\/latest\\/meta-data\\/iam\\/security-credentials',
+].join('');
+const gcpCredentialMetadataPath = [
+  'metadata\\.google\\.internal',
+  '\\/computeMetadata\\/v1\\/instance\\/service-accounts\\/[^\\s\'")]+\\/token',
+].join('');
+const azureIdentityMetadataPath = [
+  '169\\.254\\.169\\.254',
+  '\\/metadata\\/identity\\/oauth2\\/token',
+].join('');
+const ecsCredentialsEnvVar = [
+  'AWS_CONTAINER_CREDENTIALS_RELATIVE_URI',
+  'AWS_CONTAINER_CREDENTIALS_FULL_URI',
+].join('|');
+const credentialMetadataUrlPattern = [
+  'https?:\\/\\/(?:',
+  awsCredentialMetadataPath,
+  '|',
+  gcpCredentialMetadataPath,
+  '|',
+  azureIdentityMetadataPath,
+  ')',
+].join('');
+const cloudMetadataClientPattern = new RegExp(
+  ['\\b(?:requests|httpx)\\.\\w+\\s*\\([\\s\\S]{0,300}', credentialMetadataUrlPattern].join(''),
+  'i'
+);
+const cloudMetadataFetchPattern = new RegExp(
+  ['\\bfetch\\s*\\([\\s\\S]{0,300}', credentialMetadataUrlPattern].join(''),
+  'i'
+);
+const cloudMetadataCurlPattern = new RegExp(
+  ['\\b(?:curl|wget)\\b[\\s\\S]{0,300}', credentialMetadataUrlPattern].join(''),
+  'i'
+);
+const ecsCredentialsEnvPattern = new RegExp(
+  [
+    '\\b(?:os\\.environ(?:\\.get)?\\s*\\(\\s*[\'"](?:',
+    ecsCredentialsEnvVar,
+    ')[\'"]|process\\.env(?:\\.(?:',
+    ecsCredentialsEnvVar,
+    ')|\\s*\\[\\s*[\'"](?:',
+    ecsCredentialsEnvVar,
+    ')[\'"]\\s*\\]))',
+  ].join(''),
+  'i'
+);
+const ecsCredentialEndpointPattern =
+  /\b(?:requests|httpx)\.\w+\s*\([\s\S]{0,200}https?:\/\/169\.254\.170\.2\//i;
+
+export const NET_CLOUD_METADATA_CREDENTIALS: Rule = {
+  id: 'NET-CLOUD-METADATA-CREDENTIALS',
+  category: 'network-exfil',
+  severity: 'critical',
+  appliesTo: ['*.py', '*.sh', '*.bash', '*.js', '*.ts', '*.mjs'],
+  patterns: [
+    cloudMetadataClientPattern,
+    cloudMetadataFetchPattern,
+    cloudMetadataCurlPattern,
+    ecsCredentialsEnvPattern,
+    ecsCredentialEndpointPattern,
+  ],
+  prepareContent: maskDocumentationExampleContext,
+  message:
+    'Cloud credential metadata endpoint access detected — may expose instance or container credentials.',
+  fix: 'Remove requests to cloud metadata credential endpoints from skills.',
+  cwe: ['CWE-200', 'CWE-918'],
+};
+
 // NET-OUTBOUND-NONLOCAL: hardcoded outbound HTTP to non-localhost addresses
 const shellOutboundPattern =
   /\b(?:curl|wget)\s[^\n]{0,200}https?:\/\/(?!localhost|127\.0\.0\.1|::1)[a-zA-Z0-9]/;
@@ -109,6 +181,7 @@ export const NET_DNS_UNUSUAL_TLD: Rule = {
 
 export const NETWORK_EXFIL_RULES: Rule[] = [
   NET_EXFIL_ENV,
+  NET_CLOUD_METADATA_CREDENTIALS,
   NET_OUTBOUND_NONLOCAL,
   NET_WEBHOOK_KNOWN,
   NET_RAW_SOCKET,

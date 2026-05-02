@@ -119,24 +119,26 @@ export const SKILL_PASSWORD_ZIP: Rule = {
 // SKILL-MEMORY-WRITE (High)
 // Writing to agent config/memory dirs or appending to context-injection files
 // ---------------------------------------------------------------------------
-const writeToClaudeConfigPattern = /(?:write|append|echo|printf|cat\s+>>?)\s+[^#\n]*~\/\.claude\//i;
-const writeToCursorConfigPattern = /(?:write|append|echo|printf|cat\s+>>?)\s+[^#\n]*~\/\.cursor\//i;
-const appendContextFilePattern =
-  /\bappend\b[^#\n]*\b(?:CLAUDE\.md|AGENTS\.md|\.cursorrules|\.windsurfrules|GEMINI\.md)\b/i;
-const fsWriteConfigPattern =
-  /(?:fs\.writeFile|fs\.appendFile|open\s*\([^)]+,\s*["'][wa]["'])\s*[^)]*(?:\.claude|\.cursor|\.config[/\\](?:skill-audit|skillaudit))/;
+const agentContextWriteTarget = String.raw`(?:~[/\\]\.(?:claude|cursor)[/\\]|~[/\\]\.codex[/\\](?:AGENTS(?:\.override)?\.md|config\.toml)\b|(?:^|[\s"'=:(>/])\.codex[/\\]config\.toml\b|~[/\\]\.gemini[/\\](?:settings\.json\b|agents[/\\])|~[/\\]\.agents[/\\]skills[/\\]|(?:^|[\s"'=:(>/])(?:CLAUDE|AGENTS|GEMINI)\.md\b|(?:^|[\s"'=:(>/])AGENTS\.override\.md\b|\.cursorrules\b|\.windsurfrules\b|\.config[/\\](?:skill-audit|skillaudit)\b)`;
+const writeOperation = String.raw`(?:(?:[Ww]rite|[Aa]ppend|[Ee]cho|[Pp]rintf)\b|[Cc]at\s+>>?|[Tt]ee(?:\s+-a)?\b)`;
+const fsWriteOperation = [
+  String.raw`fs\.(?:writeFile|appendFile)(?:Sync)?\s*\([^#\n]*${agentContextWriteTarget}`,
+  String.raw`open\s*\([^#\n]*${agentContextWriteTarget}[^#\n]*,\s*["'][wa]`,
+].join('|');
+const notNegatedLine = String.raw`(?![^#\n]*\b(?:[Mm]ust\s+[Nn][Oo][Tt]|[Dd]o\s+[Nn]ot|[Nn]ever)\b)`;
+const writeToAgentContextPattern = new RegExp(
+  String.raw`(?:^|\n)[^\S\n]*${notNegatedLine}[^#\n]*(?<finding>(?:${writeOperation}[^#\n]*${agentContextWriteTarget}|${agentContextWriteTarget}[^#\n]*\b(?:[Ww]rite|[Aa]ppend)\b))`
+);
+const fsWriteAgentContextPattern = new RegExp(
+  String.raw`(?:^|\n)[^\S\n]*${notNegatedLine}[^#\n]*(?<finding>(?:${fsWriteOperation}))`
+);
 
 export const SKILL_MEMORY_WRITE: Rule = {
   id: 'SKILL-MEMORY-WRITE',
   category: 'skill-specific',
   severity: 'high',
   appliesTo: [...SKILL_FILES, ...SCRIPT_AND_CODE_FILES],
-  patterns: [
-    writeToClaudeConfigPattern,
-    writeToCursorConfigPattern,
-    appendContextFilePattern,
-    fsWriteConfigPattern,
-  ],
+  patterns: [writeToAgentContextPattern, fsWriteAgentContextPattern],
   prepareContent: maskSecurityEducationExampleContext,
   message:
     'Writing to agent memory or config directory detected — potential persistent context poisoning.',

@@ -290,6 +290,14 @@ without a commit message explaining why it no longer applies.
   endpoint/client contract or docs and make tests mirror that contract plus one
   realistic installed-skill fixture.
 
+- **L6.9 — Review the base diff, not just the working tree.** _A review found
+  `packages/cli/src/rules/index.ts` importing a new destructive rule module
+  that only existed as an untracked file, so the patch would fail on a clean
+  checkout._
+  Before presenting rule-module work, run `git status --short` and verify any
+  new imported files, tests, and fixtures are tracked or staged so
+  `git diff <base>` includes them.
+
 ## 7. Rule fixtures
 
 - **L7.1 — Malicious secret fixtures must not use provider placeholder keys.** _Task

@@ -1,0 +1,9 @@
+{
+  "name": "workspace-tools",
+  "mcpServers": {
+    "browser": {
+      "command": "npx",
+      "args": ["-y", "@acme/local-browser-mcp"]
+    }
+  }
+}

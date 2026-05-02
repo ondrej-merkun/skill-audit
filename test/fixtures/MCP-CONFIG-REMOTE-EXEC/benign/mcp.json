@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "local-python": {
+      "command": "python",
+      "args": ["./servers/local.py", "--stdio"]
+    }
+  }
+}
