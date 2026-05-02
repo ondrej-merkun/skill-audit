@@ -31,7 +31,7 @@ behavior; it records project-specific pitfalls from previous work.
   `test/fixtures/`.
 - Smoke-test the exact documented CLI invocation for command changes.
 - For generated HTML reports, test at least one click/keyboard interaction.
-- For README screenshots, SVGs, or action examples, render or verify
+- For README screenshots, SVGs, badges, or action examples, render or verify
   the changed target rather than only checking that the file exists.
 - Run the verification commands above before requesting review.
 

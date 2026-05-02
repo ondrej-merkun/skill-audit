@@ -5,6 +5,10 @@ branding:
   icon: shield
   color: red
 
+branding:
+  icon: 'shield'
+  color: 'red'
+
 inputs:
   version:
     description: '@ondrej-merkun/skill-audit npm package version to run (e.g. "0.1.1" or "latest")'
