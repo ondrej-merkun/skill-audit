@@ -207,6 +207,10 @@ remain visible and authoritative for the baseline scan.
   statuses, and confidence values.
 - If every selected model is skipped, unavailable, timed out, or invalid, the
   output says so and still renders deterministic findings normally.
+- LLM review progress and per-skill model status are stderr-only. Interactive
+  pretty scans show live `LLM review N/total skills - <name>` progress after
+  deterministic scanning and before enrichment; JSON, summary, HTML, and file
+  output keep stdout and written payloads free of progress text.
 - Review payloads sent to local models are bounded to skill metadata,
   deterministic findings, relevant file paths, and capped snippets from files
   that produced findings after obvious secret redaction. Outputs and docs must

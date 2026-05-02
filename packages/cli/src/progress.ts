@@ -108,6 +108,9 @@ export type ProgressReporter = {
   updateScan(completed: number, total: number, skillName: string): void;
   succeedScan(total: number): void;
   failScan(text?: string): void;
+  startLlmReview(total: number): void;
+  updateLlmReview(completed: number, total: number, skillName: string): void;
+  succeedLlmReview(total: number): void;
   startEnrichment(sources: EnrichmentSource[]): void;
   succeedEnrichment(outcomes: EnrichmentSourceOutcome[]): void;
   warnEnrichment(text?: string): void;
@@ -189,6 +192,20 @@ export function createProgressReporter(options: ProgressReporterOptions = {}): P
     },
     failScan(text = 'Scan failed') {
       fail(text);
+    },
+    startLlmReview(total) {
+      start(
+        `${progressBar(0, total, unicode)} LLM review 0/${total} skills`,
+        unicode ? STATIC_UNICODE_SPINNER : STATIC_ASCII_SPINNER
+      );
+    },
+    updateLlmReview(completed, total, skillName) {
+      update(
+        `${progressBar(completed, total, unicode)} LLM review ${completed}/${total} skills - ${skillName}`
+      );
+    },
+    succeedLlmReview(total) {
+      succeed(`LLM review complete: ${total} ${skillNoun(total)} reviewed`);
     },
     startEnrichment(sources) {
       const names = sources.map(formatEnrichmentSource).join(', ');

@@ -21,6 +21,7 @@ import { renderTableToString } from '../output/table.js';
 import { calculateCompromisedPercent } from '../percent.js';
 import {
   type ProgressOutputKind,
+  type ProgressReporter,
   createProgressReporter,
   selectProgressMode,
 } from '../progress.js';
@@ -215,15 +216,19 @@ function llmStatusLine(result: LlmReviewResult): string {
 async function reviewSkillsWithLlm(
   skills: ScannedSkill[],
   configs: LocalLlmConfig[],
-  fetchImpl: LlmReviewFetch | undefined
+  fetchImpl: LlmReviewFetch | undefined,
+  progress: ProgressReporter
 ): Promise<ScannedSkill[]> {
   const reviewed: ScannedSkill[] = [];
+  const reviewableTotal = skills.filter((skill) => skill.ignored !== true).length;
   const contextTokens = configs
     .map((config) => config.contextTokens)
     .filter((value): value is number => value !== undefined)
     .sort((a, b) => a - b)[0];
+  let completedReviews = 0;
   let hasLlmOnlyFindings = false;
 
+  if (reviewableTotal > 0) progress.startLlmReview(reviewableTotal);
   for (const skill of skills) {
     if (skill.ignored === true) {
       reviewed.push(skill);
@@ -239,13 +244,18 @@ async function reviewSkillsWithLlm(
       )
     ).sort((a, b) => a.modelName.localeCompare(b.modelName));
     reviewed.push({ ...skill, llmReviews: results });
+    completedReviews++;
+    progress.updateLlmReview(completedReviews, reviewableTotal, skill.name);
     for (const result of results) {
       if (result.status === 'ok' && result.findings.length > 0) {
         hasLlmOnlyFindings = true;
       }
-      process.stderr.write(`[skill-audit] LLM review: ${skill.name}: ${llmStatusLine(result)}\n`);
+      process.stderr.write(
+        `[skill-audit] LLM review ${completedReviews}/${reviewableTotal}: ${skill.name}: ${llmStatusLine(result)}\n`
+      );
     }
   }
+  if (reviewableTotal > 0) progress.succeedLlmReview(reviewableTotal);
   if (hasLlmOnlyFindings) {
     process.stderr.write(LLM_REVIEW_DETAILS_HINT);
   }
@@ -392,7 +402,8 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     const reviewedSkills = await reviewSkillsWithLlm(
       scannedSkills,
       selectedLlmConfigs,
-      options.llmFetchImpl
+      options.llmFetchImpl,
+      progress
     );
     scannedSkills.splice(0, scannedSkills.length, ...reviewedSkills);
   }
