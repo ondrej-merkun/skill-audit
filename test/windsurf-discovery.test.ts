@@ -4,6 +4,11 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import windsurfDiscovery from '../packages/cli/src/discovery/windsurf.js';
 
+async function writeGitRoot(dir: string): Promise<void> {
+  await mkdir(join(dir, '.git'), { recursive: true });
+  await writeFile(join(dir, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+}
+
 describe('windsurf discovery plugin', () => {
   let tempHome: string;
   let tempCwd: string;
@@ -95,7 +100,7 @@ describe('windsurf discovery plugin', () => {
 
   it('discovers parent workspace rules up to the git root', async () => {
     const nestedCwd = join(tempCwd, 'packages', 'cli');
-    await mkdir(join(tempCwd, '.git'), { recursive: true });
+    await writeGitRoot(tempCwd);
     await mkdir(nestedCwd, { recursive: true });
     process.env['SKILLAUDIT_CWD'] = nestedCwd;
 
@@ -108,6 +113,81 @@ describe('windsurf discovery plugin', () => {
 
     expect(skill).toBeDefined();
     expect(skill?.scope).toBe('project');
+  });
+
+  it('discovers sibling nested workspace rules from the git root', async () => {
+    const nestedCwd = join(tempCwd, 'packages', 'cli');
+    await writeGitRoot(tempCwd);
+    await mkdir(nestedCwd, { recursive: true });
+    process.env['SKILLAUDIT_CWD'] = nestedCwd;
+
+    const rootRulesDir = join(tempCwd, '.windsurf', 'rules');
+    const siblingRulesDir = join(tempCwd, 'apps', 'api', '.windsurf', 'rules');
+    await mkdir(rootRulesDir, { recursive: true });
+    await mkdir(siblingRulesDir, { recursive: true });
+    await writeFile(join(rootRulesDir, 'repo.md'), '# Repo rules\n');
+    await writeFile(join(siblingRulesDir, 'api.md'), '# API rules\n');
+
+    const skills = await windsurfDiscovery.discoverSkills();
+
+    expect(skills).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          agentId: 'windsurf',
+          name: 'api',
+          format: 'rules-md',
+          scope: 'project',
+        }),
+      ])
+    );
+  });
+
+  it('does not treat the filesystem root as the workspace root when no git root exists', async () => {
+    const nestedCwd = join(tempCwd, 'packages', 'cli');
+    await mkdir(nestedCwd, { recursive: true });
+    process.env['SKILLAUDIT_CWD'] = nestedCwd;
+
+    const siblingRulesDir = join(tempCwd, 'apps', 'api', '.windsurf', 'rules');
+    await mkdir(siblingRulesDir, { recursive: true });
+    await writeFile(join(siblingRulesDir, 'api.md'), '# API rules\n');
+
+    const skills = await windsurfDiscovery.discoverSkills();
+
+    expect(skills.find((s) => s.name === 'api')).toBeUndefined();
+  });
+
+  it('isInstalled: true when current workspace has only nested Windsurf rules', async () => {
+    const nestedRulesDir = join(tempCwd, 'apps', 'api', '.windsurf', 'rules');
+    await mkdir(nestedRulesDir, { recursive: true });
+    await writeFile(join(nestedRulesDir, 'backend.md'), '# Backend rules\n');
+
+    expect(await windsurfDiscovery.isInstalled()).toBe(true);
+  });
+
+  it('isInstalled: true when nested rules are deeper than one level', async () => {
+    const nestedRulesDir = join(tempCwd, 'apps', 'platform', 'api', '.windsurf', 'rules');
+    await mkdir(nestedRulesDir, { recursive: true });
+    await writeFile(join(nestedRulesDir, 'platform-api.md'), '# Platform API rules\n');
+
+    expect(await windsurfDiscovery.isInstalled()).toBe(true);
+  });
+
+  it('isInstalled: true when git workspace has only nested Windsurf rules', async () => {
+    await writeGitRoot(tempCwd);
+    const nestedRulesDir = join(tempCwd, 'apps', 'api', '.windsurf', 'rules');
+    await mkdir(nestedRulesDir, { recursive: true });
+    await writeFile(join(nestedRulesDir, 'backend.md'), '# Backend rules\n');
+
+    expect(await windsurfDiscovery.isInstalled()).toBe(true);
+  });
+
+  it('isInstalled: true for nested rules outside fixed monorepo folder names', async () => {
+    await writeGitRoot(tempCwd);
+    const nestedRulesDir = join(tempCwd, 'frontend', 'web', '.windsurf', 'rules');
+    await mkdir(nestedRulesDir, { recursive: true });
+    await writeFile(join(nestedRulesDir, 'frontend.md'), '# Frontend rules\n');
+
+    expect(await windsurfDiscovery.isInstalled()).toBe(true);
   });
 
   it('discovers legacy .windsurfrules in the current project', async () => {
