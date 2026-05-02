@@ -13,7 +13,7 @@ import {
   formatEnrichmentOutcome,
   selectProgressMode,
 } from '../progress.js';
-import { runRules } from '../rules/engine.js';
+import { runRulesForSkill } from '../rules/engine.js';
 import { ALL_RULES } from '../rules/index.js';
 import { withSecurityEducationContextFinding } from '../rules/security-education.js';
 import { scoreFindings } from '../score.js';
@@ -214,7 +214,10 @@ export async function runExplain(
   progress.startScan(1);
   let findings: Finding[];
   try {
-    findings = withSecurityEducationContextFinding(target, await runRules(target.path, ALL_RULES));
+    findings = withSecurityEducationContextFinding(
+      target,
+      await runRulesForSkill(target, ALL_RULES)
+    );
     progress.updateScan(1, 1, target.name);
   } catch (err) {
     progress.failScan();

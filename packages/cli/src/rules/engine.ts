@@ -1,11 +1,14 @@
 import { type Dirent, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import type { Finding, Rule } from '../types.js';
+import type { Finding, Rule, Skill } from '../types.js';
 
 const MAX_SCANNED_CONTENT_CHARS = 1_000_000;
 
 type RawMatch = { index: number; text: string };
 type PrepareContent = NonNullable<Rule['prepareContent']>;
+type RunRulesOptions = {
+  filenameOverride?: string;
+};
 
 const safePatternCache = new WeakMap<RegExp, boolean>();
 const globalPatternCache = new Map<string, RegExp>();
@@ -151,7 +154,11 @@ function walkDir(dir: string): string[] {
  * skillPath may be a directory or a single file.
  * Returns findings (one per rule per line — same rule firing on the same line = one finding).
  */
-export async function runRules(skillPath: string, rules: Rule[]): Promise<Finding[]> {
+export async function runRules(
+  skillPath: string,
+  rules: Rule[],
+  options: RunRulesOptions = {}
+): Promise<Finding[]> {
   const findings: Finding[] = [];
 
   let files: string[];
@@ -163,7 +170,7 @@ export async function runRules(skillPath: string, rules: Rule[]): Promise<Findin
   }
 
   for (const filePath of files) {
-    const name = basename(filePath);
+    const name = options.filenameOverride ?? basename(filePath);
     const applicableRules = rules.filter((rule) =>
       rule.appliesTo.some((glob) => matchesGlob(name, glob))
     );
@@ -216,4 +223,12 @@ export async function runRules(skillPath: string, rules: Rule[]): Promise<Findin
   }
 
   return findings;
+}
+
+export async function runRulesForSkill(skill: Skill, rules: Rule[]): Promise<Finding[]> {
+  return runRules(skill.path, rules, {
+    ...(skill.metadata?.ruleScanFilename !== undefined
+      ? { filenameOverride: skill.metadata.ruleScanFilename }
+      : {}),
+  });
 }

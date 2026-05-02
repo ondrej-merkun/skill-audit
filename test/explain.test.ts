@@ -11,6 +11,7 @@ vi.mock('../packages/cli/src/discovery/index.js', () => ({
 
 vi.mock('../packages/cli/src/rules/engine.js', () => ({
   runRules: vi.fn(),
+  runRulesForSkill: vi.fn(),
 }));
 
 vi.mock('../packages/cli/src/rules/index.js', () => ({
@@ -45,7 +46,7 @@ vi.mock('../packages/cli/src/output/json.js', () => ({
 
 import { discoverAll } from '../packages/cli/src/discovery/index.js';
 import { enrichSkillWithOutcomes } from '../packages/cli/src/enrich/index.js';
-import { runRules } from '../packages/cli/src/rules/engine.js';
+import { runRulesForSkill as runRules } from '../packages/cli/src/rules/engine.js';
 import { scoreFindings } from '../packages/cli/src/score.js';
 import { runExplain } from '../packages/cli/src/commands/explain.js';
 
