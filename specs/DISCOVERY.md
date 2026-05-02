@@ -2,6 +2,7 @@
 
 Ralph consults this when implementing discovery plugins. These paths
 were verified against official docs as of April 2026 per `SPEC.md` §3.
+Cline paths were refreshed against official docs in May 2026.
 
 ## Implemented discovery set (keep this accurate)
 
@@ -53,7 +54,31 @@ move it here in the same task; do not leave implemented behavior documented as
 - `.github/copilot-instructions.md`
 - `.github/instructions/*.instructions.md`
 
-### 4. Cross-agent AGENTS.md sweep
+### 4. Cline
+
+**User-global:**
+- `~/Documents/Cline/Rules/*.md`
+- `~/Documents/Cline/Rules/*.txt`
+- `~/Cline/Rules/` fallback on Linux/WSL
+- `~/.cline/skills/*/SKILL.md`
+- `~/Documents/Cline/Workflows/*.md`
+- `~/.cline/data/settings/cline_mcp_settings.json`
+- `$CLINE_DIR/data/settings/cline_mcp_settings.json`
+- VS Code / VS Code Insiders / JetBrains extension storage under
+  `globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+
+**Project-local:**
+- `.clinerules` legacy file
+- `.clinerules/*.md`
+- `.clinerules/*.txt`
+- `.cline/skills/*/SKILL.md`
+- `.clinerules/skills/*/SKILL.md`
+- `.clinerules/workflows/*.md`
+
+**Manifest formats:** `SKILL.md`, Markdown/TXT rules, Markdown workflows,
+`cline_mcp_settings.json`.
+
+### 5. Cross-agent AGENTS.md sweep
 
 One walker handles all of Codex, Gemini CLI, Windsurf, Cline, Zed,
 Amp, and Factory. Walk cwd and parents up to repo root; collect:
@@ -68,7 +93,7 @@ Amp, and Factory. Walk cwd and parents up to repo root; collect:
 Report each as a `Skill` with `agentId: "cross-agent"` and
 `format: "agents-md"`.
 
-### 5. OpenAI Codex
+### 6. OpenAI Codex
 
 **User-global:**
 - `~/.codex/AGENTS.md`
@@ -92,7 +117,7 @@ Report each as a `Skill` with `agentId: "cross-agent"` and
   leaves (`SKILL.md`, command/agent files) rather than intermediate cache
   directories.
 
-### 6. Gemini CLI
+### 7. Gemini CLI
 
 **User-global:**
 - `~/.gemini/extensions/**/gemini-extension.json`

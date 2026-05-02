@@ -11,6 +11,7 @@ first screen while preserving the details users need after their first scan.
 | **OpenAI Codex** | `~/.codex/AGENTS.md`, `~/.codex/config.toml`, `~/.codex/skills/`, `~/.codex/plugins/`, `~/.codex/prompts/` | `AGENTS.md`, `AGENTS.override.md`, `.codex/config.toml` |
 | **GitHub Copilot** | `~/.copilot/skills/*/SKILL.md` | `.github/skills/`, `.github/copilot-instructions.md`, `.github/instructions/` |
 | **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, `.cursorrules` |
+| **Cline** | `~/Documents/Cline/Rules/`, `~/.cline/skills/`, `~/Documents/Cline/Workflows/`, Cline MCP settings | `.clinerules/`, `.cline/skills/`, `.clinerules/skills/`, `.clinerules/workflows/` |
 | **Gemini CLI** | `~/.gemini/extensions/`, `~/.gemini/commands/`, `~/.gemini/agents/`, `~/.gemini/settings.json` | `.gemini/extensions/`, `.gemini/commands/`, `GEMINI.md` |
 | **Cross-agent sweep** | - | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.windsurfrules`, `CONVENTIONS.md` (walks parents) |
 
@@ -35,7 +36,7 @@ skill-audit ignore <name>      # add a skill's treeSha256 to your ignore list
 |---|---|
 | `--json` | Emit machine-readable JSON (schema v1.0) |
 | `--summary` | One-line summary footer only |
-| `--agent <id>` | Restrict to one agent (`claude-code`, `codex`, `copilot`, `cursor`, `gemini`, `cross-agent`) |
+| `--agent <id>` | Restrict to one agent (`claude-code`, `codex`, `copilot`, `cursor`, `cline`, `gemini`, `cross-agent`) |
 | `--include-marketplaces` | Include inactive local marketplace inventory and label rows as `marketplace` |
 | `-o, --output <file>` | Write the selected non-HTML scan output to file |
 | `--strict` | Treat REVIEW as FAIL for exit-code purposes |

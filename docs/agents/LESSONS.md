@@ -177,6 +177,13 @@ without a commit message explaining why it no longer applies.
   and add a test at the layer that owns the invariant, not only per-plugin
   fixture tests.
 
+- **L2.4 — Recheck live agent docs before filling deferred support.** _Cline
+  was named in older specs and product text, but current docs added global
+  rules, skills, workflows, CLI config, and IDE storage paths beyond the stale
+  VS Code-only row._
+  For each new agent plugin, verify current official docs first, then update
+  `specs/DISCOVERY.md`, user docs, fixtures, and `--agent` filtering together.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**

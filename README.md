@@ -6,8 +6,8 @@ context.
 
 `skill-audit` scans AI-agent skills, plugins, MCP configs, and project
 instruction files. It discovers content exposed to Claude Code, OpenAI Codex,
-GitHub Copilot, Cursor, Gemini CLI, and cross-agent project files, then shows
-the riskiest result first in a colorized verdict table.
+GitHub Copilot, Cursor, Cline, Gemini CLI, and cross-agent project files, then
+shows the riskiest result first in a colorized verdict table.
 When you want a deeper semantic pass, add optional local LLM review over the
 same discovered skills, deterministic findings, relevant file paths, and capped
 snippets.
@@ -104,7 +104,7 @@ More workflows: [`docs/EXAMPLES.md`](docs/EXAMPLES.md).
 ## What It Covers
 
 `skill-audit` scans global and project-local skill locations for Claude Code,
-Codex, Copilot, Cursor, Gemini CLI, and cross-agent instruction files such as
+Codex, Copilot, Cursor, Cline, Gemini CLI, and cross-agent instruction files such as
 `AGENTS.md`. It matches 41 shipped rules across prompt injection, network
 exfiltration, filesystem access, code execution, obfuscation, hardcoded
 secrets, git-history access, dependency risk, and skill-specific malware

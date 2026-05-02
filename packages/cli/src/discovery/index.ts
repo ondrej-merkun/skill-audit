@@ -2,6 +2,7 @@ import type { DiscoveryProgressCallback } from '../progress.js';
 import type { AgentDiscovery, Skill } from '../types.js';
 import agentsMdSweepDiscovery from './agents-md-sweep.js';
 import claudeCodeDiscovery from './claude-code.js';
+import clineDiscovery from './cline.js';
 import codexDiscovery from './codex.js';
 import copilotDiscovery from './copilot.js';
 import cursorDiscovery from './cursor.js';
@@ -123,6 +124,7 @@ export function initDefaultPlugins(): void {
     claudeCodeDiscovery,
     cursorDiscovery,
     copilotDiscovery,
+    clineDiscovery,
     codexDiscovery,
     geminiDiscovery,
     agentsMdSweepDiscovery

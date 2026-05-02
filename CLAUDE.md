@@ -57,7 +57,7 @@ test runners or split the test command.
 ```
 packages/cli/          @ondrej-merkun/skill-audit — npm package, exposes the `skill-audit` bin
   src/commands/        scan, list, explain, ignore
-  src/discovery/       per-agent plugins (claude-code, cursor, copilot, agents-md-sweep)
+  src/discovery/       per-agent plugins (claude-code, codex, cursor, copilot, cline, gemini, agents-md-sweep)
   src/rules/           27 rules grouped by category (pure regex)
   src/enrich/          skills.sh, github, deps.dev + cache
   src/output/          table (TUI), json, html, summary
