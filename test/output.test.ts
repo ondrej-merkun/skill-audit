@@ -43,7 +43,7 @@ function makeSkill(overrides: Partial<ScannedSkill> = {}): ScannedSkill {
 function makeScanResult(overrides: Partial<ScanResult> = {}): ScanResult {
   return {
     schemaVersion: '1.0',
-    scan: { startedAt: '2024-01-01T00:00:00.000Z', durationMs: 1320, toolVersion: '0.1.0' },
+    scan: { startedAt: '2024-01-01T00:00:00.000Z', durationMs: 1320, toolVersion: '0.1.1' },
     agents: [{ id: 'claude-code', installed: true, skillsScanned: 1 }],
     skills: [makeSkill()],
     summary: {
@@ -1127,7 +1127,7 @@ describe('renderJson', () => {
     const json = JSON.parse(renderJson(makeScanResult()));
     expect(json.scan.started_at).toBe('2024-01-01T00:00:00.000Z');
     expect(json.scan.duration_ms).toBe(1320);
-    expect(json.scan.tool_version).toBe('0.1.0');
+    expect(json.scan.tool_version).toBe('0.1.1');
   });
 
   it('serializes agents with snake_case skills_scanned', () => {

@@ -1,11 +1,11 @@
 import type { GitHubEnrichment, Skill } from '../types.js';
+import { USER_AGENT } from '../version.js';
 import { cacheGet, cacheSet } from './cache.js';
 import { resolveGitHubSlug } from './metadata.js';
 
 const SOURCE = 'github';
 const API_BASE = 'https://api.github.com';
 const TIMEOUT_MS = 5_000;
-const USER_AGENT = 'skill-audit/0.1.0 (+github.com/ondrej-merkun/skill-audit)';
 
 export async function hasGitHubQueryInput(skill: Skill): Promise<boolean> {
   return (await resolveGitHubSlug(skill)) !== null;

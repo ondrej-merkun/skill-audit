@@ -40,8 +40,7 @@ import type {
   Skill,
   Verdict,
 } from '../types.js';
-
-const TOOL_VERSION = '0.1.0';
+import { VERSION } from '../version.js';
 
 export function computeExitCode(
   verdict: Verdict,
@@ -470,7 +469,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
 
   const result: ScanResult = {
     schemaVersion: '1.0',
-    scan: { startedAt, durationMs, toolVersion: TOOL_VERSION },
+    scan: { startedAt, durationMs, toolVersion: VERSION },
     agents,
     skills: sortedScannedSkills,
     summary: {

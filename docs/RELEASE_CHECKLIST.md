@@ -105,8 +105,8 @@ package page shows provenance or trusted-publishing metadata for the release.
 Create and push a version tag only after the checks above pass:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.1.1
+git push origin v0.1.1
 ```
 
 Use the actual package version from

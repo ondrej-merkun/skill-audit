@@ -229,6 +229,7 @@ describe('e2e: scan malicious fixtures', () => {
   it('JSON schema has required top-level fields', async () => {
     const name = maliciousSkills[0];
     await cp(join(MALICIOUS_DIR, name), join(skillsDir, name), { recursive: true });
+    const pkg = JSON.parse(await readFile(PACKAGE_JSON, 'utf-8')) as { version: string };
 
     const env = { HOME: tempHome, USERPROFILE: tempHome, SKILLAUDIT_CWD: tempCwd };
     const { stdout } = await runCli(
@@ -242,6 +243,7 @@ describe('e2e: scan malicious fixtures', () => {
     expect(result).toHaveProperty('agents');
     expect(result).toHaveProperty('skills');
     expect(result).toHaveProperty('summary');
+    expect(result.scan.tool_version).toBe(pkg.version);
   });
 
   it('each scanned skill has required fields', async () => {

@@ -345,7 +345,7 @@ Before changing these integrations, verify the current external contract:
   when the lookup failed or used the wrong endpoint.
 
 ### ToS posture
-- **skills.sh endpoint** — undocumented but consumed by Vercel's own CLI and forks. Courtesy caching + User-Agent (`skill-audit/0.1.0 (+github.com/you/skill-audit)`). Reasonable.
+- **skills.sh endpoint** — undocumented but consumed by Vercel's own CLI and forks. Courtesy caching + User-Agent (`skill-audit/<version> (+github.com/you/skill-audit)`). Reasonable.
 - **agentskill.sh** — README explicitly states "No API key required. The learn skill uses the public API." — clean.
 - **GitHub** — documented, explicit rate limits, identify via User-Agent.
 - **deps.dev / OSV / npm / PyPI** — explicitly designed for automated consumption.
@@ -449,7 +449,7 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 ```json
 {
   "schema_version": "1.0",
-  "scan": { "started_at": "...", "duration_ms": 1320, "tool_version": "0.1.0" },
+  "scan": { "started_at": "...", "duration_ms": 1320, "tool_version": "0.1.1" },
   "agents": [{ "id": "claude-code", "installed": true, "skills_scanned": 12 }],
   "skills": [{
     "id": "ca-polymarket-trader-a1b2c3",

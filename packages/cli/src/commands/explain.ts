@@ -27,6 +27,7 @@ import type {
   Skill,
   Verdict,
 } from '../types.js';
+import { VERSION } from '../version.js';
 
 const SEVERITY_DOT: Record<Severity, string> = {
   critical: chalk.red('🔴 CRITICAL'),
@@ -254,7 +255,7 @@ export async function runExplain(
     const startedAt = new Date().toISOString();
     const jsonOutput = renderJson({
       schemaVersion: '1.0',
-      scan: { startedAt, durationMs: 0, toolVersion: '0.1.0' },
+      scan: { startedAt, durationMs: 0, toolVersion: VERSION },
       agents: [{ id: target.agentId, installed: true, skillsScanned: 1 }],
       skills: [scannedSkill],
       summary: {

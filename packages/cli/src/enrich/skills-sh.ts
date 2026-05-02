@@ -1,11 +1,11 @@
 import type { Skill, SkillsShEnrichment } from '../types.js';
+import { USER_AGENT } from '../version.js';
 import { cacheGet, cacheSet } from './cache.js';
 import { resolveGitHubSlug } from './metadata.js';
 
 const SOURCE = 'skills-sh';
 const AUDIT_URL = 'https://add-skill.vercel.sh/audit';
 const TIMEOUT_MS = 5_000;
-const USER_AGENT = 'skill-audit/0.1.0 (+github.com/ondrej-merkun/skill-audit)';
 
 type SkillsShResponse = {
   gen?: string;

@@ -1,11 +1,11 @@
 import type { DepsDevEnrichment, Skill } from '../types.js';
+import { USER_AGENT } from '../version.js';
 import { cacheGet, cacheSet } from './cache.js';
 import { readDependencyRefs } from './metadata.js';
 
 const SOURCE = 'depsdev';
 const API_BASE = 'https://api.deps.dev/v3alpha';
 const TIMEOUT_MS = 5_000;
-const USER_AGENT = 'skill-audit/0.1.0 (+github.com/ondrej-merkun/skill-audit)';
 const MAX_DEPS = 20;
 
 type DepsDevVersion = {

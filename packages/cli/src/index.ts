@@ -8,13 +8,14 @@ import { runLlmAdd, runLlmCheck, runLlmList } from './commands/llm.js';
 import type { LlmAddOptions, LlmCheckOptions, LlmListOptions } from './commands/llm.js';
 import { runScan } from './commands/scan.js';
 import type { ScanOptions } from './commands/scan.js';
+import { VERSION } from './version.js';
 
 const program = new Command();
 
 program
   .name('skill-audit')
   .description('Scan AI agent skills for prompt injection and malicious code')
-  .version('0.1.0');
+  .version(VERSION);
 
 program.action(() => {
   runScan({}).catch((err: unknown) => {
