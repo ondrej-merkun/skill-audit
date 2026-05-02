@@ -190,6 +190,12 @@ without a commit message explaining why it no longer applies.
   For each new agent plugin, verify current official docs first, then update
   `specs/DISCOVERY.md`, user docs, fixtures, and `--agent` filtering together.
 
+- **L2.5 — Discovery-only support is not scan coverage.** _Cline rule discovery
+  emitted `.clinerules` and `*.txt` rule files, but filename-glob rules treated
+  them as unsupported filenames and skipped markdown-scoped detectors._
+  When an agent accepts extensionless or non-markdown prompt files, discovery
+  must preserve a markdown-like scan filename or equivalent rule-match context.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**

@@ -38,7 +38,9 @@ export type Skill = {
   installState?: 'installed' | 'marketplace';
   treeSha256: string;
   trusted?: boolean;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> & {
+    ruleScanFilename?: string;
+  };
 };
 
 export type Rule = {

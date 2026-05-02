@@ -16,6 +16,7 @@ vi.mock('../packages/cli/src/discovery/index.js', () => ({
 
 vi.mock('../packages/cli/src/rules/engine.js', () => ({
   runRules: vi.fn(),
+  runRulesForSkill: vi.fn(),
 }));
 
 vi.mock('../packages/cli/src/enrich/index.js', () => ({
@@ -46,7 +47,7 @@ vi.mock('../packages/cli/src/enrich/index.js', () => ({
 
 import { discoverAll } from '../packages/cli/src/discovery/index.js';
 import { enrichAllWithOutcomes } from '../packages/cli/src/enrich/index.js';
-import { runRules } from '../packages/cli/src/rules/engine.js';
+import { runRulesForSkill as runRules } from '../packages/cli/src/rules/engine.js';
 import { runScan } from '../packages/cli/src/commands/scan.js';
 
 function makeSkill(overrides: Partial<Skill> = {}): Skill {
@@ -296,8 +297,8 @@ describe('runScan flag wiring', () => {
       makeSkill({ id: 'review-score-50', name: 'review-score-50', path: '/tmp/review-score-50' }),
       makeSkill({ id: 'fail-score-0', name: 'fail-score-0', path: '/tmp/fail-score-0' }),
     ]);
-    vi.mocked(runRules).mockImplementation(async (path) => {
-      if (path === '/tmp/fail-score-0') {
+    vi.mocked(runRules).mockImplementation(async (skill) => {
+      if (skill.path === '/tmp/fail-score-0') {
         return [
           {
             ruleId: 'NET-EXFIL-ENV',
@@ -349,7 +350,7 @@ describe('runScan flag wiring', () => {
           },
         ];
       }
-      if (path === '/tmp/fail-score-75') {
+      if (skill.path === '/tmp/fail-score-75') {
         return [
           {
             ruleId: 'NET-EXFIL-ENV',
@@ -365,7 +366,7 @@ describe('runScan flag wiring', () => {
           },
         ];
       }
-      if (path === '/tmp/review-score-50') {
+      if (skill.path === '/tmp/review-score-50') {
         return [
           {
             ruleId: 'PI-OVERRIDE',
@@ -747,8 +748,8 @@ describe('runScan flag wiring', () => {
           treeSha256: 'errored-hash',
         }),
       ]);
-      vi.mocked(runRules).mockImplementation(async (path) => {
-        if (path === '/tmp/errored') throw new Error('cannot scan');
+      vi.mocked(runRules).mockImplementation(async (skill) => {
+        if (skill.path === '/tmp/errored') throw new Error('cannot scan');
         return [];
       });
 

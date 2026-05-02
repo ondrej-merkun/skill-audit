@@ -2,8 +2,13 @@ import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { matchesGlob, runPatternWithSafetyPreflight, runRules } from '../packages/cli/src/rules/engine.js';
-import type { Rule } from '../packages/cli/src/types.js';
+import {
+  matchesGlob,
+  runPatternWithSafetyPreflight,
+  runRules,
+  runRulesForSkill,
+} from '../packages/cli/src/rules/engine.js';
+import type { Rule, Skill } from '../packages/cli/src/types.js';
 
 describe('matchesGlob', () => {
   it('matches literal filenames', () => {
@@ -69,6 +74,20 @@ describe('runRules', () => {
     fix: 'Remove the secret.',
     cwe: ['CWE-312'],
   };
+
+  function makeFileSkill(path: string, metadata?: Skill['metadata']): Skill {
+    return {
+      id: 'test-skill',
+      agentId: 'cline',
+      name: 'test-skill',
+      path,
+      manifestPath: path,
+      format: 'rules-md',
+      scope: 'project',
+      treeSha256: 'tree',
+      ...(metadata !== undefined ? { metadata } : {}),
+    };
+  }
 
   beforeEach(async () => {
     tmpDir = await mkdtemp(join(tmpdir(), 'skillaudit-engine-'));
@@ -160,5 +179,19 @@ describe('runRules', () => {
     await writeFile(file, 'key: sk-abcdefghijklmnopqrstuvwxyz\n');
     const findings = await runRules(file, [TEST_RULE]);
     expect(findings.length).toBe(1);
+  });
+
+  it('uses a discovered scan filename for markdown-like Cline rule files', async () => {
+    const file = join(tmpDir, '.clinerules');
+    await writeFile(file, 'key: sk-abcdefghijklmnopqrstuvwxyz\n');
+
+    const withoutMetadata = await runRulesForSkill(makeFileSkill(file), [TEST_RULE]);
+    const withMetadata = await runRulesForSkill(
+      makeFileSkill(file, { ruleScanFilename: '.clinerules.md' }),
+      [TEST_RULE]
+    );
+
+    expect(withoutMetadata).toEqual([]);
+    expect(withMetadata.length).toBe(1);
   });
 });

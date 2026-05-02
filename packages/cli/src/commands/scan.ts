@@ -27,7 +27,7 @@ import {
   createProgressReporter,
   selectProgressMode,
 } from '../progress.js';
-import { runRules } from '../rules/engine.js';
+import { runRulesForSkill } from '../rules/engine.js';
 import { ALL_RULES } from '../rules/index.js';
 import { withSecurityEducationContextFinding } from '../rules/security-education.js';
 import { scoreFindings } from '../score.js';
@@ -366,7 +366,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
       try {
         const findings = withSecurityEducationContextFinding(
           skill,
-          await runRules(skill.path, ALL_RULES)
+          await runRulesForSkill(skill, ALL_RULES)
         );
         const summary = scoreFindings(findings, skill.treeSha256);
         return { skill, scannedSkill: { ...skill, findings, enrichment: {}, summary } };

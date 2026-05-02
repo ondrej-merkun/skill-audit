@@ -47,6 +47,12 @@ function stripKnownExtension(fileName: string, extensions: string[]): string {
   return extension === undefined ? fileName : fileName.slice(0, -extension.length);
 }
 
+function ruleScanFilename(fileName: string): string | undefined {
+  if (fileName === '.clinerules') return '.clinerules.md';
+  if (fileName.endsWith('.txt')) return `${stripKnownExtension(fileName, ['.txt'])}.md`;
+  return undefined;
+}
+
 function userDocumentsClineDir(name: 'Rules' | 'Workflows'): string {
   return join(getHomeDir(), 'Documents', 'Cline', name);
 }
@@ -163,6 +169,7 @@ async function discoverRuleFiles(dir: string, scope: Skill['scope']): Promise<Sk
   return Promise.all(
     entries.map(async (entry) => {
       const filePath = join(dir, entry.name);
+      const normalizedRuleScanFilename = ruleScanFilename(entry.name);
       return {
         id: makeId(filePath),
         agentId: AGENT_ID,
@@ -172,6 +179,9 @@ async function discoverRuleFiles(dir: string, scope: Skill['scope']): Promise<Sk
         format: 'rules-md' as const,
         scope,
         treeSha256: await computeTreeSha256(filePath),
+        ...(normalizedRuleScanFilename !== undefined
+          ? { metadata: { ruleScanFilename: normalizedRuleScanFilename } }
+          : {}),
       };
     })
   );
@@ -189,6 +199,7 @@ async function discoverLegacyRulesFile(filePath: string): Promise<Skill[]> {
       format: 'rules-md',
       scope: 'project',
       treeSha256: await computeTreeSha256(filePath),
+      metadata: { ruleScanFilename: '.clinerules.md' },
     },
   ];
 }

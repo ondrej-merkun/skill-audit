@@ -20,10 +20,11 @@ vi.mock('../packages/cli/src/discovery/index.js', () => ({
 
 vi.mock('../packages/cli/src/rules/engine.js', () => ({
   runRules: vi.fn(),
+  runRulesForSkill: vi.fn(),
 }));
 
 const { discoverAll } = await import('../packages/cli/src/discovery/index.js');
-const { runRules } = await import('../packages/cli/src/rules/engine.js');
+const { runRulesForSkill: runRules } = await import('../packages/cli/src/rules/engine.js');
 const { runScan } = await import('../packages/cli/src/commands/scan.js');
 
 function makeDepsDevPackageResponse(version = '1.0.0'): Response {
