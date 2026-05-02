@@ -1,11 +1,11 @@
 # Graph Report - skillaudit  (2026-05-03)
 
 ## Corpus Check
-- 176 files · ~87,745 words
+- 176 files · ~87,800 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 696 nodes · 1245 edges · 26 communities detected
+- 696 nodes · 1246 edges · 26 communities detected
 - Extraction: 86% EXTRACTED · 14% INFERRED · 0% AMBIGUOUS · INFERRED: 174 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
@@ -64,64 +64,64 @@
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.05
-Nodes (52): computeExitCode(), llmStatusLine(), loadSelectedLlmConfigs(), mapWithConcurrency(), parseLlmSelections(), renderScanPayload(), reviewSkillsWithLlm(), runScan() (+44 more)
+Cohesion: 0.04
+Nodes (53): appendToIgnoreList(), getConfigDir(), getIgnoreListPath(), getLegacyIgnoreListPath(), loadIgnoreList(), readIgnoreListContent(), renderDetail(), renderEnrichment() (+45 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.07
+Cohesion: 0.06
 Nodes (20): basenameOf(), extensionOf(), isMarkdownPromptFile(), isStringPrefixChar(), maskDocumentationExampleContext(), maskDocumentationTextInCode(), maskJavaScriptStringsAndComments(), maskMarkdownSecurityEducationContext() (+12 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.07
-Nodes (32): appDataDir(), clineExtensionStorageDirs(), discoverLegacyRulesFile(), discoverRuleFiles(), discoverSkillsDir(), discoverWorkflowFiles(), getClineDir(), getCwd() (+24 more)
+Nodes (39): escapeHtml(), redactPaths(), renderEnrichmentCells(), renderHtml(), renderLlmOverview(), scoreRingSvg(), verdictColor(), installStateLabel() (+31 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.07
-Nodes (24): appendToIgnoreList(), getConfigDir(), getIgnoreListPath(), getLegacyIgnoreListPath(), loadIgnoreList(), readIgnoreListContent(), runIgnore(), runList() (+16 more)
+Nodes (32): appDataDir(), clineExtensionStorageDirs(), discoverLegacyRulesFile(), discoverRuleFiles(), discoverSkillsDir(), discoverWorkflowFiles(), getClineDir(), getCwd() (+24 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.07
-Nodes (28): renderDetail(), renderEnrichment(), renderFinding(), runExplain(), shortenPath(), enrichAllWithOutcomes(), enrichSkill(), enrichSkillWithOutcomes() (+20 more)
+Cohesion: 0.09
+Nodes (37): cacheDir(), cacheGet(), cacheKey(), cacheSet(), legacyCacheDir(), depsDevSystem(), enrichDepsDev(), fetchDependencyLookup() (+29 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.1
-Nodes (36): cacheDir(), cacheGet(), cacheKey(), cacheSet(), legacyCacheDir(), depsDevSystem(), enrichDepsDev(), fetchDependencyLookup() (+28 more)
-
-### Community 6 - "Community 6"
-Cohesion: 0.08
-Nodes (26): convert(), extract_audio(), Thin wrapper around the local ffmpeg binary for common media operations., _run(), thumbnail(), trim(), buildLlmReviewMessages(), buildLlmReviewPayload() (+18 more)
-
-### Community 7 - "Community 7"
 Cohesion: 0.07
 Nodes (14): executeHtmlReportScript(), FakeClassList, FakeDocument, FakeElement, FakeEvent, FakeTextNode, getFilter(), getRow() (+6 more)
 
-### Community 8 - "Community 8"
+### Community 6 - "Community 6"
+Cohesion: 0.1
+Nodes (26): convert(), extract_audio(), Thin wrapper around the local ffmpeg binary for common media operations., _run(), thumbnail(), trim(), buildLlmReviewMessages(), buildLlmReviewPayload() (+18 more)
+
+### Community 7 - "Community 7"
 Cohesion: 0.12
 Nodes (21): parseOptionalPositiveInteger(), runLlmAdd(), runLlmCheck(), runLlmList(), serializeHealth(), addLlmConfig(), getConfigDir(), getLlmConfigPath() (+13 more)
 
-### Community 9 - "Community 9"
+### Community 8 - "Community 8"
 Cohesion: 0.13
 Nodes (21): add_days(), diff_days(), parse(), Date parsing and formatting utilities — pure stdlib., to_iso(), discoverMcpJson(), discoverMcpSettings(), discoverAgentMarkdownFiles() (+13 more)
 
-### Community 10 - "Community 10"
+### Community 9 - "Community 9"
 Cohesion: 0.15
 Nodes (18): col_sum(), dedup(), describe(), filter_rows(), head(), CSV data processing helpers — pure stdlib., _read(), to_json() (+10 more)
 
-### Community 11 - "Community 11"
+### Community 10 - "Community 10"
 Cohesion: 0.19
 Nodes (16): discoverActivePluginPayloadTree(), discoverAgentFiles(), discoverEnabledPluginCaches(), discoverMcpToml(), discoverPluginTree(), discoverSkillDirs(), discoverUntrustedProjectConfig(), makeId() (+8 more)
 
-### Community 12 - "Community 12"
+### Community 11 - "Community 11"
 Cohesion: 0.17
 Nodes (15): isPluginMarketplacePath(), normalizedSegments(), shouldSkipMarketplacePath(), withInstallState(), ancestorDirsToGitRoot(), descendantWindsurfRulesDirs(), discoverRuleFile(), discoverRulesDir() (+7 more)
+
+### Community 12 - "Community 12"
+Cohesion: 0.11
+Nodes (1): runCli()
 
 ### Community 13 - "Community 13"
 Cohesion: 0.19
 Nodes (12): discoverAgentEntries(), discoverCommandFiles(), discoverMcpFromClaudeJson(), discoverPluginTree(), discoverSkillDirs(), makeId(), pathSegments(), skillFromDir() (+4 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.2
-Nodes (1): runCli()
+Cohesion: 0.22
+Nodes (11): extractSnippet(), globalPattern(), hasNestedQuantifier(), isNestedScanRoot(), isPromptBearingCommandOrAgentDir(), isSafeRegexInput(), lineCol(), runPatternWithSafetyPreflight() (+3 more)
 
 ### Community 15 - "Community 15"
 Cohesion: 0.43
@@ -170,7 +170,7 @@ Nodes (1): Benign scanner fixture catalog.  This file stores quoted payload exam
 ## Knowledge Gaps
 - **14 isolated node(s):** `Evaluate arbitrary Python expression.`, `Execute arbitrary Python code block.`, `Dynamically import a module by name.`, `Benign scanner fixture catalog.  This file stores quoted payload examples for ru`, `Test runner helper — autodetects framework and runs tests.` (+9 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 14`** (10 nodes): `stripAnsi()`, `expectSupportedAgentHelp()`, `runCli()`, `e2e.test.ts`, `strip-ansi.ts`, `makeDepsDevPackageResponse()`, `makeDepsDevProjectResponse()`, `makeDepsDevVersionResponse()`, `makeSkill()`, `scan-enrichment-pipeline.test.ts`
+- **Thin community `Community 12`** (18 nodes): `stripAnsi()`, `expectSupportedAgentHelp()`, `runCli()`, `e2e.test.ts`, `strip-ansi.ts`, `makeDepsDevPackageResponse()`, `makeDepsDevProjectResponse()`, `makeDepsDevVersionResponse()`, `makeSkill()`, `scan-enrichment-pipeline.test.ts`, `makeFinding()`, `makeInteractiveTTY()`, `makeSkill()`, `restoreProgressEnv()`, `restoreTTY()`, `scan-options.test.ts`, `withTempDir()`, `writeLlmConfig()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 18`** (6 nodes): `check_syntax()`, `minify()`, `pretty()`, `JSON syntax checking and schema validation helpers.`, `validate_schema()`, `validate.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -190,11 +190,11 @@ Nodes (1): Benign scanner fixture catalog.  This file stores quoted payload exam
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `add()` connect `Community 10` to `Community 11`, `Community 3`, `Community 12`, `Community 4`?**
+- **Why does `add()` connect `Community 9` to `Community 0`, `Community 10`, `Community 11`, `Community 14`?**
   _High betweenness centrality (0.035) - this node is a cross-community bridge._
-- **Why does `trim()` connect `Community 6` to `Community 0`, `Community 3`, `Community 4`, `Community 5`, `Community 8`, `Community 11`?**
+- **Why does `trim()` connect `Community 6` to `Community 0`, `Community 4`, `Community 7`, `Community 10`, `Community 14`?**
   _High betweenness centrality (0.030) - this node is a cross-community bridge._
-- **Why does `parse()` connect `Community 9` to `Community 2`, `Community 5`, `Community 6`, `Community 8`, `Community 13`?**
+- **Why does `parse()` connect `Community 8` to `Community 3`, `Community 4`, `Community 6`, `Community 7`, `Community 13`?**
   _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **Are the 14 inferred relationships involving `runScan()` (e.g. with `formatSupportedAgentIds()` and `clearPlugins()`) actually correct?**
   _`runScan()` has 14 INFERRED edges - model-reasoned connections that need verification._
