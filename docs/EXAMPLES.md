@@ -29,6 +29,7 @@ from:
 skill-audit scan --agent claude-code
 skill-audit scan --agent codex
 skill-audit scan --agent cursor
+skill-audit scan --agent cline
 ```
 
 Marketplace payloads under `plugins/marketplaces/` are inactive local

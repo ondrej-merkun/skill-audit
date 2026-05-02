@@ -20,7 +20,7 @@ function addScanOptions(command: Command): Command {
     .option('-o, --output <file>', 'write selected non-HTML scan output to <file>')
     .addOption(new Option('--offline', 'skip disabled network enrichment calls').hideHelp())
     .option('--strict', 'treat REVIEW band as FAIL for exit code purposes')
-    .option('--agent <id>', 'restrict scan to a single agent (e.g. claude-code, cursor)')
+    .option('--agent <id>', 'restrict scan to a single agent (e.g. claude-code, cline)')
     .option('--include-marketplaces', 'include locally available but inactive marketplace skills')
     .option(
       '--llm <name>',
@@ -70,7 +70,7 @@ addScanOptions(
 program
   .command('list')
   .description('List all discovered agent skills without scanning')
-  .option('--agent <id>', 'restrict to a single agent (e.g. claude-code, cursor)')
+  .option('--agent <id>', 'restrict to a single agent (e.g. claude-code, cline)')
   .option('--include-marketplaces', 'include locally available but inactive marketplace skills')
   .option('--json', 'emit JSON array to stdout')
   .action((cmdOpts: Record<string, unknown>) => {

@@ -91,6 +91,7 @@ const SUPPORTED_SCAN_AGENTS = new Set([
   'claude-code',
   'cursor',
   'copilot',
+  'cline',
   'codex',
   'gemini',
   'windsurf',

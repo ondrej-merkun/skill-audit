@@ -605,6 +605,21 @@ describe('runScan flag wiring', () => {
     });
   });
 
+  it('--agent cline is a supported discovery filter', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({ id: 'cline-skill', agentId: 'cline', name: 'cline-skill' }),
+    ]);
+
+    await runScan({ json: true, agent: 'cline' });
+
+    const json = JSON.parse(stdoutChunks.join(''));
+    expect(json.skills[0].agent_id).toBe('cline');
+    expect(discoverAll).toHaveBeenCalledWith({
+      agent: 'cline',
+      onProgress: expect.any(Function),
+    });
+  });
+
   it('--agent accepts windsurf as a supported discovery filter', async () => {
     vi.mocked(discoverAll).mockResolvedValue([
       makeSkill({ id: 'windsurf-rule', agentId: 'windsurf', name: 'windsurf-rule' }),
