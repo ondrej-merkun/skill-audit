@@ -29,4 +29,4 @@ safe.
 
 For the detailed scanner trust boundaries, local data handling, optional
 enrichment behavior, and false-positive/false-negative model, see
-[`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
+[`docs/THREAT_MODEL.md`](../docs/THREAT_MODEL.md).

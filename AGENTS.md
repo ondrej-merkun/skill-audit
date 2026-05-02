@@ -7,11 +7,11 @@ listed below.
 
 ## Read these in order, every session
 
-1. **`LESSONS.md`** — hard-won lessons from prior runs. Mandatory skim
+1. **`docs/agents/LESSONS.md`** — hard-won lessons from prior runs. Mandatory skim
    at session start. Append a new bullet whenever a task teaches
    something a future run would benefit from (see the format
    instructions at the top of that file).
-2. **`AGENT.md`** — repo conventions: tech stack, build/test/lint
+2. **`docs/agents/AGENT.md`** — repo conventions: tech stack, build/test/lint
    commands, TypeScript style, testing rules, commit format, and the
    "what done means" checklist.
 3. **`CLAUDE.md`** — project overview, identity (`ondrej-merkun` /
@@ -20,7 +20,7 @@ listed below.
    guess handles or names from filesystem paths.
 4. **`.ralph/PROMPT.md`** — Ralph loop protocol. Read in full at the start of
    each iteration. Step 4b ("Capture any new lesson") is the hook
-   that keeps `LESSONS.md` current.
+   that keeps `docs/agents/LESSONS.md` current.
 5. **`.ralph/fix_plan.md`** — the prioritized task list. Pick the **first
    unchecked task** (`- [ ]`), implement only that one, commit, exit.
 

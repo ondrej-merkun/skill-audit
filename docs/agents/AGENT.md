@@ -3,7 +3,7 @@
 This file tells Ralph (and any future contributor) how to build, test,
 and structure code in this repo. Keep it short and keep it accurate.
 
-**Start-of-session: read `LESSONS.md`** at the repo root. It's the
+**Start-of-session: read `docs/agents/LESSONS.md`**. It's the
 distilled record of how previous runs broke, with explicit rules to
 avoid repeating the same mistakes. If your current task produces a
 new lesson, append a bullet there in the SAME commit as the fix
@@ -67,8 +67,8 @@ skill-audit/
 ├── test/
 │   └── fixtures/                 malicious-* and benign-* skill trees
 ├── docs/
+│   └── agents/                  agent conventions and lessons
 ├── README.md
-├── CHANGELOG.md
 └── pnpm-workspace.yaml
 ```
 
@@ -238,8 +238,8 @@ A task is done when:
 13. You've updated `.ralph/fix_plan.md` checkbox.
 14. You've committed both the feature and the checkbox change.
 
-## When the spec and AGENT.md disagree
+## When the spec and docs/agents/AGENT.md disagree
 
-The spec (`specs/SPEC.md`) wins on *what* to build. AGENT.md wins on
+The spec (`specs/SPEC.md`) wins on *what* to build. `docs/agents/AGENT.md` wins on
 *how* to structure the code. If they genuinely conflict, prefer the
 spec and add a note in `.ralph/fix_plan.md` under "Spec-vs-AGENT conflicts".

@@ -89,9 +89,9 @@ skill-audit/
 ├── test/
 │   └── fixtures/                   # 20+ malicious + 20+ benign skills
 ├── docs/
+│   ├── agents/                     # agent conventions and lessons
 │   └── rules/                      # rule pages for website
 ├── README.md
-├── CHANGELOG.md
 └── pnpm-workspace.yaml
 ```
 

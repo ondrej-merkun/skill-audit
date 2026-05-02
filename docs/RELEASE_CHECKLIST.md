@@ -7,7 +7,7 @@ tag is not the first place a problem appears.
 
 ## Before Tagging
 
-- Confirm the release contents are final in [`CHANGELOG.md`](../CHANGELOG.md).
+- Confirm the release contents are final in [`packages/cli/CHANGELOG.md`](../packages/cli/CHANGELOG.md).
 - Confirm package metadata in
   [`packages/cli/package.json`](../packages/cli/package.json) still points to
   `git+https://github.com/ondrej-merkun/skill-audit.git`.
@@ -66,8 +66,8 @@ Verify the packed npm contents:
 The dry run must include `dist/`, `package.json`, `README.md`, `LICENSE`, and
 `CHANGELOG.md`, including `dist/index.d.ts` and `dist/index.d.cts`, and must
 not include loop-driver files such as `.ralph/fix_plan.md`,
-`.ralph/PROMPT.md`, `AGENT.md`, or test fixtures. The publish dry-run must not print npm manifest
-auto-correction warnings.
+`.ralph/PROMPT.md`, `docs/agents/AGENT.md`, or test fixtures. The publish
+dry-run must not print npm manifest auto-correction warnings.
 
 ## Markdown Links And Paths
 
@@ -77,8 +77,8 @@ resolve:
 
 - [`README.md`](../README.md)
 - [`LICENSE`](../LICENSE)
-- [`SECURITY.md`](../SECURITY.md)
-- [`CHANGELOG.md`](../CHANGELOG.md)
+- [`SECURITY.md`](../.github/SECURITY.md)
+- [`CHANGELOG.md`](../packages/cli/CHANGELOG.md)
 - [`docs/THREAT_MODEL.md`](THREAT_MODEL.md)
 - [`docs/PUBLISHING.md`](PUBLISHING.md)
 

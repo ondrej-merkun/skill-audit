@@ -232,7 +232,7 @@ jobs:
 ## FAQ
 
 **How do I report a security issue?**
-Please use private vulnerability reporting. See [`../SECURITY.md`](../SECURITY.md).
+Please use private vulnerability reporting. See [`../.github/SECURITY.md`](../.github/SECURITY.md).
 
 **Why local-only?**
 Your skills contain your custom instructions, tool configs, and potentially

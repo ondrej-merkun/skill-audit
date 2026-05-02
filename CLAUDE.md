@@ -6,8 +6,8 @@ Local-first, zero-auth, published as `@ondrej-merkun/skill-audit` with the
 `skill-audit` bin.
 
 Full spec: **`specs/SPEC.md`**. Ralph loop protocol: **`.ralph/PROMPT.md`**.
-Workflow conventions: **`AGENT.md`**. Task list / progress: **`.ralph/fix_plan.md`**.
-**Hard-won lessons (READ AT SESSION START): `LESSONS.md`.** Append a new
+Workflow conventions: **`docs/agents/AGENT.md`**. Task list / progress: **`.ralph/fix_plan.md`**.
+**Hard-won lessons (READ AT SESSION START): `docs/agents/LESSONS.md`.** Append a new
 bullet there whenever a task teaches something a future run would benefit
 from — see the instructions at the top of that file.
 
@@ -171,6 +171,6 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
 
 ## When spec and conventions disagree
 
-`specs/SPEC.md` wins on *what* to build. `CLAUDE.md` / `AGENT.md` win on
+`specs/SPEC.md` wins on *what* to build. `CLAUDE.md` / `docs/agents/AGENT.md` win on
 *how* to structure the code. Genuine conflicts go in `.ralph/fix_plan.md` under
 "Spec-vs-convention conflicts" and default to the spec.

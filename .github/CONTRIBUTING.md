@@ -14,10 +14,11 @@ pnpm lint
 pnpm typecheck
 ```
 
-Follow the repo conventions in [AGENT.md](AGENT.md). For behavior questions,
-start with [specs/SPEC.md](specs/SPEC.md). Read [LESSONS.md](LESSONS.md)
-before changing scanner behavior; it records project-specific pitfalls from
-previous work.
+Follow the repo conventions in
+[docs/agents/AGENT.md](../docs/agents/AGENT.md). For behavior questions, start
+with [specs/SPEC.md](../specs/SPEC.md). Read
+[docs/agents/LESSONS.md](../docs/agents/LESSONS.md) before changing scanner
+behavior; it records project-specific pitfalls from previous work.
 
 ## Pull Requests
 

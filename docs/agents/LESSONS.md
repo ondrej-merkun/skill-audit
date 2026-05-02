@@ -340,7 +340,7 @@ without a commit message explaining why it no longer applies.
 
 - Generic best-practice advice ("write tests"). Only hard-won, project-
   specific lessons.
-- Things already enforced by `CLAUDE.md` / `AGENT.md` / `.ralph/PROMPT.md`. If
+- Things already enforced by `CLAUDE.md` / `docs/agents/AGENT.md` / `.ralph/PROMPT.md`. If
   the rule is mechanical and can be checked, codify it there — LESSONS.md
   is the narrative companion, not the enforcement mechanism.
 - Resolved bugs with no general lesson. Those belong in commit messages.

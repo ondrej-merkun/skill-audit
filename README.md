@@ -16,7 +16,7 @@
   &nbsp;
   <a href="docs/PUBLISHING.md"><img src="https://img.shields.io/badge/npm%20provenance-attested-blue" alt="npm provenance: attested" /></a>
   &nbsp;
-  <a href="SECURITY.md"><img src="https://img.shields.io/badge/security-policy-blue" alt="Security policy" /></a>
+  <a href=".github/SECURITY.md"><img src="https://img.shields.io/badge/security-policy-blue" alt="Security policy" /></a>
   &nbsp;
   <a href="specs/RULES.md"><img src="https://img.shields.io/badge/rules-41-red" alt="41 shipped rules" /></a>
   &nbsp;
