@@ -1,5 +1,5 @@
 import { type Dirent, readFileSync, readdirSync, statSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import type { Finding, Rule, Skill } from '../types.js';
 
 const MAX_SCANNED_CONTENT_CHARS = 1_000_000;
@@ -171,6 +171,8 @@ export async function runRules(
 
   for (const filePath of files) {
     const name = options.filenameOverride ?? basename(filePath);
+    const preparePath =
+      options.filenameOverride === undefined ? filePath : join(dirname(filePath), name);
     const applicableRules = rules.filter((rule) =>
       rule.appliesTo.some((glob) => matchesGlob(name, glob))
     );
@@ -192,7 +194,7 @@ export async function runRules(
       if (rule.prepareContent !== undefined) {
         const cached = preparedContent.get(rule.prepareContent);
         if (cached === undefined) {
-          matchContent = rule.prepareContent(content, filePath);
+          matchContent = rule.prepareContent(content, preparePath);
           preparedContent.set(rule.prepareContent, matchContent);
         } else {
           matchContent = cached;
