@@ -28,7 +28,7 @@
 ---
 
 > **36% of agent skills ship with a security flaw. 13% with a critical one.**
-> — [Snyk ToxicSkills study, Feb 2026](https://snyk.io/blog/toxic-skills)
+> — [Snyk ToxicSkills study, Feb 2026](https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/)
 
 `skill-audit` is a fast local first pass for AI-agent skills, plugins, MCP
 configs, and project instruction files. It discovers content exposed to Claude
