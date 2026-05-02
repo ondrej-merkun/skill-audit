@@ -2,7 +2,6 @@ import { type Dirent, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import type { Finding, Rule } from '../types.js';
 
-const REGEX_TIMEOUT_MS = 500;
 const MAX_SCANNED_CONTENT_CHARS = 1_000_000;
 
 type RawMatch = { index: number; text: string };
@@ -28,12 +27,10 @@ function globalPattern(pattern: RegExp): RegExp {
  * Runs a single regex pattern against content without spawning workers.
  * Returns empty array for inputs that fail the pre-flight safety caps.
  */
-export function runPatternWithTimeout(
+export function runPatternWithSafetyPreflight(
   pattern: RegExp,
-  content: string,
-  timeoutMs = REGEX_TIMEOUT_MS
+  content: string
 ): Promise<RawMatch[]> {
-  void timeoutMs;
   if (!isSafeRegexInput(pattern, content)) return Promise.resolve([]);
 
   const re = globalPattern(pattern);
@@ -195,7 +192,7 @@ export async function runRules(skillPath: string, rules: Rule[]): Promise<Findin
         }
       }
       for (const pattern of rule.patterns) {
-        const matches = await runPatternWithTimeout(pattern, matchContent);
+        const matches = await runPatternWithSafetyPreflight(pattern, matchContent);
         for (const { index, text } of matches) {
           const { line, column } = lineCol(content, index);
           if (seenLines.has(line)) continue;

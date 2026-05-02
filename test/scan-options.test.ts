@@ -620,6 +620,21 @@ describe('runScan flag wiring', () => {
     });
   });
 
+  it('--agent accepts windsurf as a supported discovery filter', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({ id: 'windsurf-rule', agentId: 'windsurf', name: 'windsurf-rule' }),
+    ]);
+
+    await runScan({ json: true, agent: 'windsurf' });
+
+    expect(discoverAll).toHaveBeenCalledWith({
+      agent: 'windsurf',
+      onProgress: expect.any(Function),
+    });
+    const json = JSON.parse(stdoutChunks.join(''));
+    expect(json.skills[0].agent_id).toBe('windsurf');
+  });
+
   it('--include-marketplaces passes the discovery opt-in', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
 

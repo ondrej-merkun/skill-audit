@@ -63,7 +63,7 @@ At the repo root, change `lint`/`typecheck`/`build` to call the package script d
 - If you keep dts: `dts: { only: false, resolve: false }` avoids cross-package resolution.
 
 ### 8. Consider the scanner itself
-The "10 malicious skills" scan is ~28 s of actual scan work (subtract 1.3 s startup). That's 2.8 s per tiny skill — suspicious. A pre-filter (glob first, regex only on text files under a size cap) and caching the compiled `RegExp` objects across skills (current `engine.ts` has a 500 ms timeout wrapper — make sure the `RegExp` is built once, not per file) is likely a 5-10× win in the scan hot path. Separate from build tooling, but it's the single biggest number in the loop.
+The "10 malicious skills" scan is ~28 s of actual scan work (subtract 1.3 s startup). That's 2.8 s per tiny skill — suspicious. A pre-filter (glob first, regex only on text files under a size cap) and caching the compiled `RegExp` objects across skills (current `engine.ts` has a safety preflight — make sure the `RegExp` is built once, not per file) is likely a 5-10× win in the scan hot path. Separate from build tooling, but it's the single biggest number in the loop.
 
 ## Projected totals
 

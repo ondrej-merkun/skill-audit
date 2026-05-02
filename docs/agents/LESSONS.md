@@ -229,6 +229,12 @@ without a commit message explaining why it no longer applies.
   Keep isolation on unless the suite is first split so mock-heavy tests remain
   isolated and the no-isolate tier is proven green.
 
+- **L4.5 — Rename contracts when performance fixes change guarantees.** _The
+  regex worker hot path was replaced by safety preflight checks, but the engine
+  API and docs still claimed a hard regex timeout._
+  When replacing hard isolation/timeouts with heuristics, update names, tests,
+  and docs in the same change so security guarantees stay explicit.
+
 ## 5. Orphans, cleanup, and the one-task-per-loop rule
 
 - **L5.1 — Delete direct predecessors in the same commit.** _Task 1.7

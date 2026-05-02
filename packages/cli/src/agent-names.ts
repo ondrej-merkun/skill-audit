@@ -5,6 +5,7 @@ const AGENT_DISPLAY_NAMES: Record<string, string> = {
   cline: 'Cline',
   codex: 'OpenAI Codex',
   gemini: 'Gemini CLI',
+  windsurf: 'Windsurf',
   'cross-agent': 'Cross-agent',
 };
 

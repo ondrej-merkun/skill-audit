@@ -76,10 +76,11 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
 - **Never weaken a rule to make a test pass.** If a rule is too aggressive,
   adjust the fixture, add an allowlist entry, or lower severity — don't
   silently narrow the regex until failure stops.
-- **Regex patterns use Node's native `RegExp` with a 500ms per-pattern
-  timeout wrapper** (see `src/rules/engine.ts`). This prevents catastrophic
-  backtracking. Do not call `.exec()` / `.test()` directly on user-sourced
-  content outside that wrapper.
+- **Regex patterns use Node's native `RegExp` behind the safety preflight**
+  (see `src/rules/engine.ts`). Content length and nested-quantifier caps keep
+  catastrophic inputs out of the hot path without per-pattern workers. Do not
+  call `.exec()` / `.test()` directly on user-sourced content outside that
+  wrapper.
 - **Discovery plugins run against temp dirs in tests**, not the real home
   dir. Use the `HOME` / `USERPROFILE` env override in tests — never touch
   `os.homedir()` in the plugin itself without that indirection.

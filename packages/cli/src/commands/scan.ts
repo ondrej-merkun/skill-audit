@@ -94,6 +94,7 @@ const SUPPORTED_SCAN_AGENTS = new Set([
   'cline',
   'codex',
   'gemini',
+  'windsurf',
   'cross-agent',
 ]);
 

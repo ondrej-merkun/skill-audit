@@ -30,7 +30,7 @@ Justification, in order of weight:
   - `ora` for spinners
   - `listr2` for the multi-step scan pipeline
   - **Do not** reach for `ink` (React) at MVP — adds 200kb of deps and complicates output modes.
-- **Regex engine:** Node's native `RegExp` with a safety wrapper that caps runtime per pattern (prevents catastrophic backtracking).
+- **Regex engine:** Node's native `RegExp` with a safety preflight that caps scanned content size and rejects unsafe nested-quantifier patterns before matching.
 - **Semgrep integration:** shell-out to `semgrep --config ./rules --json` *only if* `semgrep` binary is on PATH. Gracefully skip AST rules otherwise and emit a note. This keeps zero-install pure regex as the default.
 - **Testing:** `vitest` for unit + snapshot. Keep ~30 rule tests with example malicious/benign fixtures.
 - **Lint/format:** `biome` (faster than eslint+prettier, single config).
@@ -143,8 +143,8 @@ Adding a new agent = adding one file and registering in `discovery/index.ts`. No
 | **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, legacy `.cursorrules` | `.mdc`, JSON |
 | **Gemini CLI** | `~/.gemini/extensions/*/gemini-extension.json`, `~/.gemini/commands/*.toml`, `~/.gemini/agents/`, `~/.gemini/settings.json` | `.gemini/extensions/`, `.gemini/commands/`, `GEMINI.md` | `gemini-extension.json` (JSON), `.toml` |
 | **GitHub Copilot** | `~/.copilot/skills/*/SKILL.md`, `~/.claude/skills/`, `~/.agents/skills/` | `.github/skills/*/SKILL.md`, `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md` | `SKILL.md`, plain `.md` |
-| **Windsurf** | `~/.codeium/windsurf/memories/global_rules.md` | `.windsurf/rules/*.md`, legacy `.windsurfrules`, auto-reads `AGENTS.md` | Plain `.md` |
 | **Cline** | `~/Documents/Cline/Rules/`, `~/.cline/skills/`, `~/Documents/Cline/Workflows/`, `~/.cline/data/settings/cline_mcp_settings.json`, `$CLINE_DIR/data/settings/cline_mcp_settings.json`, VS Code / JetBrains `globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` | `.clinerules`, `.clinerules/*.md`, `.clinerules/*.txt`, `.cline/skills/`, `.clinerules/skills/`, `.clinerules/workflows/`, cross-reads `.cursorrules`, `AGENTS.md`, `CLAUDE.md` | `SKILL.md`, `.md`, `.txt`, JSON |
+| **Windsurf** | `~/.codeium/windsurf/memories/global_rules.md` | `.windsurf/rules/*.md` in the workspace, nested workspace `.windsurf/rules/*.md`, parent `.windsurf/rules/*.md` up to git root, legacy `.windsurfrules`, auto-reads `AGENTS.md` | Plain `.md` |
 | **Cross-agent (AGENTS.md sweep)** | — | `AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `CONVENTIONS.md` (catches 7+ agents in one pass) | plain `.md` |
 
 **Discovery depth rule.** When an installed plugin path contains "plugins",
@@ -170,8 +170,9 @@ metadata, then walk only those active payload roots.
 3. OpenAI Codex (`~/.codex/AGENTS*.md`, `config.toml`, `skills/`, `plugins/`, `prompts/`)
 4. Gemini CLI (extensions, commands, agents, settings MCP)
 5. Cline (rules, skills, workflows, MCP settings)
-6. Cross-cutting AGENTS.md + `.mcp.json` sweep (catches Copilot, Windsurf, Zed, Amp, Factory)
-7. GitHub Copilot (`.github/skills/`, `.github/copilot-instructions.md`)
+6. Windsurf (global rules, workspace rules, nested workspace rules, legacy `.windsurfrules`)
+7. Cross-cutting AGENTS.md + `.mcp.json` sweep (catches Copilot, Zed, Amp, Factory)
+8. GitHub Copilot (`.github/skills/`, `.github/copilot-instructions.md`)
 
 ### Disambiguation
 When a skill appears at both user scope and project scope, list both rows in the table and mark `scope` column unless the content hash proves it is the same installed payload. Dedupe non-empty `treeSha256` values in the discovery registry (same tree hash → identical content, report once with duplicate paths in `alsoInstalledAt`). Do not dedupe empty hashes used for synthetic config-derived entries. When a skill appears in a project's `.claude/` AND is symlinked from `~/.claude/`, follow the symlink and mark `link`.
@@ -280,7 +281,7 @@ unzip\s+-P\s+["']?\S+["']?\s+\S+\.zip
 warm cache on a 2020-era laptop. If a design choice pushes past
 this, redesign before shipping. Worker-thread-per-regex is NOT
 acceptable at this scale — batch regex execution per file, or
-keep execution in the main thread with a simpler timeout strategy
+keep execution in the main thread with a simpler safety strategy
 (e.g. pre-flight length/complexity caps on user-sourced content).
 
 ## 5. Cloud enrichment layer
