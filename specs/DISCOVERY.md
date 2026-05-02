@@ -55,8 +55,9 @@ move it here in the same task; do not leave implemented behavior documented as
 
 ### 4. Cross-agent AGENTS.md sweep
 
-One walker handles all of Codex, Gemini CLI, Windsurf, Cline, Zed,
-Amp, and Factory. Walk cwd and parents up to repo root; collect:
+One walker handles shared project instruction files for Codex, Gemini CLI,
+Windsurf, Cline, Zed, Amp, and Factory. Walk cwd and parents up to repo root;
+collect:
 - `AGENTS.md`
 - `AGENTS.override.md`
 - `CLAUDE.md`
@@ -104,6 +105,18 @@ Report each as a `Skill` with `agentId: "cross-agent"` and
 - `.gemini/extensions/`
 - `.gemini/commands/`
 - `GEMINI.md` is handled by the cross-agent sweep.
+
+### 7. Windsurf
+
+**User-global:**
+- `~/.codeium/windsurf/memories/global_rules.md`
+
+**Project-local:**
+- `.windsurf/rules/*.md` in the current workspace
+- Nested workspace `.windsurf/rules/*.md` directories
+- Parent `.windsurf/rules/*.md` directories up to the git root
+- Legacy `.windsurfrules`
+- `AGENTS.md` is handled by the cross-agent sweep.
 
 
 ## Disambiguation rules
