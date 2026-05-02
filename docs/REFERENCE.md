@@ -11,6 +11,7 @@ first screen while preserving the details users need after their first scan.
 | **OpenAI Codex** | `~/.codex/AGENTS.md`, `~/.codex/config.toml`, `~/.codex/skills/`, `~/.codex/plugins/`, `~/.codex/prompts/` | `AGENTS.md`, `AGENTS.override.md`, `.codex/config.toml` |
 | **GitHub Copilot** | `~/.copilot/skills/*/SKILL.md` | `.github/skills/`, `.github/copilot-instructions.md`, `.github/instructions/` |
 | **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, `.cursorrules` |
+| **Cline** | `~/Documents/Cline/Rules/`, `~/.cline/skills/`, `~/Documents/Cline/Workflows/`, Cline MCP settings | `.clinerules/`, `.cline/skills/`, `.clinerules/skills/`, `.clinerules/workflows/` |
 | **Gemini CLI** | `~/.gemini/extensions/`, `~/.gemini/commands/`, `~/.gemini/agents/`, `~/.gemini/settings.json` | `.gemini/extensions/`, `.gemini/commands/`, `GEMINI.md` |
 | **Windsurf** | `~/.codeium/windsurf/memories/global_rules.md` | `.windsurf/rules/*.md`, nested workspace `.windsurf/rules/`, `.windsurfrules` |
 | **Cross-agent sweep** | - | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.windsurfrules`, `CONVENTIONS.md` (walks parents) |
