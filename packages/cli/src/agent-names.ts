@@ -4,6 +4,7 @@ const AGENT_DISPLAY_NAMES: Record<string, string> = {
   copilot: 'GitHub Copilot',
   codex: 'OpenAI Codex',
   gemini: 'Gemini CLI',
+  windsurf: 'Windsurf',
   'cross-agent': 'Cross-agent',
 };
 

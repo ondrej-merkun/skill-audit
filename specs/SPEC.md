@@ -143,7 +143,7 @@ Adding a new agent = adding one file and registering in `discovery/index.ts`. No
 | **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, legacy `.cursorrules` | `.mdc`, JSON |
 | **Gemini CLI** | `~/.gemini/extensions/*/gemini-extension.json`, `~/.gemini/commands/*.toml`, `~/.gemini/agents/`, `~/.gemini/settings.json` | `.gemini/extensions/`, `.gemini/commands/`, `GEMINI.md` | `gemini-extension.json` (JSON), `.toml` |
 | **GitHub Copilot** | `~/.copilot/skills/*/SKILL.md`, `~/.claude/skills/`, `~/.agents/skills/` | `.github/skills/*/SKILL.md`, `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md` | `SKILL.md`, plain `.md` |
-| **Windsurf** | `~/.codeium/windsurf/memories/global_rules.md` | `.windsurf/rules/*.md`, legacy `.windsurfrules`, auto-reads `AGENTS.md` | Plain `.md` |
+| **Windsurf** | `~/.codeium/windsurf/memories/global_rules.md` | `.windsurf/rules/*.md` in the workspace, nested workspace `.windsurf/rules/*.md`, parent `.windsurf/rules/*.md` up to git root, legacy `.windsurfrules`, auto-reads `AGENTS.md` | Plain `.md` |
 | **Cline** | VS Code `globalStorage/saoudrizwan.claude-dev/` | `.clinerules/*.md`, legacy `.clinerules`, cross-reads `.cursorrules`, `AGENTS.md`, `CLAUDE.md` | `.md` w/ YAML FM |
 | **Cross-agent (AGENTS.md sweep)** | — | `AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `CONVENTIONS.md` (catches 7+ agents in one pass) | plain `.md` |
 
@@ -169,8 +169,9 @@ metadata, then walk only those active payload roots.
 2. Cursor (MCP + rules)
 3. OpenAI Codex (`~/.codex/AGENTS*.md`, `config.toml`, `skills/`, `plugins/`, `prompts/`)
 4. Gemini CLI (extensions, commands, agents, settings MCP)
-5. Cross-cutting AGENTS.md + `.mcp.json` sweep (catches Copilot, Windsurf, Cline, Zed, Amp, Factory)
-6. GitHub Copilot (`.github/skills/`, `.github/copilot-instructions.md`)
+5. Windsurf (global rules, workspace rules, nested workspace rules, legacy `.windsurfrules`)
+6. Cross-cutting AGENTS.md + `.mcp.json` sweep (catches Copilot, Cline, Zed, Amp, Factory)
+7. GitHub Copilot (`.github/skills/`, `.github/copilot-instructions.md`)
 
 ### Disambiguation
 When a skill appears at both user scope and project scope, list both rows in the table and mark `scope` column unless the content hash proves it is the same installed payload. Dedupe non-empty `treeSha256` values in the discovery registry (same tree hash → identical content, report once with duplicate paths in `alsoInstalledAt`). Do not dedupe empty hashes used for synthetic config-derived entries. When a skill appears in a project's `.claude/` AND is symlinked from `~/.claude/`, follow the symlink and mark `link`.

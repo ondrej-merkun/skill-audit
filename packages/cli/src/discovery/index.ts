@@ -8,6 +8,7 @@ import cursorDiscovery from './cursor.js';
 import geminiDiscovery from './gemini.js';
 import { isPluginMarketplacePath, withInstallState } from './marketplace.js';
 import { addModifiedAt } from './modified-at.js';
+import windsurfDiscovery from './windsurf.js';
 
 // Registry starts empty so test files get a clean slate on import.
 // Call initDefaultPlugins() from the CLI entry point to register built-ins.
@@ -125,6 +126,7 @@ export function initDefaultPlugins(): void {
     copilotDiscovery,
     codexDiscovery,
     geminiDiscovery,
+    windsurfDiscovery,
     agentsMdSweepDiscovery
   );
 }

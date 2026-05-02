@@ -568,6 +568,49 @@ describe('discoverAll', () => {
       await rm(tempCwd, { recursive: true, force: true });
     }
   });
+
+  it('registers Windsurf in the default plugin set', async () => {
+    const tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-reg-home-'));
+    const tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-reg-cwd-'));
+    const originalHome = process.env['HOME'];
+    const originalCwd = process.env['SKILLAUDIT_CWD'];
+
+    try {
+      process.env['HOME'] = tempHome;
+      process.env['SKILLAUDIT_CWD'] = tempCwd;
+
+      const memoriesDir = join(tempHome, '.codeium', 'windsurf', 'memories');
+      await mkdir(memoriesDir, { recursive: true });
+      await writeFile(join(memoriesDir, 'global_rules.md'), '# Global Windsurf rules\n');
+
+      initDefaultPlugins();
+
+      const skills = await discoverAll();
+      expect(skills).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            agentId: 'windsurf',
+            name: 'global_rules',
+            format: 'rules-md',
+            scope: 'user',
+          }),
+        ])
+      );
+    } finally {
+      if (originalHome === undefined) {
+        delete process.env['HOME'];
+      } else {
+        process.env['HOME'] = originalHome;
+      }
+      if (originalCwd === undefined) {
+        delete process.env['SKILLAUDIT_CWD'];
+      } else {
+        process.env['SKILLAUDIT_CWD'] = originalCwd;
+      }
+      await rm(tempHome, { recursive: true, force: true });
+      await rm(tempCwd, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('isPluginCachePath', () => {

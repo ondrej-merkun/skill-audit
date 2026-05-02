@@ -12,6 +12,7 @@ first screen while preserving the details users need after their first scan.
 | **GitHub Copilot** | `~/.copilot/skills/*/SKILL.md` | `.github/skills/`, `.github/copilot-instructions.md`, `.github/instructions/` |
 | **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, `.cursorrules` |
 | **Gemini CLI** | `~/.gemini/extensions/`, `~/.gemini/commands/`, `~/.gemini/agents/`, `~/.gemini/settings.json` | `.gemini/extensions/`, `.gemini/commands/`, `GEMINI.md` |
+| **Windsurf** | `~/.codeium/windsurf/memories/global_rules.md` | `.windsurf/rules/*.md`, nested workspace `.windsurf/rules/`, `.windsurfrules` |
 | **Cross-agent sweep** | - | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.windsurfrules`, `CONVENTIONS.md` (walks parents) |
 
 By default, `scan` and `list` include only installed or currently exposed
@@ -35,7 +36,7 @@ skill-audit ignore <name>      # add a skill's treeSha256 to your ignore list
 |---|---|
 | `--json` | Emit machine-readable JSON (schema v1.0) |
 | `--summary` | One-line summary footer only |
-| `--agent <id>` | Restrict to one agent (`claude-code`, `codex`, `copilot`, `cursor`, `gemini`, `cross-agent`) |
+| `--agent <id>` | Restrict to one agent (`claude-code`, `codex`, `copilot`, `cursor`, `gemini`, `windsurf`, `cross-agent`) |
 | `--include-marketplaces` | Include inactive local marketplace inventory and label rows as `marketplace` |
 | `-o, --output <file>` | Write the selected non-HTML scan output to file |
 | `--strict` | Treat REVIEW as FAIL for exit-code purposes |
