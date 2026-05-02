@@ -10,6 +10,34 @@ at the bottom and the loop will stop.
 
 ## Pending tasks
 
+- [ ] **8.4** Migrate Biome 2 separately from broad npm major updates.
+
+  Dependabot PR #6 bundled `@biomejs/biome` 2.4.13 with TypeScript 6,
+  Vitest 4, Commander 14, Listr 10, Ora 9, and Node 25 types. That shape
+  failed CI and local validation before tests completed. The first replacement
+  migration should isolate Biome so formatter/linter config drift is solved
+  without mixing in TypeScript, test-runner, or runtime-library behavior
+  changes.
+
+  Target behavior:
+  - Update only `@biomejs/biome` from 1.9.4 to 2.4.13 in the root and
+    `packages/cli` manifests plus `pnpm-lock.yaml`.
+  - Migrate `packages/cli/biome.json` from the Biome 1 schema to the Biome 2
+    schema and replace removed keys such as `files.include` with the current
+    equivalent or remove them if `biome check src` already scopes the lint
+    surface correctly.
+  - Keep the existing lint command and code style behavior as close as possible
+    to the current repo conventions.
+  - Do not include TypeScript 6, Vitest 4, Commander, Listr, Ora, or
+    `@types/node` changes in this migration.
+
+  Testing and verification:
+  - Run `pnpm install --frozen-lockfile`.
+  - Run `pnpm lint` and verify Biome 2 accepts the migrated config.
+  - Run `pnpm build`, `pnpm test`, and `pnpm typecheck` to catch any toolchain
+    side effects.
+  - Verify GitHub CI on Node 20 and 22 before merging.
+
 - [ ] **8.5** Repair enrichment provenance, provider dedupe, and visible source
   diagnostics.
 
