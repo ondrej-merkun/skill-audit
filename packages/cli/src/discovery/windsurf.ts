@@ -17,6 +17,7 @@ const SKIPPED_DESCENDANT_DIRS = new Set([
   'coverage',
   '.next',
 ]);
+const NESTED_RULE_PROBE_MAX_DEPTH = 4;
 
 function getHomeDir(): string {
   return process.env.HOME ?? process.env.USERPROFILE ?? os.homedir();
@@ -112,7 +113,7 @@ async function ancestorDirsToGitRoot(dir: string): Promise<string[]> {
 
   while (true) {
     dirs.push(current);
-    if (await pathExists(join(current, '.git'))) break;
+    if (await isWorkspaceGitRoot(current)) break;
 
     const parent = dirname(current);
     if (parent === current) break;
@@ -120,6 +121,20 @@ async function ancestorDirsToGitRoot(dir: string): Promise<string[]> {
   }
 
   return dirs;
+}
+
+async function isWorkspaceGitRoot(dir: string): Promise<boolean> {
+  const gitPath = join(dir, '.git');
+  if (await isRegularFile(gitPath)) return true;
+  return isRegularFile(join(gitPath, 'HEAD'));
+}
+
+async function gitRootFromAncestors(ancestorDirs: string[]): Promise<string | undefined> {
+  for (const dir of ancestorDirs) {
+    if (await isWorkspaceGitRoot(dir)) return dir;
+  }
+
+  return undefined;
 }
 
 async function descendantWindsurfRulesDirs(
@@ -162,23 +177,68 @@ async function workspaceRulesDirs(
   options: DiscoverSkillsOptions = {}
 ): Promise<string[]> {
   const dirs = new Set<string>();
+  const ancestorDirs = await ancestorDirsToGitRoot(cwd);
 
-  for (const dir of await ancestorDirsToGitRoot(cwd)) {
+  for (const dir of ancestorDirs) {
     const rulesDir = join(dir, '.windsurf', 'rules');
     if (await isDirectory(rulesDir)) dirs.add(rulesDir);
   }
 
-  for (const rulesDir of await descendantWindsurfRulesDirs(cwd, options)) {
+  const workspaceRoot = (await gitRootFromAncestors(ancestorDirs)) ?? cwd;
+  for (const rulesDir of await descendantWindsurfRulesDirs(workspaceRoot, options)) {
     dirs.add(rulesDir);
   }
 
   return [...dirs].sort((a, b) => a.localeCompare(b));
 }
 
+async function hasNestedWorkspaceRules(root: string): Promise<boolean> {
+  for (const rulesDir of await nestedWorkspaceRuleProbeDirs(root)) {
+    if (await isDirectory(rulesDir)) return true;
+  }
+
+  return false;
+}
+
+async function nestedWorkspaceRuleProbeDirs(root: string, depth = 0): Promise<string[]> {
+  if (depth >= NESTED_RULE_PROBE_MAX_DEPTH) return [];
+
+  const dirs = new Set<string>();
+
+  let rootEntries: Array<{ isDirectory(): boolean; name: string }>;
+  try {
+    rootEntries = await readdir(root, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  for (const entry of rootEntries) {
+    if (!entry.isDirectory()) continue;
+    if (SKIPPED_DESCENDANT_DIRS.has(entry.name)) continue;
+
+    const child = join(root, entry.name);
+    dirs.add(join(child, '.windsurf', 'rules'));
+
+    for (const rulesDir of await nestedWorkspaceRuleProbeDirs(child, depth + 1)) {
+      dirs.add(rulesDir);
+    }
+  }
+
+  return [...dirs];
+}
+
 async function hasWorkspaceRules(cwd: string): Promise<boolean> {
-  return (
-    (await workspaceRulesDirs(cwd)).length > 0 || (await pathExists(join(cwd, '.windsurfrules')))
-  );
+  if (await pathExists(join(cwd, '.windsurfrules'))) return true;
+
+  const ancestorDirs = await ancestorDirsToGitRoot(cwd);
+  for (const dir of ancestorDirs) {
+    if (await isDirectory(join(dir, '.windsurf', 'rules'))) return true;
+  }
+
+  const workspaceRoot = (await gitRootFromAncestors(ancestorDirs)) ?? cwd;
+  if (await hasNestedWorkspaceRules(workspaceRoot)) return true;
+
+  return false;
 }
 
 const windsurfDiscovery: AgentDiscovery = {
