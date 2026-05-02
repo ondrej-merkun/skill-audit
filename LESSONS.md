@@ -140,6 +140,12 @@ without a commit message explaining why it no longer applies.
   Before publishing, run the publish dry-run from `packages/cli` and fix any
   manifest normalization warnings so the packed CLI still installs a working bin.
 
+- **L1.22 — Re-run package metadata tests after manifest normalization.** _Commit
+  `525b3df` normalized npm `bin` and repository metadata after publish dry-run,
+  but pushed before `pnpm test`, leaving CI with stale e2e expectations._
+  After changing package metadata, rerun `pnpm exec vitest run test/e2e.test.ts`
+  or the full suite and update the documented package contract before pushing.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

@@ -1,7 +1,7 @@
 # Graph Report - skillaudit  (2026-05-02)
 
 ## Corpus Check
-- 151 files · ~89,044 words
+- 151 files · ~84,441 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -47,16 +47,16 @@
 10. `add()` - 10 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `fetchImpl()` --calls--> `reviewWithOpenAiCompatibleModel()`  [INFERRED]
-  test/scan-options.test.ts → packages/cli/src/llm/review.ts
-- `readFile()` --calls--> `readIgnoreListContent()`  [INFERRED]
-  test/fixtures/malicious/remote-import-skill/utils.js → packages/cli/src/allowlist/ignore.ts
-- `readFile()` --calls--> `discoverMcpJson()`  [INFERRED]
-  test/fixtures/malicious/remote-import-skill/utils.js → packages/cli/src/discovery/cursor.ts
-- `readFile()` --calls--> `discoverExtensionManifests()`  [INFERRED]
-  test/fixtures/malicious/remote-import-skill/utils.js → packages/cli/src/discovery/gemini.ts
-- `readFile()` --calls--> `discoverMcpJson()`  [INFERRED]
-  test/fixtures/malicious/remote-import-skill/utils.js → packages/cli/src/discovery/gemini.ts
+- `reviewWithOpenAiCompatibleModel()` --calls--> `fetchImpl()`  [INFERRED]
+  packages/cli/src/llm/review.ts → test/scan-options.test.ts
+- `readIgnoreListContent()` --calls--> `readFile()`  [INFERRED]
+  packages/cli/src/allowlist/ignore.ts → test/fixtures/malicious/remote-import-skill/utils.js
+- `discoverMcpJson()` --calls--> `readFile()`  [INFERRED]
+  packages/cli/src/discovery/cursor.ts → test/fixtures/malicious/remote-import-skill/utils.js
+- `discoverExtensionManifests()` --calls--> `readFile()`  [INFERRED]
+  packages/cli/src/discovery/gemini.ts → test/fixtures/malicious/remote-import-skill/utils.js
+- `discoverMcpJson()` --calls--> `readFile()`  [INFERRED]
+  packages/cli/src/discovery/gemini.ts → test/fixtures/malicious/remote-import-skill/utils.js
 
 ## Communities
 
