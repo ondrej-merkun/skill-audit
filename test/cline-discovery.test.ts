@@ -4,6 +4,43 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import clineDiscovery from '../packages/cli/src/discovery/cline.js';
 
+const CLINE_EXTENSION_ID = 'saoudrizwan.claude-dev';
+
+function vsCodeClineSettingsDir(home: string): string {
+  if (process.platform === 'win32') {
+    return join(
+      process.env['APPDATA'] ?? join(home, 'AppData', 'Roaming'),
+      'Code',
+      'User',
+      'globalStorage',
+      CLINE_EXTENSION_ID,
+      'settings'
+    );
+  }
+
+  if (process.platform === 'darwin') {
+    return join(
+      home,
+      'Library',
+      'Application Support',
+      'Code',
+      'User',
+      'globalStorage',
+      CLINE_EXTENSION_ID,
+      'settings'
+    );
+  }
+
+  return join(
+    process.env['XDG_CONFIG_HOME'] ?? join(home, '.config'),
+    'Code',
+    'User',
+    'globalStorage',
+    CLINE_EXTENSION_ID,
+    'settings'
+  );
+}
+
 describe('cline discovery plugin', () => {
   let tempHome: string;
   let tempCwd: string;
@@ -11,6 +48,7 @@ describe('cline discovery plugin', () => {
   let originalSkillauditCwd: string | undefined;
   let originalClineDir: string | undefined;
   let originalXdgConfigHome: string | undefined;
+  let originalAppData: string | undefined;
 
   beforeEach(async () => {
     tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-cline-home-'));
@@ -19,9 +57,11 @@ describe('cline discovery plugin', () => {
     originalSkillauditCwd = process.env['SKILLAUDIT_CWD'];
     originalClineDir = process.env['CLINE_DIR'];
     originalXdgConfigHome = process.env['XDG_CONFIG_HOME'];
+    originalAppData = process.env['APPDATA'];
     process.env['HOME'] = tempHome;
     process.env['SKILLAUDIT_CWD'] = tempCwd;
     process.env['XDG_CONFIG_HOME'] = join(tempHome, '.config');
+    process.env['APPDATA'] = join(tempHome, 'AppData', 'Roaming');
     delete process.env['CLINE_DIR'];
   });
 
@@ -45,6 +85,11 @@ describe('cline discovery plugin', () => {
       delete process.env['XDG_CONFIG_HOME'];
     } else {
       process.env['XDG_CONFIG_HOME'] = originalXdgConfigHome;
+    }
+    if (originalAppData === undefined) {
+      delete process.env['APPDATA'];
+    } else {
+      process.env['APPDATA'] = originalAppData;
     }
     await rm(tempHome, { recursive: true, force: true });
     await rm(tempCwd, { recursive: true, force: true });
@@ -166,15 +211,7 @@ describe('cline discovery plugin', () => {
   });
 
   it('discovers MCP servers from VS Code extension storage', async () => {
-    const settingsDir = join(
-      tempHome,
-      '.config',
-      'Code',
-      'User',
-      'globalStorage',
-      'saoudrizwan.claude-dev',
-      'settings'
-    );
+    const settingsDir = vsCodeClineSettingsDir(tempHome);
     await mkdir(settingsDir, { recursive: true });
     await writeFile(
       join(settingsDir, 'cline_mcp_settings.json'),
