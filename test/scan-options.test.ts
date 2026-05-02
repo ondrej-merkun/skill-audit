@@ -768,6 +768,61 @@ describe('runScan flag wiring', () => {
     });
   });
 
+  it('--llm writes live review progress to stderr for interactive pretty output', async () => {
+    await withTempDir(async (dir) => {
+      makeInteractiveTTY();
+      process.env['XDG_CONFIG_HOME'] = dir;
+      await writeLlmConfig(dir);
+      vi.mocked(discoverAll).mockResolvedValue([
+        makeSkill({ id: 'one', name: 'one', path: '/tmp/one', treeSha256: 'one' }),
+        makeSkill({ id: 'two', name: 'two', path: '/tmp/two', treeSha256: 'two' }),
+      ]);
+      const fetchImpl: LlmReviewFetch = async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: '{"findings":[]}' } }] }),
+      });
+
+      await runScan({ llm: 'reviewer', llmFetchImpl: fetchImpl });
+
+      const stdout = stripAnsi(stdoutChunks.join(''));
+      const stderr = stripAnsi(stderrChunks.join(''));
+      expect(stdout).toContain('skill-audit');
+      expect(stdout).not.toContain('LLM review 1/2');
+      expect(stdout).not.toContain('LLM review 2/2');
+      expect(stderr).toContain('LLM review 1/2 skills - one');
+      expect(stderr).toContain('LLM review 2/2 skills - two');
+      expect(stderr).toContain('LLM review complete: 2 skills reviewed');
+    });
+  });
+
+  it('--llm excludes ignored skills from the review progress denominator', async () => {
+    await withTempDir(async (dir) => {
+      makeInteractiveTTY();
+      process.env['XDG_CONFIG_HOME'] = dir;
+      await writeLlmConfig(dir);
+      await writeFile(join(dir, 'skill-audit', 'ignore.yaml'), 'ignored:\n  - ignored-hash\n');
+      vi.mocked(discoverAll).mockResolvedValue([
+        makeSkill({ id: 'ignored', name: 'ignored', treeSha256: 'ignored-hash' }),
+        makeSkill({ id: 'active', name: 'active', path: '/tmp/active', treeSha256: 'active-hash' }),
+      ]);
+      const fetchImpl = vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: '{"findings":[]}' } }] }),
+      }));
+
+      await runScan({ llm: 'reviewer', llmFetchImpl: fetchImpl });
+
+      const stderr = stripAnsi(stderrChunks.join(''));
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+      expect(stderr).toContain('LLM review 1/1 skills - active');
+      expect(stderr).not.toContain('LLM review 1/2');
+      expect(stderr).not.toContain('LLM review 2/2');
+      expect(stderr).not.toContain('ignored: reviewer');
+    });
+  });
+
   it('--llm can run repeated and comma-separated models with deterministic output', async () => {
     await withTempDir(async (dir) => {
       process.env['XDG_CONFIG_HOME'] = dir;
@@ -814,6 +869,8 @@ describe('runScan flag wiring', () => {
       expect(errOut.indexOf('multi-review: alpha ok')).toBeLessThan(
         errOut.indexOf('multi-review: zeta ok')
       );
+      expect(errOut).toContain('LLM review 1/1: multi-review: alpha ok');
+      expect(errOut).not.toContain('LLM review 2/2');
     });
   });
 
@@ -950,6 +1007,8 @@ describe('runScan flag wiring', () => {
           findings: [],
         },
       ]);
+      expect(stripAnsi(stdoutChunks.join(''))).not.toContain('LLM review');
+      expect(stripAnsi(stderrChunks.join(''))).toContain('LLM review 1/1: test-skill');
       expect(stripAnsi(stderrChunks.join(''))).toContain('reviewer invalid-response');
     });
   });

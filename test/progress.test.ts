@@ -109,4 +109,25 @@ describe('progress mode selection', () => {
     expect(out).toContain('[##########] Scanning skills 2/2');
     expect(out).toContain('Scan complete: 2 skills checked');
   });
+
+  it('renders ASCII LLM review progress when unicode is disabled', () => {
+    const writes: string[] = [];
+    const stream = {
+      write(chunk: string) {
+        writes.push(String(chunk));
+        return true;
+      },
+    } as NodeJS.WritableStream;
+    const progress = createProgressReporter({ mode: 'animated', unicode: false, stream });
+
+    progress.startLlmReview(2);
+    progress.updateLlmReview(1, 2, 'alpha');
+    progress.updateLlmReview(2, 2, 'beta');
+    progress.succeedLlmReview(2);
+
+    const out = writes.join('');
+    expect(out).toContain('[#####.....] LLM review 1/2 skills - alpha');
+    expect(out).toContain('[##########] LLM review 2/2 skills - beta');
+    expect(out).toContain('LLM review complete: 2 skills reviewed');
+  });
 });
