@@ -35,7 +35,7 @@ skill-audit ignore <name>      # add a skill's treeSha256 to your ignore list
 |---|---|
 | `--json` | Emit machine-readable JSON (schema v1.0) |
 | `--summary` | One-line summary footer only |
-| `--agent <id>` | Restrict to one agent (`claude-code`, `codex`, `copilot`, `cursor`, `gemini`, `cross-agent`) |
+| `--agent <id>` | Restrict to one agent (`claude-code`, `codex`, `cross-agent`, `cursor`, `gemini`, `copilot`, `windsurf`, `cline`) |
 | `--include-marketplaces` | Include inactive local marketplace inventory and label rows as `marketplace` |
 | `-o, --output <file>` | Write the selected non-HTML scan output to file |
 | `--strict` | Treat REVIEW as FAIL for exit-code purposes |
