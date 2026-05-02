@@ -397,6 +397,7 @@ describe('formatAgentName', () => {
   it('renders friendly names for known agents and preserves unknown ids', () => {
     expect(formatAgentName('claude-code')).toBe('Claude Code');
     expect(formatAgentName('windsurf')).toBe('Windsurf');
+    expect(formatAgentName('cline')).toBe('Cline');
     expect(formatAgentName('cross-agent')).toBe('Cross-agent');
     expect(formatAgentName('unknown-agent')).toBe('unknown-agent');
   });

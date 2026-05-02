@@ -152,6 +152,12 @@ without a commit message explaining why it no longer applies.
   Route root shortcuts into the real subcommand parser and run both bare and
   explicit-subcommand e2e coverage before calling CLI flag work done.
 
+- **L1.24 — CLI option help must share supported values with validation.** _The
+  `--agent` help for `scan` and `list` still named only `claude-code` and
+  `cursor` after Codex and Gemini discovery shipped._
+  Export one supported-value list and assert every help surface that exposes the
+  option includes every current value.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

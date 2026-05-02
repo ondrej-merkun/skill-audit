@@ -1,5 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { stripVTControlCharacters } from 'node:util';
+import { SUPPORTED_AGENT_IDS, formatSupportedAgentIds } from '../agent-names.js';
 import { loadIgnoreList } from '../allowlist/ignore.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
 import {
@@ -87,16 +88,7 @@ const DEFAULT_OPTIONS: ScanOptions = {
 const SCAN_CONCURRENCY = 8;
 const LLM_REVIEW_DETAILS_HINT =
   '[skill-audit] LLM review: details: rerun this scan with --json or --html report.html to inspect LLM-only finding details\n';
-const SUPPORTED_SCAN_AGENTS = new Set([
-  'claude-code',
-  'cursor',
-  'copilot',
-  'cline',
-  'codex',
-  'gemini',
-  'windsurf',
-  'cross-agent',
-]);
+const SUPPORTED_SCAN_AGENTS: ReadonlySet<string> = new Set(SUPPORTED_AGENT_IDS);
 
 export function selectScanEnrichmentSources(
   options: Pick<ScanOptions, 'json' | 'summary' | 'html'>
@@ -279,7 +271,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
 
   if (options.agent !== undefined && !SUPPORTED_SCAN_AGENTS.has(options.agent)) {
     process.stderr.write(
-      `[skill-audit] unsupported agent "${options.agent}". Supported agents: ${[...SUPPORTED_SCAN_AGENTS].join(', ')}\n`
+      `[skill-audit] unsupported agent "${options.agent}". Supported agents: ${formatSupportedAgentIds()}\n`
     );
     process.exit(2);
     return; // unreachable in production; allows mocked exit in tests

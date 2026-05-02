@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import stripAnsi from './helpers/strip-ansi.js';
+import { SUPPORTED_AGENT_IDS } from '../packages/cli/src/agent-names.js';
 import type { LlmReviewFetch } from '../packages/cli/src/llm/review.js';
 import type { Finding, Skill } from '../packages/cli/src/types.js';
 
@@ -782,7 +783,9 @@ describe('runScan flag wiring', () => {
     expect(discoverAll).not.toHaveBeenCalled();
     const errOut = stripAnsi(stderrChunks.join(''));
     expect(errOut).toContain('unsupported agent "unknown-agent"');
-    expect(errOut).toContain('claude-code');
+    for (const agentId of SUPPORTED_AGENT_IDS) {
+      expect(errOut).toContain(agentId);
+    }
   });
 
   it('hidden --offline compatibility flag does not mention enrichment', async () => {

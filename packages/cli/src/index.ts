@@ -1,4 +1,5 @@
 import { Command, Option } from 'commander';
+import { formatSupportedAgentIds } from './agent-names.js';
 import { runExplain } from './commands/explain.js';
 import type { ExplainOptions } from './commands/explain.js';
 import { runIgnore } from './commands/ignore.js';
@@ -11,6 +12,7 @@ import type { ScanOptions } from './commands/scan.js';
 import { VERSION } from './version.js';
 
 const program = new Command();
+const SUPPORTED_AGENT_OPTION_HELP = `Supported agents: ${formatSupportedAgentIds()}`;
 
 function addScanOptions(command: Command): Command {
   return command
@@ -20,7 +22,7 @@ function addScanOptions(command: Command): Command {
     .option('-o, --output <file>', 'write selected non-HTML scan output to <file>')
     .addOption(new Option('--offline', 'skip disabled network enrichment calls').hideHelp())
     .option('--strict', 'treat REVIEW band as FAIL for exit code purposes')
-    .option('--agent <id>', 'restrict scan to a single agent (e.g. claude-code, cline)')
+    .option('--agent <id>', `restrict scan to a single agent. ${SUPPORTED_AGENT_OPTION_HELP}`)
     .option('--include-marketplaces', 'include locally available but inactive marketplace skills')
     .option(
       '--llm <name>',
@@ -70,7 +72,7 @@ addScanOptions(
 program
   .command('list')
   .description('List all discovered agent skills without scanning')
-  .option('--agent <id>', 'restrict to a single agent (e.g. claude-code, cline)')
+  .option('--agent <id>', `restrict to a single agent. ${SUPPORTED_AGENT_OPTION_HELP}`)
   .option('--include-marketplaces', 'include locally available but inactive marketplace skills')
   .option('--json', 'emit JSON array to stdout')
   .action((cmdOpts: Record<string, unknown>) => {

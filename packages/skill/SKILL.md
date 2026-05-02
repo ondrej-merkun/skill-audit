@@ -86,8 +86,8 @@ Options:
 | `--llm <name>` | Add optional local LLM review; repeat, comma-separate, or pass `all`. |
 | `--offline` | Hidden maintenance option; skip enrichment and LLM review. Use only when explicitly requested. |
 
-Supported `--agent` ids are `claude-code`, `cursor`, `copilot`, `codex`,
-`gemini`, and `cross-agent`.
+Supported `--agent` ids are `claude-code`, `codex`, `cross-agent`, `cursor`,
+`gemini`, `copilot`, `windsurf`, and `cline`.
 
 Output combinations:
 
