@@ -47,6 +47,7 @@
   ],
   "scripts": {
     "build": "tsup",
+    "build:release": "tsup --dts --clean",
     "test": "vitest run",
     "lint": "biome check src",
     "typecheck": "tsc --noEmit"

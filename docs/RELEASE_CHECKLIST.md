@@ -27,10 +27,11 @@ Run these from the repository root:
 
 ```bash
 pnpm build
+pnpm build:release
 pnpm test
 pnpm lint
 pnpm typecheck
-pnpm build 2>&1 | grep -iE 'warn|error'
+pnpm build:release 2>&1 | grep -iE 'warn|error'
 ```
 
 The final command must print nothing. If it prints a warning or error line, fix
@@ -63,9 +64,10 @@ Verify the packed npm contents:
 ```
 
 The dry run must include `dist/`, `package.json`, `README.md`, `LICENSE`, and
-`CHANGELOG.md`, and must not include loop-driver files such as `fix_plan.md`,
-`PROMPT.md`, `AGENT.md`, or test fixtures. The publish dry-run must not print
-npm manifest auto-correction warnings.
+`CHANGELOG.md`, including `dist/index.d.ts` and `dist/index.d.cts`, and must
+not include loop-driver files such as `fix_plan.md`, `PROMPT.md`, `AGENT.md`,
+or test fixtures. The publish dry-run must not print npm manifest
+auto-correction warnings.
 
 ## Markdown Links And Paths
 

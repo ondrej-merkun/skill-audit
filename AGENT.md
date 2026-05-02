@@ -16,7 +16,7 @@ new lesson, append a bullet there in the SAME commit as the fix
 | Language | TypeScript strict mode |
 | Runtime | Node.js 20+ |
 | Package manager | pnpm (workspaces) |
-| Bundler | tsup (outputs CJS + ESM + .d.ts) |
+| Bundler | tsup (dev build outputs CJS + ESM; release build adds .d.ts) |
 | CLI framework | commander |
 | Terminal colors | chalk v5 (ESM) |
 | Terminal tables | cli-table3 |
@@ -79,6 +79,7 @@ Canonical commands (the Ralph loop runs these to verify):
 ```bash
 pnpm install          # install deps
 pnpm build            # tsup build — must produce dist/ with no errors
+pnpm build:release    # release build — includes declaration files for npm
 pnpm test             # vitest run — all tests must pass
 pnpm lint             # biome check — may warn, must not error
 pnpm typecheck        # tsc --noEmit — must pass

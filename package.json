@@ -3,10 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "pnpm -r run build",
+    "build": "pnpm --dir packages/cli build",
+    "build:release": "pnpm --dir packages/cli build:release",
     "test": "vitest run",
-    "lint": "pnpm -r run lint",
-    "typecheck": "tsc --noEmit -p tsconfig.json && pnpm -r run typecheck"
+    "lint": "pnpm --dir packages/cli lint",
+    "typecheck": "tsc --noEmit -p tsconfig.json && pnpm --dir packages/cli typecheck",
+    "verify": "node scripts/verify-fast.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

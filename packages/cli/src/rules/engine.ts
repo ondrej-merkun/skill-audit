@@ -6,6 +6,23 @@ const REGEX_TIMEOUT_MS = 500;
 const MAX_SCANNED_CONTENT_CHARS = 1_000_000;
 
 type RawMatch = { index: number; text: string };
+type PrepareContent = NonNullable<Rule['prepareContent']>;
+
+const safePatternCache = new WeakMap<RegExp, boolean>();
+const globalPatternCache = new Map<string, RegExp>();
+
+function globalPattern(pattern: RegExp): RegExp {
+  const flags = pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`;
+  const key = `${flags}\0${pattern.source}`;
+  const cached = globalPatternCache.get(key);
+  if (cached !== undefined) {
+    cached.lastIndex = 0;
+    return cached;
+  }
+  const compiled = new RegExp(pattern.source, flags);
+  globalPatternCache.set(key, compiled);
+  return compiled;
+}
 
 /**
  * Runs a single regex pattern against content without spawning workers.
@@ -19,8 +36,7 @@ export function runPatternWithTimeout(
   void timeoutMs;
   if (!isSafeRegexInput(pattern, content)) return Promise.resolve([]);
 
-  const flags = pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`;
-  const re = new RegExp(pattern.source, flags);
+  const re = globalPattern(pattern);
   const matches: RawMatch[] = [];
 
   try {
@@ -44,7 +60,11 @@ export function runPatternWithTimeout(
 
 function isSafeRegexInput(pattern: RegExp, content: string): boolean {
   if (content.length > MAX_SCANNED_CONTENT_CHARS) return false;
-  return !hasNestedQuantifier(pattern.source);
+  const cached = safePatternCache.get(pattern);
+  if (cached !== undefined) return cached;
+  const safe = !hasNestedQuantifier(pattern.source);
+  safePatternCache.set(pattern, safe);
+  return safe;
 }
 
 function hasNestedQuantifier(source: string): boolean {
@@ -147,6 +167,11 @@ export async function runRules(skillPath: string, rules: Rule[]): Promise<Findin
 
   for (const filePath of files) {
     const name = basename(filePath);
+    const applicableRules = rules.filter((rule) =>
+      rule.appliesTo.some((glob) => matchesGlob(name, glob))
+    );
+    if (applicableRules.length === 0) continue;
+
     let content: string;
     try {
       content = readFileSync(filePath, 'utf-8');
@@ -154,13 +179,21 @@ export async function runRules(skillPath: string, rules: Rule[]): Promise<Findin
       continue;
     }
 
-    for (const rule of rules) {
-      if (!rule.appliesTo.some((glob) => matchesGlob(name, glob))) continue;
-
+    const preparedContent = new Map<PrepareContent, string>();
+    for (const rule of applicableRules) {
       // Track seen lines per rule to avoid duplicate findings from overlapping patterns
       const seenLines = new Set<number>();
 
-      const matchContent = rule.prepareContent?.(content, filePath) ?? content;
+      let matchContent = content;
+      if (rule.prepareContent !== undefined) {
+        const cached = preparedContent.get(rule.prepareContent);
+        if (cached === undefined) {
+          matchContent = rule.prepareContent(content, filePath);
+          preparedContent.set(rule.prepareContent, matchContent);
+        } else {
+          matchContent = cached;
+        }
+      }
       for (const pattern of rule.patterns) {
         const matches = await runPatternWithTimeout(pattern, matchContent);
         for (const { index, text } of matches) {

@@ -193,39 +193,6 @@ describe('e2e: scan malicious fixtures', () => {
     'code-execution-skill',
   ];
 
-  it(
-    'produces findings for malicious skills',
-    async () => {
-      for (const name of maliciousSkills) {
-        await cp(join(MALICIOUS_DIR, name), join(skillsDir, name), { recursive: true });
-      }
-
-      const env = { HOME: tempHome, USERPROFILE: tempHome, SKILLAUDIT_CWD: tempCwd };
-      const { stdout, code } = await runCli(
-        ['scan', '--json', '--offline', '--agent', 'claude-code'],
-        env
-      );
-
-      // Exit code 1 = at least one REVIEW or FAIL skill
-      expect(code).toBe(1);
-
-      const result = JSON.parse(stdout) as JsonOutput;
-
-      expect(result.schema_version).toBe('1.0');
-      expect(Array.isArray(result.skills)).toBe(true);
-      expect(result.skills.length).toBeGreaterThan(0);
-
-      // At least one malicious skill should have findings
-      const withFindings = result.skills.filter((s) => s.findings.length > 0);
-      expect(withFindings.length).toBeGreaterThan(0);
-
-      // Summary reports at least one compromised
-      expect(result.summary.skills_scanned).toBeGreaterThan(0);
-      expect(result.summary.compromised).toBeGreaterThan(0);
-    },
-    60_000
-  );
-
   it('JSON schema has required top-level fields', async () => {
     const name = maliciousSkills[0];
     await cp(join(MALICIOUS_DIR, name), join(skillsDir, name), { recursive: true });
@@ -362,51 +329,6 @@ describe('e2e: scan benign fixtures', () => {
     await rm(tempHome, { recursive: true, force: true });
     await rm(tempCwd, { recursive: true, force: true });
   });
-
-  const benignSkills = [
-    'pdf-extractor',
-    'git-helper',
-    'kanban',
-    'ffmpeg-wrapper',
-    'date-parser',
-    'csv-processor',
-    'json-validator',
-    'markdown-formatter',
-    'docker-helper',
-    'test-runner',
-  ];
-
-  it(
-    'produces no critical findings for benign skills',
-    async () => {
-      for (const name of benignSkills) {
-        await cp(join(BENIGN_DIR, name), join(skillsDir, name), { recursive: true });
-      }
-
-      const env = { HOME: tempHome, USERPROFILE: tempHome, SKILLAUDIT_CWD: tempCwd };
-      const { stdout, code } = await runCli(
-        ['scan', '--json', '--offline', '--agent', 'claude-code'],
-        env
-      );
-
-      // All benign → exit code 0
-      expect(code).toBe(0);
-
-      const result = JSON.parse(stdout) as JsonOutput;
-
-      expect(result.schema_version).toBe('1.0');
-      expect(result.skills.length).toBeGreaterThan(0);
-
-      // No skill should have a FAIL verdict
-      // (REVIEW from subprocess calls is acceptable static-analysis noise)
-      const failed = result.skills.filter((s) => s.summary.verdict === 'FAIL');
-      expect(failed.length).toBe(0);
-
-      // Summary shows 0 compromised (only FAIL counts as compromised)
-      expect(result.summary.compromised).toBe(0);
-    },
-    60_000
-  );
 
   it('exit code 0 for a single clearly-safe skill', async () => {
     await cp(join(BENIGN_DIR, 'date-parser'), join(skillsDir, 'date-parser'), { recursive: true });

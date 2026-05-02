@@ -15,6 +15,12 @@ Measured on Apple M1 Pro, Node 20, warm FS cache. Commands run from repo root.
 
 Full verify chain per Ralph step ≈ **67 s**, of which test is **91 %** and e2e is **99 % of test**.
 
+> 2026-05-02 implementation note: this audit was re-run on the current Linux
+> workspace after later scanner/test improvements had already landed. The
+> corrected baseline was much lower than the original M1 numbers:
+> `pnpm test` 8.45 s, focused e2e 5.83 s, dev build 3.51 s, lint 0.91 s,
+> typecheck 4.84 s, and a 10-skill built-CLI scan around 160 ms.
+
 ### Per-test e2e breakdown (`vitest run test/e2e.test.ts --reporter=verbose`)
 
 | Test | Time |
@@ -70,6 +76,21 @@ The "10 malicious skills" scan is ~28 s of actual scan work (subtract 1.3 s star
 | +Fix #8 (scanner perf) | likely <3 s |
 
 Going from 67 s to ~4 s per iteration means an 8-hour Ralph loop runs ~16× more iterations.
+
+## 2026-05-02 implementation results
+
+| Fix | Result |
+|-----|--------|
+| Move 10-skill e2e cases in-process | Improved slightly: focused e2e 5.83 s → 5.60 s; coverage moved to `test/scan-multi.test.ts`. |
+| Vitest `isolate=false` | Rejected: `pnpm exec vitest run --no-isolate` failed 8 tests from leaked mocks/cache/env state. |
+| Dev build without dts/clean | Improved: `pnpm build` 3.51 s → 1.22 s; `pnpm build:release` keeps npm declaration output. |
+| Incremental typecheck | Improved after warm cache: `pnpm typecheck` 4.84 s → 2.78 s. |
+| Skip recursive pnpm wrapper | Unchanged for lint on this machine: 0.91 s → 0.91 s, but scripts now target the single package directly. |
+| Parallel verify script | Improved: `pnpm verify` completed build/lint/typecheck in 3.49-3.97 s versus roughly 5 s for the improved serial sum. |
+| Scanner hot path | Slightly improved: cached regex safety/compilation, skipped unmatched files before reading, and reused content masks per file. Built CLI 10-skill medians measured malicious 150.0 ms and benign 156.6 ms. |
+
+Final full-suite result after the retained changes: `pnpm test` passed all 538
+tests in 6.77 s.
 
 ## Out of scope but worth noting
 - `pnpm typecheck` previously failed (`exactOptionalPropertyTypes` vs optional `etag` in `src/enrich/cache.ts:40`). Task 12.5 fixed the typecheck path.

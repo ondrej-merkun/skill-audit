@@ -209,6 +209,13 @@ without a commit message explaining why it no longer applies.
   After changing regex execution safety, run the full rule-fixture suite before
   trusting scan performance.
 
+- **L4.4 — Do not disable Vitest isolation without proving state cannot leak.**
+  _The Ralph-loop perf pass tried `pnpm exec vitest run --no-isolate`; it was
+  faster but failed scan, enrichment, and cache tests because mocks/env/cache
+  state leaked between files._
+  Keep isolation on unless the suite is first split so mock-heavy tests remain
+  isolated and the no-isolate tier is proven green.
+
 ## 5. Orphans, cleanup, and the one-task-per-loop rule
 
 - **L5.1 — Delete direct predecessors in the same commit.** _Task 1.7
