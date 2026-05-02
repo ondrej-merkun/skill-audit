@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/demo.svg" alt="skill-audit terminal demo showing scan results" width="600" />
+  <img src="docs/demo.svg" alt="skill-audit terminal demo showing scan results" width="660" />
 </p>
 
 <h1 align="center">skill-audit</h1>
