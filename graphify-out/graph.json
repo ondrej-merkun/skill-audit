@@ -8244,8 +8244,8 @@
       "source_file": "packages/cli/src/discovery/cline.ts",
       "source_location": "L120",
       "weight": 1.0,
-      "_src": "discovery_cline_discovermcpsettings",
-      "_tgt": "remote_import_skill_utils_readfile",
+      "_src": "remote_import_skill_utils_readfile",
+      "_tgt": "discovery_cline_discovermcpsettings",
       "source": "remote_import_skill_utils_readfile",
       "target": "discovery_cline_discovermcpsettings"
     },
@@ -9636,8 +9636,8 @@
       "source_file": "packages/cli/src/discovery/cline.ts",
       "source_location": "L127",
       "weight": 1.0,
-      "_src": "discovery_cline_discovermcpsettings",
-      "_tgt": "date_parser_parse_parse",
+      "_src": "date_parser_parse_parse",
+      "_tgt": "discovery_cline_discovermcpsettings",
       "source": "date_parser_parse_parse",
       "target": "discovery_cline_discovermcpsettings"
     },
@@ -13860,8 +13860,8 @@
       "source_file": "packages/cli/src/discovery/tree-hash.ts",
       "source_location": "L21",
       "weight": 1.0,
-      "_src": "discovery_tree_hash_computetreesha256",
-      "_tgt": "discovery_cline_isfile",
+      "_src": "discovery_cline_isfile",
+      "_tgt": "discovery_tree_hash_computetreesha256",
       "source": "discovery_cline_isfile",
       "target": "discovery_tree_hash_computetreesha256"
     },
@@ -13872,8 +13872,8 @@
       "source_file": "packages/cli/src/rules/security-education.ts",
       "source_location": "L35",
       "weight": 1.0,
-      "_src": "rules_security_education_readskillcontext",
-      "_tgt": "discovery_cline_isfile",
+      "_src": "discovery_cline_isfile",
+      "_tgt": "rules_security_education_readskillcontext",
       "source": "discovery_cline_isfile",
       "target": "rules_security_education_readskillcontext"
     },

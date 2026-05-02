@@ -10,6 +10,7 @@ describe('cline discovery plugin', () => {
   let originalHome: string | undefined;
   let originalSkillauditCwd: string | undefined;
   let originalClineDir: string | undefined;
+  let originalXdgConfigHome: string | undefined;
 
   beforeEach(async () => {
     tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-cline-home-'));
@@ -17,8 +18,10 @@ describe('cline discovery plugin', () => {
     originalHome = process.env['HOME'];
     originalSkillauditCwd = process.env['SKILLAUDIT_CWD'];
     originalClineDir = process.env['CLINE_DIR'];
+    originalXdgConfigHome = process.env['XDG_CONFIG_HOME'];
     process.env['HOME'] = tempHome;
     process.env['SKILLAUDIT_CWD'] = tempCwd;
+    process.env['XDG_CONFIG_HOME'] = join(tempHome, '.config');
     delete process.env['CLINE_DIR'];
   });
 
@@ -37,6 +40,11 @@ describe('cline discovery plugin', () => {
       delete process.env['CLINE_DIR'];
     } else {
       process.env['CLINE_DIR'] = originalClineDir;
+    }
+    if (originalXdgConfigHome === undefined) {
+      delete process.env['XDG_CONFIG_HOME'];
+    } else {
+      process.env['XDG_CONFIG_HOME'] = originalXdgConfigHome;
     }
     await rm(tempHome, { recursive: true, force: true });
     await rm(tempCwd, { recursive: true, force: true });
