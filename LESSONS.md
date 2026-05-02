@@ -133,6 +133,13 @@ without a commit message explaining why it no longer applies.
   Use `pnpm exec vitest run <file>` for focused tests, and run full-suite
   verification as one sequential `pnpm test`.
 
+- **L1.21 — Run `npm publish --dry-run`, not only `pack --dry-run`.** _The
+  first public package preflight showed `pnpm pack --dry-run` passing while
+  `npm publish --dry-run --access public` warned that npm would auto-correct the
+  `bin` and repository metadata._
+  Before publishing, run the publish dry-run from `packages/cli` and fix any
+  manifest normalization warnings so the packed CLI still installs a working bin.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

@@ -17,9 +17,9 @@ trusted publisher:
 - Workflow filename: `release.yml`
 
 The package `repository.url` in `packages/cli/package.json` must continue to
-match `https://github.com/ondrej-merkun/skill-audit` exactly. The release workflow
-runs on GitHub-hosted Ubuntu with Node 24, grants `id-token: write`, and
-publishes from `packages/cli` with `npm publish --access public`. Trusted
+point to `git+https://github.com/ondrej-merkun/skill-audit.git`. The release
+workflow runs on GitHub-hosted Ubuntu with Node 24, grants `id-token: write`,
+and publishes from `packages/cli` with `npm publish --access public`. Trusted
 publishing should provide the provenance metadata for the package release.
 
 After a trusted-publishing release succeeds, keep npm package publishing access

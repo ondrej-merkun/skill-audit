@@ -7,7 +7,7 @@
   "homepage": "https://github.com/ondrej-merkun/skill-audit#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ondrej-merkun/skill-audit.git",
+    "url": "git+https://github.com/ondrej-merkun/skill-audit.git",
     "directory": "packages/cli"
   },
   "bugs": {
@@ -27,7 +27,7 @@
   ],
   "type": "module",
   "bin": {
-    "skill-audit": "./dist/index.js"
+    "skill-audit": "dist/index.js"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
