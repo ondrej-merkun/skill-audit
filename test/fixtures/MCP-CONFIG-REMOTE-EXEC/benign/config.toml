@@ -1,0 +1,3 @@
+[mcp_servers.local]
+command = "node"
+args = ["./server.js", "--stdio"]

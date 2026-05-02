@@ -188,10 +188,145 @@ export const DEPS_INLINE_INSTALL: Rule = {
   cwe: ['CWE-829'],
 };
 
+// MCP-CONFIG-REMOTE-EXEC: MCP / agent config startup commands that download and execute remote content.
+// Keep this scoped to startup command fields so documentation strings in generic config files do not fire.
+const mcpConfigRemoteExecBasenames = new Set([
+  '.mcp.json',
+  'mcp.json',
+  'settings.json',
+  'config.toml',
+  'gemini-extension.json',
+]);
+const mcpStartupFieldPattern = /(?:"(?:command|args)"\s*:|\b(?:command|args)\s*=)/i;
+const mcpStartupFieldPrefix =
+  '(?:"(?:command|args)"\\s*:|\\b(?:command|args)\\s*=)[\\s\\S]{0,800}?';
+const remoteDownloader = '(?:curl|wget|fetch)\\b[^\\n|&;]{0,240}https?://[^\\s"\'`)]+';
+const remoteDownloadPipeOrChainPattern = new RegExp(
+  [
+    mcpStartupFieldPrefix,
+    remoteDownloader,
+    '[^\\n|&;]{0,80}\\s*(?:\\||&&)\\s*(?:bash|sh|zsh|python|node)\\b',
+  ].join(''),
+  'i'
+);
+const sourceRemoteProcessSubstitutionPattern = new RegExp(
+  [mcpStartupFieldPrefix, '\\bsource\\s*<\\(\\s*(?:curl|wget)\\b[^)]*https?://[^)]*\\)'].join(''),
+  'i'
+);
+const evalRemoteDownloadPattern = new RegExp(
+  [
+    mcpStartupFieldPrefix,
+    '\\beval\\s*(?:["\'`]+\\s*)?\\$\\(\\s*(?:curl|wget)\\b[^)]*https?://',
+  ].join(''),
+  'i'
+);
+const shellCRemoteDownloadSubstitutionPattern = new RegExp(
+  [
+    mcpStartupFieldPrefix,
+    '\\b(?:bash|sh|zsh|python|node)\\s+-c\\s+[^\\n]{0,80}\\$\\(\\s*(?:curl|wget)\\b[^)]*https?://',
+  ].join(''),
+  'i'
+);
+const shellArgRemoteDownloadSubstitutionPattern = new RegExp(
+  [mcpStartupFieldPrefix, '["\']-c["\'][^\\n]{0,120}\\$\\(\\s*(?:curl|wget)\\b[^)]*https?://'].join(
+    ''
+  ),
+  'i'
+);
+
+function isGeminiCommandToml(filePath: string, name: string): boolean {
+  return name.endsWith('.toml') && filePath.split(/[\\/]/).includes('commands');
+}
+
+function squareBracketBalance(line: string): number {
+  let balance = 0;
+  let quote: '"' | "'" | null = null;
+  let escaped = false;
+
+  for (const char of line) {
+    if (quote !== null) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+    } else if (char === '[') {
+      balance += 1;
+    } else if (char === ']') {
+      balance -= 1;
+    }
+  }
+
+  return balance;
+}
+
+function keepMcpStartupFieldBlocks(content: string): string {
+  const lines = content.split('\n');
+  const keep = new Array<boolean>(lines.length).fill(false);
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (!mcpStartupFieldPattern.test(line)) continue;
+
+    keep[index] = true;
+    let balance = squareBracketBalance(line);
+    let lookahead = index + 1;
+    while (balance > 0 && lookahead < lines.length && lookahead <= index + 24) {
+      keep[lookahead] = true;
+      balance += squareBracketBalance(lines[lookahead]);
+      lookahead += 1;
+    }
+  }
+
+  return lines.map((line, index) => (keep[index] ? line : maskLine(line))).join('\n');
+}
+
+function prepareMcpConfigRemoteExecContent(content: string, filePath: string): string {
+  const name = basename(filePath);
+  if (mcpConfigRemoteExecBasenames.has(name) || isGeminiCommandToml(filePath, name)) {
+    return keepMcpStartupFieldBlocks(content);
+  }
+
+  return '';
+}
+
+export const MCP_CONFIG_REMOTE_EXEC: Rule = {
+  id: 'MCP-CONFIG-REMOTE-EXEC',
+  category: 'dependencies',
+  severity: 'critical',
+  appliesTo: [
+    '.mcp.json',
+    'mcp.json',
+    'settings.json',
+    'config.toml',
+    'gemini-extension.json',
+    '*.toml',
+  ],
+  patterns: [
+    remoteDownloadPipeOrChainPattern,
+    sourceRemoteProcessSubstitutionPattern,
+    evalRemoteDownloadPattern,
+    shellCRemoteDownloadSubstitutionPattern,
+    shellArgRemoteDownloadSubstitutionPattern,
+  ],
+  prepareContent: prepareMcpConfigRemoteExecContent,
+  message: 'MCP or agent config startup command downloads and executes remote content.',
+  fix: 'Use a local audited server command or pinned package runner. Do not bootstrap MCP servers by executing remote downloads.',
+  cwe: ['CWE-494', 'CWE-78'],
+};
+
 export const DEPENDENCIES_RULES: Rule[] = [
   DEPS_REMOTE_IMPORT,
   DEPS_INSTALL_SCRIPT_HOOKS,
   DEPS_TYPOSQUAT,
   DEPS_UNPINNED_SUSPECT,
   DEPS_INLINE_INSTALL,
+  MCP_CONFIG_REMOTE_EXEC,
 ];

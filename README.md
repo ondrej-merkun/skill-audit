@@ -105,7 +105,7 @@ More workflows: [`docs/EXAMPLES.md`](docs/EXAMPLES.md).
 
 `skill-audit` scans global and project-local skill locations for Claude Code,
 Codex, Copilot, Cursor, Cline, Gemini CLI, Windsurf, and cross-agent instruction
-files such as `AGENTS.md`. It matches 41 shipped rules across prompt injection, network
+files such as `AGENTS.md`. It matches 46 shipped rules across prompt injection, network
 exfiltration, filesystem access, code execution, obfuscation, hardcoded
 secrets, git-history access, dependency risk, and skill-specific malware
 patterns.

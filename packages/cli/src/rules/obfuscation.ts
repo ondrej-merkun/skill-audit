@@ -1,5 +1,8 @@
 import type { Rule } from '../types.js';
-import { maskDocumentationTextInCode } from './code-context.js';
+import {
+  maskDocumentationTextInCode,
+  maskSecurityEducationExampleContext,
+} from './code-context.js';
 
 // Patterns split across array elements so this detector file does not
 // contain literal dangerous substrings that trigger security scanners.
@@ -14,6 +17,16 @@ const cyrillicHomoglyphInAsciiTokenPattern =
   /(?<finding>\b[A-Za-z0-9_.:/-]*[аеіорсху][A-Za-z0-9_.:/-]+|[A-Za-z0-9_.:/-]+[аеіорсху][A-Za-z0-9_.:/-]*\b)/u;
 const greekHomoglyphInSuspiciousTokenPattern =
   /(?<finding>\b(?:ignοre|οverride|bypαss|disαble|nοde|pythοn|cοm)[A-Za-z0-9_.:/-]*\b|https?:\/\/[^\s"'`<>]*[αουν][^\s"'`<>]*)/iu;
+const shellBase64DecodeExecPattern =
+  /\bbase64\b(?=[^\n|&;]{0,160}\s(?:-[A-Za-z]*d[A-Za-z]*|--decode)\b)[^\n|&;]{0,220}(?:\|\s*|(?:&&|;)\s*)(?:sh|bash|zsh|python3?|node)\b/i;
+const shellOpenSslDecodeExecPattern =
+  /\bopenssl\s+enc\b(?=[^\n|&;]{0,180}\s-d\b)(?=[^\n|&;]{0,180}\s-base64\b)[^\n|&;]{0,240}(?:\|\s*|(?:&&|;)\s*)(?:sh|bash|zsh|python3?|node)\b/i;
+const psEncodedCommandPattern =
+  /(?:^|[;&|(:=-]\s*)(?:[&.]\s*)?(?:powershell(?:\.exe)?|pwsh(?:\.exe)?)[^\n#"'`]{0,200}-(?:EncodedCommand|enc|e)\b/im;
+const psInvokeDownloadPattern =
+  /\b(?:IEX|Invoke-Expression)\b\s*[\s(]{0,20}[^\n#]{0,240}\b(?:iwr|Invoke-WebRequest|DownloadString)\b/i;
+const psDownloadPipeInvokePattern =
+  /\b(?:iwr|Invoke-WebRequest|DownloadString)\b[^\n#|]{0,240}\|\s*(?:IEX|Invoke-Expression)\b/i;
 
 const TEXT_FILES = [
   '*.md',
@@ -33,6 +46,58 @@ const TEXT_FILES = [
   'CLAUDE.md',
   'GEMINI.md',
 ];
+
+const DECODE_EXEC_FILES = [
+  '*.md',
+  '*.mdc',
+  '*.txt',
+  '*.sh',
+  '*.bash',
+  '*.ps1',
+  'SKILL.md',
+  'AGENTS.md',
+  'CLAUDE.md',
+  'GEMINI.md',
+];
+
+function maskPowerShellStringsAndComments(content: string): string {
+  const chars = content.split('');
+  let quote: '"' | "'" | null = null;
+
+  for (let idx = 0; idx < chars.length; idx += 1) {
+    const char = chars[idx];
+
+    if (quote !== null) {
+      chars[idx] = char === '\n' || char === '\r' ? char : ' ';
+      if (char === quote) quote = null;
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      chars[idx] = ' ';
+      continue;
+    }
+
+    if (char === '#') {
+      while (idx < chars.length && chars[idx] !== '\n' && chars[idx] !== '\r') {
+        chars[idx] = ' ';
+        idx += 1;
+      }
+      idx -= 1;
+    }
+  }
+
+  return chars.join('');
+}
+
+function maskDecodeExecDocumentation(content: string, filePath: string): string {
+  if (/\.ps1$/i.test(filePath)) return maskPowerShellStringsAndComments(content);
+  return maskSecurityEducationExampleContext(
+    maskDocumentationTextInCode(content, filePath),
+    filePath
+  );
+}
 
 export const OBFS_BASE64_LARGE: Rule = {
   id: 'OBFS-BASE64-LARGE',
@@ -74,6 +139,24 @@ export const OBFS_EVAL_ATOB: Rule = {
   cwe: ['CWE-95', 'CWE-506'],
 };
 
+export const OBFS_DECODE_EXEC: Rule = {
+  id: 'OBFS-DECODE-EXEC',
+  category: 'obfuscation',
+  severity: 'critical',
+  appliesTo: DECODE_EXEC_FILES,
+  patterns: [
+    shellBase64DecodeExecPattern,
+    shellOpenSslDecodeExecPattern,
+    psEncodedCommandPattern,
+    psInvokeDownloadPattern,
+    psDownloadPipeInvokePattern,
+  ],
+  prepareContent: maskDecodeExecDocumentation,
+  message: 'Decode-and-execute pattern detected — obfuscated payload execution.',
+  fix: 'Decode or download to a file first, inspect it, and execute only explicit trusted scripts.',
+  cwe: ['CWE-78', 'CWE-506'],
+};
+
 export const OBFS_STRING_CONCAT_CMD: Rule = {
   id: 'OBFS-STRING-CONCAT-CMD',
   category: 'obfuscation',
@@ -113,6 +196,7 @@ export const OBFUSCATION_RULES: Rule[] = [
   OBFS_BASE64_LARGE,
   OBFS_HEX_LARGE,
   OBFS_EVAL_ATOB,
+  OBFS_DECODE_EXEC,
   OBFS_STRING_CONCAT_CMD,
   OBFS_HOMOGLYPH,
 ];
