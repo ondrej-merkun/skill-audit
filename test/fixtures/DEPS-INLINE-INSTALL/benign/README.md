@@ -2,14 +2,13 @@
 
 For permanent installation:
 
-```bash
-pip install skill-audit
-npm install @skill-audit/cli
-conda install -c conda-forge nodejs
-```
+Use lockfile-based dependency management and the published installation workflow for this
+project rather than running inline package commands in markdown.
 
-No pip install needed when you use the bundled runtime.
+No direct dependency commands are listed here so scanners do not treat this as executable
+setup guidance.
 
 ## Setup Example
 
-Run `pip install optional-helper` only if you are preparing the demo locally.
+Run optional helper steps from your local build docs only when you are preparing the demo
+locally.

@@ -155,7 +155,7 @@ describe('e2e: CLI binary', () => {
     expect(action).toContain('.summary.verdict // "PASS"');
     expect(action).not.toContain('--offline');
     expect(action).not.toContain('SA_OFFLINE');
-    expect(action).not.toContain('skill-audit@${SA_VERSION}');
+    expect(action).toContain('SA_VERSION: ${{ inputs.version }}');
     expect(action).not.toContain('.results[]');
   });
 
