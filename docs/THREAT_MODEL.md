@@ -91,5 +91,5 @@ guarantee that the skill is safe.
 The scanner can miss novel prompt-injection phrasing, split-string or encoded
 payloads below rule thresholds, behavior fetched at runtime, malicious services
 called by otherwise normal code, and risks introduced after a scan. Treat
-`skill-audit` as a local scanner, not a replacement for code review,
+`skill-audit` as a fast local first pass, not a replacement for code review,
 runtime isolation, provenance checks, or dependency review.

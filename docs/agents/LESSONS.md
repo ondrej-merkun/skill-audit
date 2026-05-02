@@ -91,8 +91,9 @@ without a commit message explaining why it no longer applies.
   test and assert the visible state changes after click/keyboard events.
 
 - **L1.14 — README images need browser-rendered proof, not just existing paths.** _Post-mortem
-  issue: a README SVG existed, then task 20 hand-edited it again after reading
-  CLI output, but unmeasured SVG text still overlapped in the README._
+  issue: `docs/demo.svg` existed, then task 20 hand-edited it again after
+  reading CLI output, but unmeasured SVG text still overlapped in the README
+  hero._
   Render changed docs images at their embedded README/GitHub dimensions in a
   browser or image renderer. If the asset is hand-authored, check text bounds
   for every label/line; no renderer means the task is blocked, not done.
@@ -206,9 +207,9 @@ without a commit message explaining why it no longer applies.
   yet, ask — don't guess from paths or git metadata.
 
 - **L3.2 — External GitHub URLs need repository verification, not string assembly.**
-  _Post-mortem issue: a README CI link pointed to a GitHub Actions URL that
+  _Post-mortem issue: the README CI badge linked to a GitHub Actions URL that
   returned 404._
-  Treat action examples, repository URLs, and npm trusted-publisher
+  Treat badges, action examples, repository URLs, and npm trusted-publisher
   settings as external contracts. Verify the exact owner/repo/workflow target
   before changing them; if the canonical slug is missing from `CLAUDE.md`, ask.
 
@@ -279,7 +280,7 @@ without a commit message explaining why it no longer applies.
   non-HTML formats had no first-class file destination._
   For user-facing command/output tasks, check whether the first screen tells
   users what to fix first, whether machine and human outputs agree, and whether
-  users can save or export the result through normal CLI affordances.
+  users can save/share the result through normal CLI affordances.
 
 - **L6.4 — Re-check release-tool minimums before changing publish workflows.** _Task
   40 found npm trusted publishing needs newer Node/npm than the existing Node 20

@@ -1,12 +1,38 @@
-# skill-audit
+<p align="center">
+  <img src="docs/demo.svg" alt="skill-audit terminal demo showing scan results" width="660" />
+</p>
 
-Scan every AI agent skill on your machine for prompt injection and malicious
-code. Local rules run by default, with optional local LLM review for deeper
-context.
+<h1 align="center">skill-audit</h1>
 
-`skill-audit` scans AI-agent skills, plugins, MCP configs, and project
-instruction files. It discovers content exposed to Claude Code, OpenAI Codex,
-GitHub Copilot, Cursor, Cline, Gemini CLI, Windsurf, and cross-agent project
+<p align="center">
+  Scan every AI agent skill on your machine for prompt injection and malicious code.<br/>
+  Fast local rules by default, with optional local LLM review for deeper context.
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@ondrej-merkun/skill-audit"><img src="https://img.shields.io/npm/v/%40ondrej-merkun%2Fskill-audit" alt="npm version" /></a>
+  &nbsp;
+  <a href="https://www.npmjs.com/package/@ondrej-merkun/skill-audit"><img src="https://img.shields.io/node/v/%40ondrej-merkun%2Fskill-audit" alt="Node version" /></a>
+  &nbsp;
+  <a href="docs/PUBLISHING.md"><img src="https://img.shields.io/badge/npm%20provenance-attested-blue" alt="npm provenance: attested" /></a>
+  &nbsp;
+  <a href=".github/SECURITY.md"><img src="https://img.shields.io/badge/security-policy-blue" alt="Security policy" /></a>
+  &nbsp;
+  <a href="specs/RULES.md"><img src="https://img.shields.io/badge/rules-41-red" alt="41 shipped rules" /></a>
+  &nbsp;
+  <a href="action.yml"><img src="https://img.shields.io/badge/action-skill--audit-red" alt="GitHub Action: skill-audit" /></a>
+  &nbsp;
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0" /></a>
+</p>
+
+---
+
+> **36% of agent skills ship with a security flaw. 13% with a critical one.**
+> — [Snyk ToxicSkills study, Feb 2026](https://snyk.io/blog/toxic-skills)
+
+`skill-audit` is a fast local first pass for AI-agent skills, plugins, MCP
+configs, and project instruction files. It discovers content exposed to Claude
+Code, OpenAI Codex, GitHub Copilot, Cursor, Gemini CLI, and cross-agent project
 files, then shows the riskiest result first in a colorized verdict table.
 When you want a deeper semantic pass, add optional local LLM review over the
 same discovered skills, deterministic findings, relevant file paths, and capped
@@ -104,8 +130,8 @@ More workflows: [`docs/EXAMPLES.md`](docs/EXAMPLES.md).
 ## What It Covers
 
 `skill-audit` scans global and project-local skill locations for Claude Code,
-Codex, Copilot, Cursor, Cline, Gemini CLI, Windsurf, and cross-agent instruction
-files such as `AGENTS.md`. It matches 46 shipped rules across prompt injection, network
+Codex, Copilot, Cursor, Gemini CLI, and cross-agent instruction files such as
+`AGENTS.md`. It matches 41 shipped rules across prompt injection, network
 exfiltration, filesystem access, code execution, obfuscation, hardcoded
 secrets, git-history access, dependency risk, and skill-specific malware
 patterns.
@@ -150,7 +176,7 @@ directories, unrelated files, environment variables, or discovered secrets.
 
 Detailed reference:
 
-- [Discovery paths, scoring, JSON, CI, and FAQ](docs/REFERENCE.md)
+- [Discovery paths, comparison, scoring, JSON, CI, and FAQ](docs/REFERENCE.md)
 - [Examples](docs/EXAMPLES.md)
 - [Threat model and network boundary](docs/THREAT_MODEL.md)
 - [Rule catalog](specs/RULES.md)

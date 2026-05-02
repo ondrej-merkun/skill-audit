@@ -15,7 +15,7 @@ tag is not the first place a problem appears.
   [`docs/PUBLISHING.md`](PUBLISHING.md).
 - Confirm public docs changed in the release have working local links and image
   paths.
-- Confirm changed README screenshots and SVGs render at their embedded
+- Confirm changed README screenshots, SVGs, and badges render at their embedded
   GitHub dimensions in a browser or image renderer without clipping, overlap,
   stale output, unreadable text, or broken external targets.
 - If enrichment is re-enabled in a release, confirm each touched external
@@ -85,7 +85,7 @@ resolve:
 External links can be checked manually. Do not publish with broken local
 references.
 
-For GitHub Action examples, trusted-publishing settings, and repository
+For badges, GitHub Action examples, trusted-publishing settings, and repository
 metadata links, verify the exact public owner/repo/workflow/package target
 exists. Do not rely on locally present workflow files or string-assembled
 repository URLs as proof.
