@@ -763,7 +763,11 @@ describe('runScan flag wiring', () => {
       expect(calls[0]?.body).toMatchObject({ model: 'local-reviewer', stream: false });
       const errOut = stripAnsi(stderrChunks.join(''));
       expect(errOut).toContain('LLM review: reviewer');
-      expect(errOut).toContain('review-me: reviewer ok (1 LLM-only finding)');
+      expect(errOut).toContain('review-me: ❌ reviewer ok (1 LLM-only finding)');
+      expect(errOut).toContain(
+        'LLM review: details: rerun this scan with --json or --html report.html to inspect LLM-only finding details'
+      );
+      expect(errOut.match(/LLM review: details:/g)).toHaveLength(1);
       expect(process.exitCode).toBeUndefined();
     });
   });
@@ -866,10 +870,10 @@ describe('runScan flag wiring', () => {
       ]);
       const errOut = stripAnsi(stderrChunks.join(''));
       expect(errOut).toContain('LLM review: alpha (alpha-model), zeta (zeta-model)');
-      expect(errOut.indexOf('multi-review: alpha ok')).toBeLessThan(
-        errOut.indexOf('multi-review: zeta ok')
+      expect(errOut.indexOf('multi-review: ✅ alpha ok')).toBeLessThan(
+        errOut.indexOf('multi-review: ✅ zeta ok')
       );
-      expect(errOut).toContain('LLM review 1/1: multi-review: alpha ok');
+      expect(errOut).toContain('LLM review 1/1: multi-review: ✅ alpha ok');
       expect(errOut).not.toContain('LLM review 2/2');
     });
   });
@@ -976,9 +980,10 @@ describe('runScan flag wiring', () => {
 
       const errOut = stripAnsi(stderrChunks.join(''));
       expect(errOut).toContain('partial-review: bad-json invalid-response');
-      expect(errOut).toContain('partial-review: ok-model ok (0 LLM-only findings)');
+      expect(errOut).toContain('partial-review: ✅ ok-model ok (0 LLM-only findings)');
       expect(errOut).toContain('partial-review: slow timeout');
       expect(errOut).toContain('partial-review: unavailable unavailable');
+      expect(errOut).not.toContain('LLM review: details:');
     });
   });
 
@@ -1067,8 +1072,12 @@ describe('runScan flag wiring', () => {
       await runScan({ llm: 'reviewer', llmFetchImpl: fetchImpl });
 
       const errOut = stripAnsi(stderrChunks.join(''));
-      expect(errOut).toContain('noop-skill: reviewer ok (0 LLM-only findings)');
-      expect(errOut).toContain('real-finding: reviewer ok (1 LLM-only finding)');
+      expect(errOut).toContain('noop-skill: ✅ reviewer ok (0 LLM-only findings)');
+      expect(errOut).toContain('real-finding: ❌ reviewer ok (1 LLM-only finding)');
+      expect(errOut).toContain(
+        'LLM review: details: rerun this scan with --json or --html report.html to inspect LLM-only finding details'
+      );
+      expect(errOut.match(/LLM review: details:/g)).toHaveLength(1);
       expect(errOut).not.toContain('invalid-response');
     });
   });
@@ -1088,7 +1097,10 @@ describe('runScan flag wiring', () => {
 
       expect(stripAnsi(stdoutChunks.join(''))).toMatch(/PASS|REVIEW|FAIL/);
       expect(stripAnsi(stdoutChunks.join(''))).toContain('LLM review: reviewer ok (0)');
-      expect(stripAnsi(stderrChunks.join(''))).toContain('reviewer ok (0 LLM-only findings)');
+      expect(stripAnsi(stderrChunks.join(''))).toContain(
+        'test-skill: ✅ reviewer ok (0 LLM-only findings)'
+      );
+      expect(stripAnsi(stderrChunks.join(''))).not.toContain('LLM review: details:');
     });
   });
 

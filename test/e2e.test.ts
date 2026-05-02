@@ -118,9 +118,9 @@ describe('e2e: CLI binary', () => {
 
     expect(readme).toContain('npx skill-audit');
     expect(pkg.name).toBe('skill-audit');
-    expect(pkg.bin).toEqual({ 'skill-audit': './dist/index.js' });
+    expect(pkg.bin).toEqual({ 'skill-audit': 'dist/index.js' });
     expect(pkg.homepage).toBe('https://github.com/ondrej-merkun/skill-audit#readme');
-    expect(pkg.repository.url).toBe('https://github.com/ondrej-merkun/skill-audit.git');
+    expect(pkg.repository.url).toBe('git+https://github.com/ondrej-merkun/skill-audit.git');
     expect(pkg.bugs.url).toBe('https://github.com/ondrej-merkun/skill-audit/issues');
 
     const { stdout, code } = await runCli(['--version']);

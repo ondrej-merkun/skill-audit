@@ -84,6 +84,8 @@ const DEFAULT_OPTIONS: ScanOptions = {
 };
 
 const SCAN_CONCURRENCY = 8;
+const LLM_REVIEW_DETAILS_HINT =
+  '[skill-audit] LLM review: details: rerun this scan with --json or --html report.html to inspect LLM-only finding details\n';
 const SUPPORTED_SCAN_AGENTS = new Set([
   'claude-code',
   'cursor',
@@ -205,7 +207,8 @@ async function loadSelectedLlmConfigs(selection: string | string[]): Promise<Loc
 
 function llmStatusLine(result: LlmReviewResult): string {
   if (result.status === 'ok') {
-    return `${result.modelName} ok (${result.findings.length} LLM-only finding${result.findings.length === 1 ? '' : 's'})`;
+    const marker = result.findings.length === 0 ? '✅' : '❌';
+    return `${marker} ${result.modelName} ok (${result.findings.length} LLM-only finding${result.findings.length === 1 ? '' : 's'})`;
   }
   return `${result.modelName} ${result.status}`;
 }
@@ -223,6 +226,7 @@ async function reviewSkillsWithLlm(
     .filter((value): value is number => value !== undefined)
     .sort((a, b) => a - b)[0];
   let completedReviews = 0;
+  let hasLlmOnlyFindings = false;
 
   if (reviewableTotal > 0) progress.startLlmReview(reviewableTotal);
   for (const skill of skills) {
@@ -243,12 +247,18 @@ async function reviewSkillsWithLlm(
     completedReviews++;
     progress.updateLlmReview(completedReviews, reviewableTotal, skill.name);
     for (const result of results) {
+      if (result.status === 'ok' && result.findings.length > 0) {
+        hasLlmOnlyFindings = true;
+      }
       process.stderr.write(
         `[skill-audit] LLM review ${completedReviews}/${reviewableTotal}: ${skill.name}: ${llmStatusLine(result)}\n`
       );
     }
   }
   if (reviewableTotal > 0) progress.succeedLlmReview(reviewableTotal);
+  if (hasLlmOnlyFindings) {
+    process.stderr.write(LLM_REVIEW_DETAILS_HINT);
+  }
   return reviewed;
 }
 

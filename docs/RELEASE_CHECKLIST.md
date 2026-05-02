@@ -10,7 +10,7 @@ a problem appears.
 - Confirm the release contents are final in [`CHANGELOG.md`](../CHANGELOG.md).
 - Confirm package metadata in
   [`packages/cli/package.json`](../packages/cli/package.json) still points to
-  `https://github.com/ondrej-merkun/skill-audit`.
+  `git+https://github.com/ondrej-merkun/skill-audit.git`.
 - Confirm npm trusted publishing is configured as described in
   [`docs/PUBLISHING.md`](PUBLISHING.md).
 - Confirm public docs changed in the release have working local links and image
@@ -57,11 +57,13 @@ Verify the packed npm contents:
 
 ```bash
 pnpm --filter skill-audit pack --dry-run
+cd packages/cli && npm publish --dry-run --access public
 ```
 
 The dry run must include `dist/`, `package.json`, `README.md`, `LICENSE`, and
 `CHANGELOG.md`, and must not include loop-driver files such as `fix_plan.md`,
-`PROMPT.md`, `AGENT.md`, or test fixtures.
+`PROMPT.md`, `AGENT.md`, or test fixtures. The publish dry-run must not print
+npm manifest auto-correction warnings.
 
 ## Markdown Links And Paths
 
