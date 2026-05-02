@@ -599,7 +599,7 @@ document.getElementById('btn-download').addEventListener('click', function(){
   document.body.removeChild(a);
 });
 
-document.getElementById('btn-share').addEventListener('click', function(){
+document.getElementById('btn-download-redacted').addEventListener('click', function(){
   var blob = new Blob([JSON.stringify(REDACTED.result, null, 2)], {type:'application/json'});
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -641,7 +641,7 @@ document.getElementById('btn-share').addEventListener('click', function(){
       <button class="btn" id="btn-copy-json">Copy JSON</button>
       <button class="btn" id="btn-copy-md">Copy Markdown</button>
       <button class="btn" id="btn-download">Download JSON</button>
-      <button class="btn btn-danger" id="btn-share">Share (redacted)</button>
+      <button class="btn btn-danger" id="btn-download-redacted">Download redacted JSON</button>
     </div>
     ${renderLlmOverview(sorted)}
     <table>

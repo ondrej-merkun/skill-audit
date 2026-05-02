@@ -23,7 +23,7 @@ from — see the instructions at the top of that file.
 Never guess these from paths, filesystem layout, or commit metadata.
 If a task needs a personal handle, package name, or byline, pull it
 from this section verbatim.
-Repository URLs, badges, action examples, and trusted-publishing settings
+Repository URLs, action examples, and trusted-publishing settings
 need the exact public owner/repo/workflow target, not just a handle and
 package name. If that target is not explicitly present here, verify it
 against the actual GitHub repository before editing those docs, or ask.
@@ -121,7 +121,7 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
 - **Rule fixtures need security-education benign cases.** Scanner docs,
   red-team examples, quoted attacks, and test fixtures often contain hostile
   vocabulary without being hostile instructions.
-- **README visuals are product surface.** SVGs, screenshots, badges, and demo
+- **README visuals are product surface.** SVGs, screenshots, and visual docs
   assets must be rendered in a browser or image renderer at their embedded size
   and checked for clipping, overlap, stale output, and broken external targets.
   Hand-authored SVG text needs explicit bounds/spacing checks; do not mark a
@@ -144,10 +144,10 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
 8. For scanner/reporting output changes: verify product behavior, not
    just rendering. Check ordering, prioritization, file/export
    ergonomics, and consistency across human and machine formats.
-9. For any task that adds a file reference (image, link, badge) to a
+9. For any task that adds a file reference (image or link) to a
    markdown file: verify the referenced path resolves on disk. Broken
    links block the commit.
-10. For any task that changes external links, badges, action examples,
+10. For any task that changes external links, action examples,
     package metadata, or trusted-publishing settings: verify the external
     target exists and matches the canonical repository/package target.
 11. For any task that changes README screenshots, SVGs, or visual docs

@@ -196,7 +196,7 @@ export function renderSummaryFooter(
     },
     {
       command: 'skill-audit --html report.html',
-      description: 'Generate shareable HTML',
+      description: 'Write HTML report',
     }
   );
   nextCommands.splice(

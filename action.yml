@@ -2,10 +2,6 @@ name: 'skill-audit'
 description: 'Scan AI agent skills (Claude Code, Cursor, Copilot, Codex, Gemini, Windsurf, Cline) for prompt injection and malicious code.'
 author: 'Ondrej Merkun'
 
-branding:
-  icon: 'shield'
-  color: 'red'
-
 inputs:
   version:
     description: '@ondrej-merkun/skill-audit npm package version to run (e.g. "0.1.1" or "latest")'

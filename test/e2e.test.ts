@@ -135,10 +135,7 @@ describe('e2e: CLI binary', () => {
       readFile(EXAMPLES_DOC, 'utf-8'),
     ]);
 
-    expect(readme).toContain('https://www.npmjs.com/package/@ondrej-merkun/skill-audit');
-    expect(readme).toContain('img.shields.io/npm/v/%40ondrej-merkun%2Fskill-audit');
-    expect(readme).toContain('img.shields.io/node/v/%40ondrej-merkun%2Fskill-audit');
-    expect(readme).toContain('img.shields.io/badge/rules-41-red');
+    expect(readme).toContain('npx @ondrej-merkun/skill-audit');
     expect(readme).toContain('uses: ondrej-merkun/skill-audit@v1');
     expect(examples).toContain('uses: ondrej-merkun/skill-audit@v1');
     expect(action).toContain('npx --yes "@ondrej-merkun/skill-audit@${SA_VERSION}" scan');

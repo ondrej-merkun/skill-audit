@@ -1,8 +1,7 @@
 # specs/OUTPUT.md — exact output contracts
 
 Ralph must reproduce these outputs **literally**. They are contracts
-(for the JSON schema) and brand assets (for the TUI mockup that will
-ship as the hero GIF).
+for the JSON schema and output examples.
 
 ## JSON output schema (contract — v1.0, stable)
 
@@ -206,7 +205,7 @@ remain visible and authoritative for the baseline scan.
 
 ## Visible data contract
 
-If a human output adds a visible column, footer line, panel field, badge, or
+If a human output adds a visible column, footer line, panel field, status marker, or
 enrichment section, it must define and test:
 
 - one realistic populated path through discovery/scan/enrichment into the
@@ -256,10 +255,9 @@ For enrichment specifically, track and render source-level truth:
 
 Verdict exit codes are unchanged and must be set only after file writes flush.
 
-## TUI hero table (brand asset)
+## TUI example table
 
-Reproduce this layout precisely. It's the screenshot that goes on the
-README and into the hero GIF. Column widths are fixed.
+Reproduce this layout precisely. Column widths are fixed.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────┐
@@ -285,9 +283,9 @@ README and into the hero GIF. Column widths are fixed.
 
   →  skill-audit explain polymarket-trader    See full findings
   →  skill-audit ignore aws-helper            Allowlist a false positive
-  →  skill-audit --html report.html           Generate shareable HTML
+  →  skill-audit --html report.html           Write HTML report
 
-  Want the details? https://skill-audit.dev/rules
+  Rules reference: specs/RULES.md
 ```
 
 Palette (hex, use chalk.hex):
@@ -314,7 +312,7 @@ Always end with 2-3 arrow-prefixed next-commands. This is the pattern
 across `snyk test`, `semgrep scan`, `npm audit`, `trivy image`. Never
 skip it.
 
-README screenshots, SVG demos, and terminal recordings derived from this output
+README screenshots, SVG examples, and terminal recordings derived from this output
 must be rendered in a browser or image renderer at the embedded README/GitHub
 dimensions before committing. Text must not clip, overlap, spill beyond the
 terminal frame, or show stale columns/commands. Prefer generating the asset from
@@ -364,7 +362,7 @@ block is separated by exactly one blank line.
   restores the full table.
 - Row clicks and keyboard activation open the detail panel for the matching
   skill.
-- Toolbar actions such as copy/download/share must be wired or omitted; do not
+- Toolbar actions such as copy, download, or export must be wired or omitted; do not
   render inert controls.
 - Tests must execute the generated page script in a DOM/browser environment and
   assert at least one interaction changes visible state. String containment

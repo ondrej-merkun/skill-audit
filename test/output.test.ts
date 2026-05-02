@@ -296,7 +296,7 @@ function executeHtmlReportScript(html: string): FakeDocument {
     'btn-copy-json',
     'btn-copy-md',
     'btn-download',
-    'btn-share',
+    'btn-download-redacted',
   ]) {
     registerElement(document, id.startsWith('btn-') || id === 'panel-close' ? 'button' : 'div', {
       id,
@@ -912,7 +912,7 @@ describe('renderSummaryFooter', () => {
       '→  skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model <model_name>    Configure local LLM review',
       '→  skill-audit --llm local    Add local LLM review',
       '→  skill-audit ignore <skill>    Allowlist a false positive',
-      '→  skill-audit --html report.html    Generate shareable HTML',
+      '→  skill-audit --html report.html    Write HTML report',
       '→  skill-audit --agent claude-code    Scan only Claude Code skills',
     ]);
   });

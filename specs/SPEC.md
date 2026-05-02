@@ -1,21 +1,22 @@
 # skill-audit MVP spec and implementation plan
 
-## 1. Name and positioning
+## 1. Package and command names
 
 ### Name: **`skill-audit`**
-Parallels the strongest existing cross-ecosystem pattern: **`npm audit`, `bundle-audit`, `pip-audit`, `cargo audit`**. Tells anyone reading an HN title what the tool does in one second. The GitHub repo slug and installed binary stay `skill-audit`; the npm package is scoped as `@ondrej-merkun/skill-audit`.
+The GitHub repo slug and installed binary stay `skill-audit`; the npm package
+is scoped as `@ondrej-merkun/skill-audit`.
 
 The executable is `skill-audit`; the npm package is `@ondrej-merkun/skill-audit`, so one-off runs use `npx @ondrej-merkun/skill-audit`.
 
 The unscoped `skill-audit` package name was blocked at publish time as too
 similar to `skillaudit`, so the package is scoped instead of changing the
-product or binary name.
+CLI or binary name.
 
 ## 2. Architecture and tech stack
 
 ### Language: **TypeScript on Node.js 20+**
 Justification, in order of weight:
-1. **`npx @ondrej-merkun/skill-audit` is the single most-important distribution channel.** Every Claude Code / Cursor / Codex user already has Node. Zero onboarding.
+1. **`npx @ondrej-merkun/skill-audit` is the primary distribution channel.** It uses the existing Node runtime on typical agent-development machines.
 2. Excellent TUI ecosystem (`ink`, `chalk`, `cli-table3`, `listr2`, `ora`) in a single runtime.
 3. Single `package.json` publish; no cross-compiled binaries.
 
@@ -351,9 +352,9 @@ Before changing these integrations, verify the current external contract:
 - **deps.dev / OSV / npm / PyPI** — explicitly designed for automated consumption.
 - **Snyk, Repello** — avoid scraping; not supported.
 
-## 6. Output and UX layer — this is where we win
+## 6. Output and UX layer
 
-### The hero screenshot
+### Example table output
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────┐
@@ -379,9 +380,9 @@ Before changing these integrations, verify the current external contract:
 
   →  skill-audit explain polymarket-trader    See full findings
   →  skill-audit ignore aws-helper            Allowlist a false positive
-  →  skill-audit --html report.html           Generate shareable HTML
+  →  skill-audit --html report.html           Write HTML report
 
-  Want the details? https://skill-audit.dev/rules
+  Rules reference: specs/RULES.md
 ```
 
 **Design notes.**
@@ -433,7 +434,7 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 - Left rail: agent tree; clickable to filter.
 - Main grid: skills sorted by verdict (FAIL first). Click a row → slide-out panel with the same content as `explain`.
 - Export buttons: copy JSON, copy markdown, download.
-- "Share" button that exports a redacted (paths stripped) version for Twitter.
+- Redacted export button that writes a paths-stripped JSON report.
 - No network calls — works from `file://`. This matters; scanners that phone home from reports lose trust.
 
 ### Output modes
