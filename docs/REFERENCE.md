@@ -193,7 +193,7 @@ For CI, write JSON to a file and choose the verdict threshold that should fail
 the job:
 
 ```bash
-npx --yes skill-audit@latest scan \
+npx --yes @ondrej-merkun/skill-audit@latest scan \
   --json \
   --output skill-audit-results.json \
   --fail-on REVIEW

@@ -2,7 +2,8 @@
 
 A CLI that scans installed AI agent skills (Claude Code, Cursor, Copilot,
 Codex, Gemini, Windsurf, Cline) for prompt injection and malicious code.
-Local-first, zero-auth, published as `skill-audit` with the `skill-audit` bin.
+Local-first, zero-auth, published as `@ondrej-merkun/skill-audit` with the
+`skill-audit` bin.
 
 Full spec: **`specs/SPEC.md`**. Ralph loop protocol: **`PROMPT.md`**.
 Workflow conventions: **`AGENT.md`**. Task list / progress: **`fix_plan.md`**.
@@ -17,7 +18,7 @@ from — see the instructions at the top of that file.
 
 - GitHub handle: `ondrej-merkun`
 - GitHub repository: `https://github.com/ondrej-merkun/skill-audit`
-- npm package name: `skill-audit`
+- npm package name: `@ondrej-merkun/skill-audit`
 
 Never guess these from paths, filesystem layout, or commit metadata.
 If a task needs a personal handle, package name, or byline, pull it
@@ -52,7 +53,7 @@ test runners or split the test command.
 ## Directory map
 
 ```
-packages/cli/          skill-audit — npm package, exposes the `skill-audit` bin
+packages/cli/          @ondrej-merkun/skill-audit — npm package, exposes the `skill-audit` bin
   src/commands/        scan, list, explain, ignore
   src/discovery/       per-agent plugins (claude-code, cursor, copilot, agents-md-sweep)
   src/rules/           27 rules grouped by category (pure regex)

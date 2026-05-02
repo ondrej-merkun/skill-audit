@@ -47,7 +47,7 @@ In `packages/cli/tsconfig.json`:
 Add `.tsbuildinfo` to `.gitignore`. Typical re-run drops to ~150 ms.
 
 ### 5. Skip the `pnpm -r` wrapper on single-package scripts — saves ~1 s per loop
-At the repo root, change `lint`/`typecheck`/`build` to call the package script directly (`pnpm --filter skill-audit lint`, or even just `cd packages/cli && biome check src`). `pnpm -r` is paying recursive-plan overhead to run one script.
+At the repo root, change `lint`/`typecheck`/`build` to call the package script directly (`pnpm --filter @ondrej-merkun/skill-audit lint`, or even just `cd packages/cli && biome check src`). `pnpm -r` is paying recursive-plan overhead to run one script.
 
 ### 6. Parallel verify script — collapses the remaining three steps
 `"verify": "run-p -l build lint typecheck"` (or `concurrently`). Build/lint/typecheck are independent; serial ~5 s → parallel ~2 s on 8 cores.

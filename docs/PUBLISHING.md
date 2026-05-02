@@ -8,8 +8,8 @@ Before tagging a release, complete the project-specific checks in
 
 ## npm package settings
 
-Before pushing a release tag, configure the `skill-audit` package on npm with a
-trusted publisher:
+Before pushing a release tag, configure the `@ondrej-merkun/skill-audit` package
+on npm with a trusted publisher:
 
 - Publisher: GitHub Actions
 - Organization or user: `ondrej-merkun`

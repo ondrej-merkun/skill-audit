@@ -2,16 +2,17 @@
 
 Scan installed AI agent skills for prompt injection and malicious code.
 
-`skill-audit` is the npm package. `skill-audit` is the command it installs.
+`@ondrej-merkun/skill-audit` is the npm package. `skill-audit` is the command it
+installs.
 
 ```bash
-npx skill-audit
+npx @ondrej-merkun/skill-audit
 ```
 
 Or install it globally:
 
 ```bash
-npm install -g skill-audit
+npm install -g @ondrej-merkun/skill-audit
 skill-audit scan
 ```
 

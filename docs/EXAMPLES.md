@@ -1,15 +1,15 @@
 # Examples
 
-These examples use the published package name, `skill-audit`, and the installed
-binary, `skill-audit`. Use `npx skill-audit` for one-off runs, or `skill-audit`
-after a global install.
+These examples use the published package name, `@ondrej-merkun/skill-audit`, and
+the installed binary, `skill-audit`. Use `npx @ondrej-merkun/skill-audit` for
+one-off runs, or `skill-audit` after a global install.
 
 ## Local Scan
 
 Run the default scan from any project directory:
 
 ```bash
-npx skill-audit
+npx @ondrej-merkun/skill-audit
 ```
 
 The default view is a risk-first table. Skills with lower scores and worse
@@ -133,7 +133,7 @@ For generic CI, write JSON to a file and choose the verdict threshold that
 should fail the job:
 
 ```bash
-npx --yes skill-audit@latest scan \
+npx --yes @ondrej-merkun/skill-audit@latest scan \
   --json \
   --output skill-audit-results.json \
   --fail-on REVIEW

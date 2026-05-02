@@ -59,7 +59,7 @@ jobs:
         run: node packages/cli/dist/index.js --help
 
       - name: Verify package contents
-        run: pnpm --filter skill-audit pack --dry-run
+        run: pnpm --filter @ondrej-merkun/skill-audit pack --dry-run
 
       - name: Publish skill-audit
         # No NODE_AUTH_TOKEN: npm uses GitHub OIDC trusted publishing when configured.

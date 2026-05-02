@@ -3,17 +3,19 @@
 ## 1. Name and positioning
 
 ### Name: **`skill-audit`**
-Parallels the strongest existing cross-ecosystem pattern: **`npm audit`, `bundle-audit`, `pip-audit`, `cargo audit`**. Tells anyone reading an HN title what the tool does in one second. Verified available on npm and as a GitHub repo slug as of research date.
+Parallels the strongest existing cross-ecosystem pattern: **`npm audit`, `bundle-audit`, `pip-audit`, `cargo audit`**. Tells anyone reading an HN title what the tool does in one second. The GitHub repo slug and installed binary stay `skill-audit`; the npm package is scoped as `@ondrej-merkun/skill-audit`.
 
-The executable is `skill-audit`; the npm package is `skill-audit`, so one-off runs use `npx skill-audit`.
+The executable is `skill-audit`; the npm package is `@ondrej-merkun/skill-audit`, so one-off runs use `npx @ondrej-merkun/skill-audit`.
 
-Backup picks if `skill-audit` is taken at publish time: `skillprobe`, `agentscan` (conflicts with Snyk's binary — skip), `skillsleuth`, `skylint`. The user's past affinity for `vibe-check` works here but doesn't signal "security" strongly enough — reserve for a related tool.
+The unscoped `skill-audit` package name was blocked at publish time as too
+similar to `skillaudit`, so the package is scoped instead of changing the
+product or binary name.
 
 ## 2. Architecture and tech stack
 
 ### Language: **TypeScript on Node.js 20+**
 Justification, in order of weight:
-1. **`npx skill-audit` is the single most-important distribution channel.** Every Claude Code / Cursor / Codex user already has Node. Zero onboarding.
+1. **`npx @ondrej-merkun/skill-audit` is the single most-important distribution channel.** Every Claude Code / Cursor / Codex user already has Node. Zero onboarding.
 2. Excellent TUI ecosystem (`ink`, `chalk`, `cli-table3`, `listr2`, `ora`) in a single runtime.
 3. Single `package.json` publish; no cross-compiled binaries.
 
@@ -33,14 +35,14 @@ Justification, in order of weight:
 - **Lint/format:** `biome` (faster than eslint+prettier, single config).
 
 ### Distribution
-1. **Primary:** `npm publish` → `npx skill-audit` and `pnpm dlx skill-audit` work instantly.
+1. **Primary:** `npm publish` → `npx @ondrej-merkun/skill-audit` and `pnpm dlx @ondrej-merkun/skill-audit` work instantly.
 2. **GitHub Action wrapper:** `uses: ondrej-merkun/skill-audit@v1` — thin composite action.
 
 ### Directory layout
 ```
 skill-audit/
 ├── packages/
-│   ├── cli/                        # skill-audit npm package, skill-audit bin
+│   ├── cli/                        # @ondrej-merkun/skill-audit npm package, skill-audit bin
 │   │   ├── src/
 │   │   │   ├── index.ts            # shebang + commander setup
 │   │   │   ├── commands/
@@ -555,7 +557,7 @@ allowed-tools: [Bash]
 When invoked, run:
 
 ```bash
-npx skill-audit@latest scan --json
+npx @ondrej-merkun/skill-audit@latest scan --json
 ```
 
 Parse the JSON output and summarize:
@@ -565,7 +567,7 @@ Parse the JSON output and summarize:
 
 If the user asks to audit a specific skill, run:
 ```bash
-npx skill-audit@latest explain <skill-name> --json
+npx @ondrej-merkun/skill-audit@latest explain <skill-name> --json
 ```
 
 Do not recommend rm/delete commands without explicit user confirmation.

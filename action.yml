@@ -8,7 +8,7 @@ branding:
 
 inputs:
   version:
-    description: 'skill-audit npm package version to run (e.g. "0.1.0" or "latest")'
+    description: '@ondrej-merkun/skill-audit npm package version to run (e.g. "0.1.0" or "latest")'
     required: false
     default: 'latest'
   path:
@@ -70,7 +70,7 @@ runs:
         # Run scan and write JSON output to the requested file.
         # SA_ARGS is intentionally word-split here (extra flags from caller).
         # shellcheck disable=SC2086
-        npx --yes "skill-audit@${SA_VERSION}" scan \
+        npx --yes "@ondrej-merkun/skill-audit@${SA_VERSION}" scan \
           --json \
           --output "$SA_RESULTS_FILE" \
           --fail-on "$SA_FAIL_ON" \

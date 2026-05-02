@@ -1,5 +1,5 @@
 {
-  "name": "skill-audit",
+  "name": "@ondrej-merkun/skill-audit",
   "version": "0.1.0",
   "description": "Scan AI agent skills for prompt injection and malicious code",
   "license": "Apache-2.0",

@@ -1,9 +1,9 @@
 # Release Checklist
 
-Use this checklist before publishing a `skill-audit` npm package or tagging an
-action release. The release workflow performs the automated gates, but the
-maintainer should run the local checks first so a bad tag is not the first place
-a problem appears.
+Use this checklist before publishing the `@ondrej-merkun/skill-audit` npm
+package or tagging an action release. The release workflow performs the
+automated gates, but the maintainer should run the local checks first so a bad
+tag is not the first place a problem appears.
 
 ## Before Tagging
 
@@ -55,7 +55,7 @@ contains findings.
 Verify the packed npm contents:
 
 ```bash
-pnpm --filter skill-audit pack --dry-run
+pnpm --filter @ondrej-merkun/skill-audit pack --dry-run
 cd packages/cli && npm publish --dry-run --access public
 ```
 
@@ -93,8 +93,9 @@ Before pushing the release tag, verify:
 - The release job installs npm with trusted-publishing support.
 - The publish step runs from `packages/cli`.
 - The publish step does not require a long-lived `NPM_TOKEN`.
-- The npm package has a trusted publisher for GitHub Actions configured for
-  repository `ondrej-merkun/skill-audit` and workflow `release.yml`.
+- `@ondrej-merkun/skill-audit` has a trusted publisher for GitHub Actions
+  configured for repository `ondrej-merkun/skill-audit` and workflow
+  `release.yml`.
 
 After the workflow finishes, inspect the npm package version and confirm the
 package page shows provenance or trusted-publishing metadata for the release.

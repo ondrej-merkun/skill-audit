@@ -116,8 +116,8 @@ describe('e2e: CLI binary', () => {
     };
     const readme = await readFile(README, 'utf-8');
 
-    expect(readme).toContain('npx skill-audit');
-    expect(pkg.name).toBe('skill-audit');
+    expect(readme).toContain('npx @ondrej-merkun/skill-audit');
+    expect(pkg.name).toBe('@ondrej-merkun/skill-audit');
     expect(pkg.bin).toEqual({ 'skill-audit': 'dist/index.js' });
     expect(pkg.homepage).toBe('https://github.com/ondrej-merkun/skill-audit#readme');
     expect(pkg.repository.url).toBe('git+https://github.com/ondrej-merkun/skill-audit.git');
@@ -141,7 +141,7 @@ describe('e2e: CLI binary', () => {
     );
     expect(readme).toContain('uses: ondrej-merkun/skill-audit@v1');
     expect(examples).toContain('uses: ondrej-merkun/skill-audit@v1');
-    expect(action).toContain('npx --yes "skill-audit@${SA_VERSION}" scan');
+    expect(action).toContain('npx --yes "@ondrej-merkun/skill-audit@${SA_VERSION}" scan');
     expect(action).toContain('--output "$SA_RESULTS_FILE"');
     expect(action).toContain('.summary.verdict // "PASS"');
     expect(action).not.toContain('--offline');

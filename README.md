@@ -25,7 +25,7 @@ Code, OpenAI Codex, GitHub Copilot, Cursor, Gemini CLI, and cross-agent project
 files, then shows the riskiest result first in a colorized verdict table.
 
 ```bash
-npx skill-audit
+npx @ondrej-merkun/skill-audit
 ```
 
 Rule scanning runs on your machine. This version does not perform enrichment
@@ -35,10 +35,10 @@ lookups in the user-facing CLI.
 
 ```bash
 # One-off scan
-npx skill-audit
+npx @ondrej-merkun/skill-audit
 
 # Or install globally
-npm install -g skill-audit
+npm install -g @ondrej-merkun/skill-audit
 skill-audit
 ```
 
@@ -145,7 +145,7 @@ Detailed reference:
 ## Use In CI
 
 ```bash
-npx --yes skill-audit@latest scan \
+npx --yes @ondrej-merkun/skill-audit@latest scan \
   --json \
   --output skill-audit-results.json \
   --fail-on REVIEW
