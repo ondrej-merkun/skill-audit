@@ -16,12 +16,12 @@ describe('windsurf discovery plugin', () => {
   let originalSkillauditCwd: string | undefined;
 
   beforeEach(async () => {
-    tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-windsurf-home-'));
-    tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-windsurf-cwd-'));
+    tempHome = await mkdtemp(join(tmpdir(), 'skill-audit-windsurf-home-'));
+    tempCwd = await mkdtemp(join(tmpdir(), 'skill-audit-windsurf-cwd-'));
     originalHome = process.env['HOME'];
-    originalSkillauditCwd = process.env['SKILLAUDIT_CWD'];
+    originalSkillauditCwd = process.env['SKILL_AUDIT_CWD'];
     process.env['HOME'] = tempHome;
-    process.env['SKILLAUDIT_CWD'] = tempCwd;
+    process.env['SKILL_AUDIT_CWD'] = tempCwd;
   });
 
   afterEach(async () => {
@@ -31,9 +31,9 @@ describe('windsurf discovery plugin', () => {
       process.env['HOME'] = originalHome;
     }
     if (originalSkillauditCwd === undefined) {
-      delete process.env['SKILLAUDIT_CWD'];
+      delete process.env['SKILL_AUDIT_CWD'];
     } else {
-      process.env['SKILLAUDIT_CWD'] = originalSkillauditCwd;
+      process.env['SKILL_AUDIT_CWD'] = originalSkillauditCwd;
     }
     await rm(tempHome, { recursive: true, force: true });
     await rm(tempCwd, { recursive: true, force: true });
@@ -102,7 +102,7 @@ describe('windsurf discovery plugin', () => {
     const nestedCwd = join(tempCwd, 'packages', 'cli');
     await writeGitRoot(tempCwd);
     await mkdir(nestedCwd, { recursive: true });
-    process.env['SKILLAUDIT_CWD'] = nestedCwd;
+    process.env['SKILL_AUDIT_CWD'] = nestedCwd;
 
     const rootRulesDir = join(tempCwd, '.windsurf', 'rules');
     await mkdir(rootRulesDir, { recursive: true });
@@ -119,7 +119,7 @@ describe('windsurf discovery plugin', () => {
     const nestedCwd = join(tempCwd, 'packages', 'cli');
     await writeGitRoot(tempCwd);
     await mkdir(nestedCwd, { recursive: true });
-    process.env['SKILLAUDIT_CWD'] = nestedCwd;
+    process.env['SKILL_AUDIT_CWD'] = nestedCwd;
 
     const rootRulesDir = join(tempCwd, '.windsurf', 'rules');
     const siblingRulesDir = join(tempCwd, 'apps', 'api', '.windsurf', 'rules');
@@ -145,7 +145,7 @@ describe('windsurf discovery plugin', () => {
   it('does not treat the filesystem root as the workspace root when no git root exists', async () => {
     const nestedCwd = join(tempCwd, 'packages', 'cli');
     await mkdir(nestedCwd, { recursive: true });
-    process.env['SKILLAUDIT_CWD'] = nestedCwd;
+    process.env['SKILL_AUDIT_CWD'] = nestedCwd;
 
     const siblingRulesDir = join(tempCwd, 'apps', 'api', '.windsurf', 'rules');
     await mkdir(siblingRulesDir, { recursive: true });

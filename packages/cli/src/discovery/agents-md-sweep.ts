@@ -17,10 +17,10 @@ const TARGET_FILENAMES = new Set([
   'CONVENTIONS.md',
 ]);
 
-// SKILLAUDIT_CWD lets tests inject a fake working directory without process.chdir(),
+// SKILL_AUDIT_CWD lets tests inject a fake working directory without process.chdir(),
 // which is not supported in vitest worker threads.
 function getCwd(): string {
-  return process.env.SKILLAUDIT_CWD ?? process.cwd();
+  return process.env.SKILL_AUDIT_CWD ?? process.cwd();
 }
 
 function makeId(input: string): string {

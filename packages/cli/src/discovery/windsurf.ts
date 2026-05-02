@@ -24,7 +24,7 @@ function getHomeDir(): string {
 }
 
 function getCwd(): string {
-  return process.env.SKILLAUDIT_CWD ?? process.cwd();
+  return process.env.SKILL_AUDIT_CWD ?? process.cwd();
 }
 
 function makeId(input: string): string {

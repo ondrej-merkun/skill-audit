@@ -21,14 +21,14 @@ body:
       label: Reproduction steps
       description: Include the smallest command and fixture layout that reproduces it.
       placeholder: |
-        1. Run `skillaudit scan ...`
+        1. Run `skill-audit scan ...`
         2. Observe ...
     validations:
       required: true
   - type: input
     id: version
     attributes:
-      label: skillaudit version
+      label: skill-audit version
       placeholder: "0.1.1"
     validations:
       required: true

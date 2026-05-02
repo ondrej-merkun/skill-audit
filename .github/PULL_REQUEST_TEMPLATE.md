@@ -16,7 +16,7 @@
 
 Paste the first screen of built CLI output when this changes commands,
 discovery, scanning, reports, or user-facing output. Use the exact
-documented invocation, including bare `skillaudit` if this PR affects the
+documented invocation, including bare `skill-audit` if this PR affects the
 default command.
 
 ```text

@@ -520,15 +520,15 @@ describe('discoverAll', () => {
   });
 
   it('registers Gemini in the default plugin set', async () => {
-    const tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-reg-home-'));
-    const tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-reg-cwd-'));
+    const tempHome = await mkdtemp(join(tmpdir(), 'skill-audit-reg-home-'));
+    const tempCwd = await mkdtemp(join(tmpdir(), 'skill-audit-reg-cwd-'));
     const originalHome = process.env['HOME'];
-    const originalCwd = process.env['SKILLAUDIT_CWD'];
+    const originalCwd = process.env['SKILL_AUDIT_CWD'];
     const originalCodexHome = process.env['CODEX_HOME'];
 
     try {
       process.env['HOME'] = tempHome;
-      process.env['SKILLAUDIT_CWD'] = tempCwd;
+      process.env['SKILL_AUDIT_CWD'] = tempCwd;
       process.env['CODEX_HOME'] = join(tempHome, '.codex');
 
       const commandsDir = join(tempHome, '.gemini', 'commands');
@@ -555,9 +555,9 @@ describe('discoverAll', () => {
         process.env['HOME'] = originalHome;
       }
       if (originalCwd === undefined) {
-        delete process.env['SKILLAUDIT_CWD'];
+        delete process.env['SKILL_AUDIT_CWD'];
       } else {
-        process.env['SKILLAUDIT_CWD'] = originalCwd;
+        process.env['SKILL_AUDIT_CWD'] = originalCwd;
       }
       if (originalCodexHome === undefined) {
         delete process.env['CODEX_HOME'];
@@ -570,14 +570,14 @@ describe('discoverAll', () => {
   });
 
   it('registers Windsurf in the default plugin set', async () => {
-    const tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-reg-home-'));
-    const tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-reg-cwd-'));
+    const tempHome = await mkdtemp(join(tmpdir(), 'skill-audit-reg-home-'));
+    const tempCwd = await mkdtemp(join(tmpdir(), 'skill-audit-reg-cwd-'));
     const originalHome = process.env['HOME'];
-    const originalCwd = process.env['SKILLAUDIT_CWD'];
+    const originalCwd = process.env['SKILL_AUDIT_CWD'];
 
     try {
       process.env['HOME'] = tempHome;
-      process.env['SKILLAUDIT_CWD'] = tempCwd;
+      process.env['SKILL_AUDIT_CWD'] = tempCwd;
 
       const memoriesDir = join(tempHome, '.codeium', 'windsurf', 'memories');
       await mkdir(memoriesDir, { recursive: true });
@@ -603,9 +603,9 @@ describe('discoverAll', () => {
         process.env['HOME'] = originalHome;
       }
       if (originalCwd === undefined) {
-        delete process.env['SKILLAUDIT_CWD'];
+        delete process.env['SKILL_AUDIT_CWD'];
       } else {
-        process.env['SKILLAUDIT_CWD'] = originalCwd;
+        process.env['SKILL_AUDIT_CWD'] = originalCwd;
       }
       await rm(tempHome, { recursive: true, force: true });
       await rm(tempCwd, { recursive: true, force: true });

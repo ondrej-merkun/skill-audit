@@ -30,22 +30,22 @@ async function fixture(...parts: string[]): Promise<string> {
 // ── agents-md-sweep ──────────────────────────────────────────────────────────
 //
 // The fixture cwd contains CLAUDE.md, AGENTS.md, GEMINI.md — no dot dirs
-// needed, so we can point SKILLAUDIT_CWD straight at the fixture directory.
+// needed, so we can point SKILL_AUDIT_CWD straight at the fixture directory.
 
 describe('agents-md-sweep: fixture skill tree', () => {
   let originalCwd: string | undefined;
   const fixtureCwd = join(FIXTURES, 'agents-md', 'cwd');
 
   beforeEach(() => {
-    originalCwd = process.env['SKILLAUDIT_CWD'];
-    process.env['SKILLAUDIT_CWD'] = fixtureCwd;
+    originalCwd = process.env['SKILL_AUDIT_CWD'];
+    process.env['SKILL_AUDIT_CWD'] = fixtureCwd;
   });
 
   afterEach(() => {
     if (originalCwd === undefined) {
-      delete process.env['SKILLAUDIT_CWD'];
+      delete process.env['SKILL_AUDIT_CWD'];
     } else {
-      process.env['SKILLAUDIT_CWD'] = originalCwd;
+      process.env['SKILL_AUDIT_CWD'] = originalCwd;
     }
   });
 
@@ -85,12 +85,12 @@ describe('claude-code: fixture skill tree', () => {
   let originalCwd: string | undefined;
 
   beforeEach(async () => {
-    tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-cc-home-'));
-    tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-cc-cwd-'));
+    tempHome = await mkdtemp(join(tmpdir(), 'skill-audit-cc-home-'));
+    tempCwd = await mkdtemp(join(tmpdir(), 'skill-audit-cc-cwd-'));
     originalHome = process.env['HOME'];
-    originalCwd = process.env['SKILLAUDIT_CWD'];
+    originalCwd = process.env['SKILL_AUDIT_CWD'];
     process.env['HOME'] = tempHome;
-    process.env['SKILLAUDIT_CWD'] = tempCwd;
+    process.env['SKILL_AUDIT_CWD'] = tempCwd;
 
     // Plant user-scoped skill from fixture
     const skillDir = join(tempHome, '.claude', 'skills', 'git-helper');
@@ -137,9 +137,9 @@ describe('claude-code: fixture skill tree', () => {
       process.env['HOME'] = originalHome;
     }
     if (originalCwd === undefined) {
-      delete process.env['SKILLAUDIT_CWD'];
+      delete process.env['SKILL_AUDIT_CWD'];
     } else {
-      process.env['SKILLAUDIT_CWD'] = originalCwd;
+      process.env['SKILL_AUDIT_CWD'] = originalCwd;
     }
     await rm(tempHome, { recursive: true, force: true });
     await rm(tempCwd, { recursive: true, force: true });
@@ -214,12 +214,12 @@ describe('cline: fixture skill tree', () => {
   let originalCwd: string | undefined;
 
   beforeEach(async () => {
-    tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-cline-home-'));
-    tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-cline-cwd-'));
+    tempHome = await mkdtemp(join(tmpdir(), 'skill-audit-cline-home-'));
+    tempCwd = await mkdtemp(join(tmpdir(), 'skill-audit-cline-cwd-'));
     originalHome = process.env['HOME'];
-    originalCwd = process.env['SKILLAUDIT_CWD'];
+    originalCwd = process.env['SKILL_AUDIT_CWD'];
     process.env['HOME'] = tempHome;
-    process.env['SKILLAUDIT_CWD'] = tempCwd;
+    process.env['SKILL_AUDIT_CWD'] = tempCwd;
 
     const globalRulesDir = join(tempHome, 'Documents', 'Cline', 'Rules');
     await mkdir(globalRulesDir, { recursive: true });
@@ -262,9 +262,9 @@ describe('cline: fixture skill tree', () => {
       process.env['HOME'] = originalHome;
     }
     if (originalCwd === undefined) {
-      delete process.env['SKILLAUDIT_CWD'];
+      delete process.env['SKILL_AUDIT_CWD'];
     } else {
-      process.env['SKILLAUDIT_CWD'] = originalCwd;
+      process.env['SKILL_AUDIT_CWD'] = originalCwd;
     }
     await rm(tempHome, { recursive: true, force: true });
     await rm(tempCwd, { recursive: true, force: true });
@@ -295,12 +295,12 @@ describe('codex: fixture skill tree', () => {
   let originalCwd: string | undefined;
 
   beforeEach(async () => {
-    tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-codex-home-'));
-    tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-codex-cwd-'));
+    tempHome = await mkdtemp(join(tmpdir(), 'skill-audit-codex-home-'));
+    tempCwd = await mkdtemp(join(tmpdir(), 'skill-audit-codex-cwd-'));
     originalCodexHome = process.env['CODEX_HOME'];
-    originalCwd = process.env['SKILLAUDIT_CWD'];
+    originalCwd = process.env['SKILL_AUDIT_CWD'];
     process.env['CODEX_HOME'] = tempHome;
-    process.env['SKILLAUDIT_CWD'] = tempCwd;
+    process.env['SKILL_AUDIT_CWD'] = tempCwd;
 
     await writeFile(join(tempHome, 'AGENTS.md'), await fixture('codex', 'AGENTS.md'));
     await writeFile(join(tempHome, 'AGENTS.override.md'), await fixture('codex', 'AGENTS.override.md'));
@@ -347,9 +347,9 @@ describe('codex: fixture skill tree', () => {
       process.env['CODEX_HOME'] = originalCodexHome;
     }
     if (originalCwd === undefined) {
-      delete process.env['SKILLAUDIT_CWD'];
+      delete process.env['SKILL_AUDIT_CWD'];
     } else {
-      process.env['SKILLAUDIT_CWD'] = originalCwd;
+      process.env['SKILL_AUDIT_CWD'] = originalCwd;
     }
     await rm(tempHome, { recursive: true, force: true });
     await rm(tempCwd, { recursive: true, force: true });
@@ -480,12 +480,12 @@ describe('gemini: fixture skill tree', () => {
   let originalCwd: string | undefined;
 
   beforeEach(async () => {
-    tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-gem-home-'));
-    tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-gem-cwd-'));
+    tempHome = await mkdtemp(join(tmpdir(), 'skill-audit-gem-home-'));
+    tempCwd = await mkdtemp(join(tmpdir(), 'skill-audit-gem-cwd-'));
     originalHome = process.env['HOME'];
-    originalCwd = process.env['SKILLAUDIT_CWD'];
+    originalCwd = process.env['SKILL_AUDIT_CWD'];
     process.env['HOME'] = tempHome;
-    process.env['SKILLAUDIT_CWD'] = tempCwd;
+    process.env['SKILL_AUDIT_CWD'] = tempCwd;
 
     await cp(join(FIXTURES, 'gemini', 'extensions'), join(tempHome, '.gemini', 'extensions'), {
       recursive: true,
@@ -527,9 +527,9 @@ describe('gemini: fixture skill tree', () => {
       process.env['HOME'] = originalHome;
     }
     if (originalCwd === undefined) {
-      delete process.env['SKILLAUDIT_CWD'];
+      delete process.env['SKILL_AUDIT_CWD'];
     } else {
-      process.env['SKILLAUDIT_CWD'] = originalCwd;
+      process.env['SKILL_AUDIT_CWD'] = originalCwd;
     }
     await rm(tempHome, { recursive: true, force: true });
     await rm(tempCwd, { recursive: true, force: true });
@@ -600,12 +600,12 @@ describe('cursor: fixture skill tree', () => {
   let originalCwd: string | undefined;
 
   beforeEach(async () => {
-    tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-cur-home-'));
-    tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-cur-cwd-'));
+    tempHome = await mkdtemp(join(tmpdir(), 'skill-audit-cur-home-'));
+    tempCwd = await mkdtemp(join(tmpdir(), 'skill-audit-cur-cwd-'));
     originalHome = process.env['HOME'];
-    originalCwd = process.env['SKILLAUDIT_CWD'];
+    originalCwd = process.env['SKILL_AUDIT_CWD'];
     process.env['HOME'] = tempHome;
-    process.env['SKILLAUDIT_CWD'] = tempCwd;
+    process.env['SKILL_AUDIT_CWD'] = tempCwd;
 
     // Plant user-scoped rule from fixture
     const userRulesDir = join(tempHome, '.cursor', 'rules');
@@ -631,9 +631,9 @@ describe('cursor: fixture skill tree', () => {
       process.env['HOME'] = originalHome;
     }
     if (originalCwd === undefined) {
-      delete process.env['SKILLAUDIT_CWD'];
+      delete process.env['SKILL_AUDIT_CWD'];
     } else {
-      process.env['SKILLAUDIT_CWD'] = originalCwd;
+      process.env['SKILL_AUDIT_CWD'] = originalCwd;
     }
     await rm(tempHome, { recursive: true, force: true });
     await rm(tempCwd, { recursive: true, force: true });
@@ -672,12 +672,12 @@ describe('copilot: fixture skill tree', () => {
   let originalCwd: string | undefined;
 
   beforeEach(async () => {
-    tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-cop-home-'));
-    tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-cop-cwd-'));
+    tempHome = await mkdtemp(join(tmpdir(), 'skill-audit-cop-home-'));
+    tempCwd = await mkdtemp(join(tmpdir(), 'skill-audit-cop-cwd-'));
     originalHome = process.env['HOME'];
-    originalCwd = process.env['SKILLAUDIT_CWD'];
+    originalCwd = process.env['SKILL_AUDIT_CWD'];
     process.env['HOME'] = tempHome;
-    process.env['SKILLAUDIT_CWD'] = tempCwd;
+    process.env['SKILL_AUDIT_CWD'] = tempCwd;
 
     // Plant user-scoped skill from fixture
     const userSkillDir = join(tempHome, '.copilot', 'skills', 'code-reviewer');
@@ -719,9 +719,9 @@ describe('copilot: fixture skill tree', () => {
       process.env['HOME'] = originalHome;
     }
     if (originalCwd === undefined) {
-      delete process.env['SKILLAUDIT_CWD'];
+      delete process.env['SKILL_AUDIT_CWD'];
     } else {
-      process.env['SKILLAUDIT_CWD'] = originalCwd;
+      process.env['SKILL_AUDIT_CWD'] = originalCwd;
     }
     await rm(tempHome, { recursive: true, force: true });
     await rm(tempCwd, { recursive: true, force: true });

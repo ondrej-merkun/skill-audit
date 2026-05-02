@@ -91,7 +91,7 @@ describe('runRules', () => {
   }
 
   beforeEach(async () => {
-    tmpDir = await mkdtemp(join(tmpdir(), 'skillaudit-engine-'));
+    tmpDir = await mkdtemp(join(tmpdir(), 'skill-audit-engine-'));
   });
 
   afterEach(async () => {

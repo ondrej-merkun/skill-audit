@@ -72,7 +72,7 @@ without a commit message explaining why it no longer applies.
 
 - **L1.10 — `scan` does not take a positional fixture path.** _Task 16 first ran `node packages/cli/dist/index.js scan test/fixtures/...` and accidentally scanned the real discovered home skills._
   For built-CLI fixture checks, create a temp home/project and use `HOME`,
-  `USERPROFILE`, and `SKILLAUDIT_CWD` discovery overrides.
+  `USERPROFILE`, and `SKILL_AUDIT_CWD` discovery overrides.
 
 - **L1.11 — Documented maintenance commands must exist and run.** _Task 22 found `anthropic-skills.json` pointing at missing `scripts/vendor-allowlist.ts` and unavailable `tsx`._
   Run any command you document for regenerating shipped data before committing

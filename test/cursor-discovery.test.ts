@@ -11,12 +11,12 @@ describe('cursor discovery plugin', () => {
   let originalSkillauditCwd: string | undefined;
 
   beforeEach(async () => {
-    tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-home-'));
-    tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-cwd-'));
+    tempHome = await mkdtemp(join(tmpdir(), 'skill-audit-home-'));
+    tempCwd = await mkdtemp(join(tmpdir(), 'skill-audit-cwd-'));
     originalHome = process.env['HOME'];
-    originalSkillauditCwd = process.env['SKILLAUDIT_CWD'];
+    originalSkillauditCwd = process.env['SKILL_AUDIT_CWD'];
     process.env['HOME'] = tempHome;
-    process.env['SKILLAUDIT_CWD'] = tempCwd;
+    process.env['SKILL_AUDIT_CWD'] = tempCwd;
   });
 
   afterEach(async () => {
@@ -26,9 +26,9 @@ describe('cursor discovery plugin', () => {
       process.env['HOME'] = originalHome;
     }
     if (originalSkillauditCwd === undefined) {
-      delete process.env['SKILLAUDIT_CWD'];
+      delete process.env['SKILL_AUDIT_CWD'];
     } else {
-      process.env['SKILLAUDIT_CWD'] = originalSkillauditCwd;
+      process.env['SKILL_AUDIT_CWD'] = originalSkillauditCwd;
     }
     await rm(tempHome, { recursive: true, force: true });
     await rm(tempCwd, { recursive: true, force: true });
