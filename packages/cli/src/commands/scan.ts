@@ -93,6 +93,7 @@ const SUPPORTED_SCAN_AGENTS = new Set([
   'copilot',
   'codex',
   'gemini',
+  'windsurf',
   'cross-agent',
 ]);
 
