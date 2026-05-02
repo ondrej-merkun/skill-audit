@@ -281,7 +281,12 @@ keep execution in the main thread with a simpler timeout strategy
 
 ## 5. Cloud enrichment layer
 
-### Tier-1 enrichment calls (default on, 5s timeout, fail-silent)
+Enrichment is disabled in the current user-facing CLI and docs. Keep the
+implementation code for now, but do not expose enrichment commands, help text,
+or output until a new version can reliably identify the correct upstream data
+from only the local directory name and `SKILL.md` contents.
+
+### Tier-1 enrichment calls (disabled design notes, 5s timeout, fail-silent)
 
 **skills.sh audit endpoint.** For every skill whose `package.json`/`SKILL.md`/git-remote resolves to a `<owner>/<repo>` on GitHub, call:
 ```
@@ -314,7 +319,6 @@ Merge into the finding pipeline as three Info-level enrichment signals; if any r
 All caches include `fetched_at`. TTL stale-cache is served when enrichment API fails; annotated `(cached, stale)` in output. Never blocks scan.
 
 ### Graceful degradation
-- Offline? Skip all enrichment with a single stderr line: `ℹ Running offline — scan is local-only`.
 - Rate-limited? Serve stale cache + proceed.
 - Skills.sh endpoint 500s? Fall back to HTML scrape; if that fails, emit Info note and continue.
 - Zero enrichment is always a complete scan — the local analyzer is the product; cloud is the garnish.
@@ -369,7 +373,6 @@ Before changing these integrations, verify the current external contract:
   Skills scanned ............ 47
   Unique issues ............. 18  (4 critical, 5 high, 6 medium, 3 low)
   Compromised skills ........ 8   (17% of installed)
-  Enrichment ................ skills.sh ✓  github ✓  deps.dev ✓
   Duration .................. 1.32s
 
   →  skill-audit explain polymarket-trader    See full findings
@@ -415,12 +418,6 @@ polymarket-trader
      │ unzip -P "infected123" helper.zip && ./helper
      → Password-protected archive from release — AV evasion pattern
        documented in Snyk ClawHavoc IOCs.
-
-  Enrichment
-  ──────────
-  skills.sh:   Gen=Critical  Socket=7 alerts  Snyk=Critical
-  github.com:  2 stars, 4 days old, 1 contributor, 0 releases
-               maintainer account created 7 days ago ⚠
 
   Next steps
   ──────────
@@ -470,8 +467,6 @@ Single standalone HTML file (inlined CSS + JS). Layout:
       "fix": "Remove instructions that append credentials to URLs.",
       "cwe": ["CWE-200"]
     }],
-    "enrichment": { "skills_sh": { "gen": "Critical", "socket_alerts": 7, "snyk": "Critical" },
-                    "github": { "stars": 2, "age_days": 4, "contributors": 1 } },
     "summary": { "critical": 3, "high": 0, "medium": 0, "low": 0, "info": 2,
                  "score": 0, "verdict": "FAIL", "mandatory_fail": ["PI-EXFIL-TRIGGER-CLAUSE"] }
   }],
@@ -487,7 +482,6 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 | `skill-audit scan --agent claude-code` | Restrict to one agent |
 | `skill-audit scan --include-marketplaces` | Include inactive local marketplace inventory and label it separately |
 | `skill-audit scan --json` / `--html <file>` / `--summary` | Output formats |
-| `skill-audit scan --offline` | Skip all enrichment |
 | `skill-audit scan --llm <name>` | Optional local LLM review; repeat, comma-separate, or use `all` |
 | `skill-audit scan --strict` | REVIEW becomes FAIL; exit non-zero |
 | `skill-audit llm add <name> --base-url <url> --model <id>` | Store a loopback OpenAI-compatible local model |
@@ -502,7 +496,7 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 - `0` — all PASS
 - `1` — any REVIEW or FAIL (configurable: `--fail-on=fail`, `--fail-on=review`, `--fail-on=any`)
 - `2` — tool error
-- `3` — scan incomplete (offline + required enrichment)
+- `3` — scan incomplete
 
 **Interactivity.** Zero prompts at MVP. No "Press y to continue". No auth flow. Running the binary with no args performs a full scan. The single most-important UX rule: **a first-time user can type the install command, hit enter, and be reading the result in under 5 seconds.**
 
@@ -531,7 +525,6 @@ Configuration is local-first:
 Scan review stays bounded and redacted:
 
 - `skill-audit scan` with no `--llm` performs no model requests.
-- `--offline --llm <name>` validates the configured model name but skips review.
 - `--llm <name>` accepts repeated flags, comma-separated names, or `all` for
   every enabled configured local model.
 - Each selected model receives the same prompt version and normalized payload:

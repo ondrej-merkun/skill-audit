@@ -3,6 +3,7 @@ import { stripVTControlCharacters } from 'node:util';
 import { loadIgnoreList } from '../allowlist/ignore.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
 import {
+  ENRICHMENT_ENABLED,
   enrichAllWithOutcomes,
   skippedEnrichmentOutcomes,
   summarizeEnrichmentOutcomes,
@@ -98,6 +99,7 @@ const SUPPORTED_SCAN_AGENTS = new Set([
 export function selectScanEnrichmentSources(
   options: Pick<ScanOptions, 'json' | 'summary' | 'html'>
 ): EnrichmentSource[] {
+  if (!ENRICHMENT_ENABLED) return [];
   if (options.summary) return [];
   if (options.json || options.html !== undefined) return ['skillsSh', 'github', 'depsdev'];
   return ['skillsSh', 'github', 'depsdev'];
@@ -320,8 +322,10 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     process.exit(2);
   }
 
-  if (options.offline) {
+  if (options.offline && ENRICHMENT_ENABLED) {
     process.stderr.write('[skill-audit] offline mode — enrichment skipped\n');
+  }
+  if (options.offline) {
     if (selectedLlmConfigs.length > 0) {
       process.stderr.write('[skill-audit] offline mode — LLM review skipped\n');
     }
@@ -409,12 +413,18 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   }
 
   const enrichmentSources = selectScanEnrichmentSources(options);
-  let enrichmentStatus: EnrichmentStatus = options.offline ? 'skipped-offline' : 'not-run';
+  let enrichmentStatus: EnrichmentStatus =
+    ENRICHMENT_ENABLED && options.offline ? 'skipped-offline' : 'not-run';
   let enrichmentOutcomes: EnrichmentSourceOutcome[] | undefined;
-  if (options.offline && enrichmentSources.length > 0) {
+  if (ENRICHMENT_ENABLED && options.offline && enrichmentSources.length > 0) {
     enrichmentOutcomes = skippedEnrichmentOutcomes(enrichmentSources);
   }
-  if (!options.offline && scannedSkills.length > 0 && enrichmentSources.length > 0) {
+  if (
+    ENRICHMENT_ENABLED &&
+    !options.offline &&
+    scannedSkills.length > 0 &&
+    enrichmentSources.length > 0
+  ) {
     progress.startEnrichment(enrichmentSources);
     const enrichments = await enrichAllWithOutcomes(scannedSkills, { sources: enrichmentSources });
     const allOutcomes: EnrichmentSourceOutcome[] = [];

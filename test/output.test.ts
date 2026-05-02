@@ -584,10 +584,10 @@ describe('renderTableToString', () => {
     expect(out).toContain('0 OSV');
   });
 
-  it('renders neutral enrichment when no table enrichment data exists', () => {
+  it('omits enrichment when no table enrichment data exists', () => {
     const out = stripAnsi(renderTableToString(makeScanResult()));
-    expect(out).toContain('ENRICHMENT');
-    expect(out).toContain(' - ');
+    expect(out).not.toContain('ENRICHMENT');
+    expect(out).not.toContain('Enrichment');
   });
 
   it('omits the enrichment column when enrichment was skipped for offline mode', () => {
@@ -1346,7 +1346,7 @@ describe('renderJson', () => {
       'ignored',
       'findings',
       'llm_reviews',
-      'enrichment',
+      'summary',
     ]);
   });
 
@@ -1375,12 +1375,9 @@ describe('renderJson', () => {
     });
   });
 
-  it('omits enrichment keys that are absent', () => {
+  it('omits enrichment when all enrichment keys are absent', () => {
     const json = JSON.parse(renderJson(makeScanResult()));
-    const enrich = json.skills[0].enrichment;
-    expect(enrich).not.toHaveProperty('skills_sh');
-    expect(enrich).not.toHaveProperty('github');
-    expect(enrich).not.toHaveProperty('deps_dev');
+    expect(json.skills[0]).not.toHaveProperty('enrichment');
   });
 
   it('serializes top-level summary with snake_case keys', () => {
@@ -1495,16 +1492,15 @@ describe('renderHtml', () => {
     expect(html).not.toContain('0 contributors');
   });
 
-  it('renders neutral HTML enrichment states when sources are missing', async () => {
+  it('omits HTML enrichment UI when sources are missing', async () => {
     const { renderHtml } = await import('../packages/cli/src/output/html.js');
     const html = renderHtml(makeScanResult({ skills: [makeSkill({ enrichment: {} })] }));
 
-    expect(html).toContain('<th>Enrichment</th>');
-    expect(html).toContain('<span>skills.sh</span> —');
-    expect(html).toContain('<span>GitHub</span> —');
-    expect(html).toContain('<span>deps.dev</span> —');
-    expect(html).toContain("addRow('skills.sh', '—', true)");
-    expect(html).toContain('OSV advisories');
+    expect(html).not.toContain('<th>Enrichment</th>');
+    expect(html).not.toContain('class="enrichment-cell"');
+    expect(html).not.toContain('<span>skills.sh</span> —');
+    expect(html).not.toContain('<span>GitHub</span> —');
+    expect(html).not.toContain('<span>deps.dev</span> —');
   });
 
   it('renders friendly agent names in visible HTML while keeping raw filter ids', async () => {

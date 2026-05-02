@@ -18,6 +18,7 @@ vi.mock('../packages/cli/src/rules/engine.js', () => ({
 }));
 
 vi.mock('../packages/cli/src/enrich/index.js', () => ({
+  ENRICHMENT_ENABLED: false,
   enrichAllWithOutcomes: vi.fn(async (skills: Skill[]) =>
     skills.map(() => ({
       enrichment: {},
@@ -370,17 +371,20 @@ describe('runScan flag wiring', () => {
     expect(() => JSON.parse(out)).not.toThrow();
   });
 
-  it('default scan enriches only sources shown in the table', async () => {
+  it('default scan does not run disabled enrichment', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
 
     await runScan({});
 
-    expect(enrichAllWithOutcomes).toHaveBeenCalledWith(expect.any(Array), {
-      sources: ['skillsSh', 'github', 'depsdev'],
-    });
+    const out = stripAnsi(stdoutChunks.join(''));
+    const stderr = stripAnsi(stderrChunks.join(''));
+    expect(enrichAllWithOutcomes).not.toHaveBeenCalled();
+    expect(out).not.toContain('ENRICHMENT');
+    expect(out).not.toContain('Enrichment');
+    expect(stderr).not.toContain('Enriching');
   });
 
-  it('writes live scan and enrichment progress only to stderr for pretty output', async () => {
+  it('writes live scan progress only to stderr for pretty output', async () => {
     makeInteractiveTTY();
     vi.mocked(discoverAll).mockResolvedValue([
       makeSkill({ id: 'one', name: 'one', path: '/tmp/one', treeSha256: 'one' }),
@@ -395,14 +399,12 @@ describe('runScan flag wiring', () => {
     expect(stdout).not.toContain('Scanning skills');
     expect(stderr).toContain('Scanning skills 1/2');
     expect(stderr).toContain('Scanning skills 2/2');
-    expect(stderr).toContain('Enriching with skills.sh, GitHub, deps.dev');
-    expect(stderr).toContain('skills.sh no metadata');
-    expect(stderr).toContain('deps.dev no metadata');
-    expect(stderr).not.toContain('skills.sh ✓');
-    expect(stderr).not.toContain('deps.dev ✓');
+    expect(stderr).not.toContain('Enriching');
+    expect(stderr).not.toContain('skills.sh');
+    expect(stderr).not.toContain('deps.dev');
   });
 
-  it('default scan explains when selected enrichment sources find no metadata', async () => {
+  it('default scan hides enrichment when disabled even if sources would find no metadata', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     vi.mocked(enrichAllWithOutcomes).mockResolvedValue([
       {
@@ -418,12 +420,13 @@ describe('runScan flag wiring', () => {
     await runScan({});
 
     const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).toContain('Enrichment');
-    expect(out).toContain('skills.sh no metadata');
-    expect(out).toContain('deps.dev no metadata');
+    expect(enrichAllWithOutcomes).not.toHaveBeenCalled();
+    expect(out).not.toContain('Enrichment');
+    expect(out).not.toContain('skills.sh');
+    expect(out).not.toContain('deps.dev');
   });
 
-  it('default scan explains when aggregate enrichment lookup fails', async () => {
+  it('default scan hides enrichment when disabled even if aggregate lookup would fail', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     vi.mocked(enrichAllWithOutcomes).mockResolvedValue([
       {
@@ -439,31 +442,33 @@ describe('runScan flag wiring', () => {
     await runScan({});
 
     const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).toContain('Enrichment');
-    expect(out).toContain('skills.sh unavailable');
-    expect(out).toContain('deps.dev unavailable');
+    expect(enrichAllWithOutcomes).not.toHaveBeenCalled();
+    expect(out).not.toContain('Enrichment');
+    expect(out).not.toContain('skills.sh');
+    expect(out).not.toContain('deps.dev');
   });
 
-  it('--json requests all enrichment sources for machine output', async () => {
+  it('--json does not request disabled enrichment sources for machine output', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
 
     await runScan({ json: true });
 
-    expect(enrichAllWithOutcomes).toHaveBeenCalledWith(expect.any(Array), {
-      sources: ['skillsSh', 'github', 'depsdev'],
-    });
+    const json = JSON.parse(stdoutChunks.join(''));
+    expect(enrichAllWithOutcomes).not.toHaveBeenCalled();
+    expect(json.skills[0]).not.toHaveProperty('enrichment');
   });
 
-  it('--html requests all enrichment sources displayed in the report panel', async () => {
+  it('--html does not request disabled enrichment sources or render enrichment UI', async () => {
     await withTempDir(async (dir) => {
       vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
       const html = join(dir, 'report.html');
 
       await runScan({ html });
 
-      expect(enrichAllWithOutcomes).toHaveBeenCalledWith(expect.any(Array), {
-        sources: ['skillsSh', 'github', 'depsdev'],
-      });
+      const htmlOut = await readFile(html, 'utf-8');
+      expect(enrichAllWithOutcomes).not.toHaveBeenCalled();
+      expect(htmlOut).not.toContain('<th>Enrichment</th>');
+      expect(htmlOut).not.toContain('class="enrichment-cell"');
     });
   });
 
@@ -698,12 +703,13 @@ describe('runScan flag wiring', () => {
     expect(errOut).toContain('claude-code');
   });
 
-  it('--offline writes notice to stderr', async () => {
+  it('hidden --offline compatibility flag does not mention enrichment', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     await runScan({ offline: true });
     const errOut = stripAnsi(stderrChunks.join(''));
     const out = stripAnsi(stdoutChunks.join(''));
-    expect(errOut).toContain('offline mode');
+    expect(errOut).not.toContain('enrichment');
+    expect(errOut).not.toContain('offline mode');
     expect(out).not.toContain('ENRICHMENT');
   });
 

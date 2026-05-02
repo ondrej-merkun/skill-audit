@@ -27,7 +27,7 @@ produce shareable CLI output without an account.
 
 | Tool | Best fit | Account or token | Agent discovery | Output | Rule/model approach |
 |---|---|---|---|---|---|
-| **skill-audit** | Local skill and instruction audit before installing, sharing, or running agent workflows | No account; `--offline` disables optional metadata lookups | Claude Code, Codex, Copilot, Cursor, Gemini CLI, and cross-agent project files | Table, summary, JSON, HTML, file output, GitHub Action | Deterministic local rules plus optional `skills.sh`, GitHub, and `deps.dev` metadata |
+| **skill-audit** | Local skill and instruction audit before installing, sharing, or running agent workflows | No account | Claude Code, Codex, Copilot, Cursor, Gemini CLI, and cross-agent project files | Table, summary, JSON, HTML, file output, GitHub Action | Deterministic local rules |
 | [**Snyk Agent Scan**](https://github.com/snyk/agent-scan) | Agent/MCP/skill security scanning with Snyk-backed verification and enterprise monitoring options | Requires `SNYK_TOKEN` for CLI scanning | MCP configs, tools, prompts, resources, and skills across many agents; skills require `--skills` | Rich CLI, JSON, background/enterprise modes | Local checks plus Agent Scan API analysis |
 | [**Cisco AI Security Scanner / Skill Scanner**](https://cisco-ai-defense.github.io/docs/ai-security-scanner) | IDE-centered agent asset review, skill scanning, allowlists, and optional deeper analyzers | Basic YARA scanning runs without setup; LLM, Cisco AI Defense, and VirusTotal analyzers need provider/API keys | VS Code, Cursor, Windsurf, Antigravity extension commands for MCP configs and skills | IDE sidebar, Problems panel, SARIF via the underlying scanner | YARA and behavioral analysis, with optional LLM/cloud/VT analyzers |
 | [**Semgrep CLI**](https://semgrep.dev/docs/getting-started/cli) | General source-code SAST and custom rule development | `semgrep scan` can run locally without an account; `semgrep ci` uses Semgrep AppSec Platform login/policies | Code repositories, not agent-skill inventory | CLI findings, CI integrations, Semgrep platform workflows | Language-aware static analysis rules |
@@ -52,7 +52,6 @@ skill-audit ignore <name>      # add a skill's treeSha256 to your ignore list
 | `--agent <id>` | Restrict to one agent (`claude-code`, `codex`, `copilot`, `cursor`, `gemini`, `cross-agent`) |
 | `--include-marketplaces` | Include inactive local marketplace inventory and label rows as `marketplace` |
 | `-o, --output <file>` | Write the selected non-HTML scan output to file |
-| `--offline` | Skip optional enrichment lookups to `skills.sh`, GitHub, and `deps.dev` |
 | `--strict` | Treat REVIEW as FAIL for exit-code purposes |
 | `--fail-on <band>` | Override exit-code threshold (`REVIEW` or `FAIL`) |
 | `--html <file>` | Write standalone HTML report to file |
@@ -60,20 +59,20 @@ skill-audit ignore <name>      # add a skill's treeSha256 to your ignore list
 ## What Leaves The Machine
 
 Rule scanning is local. Skill contents are read from disk and matched on your
-machine; they are not uploaded by `skill-audit`. Optional enrichment may make
-metadata lookups unless you pass `--offline`.
+machine; they are not uploaded by `skill-audit`. User-facing scan, list,
+explain, JSON, and HTML flows do not contact enrichment services in this
+version.
 
 For the full security boundary, see [`THREAT_MODEL.md`](THREAT_MODEL.md).
 
 | Command or mode | Local reads | Network by default | What may be sent |
 |---|---|---|---|
 | `skill-audit list` | Skill paths and manifests for discovery | No | Nothing |
-| `skill-audit scan` | Skill contents and dependency manifests | `skills.sh`, GitHub, `deps.dev` when metadata exists | GitHub repository slug, dependency package names; `GITHUB_TOKEN` is used only as an API token if set |
+| `skill-audit scan` | Skill contents and dependency manifests | No | Nothing |
 | `skill-audit scan --summary` | Skill contents | No | Nothing |
-| `skill-audit scan --json` | Skill contents and dependency manifests | `skills.sh`, GitHub, `deps.dev` when metadata exists | GitHub repository slug, dependency package names; `GITHUB_TOKEN` is used only as an API token if set |
-| `skill-audit scan --html <file>` | Skill contents and dependency manifests | `skills.sh`, GitHub, `deps.dev` when metadata exists | GitHub repository slug, dependency package names; `GITHUB_TOKEN` is used only as an API token if set |
-| `skill-audit explain <name>` | Selected skill contents and dependency manifests | `skills.sh`, GitHub, `deps.dev` when metadata exists | GitHub repository slug, dependency package names; `GITHUB_TOKEN` is used only as an API token if set |
-| Any scan mode with `--offline` | Same local reads as the selected mode | No | Nothing |
+| `skill-audit scan --json` | Skill contents and dependency manifests | No | Nothing |
+| `skill-audit scan --html <file>` | Skill contents and dependency manifests | No | Nothing |
+| `skill-audit explain <name>` | Selected skill contents | No | Nothing |
 
 ## Example Findings
 
@@ -165,22 +164,6 @@ pipe-to-shell.
           "cwe": ["CWE-200"]
         }
       ],
-      "enrichment": {
-        "skills_sh": {
-          "gen": "high",
-          "socket_alerts": 2,
-          "snyk": "critical"
-        },
-        "github": {
-          "stars": 0,
-          "age_days": 10,
-          "contributors": 1
-        },
-        "deps_dev": {
-          "osv_advisories": 1,
-          "scorecard_score": null
-        }
-      },
       "summary": {
         "critical": 1,
         "high": 0,
@@ -243,7 +226,6 @@ jobs:
       - uses: ondrej-merkun/skill-audit@v1
         with:
           fail-on: REVIEW
-          offline: true
           results-file: skill-audit-results.json
 ```
 
@@ -256,9 +238,8 @@ Please use private vulnerability reporting. See [`../SECURITY.md`](../SECURITY.m
 Your skills contain your custom instructions, tool configs, and potentially
 secrets. Sending skill contents to a cloud service to scan them is the threat
 model we're trying to prevent. Rule scanning runs on your machine and there is
-no telemetry. By default, some output modes may make enrichment lookups to
-`skills.sh`, GitHub, or `deps.dev` using package/repository metadata. Pass
-`--offline` when you want the scan to make no network requests.
+no telemetry. User-facing scan, list, explain, JSON, and HTML flows do not
+perform enrichment lookups in this version.
 
 **How does this compare to Snyk's `mcp-scan`?**
 Snyk's scanner is excellent and has a larger rule set. It requires a

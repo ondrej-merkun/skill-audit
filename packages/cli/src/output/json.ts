@@ -73,6 +73,8 @@ function serializeLlmReview(review: LlmReviewResult): object {
 }
 
 function serializeSkill(s: ScannedSkill): object {
+  const enrichment = serializeEnrichment(s.enrichment);
+  const hasEnrichment = Object.keys(enrichment).length > 0;
   return {
     id: s.id,
     agent_id: s.agentId,
@@ -88,7 +90,7 @@ function serializeSkill(s: ScannedSkill): object {
     ignored: s.ignored === true,
     findings: s.findings.map(serializeFinding),
     ...(s.llmReviews !== undefined ? { llm_reviews: s.llmReviews.map(serializeLlmReview) } : {}),
-    enrichment: serializeEnrichment(s.enrichment),
+    ...(hasEnrichment ? { enrichment } : {}),
     summary: {
       critical: s.summary.critical,
       high: s.summary.high,

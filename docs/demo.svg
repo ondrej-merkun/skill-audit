@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1000" height="640" viewBox="0 0 1000 640" role="img" aria-labelledby="title desc">
   <title id="title">skill-audit terminal demo</title>
-  <desc id="desc">A terminal screenshot showing skill-audit scan --offline --agent claude-code with current risk-first scan results and summary footer.</desc>
+  <desc id="desc">A terminal screenshot showing skill-audit scan --agent claude-code with current risk-first scan results and summary footer.</desc>
   <defs>
     <linearGradient id="screen" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#111827"/>
@@ -30,9 +30,7 @@
 
   <g clip-path="url(#terminal-body)" font-family="SFMono-Regular, Consolas, 'Liberation Mono', monospace" font-size="14">
     <text x="82" y="108" fill="#22c55e">$</text>
-    <text x="104" y="108" fill="#e5e7eb">skill-audit scan --offline --agent claude-code</text>
-
-    <text x="82" y="140" fill="#fbbf24">[skill-audit] offline mode &#8212; enrichment skipped</text>
+    <text x="104" y="108" fill="#e5e7eb">skill-audit scan --agent claude-code</text>
 
     <rect x="82" y="162" width="836" height="58" rx="6" fill="#020617" stroke="#334155"/>
     <text x="104" y="198" fill="#e5e7eb">skill-audit  scanned 3 skills across 1 agent in 0.0s</text>
@@ -74,7 +72,6 @@
     <text x="92" y="454" fill="#e5e7eb">Agents scanned............ Claude Code: 3</text>
     <text x="92" y="478" fill="#e5e7eb">Unique issues............. 2  (2 critical, 0 high, 0 medium, 0 low)</text>
     <text x="92" y="502" fill="#e5e7eb">Compromised skills........ 2   (67% of installed)</text>
-    <text x="92" y="526" fill="#e5e7eb">Enrichment................ skills.sh skipped  GitHub skipped  deps.dev skipped</text>
   </g>
 
   <g font-family="SFMono-Regular, Consolas, 'Liberation Mono', monospace" font-size="13">

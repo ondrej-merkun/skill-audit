@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import { formatAgentName } from '../agent-names.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
 import {
+  ENRICHMENT_ENABLED,
   enrichSkillWithOutcomes,
   skippedEnrichmentOutcomes,
   summarizeEnrichmentOutcomes,
@@ -224,12 +225,14 @@ export async function runExplain(
   const summary = scoreFindings(findings, target.treeSha256);
 
   let enrichment: Enrichment = {};
-  let enrichmentStatus: EnrichmentStatus = options.offline ? 'skipped-offline' : 'not-run';
+  let enrichmentStatus: EnrichmentStatus =
+    ENRICHMENT_ENABLED && options.offline ? 'skipped-offline' : 'not-run';
   const enrichmentSources = ['skillsSh', 'github', 'depsdev'] as const;
-  let enrichmentOutcomes: EnrichmentSourceOutcome[] | undefined = options.offline
-    ? skippedEnrichmentOutcomes([...enrichmentSources])
-    : undefined;
-  if (!options.offline) {
+  let enrichmentOutcomes: EnrichmentSourceOutcome[] | undefined =
+    ENRICHMENT_ENABLED && options.offline
+      ? skippedEnrichmentOutcomes([...enrichmentSources])
+      : undefined;
+  if (ENRICHMENT_ENABLED && !options.offline) {
     progress.startEnrichment([...enrichmentSources]);
     const result = await enrichSkillWithOutcomes(target, { sources: [...enrichmentSources] });
     enrichment = result.enrichment;

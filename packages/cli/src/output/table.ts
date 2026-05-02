@@ -107,9 +107,21 @@ function enrichmentDetails(skill: ScannedSkill): string {
   return parts.length > 0 ? parts.join('  ') : C_GREY('-');
 }
 
+function hasEnrichmentDetails(skill: ScannedSkill): boolean {
+  return (
+    skill.enrichment.skillsSh !== undefined ||
+    skill.enrichment.github !== undefined ||
+    skill.enrichment.depsdev !== undefined
+  );
+}
+
 export function renderTableToString(result: ScanResult): string {
   const { skills, scan, agents, summary } = result;
-  const showEnrichmentColumn = result.enrichmentStatus !== 'skipped-offline';
+  const showEnrichmentColumn =
+    skills.some(hasEnrichmentDetails) ||
+    (result.enrichmentOutcomes !== undefined && result.enrichmentOutcomes.length > 0) ||
+    result.enrichmentStatus === 'no-metadata' ||
+    result.enrichmentStatus === 'unavailable';
   const showInstallStateColumn = skills.some(
     (skill) => installStateLabel(skill.installState) === 'marketplace'
   );

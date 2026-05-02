@@ -31,23 +31,14 @@ The CLI inherits the user's process environment like any local command. Rules
 look for patterns that read or exfiltrate environment variables, but
 `skill-audit` should not print environment variable values as part of findings.
 
-`GITHUB_TOKEN`, when present, may be used only as an API token for optional
-GitHub metadata enrichment. It is not sent to skills, written into reports, or
-used during local rule evaluation.
+`GITHUB_TOKEN`, when present, is not used by the deterministic scan. It is not
+sent to skills, written into reports, or used during local rule evaluation.
 
-## Network Enrichment
+## Network Access
 
-Core scanning is local. Optional enrichment may contact external metadata
-services when the selected output mode displays or serializes that data:
-
-- `skills.sh` may receive a GitHub repository slug.
-- GitHub may receive a repository slug and, if set, `GITHUB_TOKEN` as an API
-  credential.
-- `deps.dev` may receive dependency package names from scanned manifests.
-
-`--offline` disables all enrichment network calls. Enrichment failures must not
-block scanning; stale cache fallback or omitted metadata is safer than making
-scan verdicts depend on a network service.
+Core scanning is local. The user-facing scan, list, explain, JSON, and HTML
+flows do not contact external metadata services in this version; scan verdicts
+come from local discovery and deterministic rules.
 
 ## Rule Updates
 
@@ -73,13 +64,12 @@ why findings were suppressed.
 
 The GitHub Action runs `skill-audit` in CI against repository content and any
 agent files present in the checked-out workspace. It should use the same local
-rule engine and optional enrichment boundaries as the CLI.
+rule engine boundaries as the CLI.
 
 Action runs should not require long-lived publish or scan secrets. If a token is
-available through GitHub Actions, it should be scoped to the job need and used
-only for the documented metadata or publishing operation. Reports generated in
-CI should be treated as potentially sensitive because snippets and file paths
-can reveal repository internals.
+available through GitHub Actions, it should be scoped to the job need. Reports
+generated in CI should be treated as potentially sensitive because snippets and
+file paths can reveal repository internals.
 
 ## False Positives
 

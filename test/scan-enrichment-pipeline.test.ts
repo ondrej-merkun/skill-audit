@@ -144,7 +144,7 @@ describe('scan enrichment pipeline', () => {
     vi.unstubAllGlobals();
   });
 
-  it('populates the pretty scan enrichment column from discovered skill metadata', async () => {
+  it('does not populate pretty scan enrichment while enrichment is disabled', async () => {
     const dir = await mkdtemp(join(testHome, 'skill-'));
     await writeFile(join(dir, 'SKILL.md'), '# Source Skill\n');
     await writeFile(
@@ -159,18 +159,16 @@ describe('scan enrichment pipeline', () => {
     await runScan({});
 
     const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).toContain('ENRICHMENT');
-    expect(out).toContain('Gen=Low');
-    expect(out).toContain('Socket=1');
-    expect(out).toContain('Snyk=Pass');
-    expect(out).toContain('GitHub=7 stars');
-    expect(out).toContain('2 contributors');
-    expect(out).toContain('1 OSV advisory');
+    expect(out).not.toContain('ENRICHMENT');
+    expect(out).not.toContain('Gen=Low');
+    expect(out).not.toContain('GitHub=7 stars');
+    expect(out).not.toContain('1 OSV advisory');
     expect(out).not.toContain('no metadata found');
+    expect(fetch).not.toHaveBeenCalled();
     expect(stripAnsi(stderrChunks.join(''))).toBe('');
   });
 
-  it('populates JSON and HTML enrichment from the same provider contracts', async () => {
+  it('omits JSON and HTML enrichment while enrichment is disabled', async () => {
     const dir = await mkdtemp(join(testHome, 'json-html-skill-'));
     const htmlPath = join(testHome, 'report.html');
     await writeFile(join(dir, 'SKILL.md'), '# Source Skill\n');
@@ -185,28 +183,22 @@ describe('scan enrichment pipeline', () => {
 
     await runScan({ json: true });
     const json = JSON.parse(stdoutChunks.join('')) as {
-      skills: Array<{
-        enrichment: {
-          skills_sh: { socket_alerts: number };
-          deps_dev: { osv_advisories: number; scorecard_score: number };
-        };
-      }>;
+      skills: Array<Record<string, unknown>>;
     };
-    expect(json.skills[0]?.enrichment.skills_sh.socket_alerts).toBe(1);
-    expect(json.skills[0]?.enrichment.deps_dev.osv_advisories).toBe(1);
-    expect(json.skills[0]?.enrichment.deps_dev.scorecard_score).toBe(6.5);
+    expect(json.skills[0]).not.toHaveProperty('enrichment');
 
     stdoutChunks = [];
     stderrChunks = [];
     await runScan({ html: htmlPath });
     const html = await readFile(htmlPath, 'utf8');
-    expect(html).toContain('Gen=Low');
-    expect(html).toContain('1 OSV advisories');
-    expect(html).toContain('scorecard 6.5');
+    expect(html).not.toContain('<th>Enrichment</th>');
+    expect(html).not.toContain('Gen=Low');
+    expect(html).not.toContain('1 OSV advisories');
+    expect(fetch).not.toHaveBeenCalled();
     expect(stripAnsi(stderrChunks.join(''))).toContain(`HTML report written to ${htmlPath}`);
   });
 
-  it('keeps unavailable GitHub contributors unknown across pretty, JSON, and HTML output', async () => {
+  it('does not fetch GitHub contributors while enrichment is disabled', async () => {
     const dir = await mkdtemp(join(testHome, 'unknown-contrib-skill-'));
     const htmlPath = join(testHome, 'unknown-contrib.html');
     await writeFile(join(dir, 'SKILL.md'), '# Unknown Contributor Skill\n');
@@ -218,27 +210,26 @@ describe('scan enrichment pipeline', () => {
 
     await runScan({});
     const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).toContain('GitHub=11 stars');
-    expect(out).toContain('contributors unknown');
+    expect(out).not.toContain('GitHub=11 stars');
+    expect(out).not.toContain('contributors unknown');
     expect(out).not.toContain('0 contributors');
 
     stdoutChunks = [];
     stderrChunks = [];
     await runScan({ json: true });
-    const json = JSON.parse(stdoutChunks.join('')) as {
-      skills: Array<{ enrichment: { github: { contributors: number | null } } }>;
-    };
-    expect(json.skills[0]?.enrichment.github.contributors).toBeNull();
+    const json = JSON.parse(stdoutChunks.join('')) as { skills: Array<Record<string, unknown>> };
+    expect(json.skills[0]).not.toHaveProperty('enrichment');
 
     stdoutChunks = [];
     stderrChunks = [];
     await runScan({ html: htmlPath });
     const html = await readFile(htmlPath, 'utf8');
-    expect(html).toContain('contributors unknown');
-    expect(html).not.toContain('0 contributors');
+    expect(html).not.toContain('<th>Enrichment</th>');
+    expect(html).not.toContain('class="enrichment-cell"');
+    expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('populates deps.dev enrichment from a nested tool manifest', async () => {
+  it('does not populate deps.dev enrichment from a nested tool manifest while disabled', async () => {
     const dir = await mkdtemp(join(testHome, 'nested-skill-'));
     await mkdir(join(dir, 'tools', 'node-helper'), { recursive: true });
     await writeFile(join(dir, 'SKILL.md'), '# Nested Source Skill\n');
@@ -255,9 +246,10 @@ describe('scan enrichment pipeline', () => {
     await runScan({});
 
     const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).toContain('ENRICHMENT');
-    expect(out).toContain('GitHub=7 stars');
-    expect(out).toContain('1 OSV advisory');
+    expect(out).not.toContain('ENRICHMENT');
+    expect(out).not.toContain('GitHub=7 stars');
+    expect(out).not.toContain('1 OSV advisory');
+    expect(fetch).not.toHaveBeenCalled();
     expect(stripAnsi(stderrChunks.join(''))).toBe('');
   });
 });

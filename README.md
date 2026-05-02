@@ -28,8 +28,8 @@ files, then shows the riskiest result first in a colorized verdict table.
 npx skill-audit
 ```
 
-Core rule scanning runs on your machine. Optional enrichment can query
-`skills.sh`, GitHub, and `deps.dev`; use `--offline` for a no-network scan.
+Rule scanning runs on your machine. This version does not perform enrichment
+lookups in the user-facing CLI.
 
 ## Install
 
@@ -48,10 +48,10 @@ The default scan sorts findings by risk, so the first row is the next thing to
 review.
 
 ```text
-AGENT         SKILL                    VERDICT   SCORE   ENRICHMENT   TOP ISSUE
-Claude Code   obfuscated-eval-skill    FAIL      50      -            CODEEXEC-JS-EVAL-FUNCTION
-Claude Code   webhook-exfil-skill      FAIL      75      -            NET-WEBHOOK-KNOWN
-Codex         review-helper            REVIEW    82      -            PI-OVERRIDE
+AGENT         SKILL                    VERDICT   SCORE   TOP ISSUE
+Claude Code   obfuscated-eval-skill    FAIL      50      CODEEXEC-JS-EVAL-FUNCTION
+Claude Code   webhook-exfil-skill      FAIL      75      NET-WEBHOOK-KNOWN
+Codex         review-helper            REVIEW    82      PI-OVERRIDE
 ```
 
 - **FAIL** means a high-risk or mandatory-fail rule fired. Remove or review the
@@ -64,14 +64,13 @@ Codex         review-helper            REVIEW    82      -            PI-OVERRID
 Investigate one row with:
 
 ```bash
-skill-audit explain obfuscated-eval-skill --offline
+skill-audit explain obfuscated-eval-skill
 ```
 
 ## Common Commands
 
 ```bash
 skill-audit scan                                      # default scan
-skill-audit scan --offline                           # local-only, no enrichment
 skill-audit scan --agent claude-code                 # restrict discovery
 skill-audit scan --include-marketplaces              # include inactive local marketplace inventory
 skill-audit scan --json -o skill-audit-report.json   # machine-readable report

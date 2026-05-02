@@ -18,6 +18,7 @@ vi.mock('../packages/cli/src/rules/index.js', () => ({
 }));
 
 vi.mock('../packages/cli/src/enrich/index.js', () => ({
+  ENRICHMENT_ENABLED: false,
   enrichSkillWithOutcomes: vi.fn(),
   enrichAll: vi.fn(),
   skippedEnrichmentOutcomes: vi.fn((sources: string[]) =>
@@ -245,7 +246,7 @@ describe('runExplain', () => {
     expect(out).toContain('MyComplexSkill');
   });
 
-  it('renders enrichment section when enrichment data is present', async () => {
+  it('does not run or render enrichment while disabled', async () => {
     const enrichment: Enrichment = {
       github: { stars: 3, ageDays: 10, contributors: 2 },
     };
@@ -257,14 +258,12 @@ describe('runExplain', () => {
     await runExplain('test-skill', {});
 
     const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).toContain('Enrichment');
-    expect(out).toContain('3 stars');
-    expect(enrichSkillWithOutcomes).toHaveBeenCalledWith(expect.any(Object), {
-      sources: ['skillsSh', 'github', 'depsdev'],
-    });
+    expect(out).not.toContain('Enrichment');
+    expect(out).not.toContain('3 stars');
+    expect(enrichSkillWithOutcomes).not.toHaveBeenCalled();
   });
 
-  it('does not render unknown GitHub contributors as zero', async () => {
+  it('does not render disabled GitHub enrichment contributors', async () => {
     const enrichment: Enrichment = {
       github: { stars: 3, ageDays: 10, contributors: null },
     };
@@ -276,11 +275,12 @@ describe('runExplain', () => {
     await runExplain('test-skill', {});
 
     const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).toContain('contributors unknown');
+    expect(out).not.toContain('contributors unknown');
     expect(out).not.toContain('0 contributors');
+    expect(enrichSkillWithOutcomes).not.toHaveBeenCalled();
   });
 
-  it('explains when enrichment runs but finds no metadata', async () => {
+  it('does not explain disabled enrichment when metadata would be absent', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     vi.mocked(runRules).mockResolvedValue([]);
     vi.mocked(scoreFindings).mockReturnValue(makeSummary());
@@ -289,12 +289,13 @@ describe('runExplain', () => {
     await runExplain('test-skill', {});
 
     const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).toContain('Enrichment');
-    expect(out).toContain('skills.sh no metadata');
-    expect(out).toContain('deps.dev no metadata');
+    expect(out).not.toContain('Enrichment');
+    expect(out).not.toContain('skills.sh');
+    expect(out).not.toContain('deps.dev');
+    expect(enrichSkillWithOutcomes).not.toHaveBeenCalled();
   });
 
-  it('explains when enrichment lookup is unavailable', async () => {
+  it('does not explain disabled enrichment when lookup would be unavailable', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     vi.mocked(runRules).mockResolvedValue([]);
     vi.mocked(scoreFindings).mockReturnValue(makeSummary());
@@ -310,12 +311,13 @@ describe('runExplain', () => {
     await runExplain('test-skill', {});
 
     const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).toContain('Enrichment');
-    expect(out).toContain('skills.sh unavailable');
-    expect(out).toContain('deps.dev unavailable');
+    expect(out).not.toContain('Enrichment');
+    expect(out).not.toContain('skills.sh');
+    expect(out).not.toContain('deps.dev');
+    expect(enrichSkillWithOutcomes).not.toHaveBeenCalled();
   });
 
-  it('skips enrichment when --offline is set', async () => {
+  it('hidden --offline compatibility flag does not mention enrichment', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     vi.mocked(runRules).mockResolvedValue([]);
     vi.mocked(scoreFindings).mockReturnValue(makeSummary());
@@ -323,7 +325,8 @@ describe('runExplain', () => {
     await runExplain('test-skill', { offline: true });
 
     const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).toContain('offline mode is active');
+    expect(out).not.toContain('offline mode is active');
+    expect(out).not.toContain('Enrichment');
     expect(enrichSkillWithOutcomes).not.toHaveBeenCalled();
   });
 

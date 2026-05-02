@@ -15,7 +15,7 @@ that section, not the whole file. Token economy.
 | §2 | Architecture, tech stack, and distribution |
 | §3 | Discovery layer — plugin architecture, canonical install paths |
 | §4 | Local static analysis — 27 rule catalog, scoring, allowlist |
-| §5 | Cloud enrichment — skills.sh, GitHub, deps.dev |
+| §5 | Disabled enrichment design notes — skills.sh, GitHub, deps.dev |
 | §6 | Output & UX — hero screenshot, detail view, HTML report, JSON schema |
 | §7 | Core commands and UX flow, exit codes |
 | §8 | Claude Code skill wrapper (packages/skill/SKILL.md) |

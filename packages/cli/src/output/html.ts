@@ -71,6 +71,14 @@ function renderEnrichmentCells(skill: ScannedSkill): string {
   return rows.join('');
 }
 
+function hasEnrichmentDetails(skill: ScannedSkill): boolean {
+  return (
+    skill.enrichment.skillsSh !== undefined ||
+    skill.enrichment.github !== undefined ||
+    skill.enrichment.depsdev !== undefined
+  );
+}
+
 function severityClass(severity: Severity): string {
   return `sev sev-${severity}`;
 }
@@ -188,6 +196,7 @@ export function renderHtml(result: ScanResult): string {
   const showInstallState = sorted.some(
     (skill) => installStateLabel(skill.installState) === 'marketplace'
   );
+  const showEnrichment = sorted.some(hasEnrichmentDetails);
   const showLlmReview = sorted.some((skill) => skill.llmReviews !== undefined);
 
   // Embed scan data as JSON for client-side consumption (all strings are server-generated)
@@ -214,7 +223,7 @@ export function renderHtml(result: ScanResult): string {
       <td>${escapeHtml(formatAgentName(sk.agentId))}</td>
       <td style="font-weight:600;color:${color}">${sk.summary.score}</td>
       <td>${sk.summary.critical}C ${sk.summary.high}H ${sk.summary.medium}M ${sk.summary.low}L</td>
-      <td class="enrichment-cell">${renderEnrichmentCells(sk)}</td>
+      ${showEnrichment ? `<td class="enrichment-cell">${renderEnrichmentCells(sk)}</td>` : ''}
       ${showLlmReview ? `<td class="llm-cell">${renderLlmReviewCells(sk)}</td>` : ''}
       <td class="top-issue">${escapeHtml(topIssue)}</td>
     </tr>`;
@@ -378,6 +387,7 @@ function makeFindingEl(f){
 
 function makeEnrichmentEl(enrichment){
   var e = enrichment || {};
+  if(!e.skillsSh && !e.github && !e.depsdev) return null;
 
   var wrap = document.createElement('div');
   wrap.className = 'enrichment';
@@ -642,7 +652,7 @@ document.getElementById('btn-share').addEventListener('click', function(){
           <th>Agent</th>
           <th>Score</th>
           <th>Findings</th>
-          <th>Enrichment</th>
+          ${showEnrichment ? '<th>Enrichment</th>' : ''}
           ${showLlmReview ? '<th>LLM Review</th>' : ''}
           <th>Top Issue</th>
         </tr>

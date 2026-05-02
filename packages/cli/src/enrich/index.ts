@@ -11,6 +11,8 @@ import { enrichSkillsSh, hasSkillsShQueryInput } from './skills-sh.js';
 
 export type EnrichmentSource = EnrichmentSourceKey;
 
+export const ENRICHMENT_ENABLED = false;
+
 const ALL_SOURCES: EnrichmentSource[] = ['skillsSh', 'github', 'depsdev'];
 
 export type EnrichmentOptions = {

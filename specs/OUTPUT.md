@@ -61,22 +61,6 @@ ship as the hero GIF).
           ]
         }
       ],
-      "enrichment": {
-        "skills_sh": {
-          "gen": "Critical",
-          "socket_alerts": 7,
-          "snyk": "Critical"
-        },
-        "github": {
-          "stars": 2,
-          "age_days": 4,
-          "contributors": 1
-        },
-        "deps_dev": {
-          "osv_advisories": 2,
-          "scorecard_score": 8.5
-        }
-      },
       "summary": {
         "critical": 3,
         "high": 0,
@@ -122,6 +106,9 @@ Field notes:
 - `modified_at` is present only when the scanner can read a filesystem mtime
   for the skill manifest or file. It is an ISO 8601 timestamp and is not an
   install or creation time.
+- `enrichment` is omitted while enrichment is disabled. If enrichment is
+  reintroduced later, it must be present only when source data exists and the
+  schema update must be documented here first.
 
 Do not add fields beyond this schema. Do not rename fields. Do not reorder in
 the source JSON stringifier (use a deterministic serializer).
@@ -225,7 +212,7 @@ enrichment section, it must define and test:
 - one realistic populated path through discovery/scan/enrichment into the
   renderer;
 - one empty or unavailable state that tells the user whether data was absent,
-  skipped by mode, disabled by `--offline`, or unavailable after a lookup;
+  not requested, disabled in the current build, or unavailable after a lookup;
 - consistency with JSON/HTML/summary behavior when the same information appears
   in multiple renderers.
 
@@ -294,7 +281,6 @@ README and into the hero GIF. Column widths are fixed.
   Skills scanned ............ 47
   Unique issues ............. 18  (4 critical, 5 high, 6 medium, 3 low)
   Compromised skills ........ 8   (17% of installed)
-  Enrichment ................ skills.sh ✓  github ✓  deps.dev ✓
   Duration .................. 1.32s
 
   →  skill-audit explain polymarket-trader    See full findings
@@ -355,12 +341,6 @@ polymarket-trader
        Remove instructions that append credentials to URLs.
 
   ...
-
-  Enrichment
-  ──────────
-  skills.sh:   Gen=Critical  Socket=7 alerts  Snyk=Critical
-  github.com:  2 stars, 4 days old, 1 contributor, 0 releases
-               maintainer account created 7 days ago ⚠
 
   Next steps
   ──────────

@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { runExplain } from './commands/explain.js';
 import type { ExplainOptions } from './commands/explain.js';
 import { runIgnore } from './commands/ignore.js';
@@ -31,7 +31,7 @@ program
   .option('--summary', 'emit compact one-liner summary instead of full table')
   .option('--html <file>', 'write standalone HTML report to <file>')
   .option('-o, --output <file>', 'write selected non-HTML scan output to <file>')
-  .option('--offline', 'skip network enrichment calls')
+  .addOption(new Option('--offline', 'skip disabled network enrichment calls').hideHelp())
   .option('--strict', 'treat REVIEW band as FAIL for exit code purposes')
   .option('--agent <id>', 'restrict scan to a single agent (e.g. claude-code, cursor)')
   .option('--include-marketplaces', 'include locally available but inactive marketplace skills')
@@ -88,7 +88,7 @@ program
 program
   .command('explain <skill-name-or-id>')
   .description('Show full detail view for a single skill')
-  .option('--offline', 'skip network enrichment calls')
+  .addOption(new Option('--offline', 'skip disabled network enrichment calls').hideHelp())
   .option('--json', 'emit JSON to stdout instead of detail view')
   .action((nameOrId: string, cmdOpts: Record<string, unknown>) => {
     const options: Partial<ExplainOptions> = {

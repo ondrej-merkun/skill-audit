@@ -55,4 +55,4 @@ confirmation.
 
 This skill is part of the [skill-audit](https://github.com/ondrej-merkun/skill-audit)
 project. The CLI it invokes (`npx skill-audit`) runs entirely locally —
-no skill content is sent to any server unless you opt into enrichment.
+no skill content is sent to any server by the deterministic scan.

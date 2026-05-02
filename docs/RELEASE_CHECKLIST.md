@@ -18,9 +18,8 @@ a problem appears.
 - Confirm changed README screenshots, SVGs, and badges render at their embedded
   GitHub dimensions in a browser or image renderer without clipping, overlap,
   stale output, unreadable text, or broken external targets.
-- Confirm enrichment changes have one source-level smoke or contract check for
-  each touched external source. Checkmarks must mean found displayable metadata
-  or a labeled cache hit, not merely that the enrichment batch completed.
+- If enrichment is re-enabled in a release, confirm each touched external
+  source has a source-level smoke or contract check before publishing.
 
 ## Local Verification
 
@@ -46,7 +45,7 @@ TMP_PROJECT="$(mktemp -d)"
 HOME="$TMP_HOME" \
 USERPROFILE="$TMP_HOME" \
 SKILLAUDIT_CWD="$TMP_PROJECT" \
-node packages/cli/dist/index.js scan --summary --offline
+node packages/cli/dist/index.js scan --summary
 ```
 
 The command should complete without stack traces or unexpected stderr. A

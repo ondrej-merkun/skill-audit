@@ -27,10 +27,6 @@ inputs:
     description: 'Restrict discovery to one agent id (claude-code, cursor, copilot, cross-agent). Leave blank for all agents.'
     required: false
     default: ''
-  offline:
-    description: 'Skip enrichment network calls (skills.sh, GitHub, deps.dev)'
-    required: false
-    default: 'false'
   upload-results:
     description: 'Upload JSON results as a workflow artifact'
     required: false
@@ -58,7 +54,6 @@ runs:
       env:
         SA_VERSION: ${{ inputs.version }}
         SA_AGENT: ${{ inputs.agent }}
-        SA_OFFLINE: ${{ inputs.offline }}
         SA_FAIL_ON: ${{ inputs.fail-on }}
         SA_ARGS: ${{ inputs.args }}
         SA_RESULTS_FILE: ${{ inputs.results-file }}
@@ -72,11 +67,6 @@ runs:
           AGENT_FLAG="--agent"
         fi
 
-        OFFLINE_FLAG=""
-        if [ "$SA_OFFLINE" = "true" ]; then
-          OFFLINE_FLAG="--offline"
-        fi
-
         # Run scan and write JSON output to the requested file.
         # SA_ARGS is intentionally word-split here (extra flags from caller).
         # shellcheck disable=SC2086
@@ -85,7 +75,6 @@ runs:
           --output "$SA_RESULTS_FILE" \
           --fail-on "$SA_FAIL_ON" \
           ${AGENT_FLAG:+--agent "$SA_AGENT"} \
-          $OFFLINE_FLAG \
           $SA_ARGS \
           2>skill-audit-stderr.txt
         EXIT_CODE=$?

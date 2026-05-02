@@ -144,6 +144,8 @@ describe('e2e: CLI binary', () => {
     expect(action).toContain('npx --yes "skill-audit@${SA_VERSION}" scan');
     expect(action).toContain('--output "$SA_RESULTS_FILE"');
     expect(action).toContain('.summary.verdict // "PASS"');
+    expect(action).not.toContain('--offline');
+    expect(action).not.toContain('SA_OFFLINE');
     expect(action).not.toContain('skillaudit@${SA_VERSION}');
     expect(action).not.toContain('.results[]');
   });
@@ -438,8 +440,19 @@ describe('e2e: scan flags', () => {
     expect(stdout).toContain('--html <file>');
     expect(stdout).toContain('--include-marketplaces');
     expect(stdout).toContain('locally available but inactive marketplace');
+    expect(stdout).not.toContain('--offline');
+    expect(stdout).not.toContain('enrichment');
     expect(stdout).not.toContain('--deep');
     expect(stdout).not.toContain('coming soon');
+  });
+
+  it('explain help hides disabled enrichment flags', async () => {
+    const env = { HOME: tempHome, USERPROFILE: tempHome, SKILLAUDIT_CWD: tempCwd };
+    const { code, stdout } = await runCli(['explain', '--help'], env);
+    expect(code).toBe(0);
+    expect(stdout).toContain('Show full detail view');
+    expect(stdout).not.toContain('--offline');
+    expect(stdout).not.toContain('enrichment');
   });
 
   it('list help documents marketplace inventory as inactive opt-in output', async () => {

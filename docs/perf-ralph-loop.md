@@ -11,7 +11,7 @@ Measured on Apple M1 Pro, Node 20, warm FS cache. Commands run from repo root.
 | `pnpm lint` | **1.4 s** | `pnpm -r` wrapper | biome itself: 33 ms |
 | `pnpm typecheck` | **1.8 s** | full `tsc --noEmit`, no cache | previously failed on `src/enrich/cache.ts:40`; fixed in task 12.5 |
 | `pnpm test` | **62.0 s** | `test/e2e.test.ts` = 61.7 s | see below |
-| binary `scan --offline` | 1.3 s | 1.1 s of that is node+ESM import startup | |
+| binary `scan --summary` | 1.3 s | 1.1 s of that is node+ESM import startup | |
 
 Full verify chain per Ralph step ≈ **67 s**, of which test is **91 %** and e2e is **99 % of test**.
 
