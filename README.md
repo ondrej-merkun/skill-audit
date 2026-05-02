@@ -18,7 +18,7 @@
   &nbsp;
   <a href=".github/SECURITY.md"><img src="https://img.shields.io/badge/security-policy-blue" alt="Security policy" /></a>
   &nbsp;
-  <a href="specs/RULES.md"><img src="https://img.shields.io/badge/rules-41-red" alt="41 shipped rules" /></a>
+  <a href="specs/RULES.md"><img src="https://img.shields.io/badge/rules-46-red" alt="46 shipped rules" /></a>
   &nbsp;
   <a href="action.yml"><img src="https://img.shields.io/badge/action-skill--audit-red" alt="GitHub Action: skill-audit" /></a>
   &nbsp;
