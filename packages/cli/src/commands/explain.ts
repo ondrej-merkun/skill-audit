@@ -37,7 +37,7 @@ const SEVERITY_DOT: Record<Severity, string> = {
   info: chalk.gray('⚪ INFO'),
 };
 
-const VERDICT_BADGE: Record<Verdict, string> = {
+const VERDICT_MARKER: Record<Verdict, string> = {
   PASS: chalk.green('PASS ✅'),
   REVIEW: chalk.yellow('REVIEW ⚠️'),
   FAIL: chalk.red('FAIL ❌'),
@@ -142,7 +142,7 @@ function renderDetail(skill: ScannedSkill, enrichmentStatus: EnrichmentStatus): 
       ? `   (${summary.mandatoryFail.length} mandatory-fail trigger${summary.mandatoryFail.length === 1 ? '' : 's'})`
       : '';
   process.stdout.write(
-    `  ${chalk.dim('Verdict:')}   ${VERDICT_BADGE[summary.verdict]}   Score ${summary.score}/100${mandatoryNote}\n`
+    `  ${chalk.dim('Verdict:')}   ${VERDICT_MARKER[summary.verdict]}   Score ${summary.score}/100${mandatoryNote}\n`
   );
 
   const findingsBySeverity = [...skill.findings].sort((a, b) => {

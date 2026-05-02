@@ -23,6 +23,7 @@
     "cli",
     "claude-code",
     "codex",
+    "cline",
     "cursor"
   ],
   "type": "module",

@@ -13,6 +13,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import agentsMdSweepDiscovery from '../packages/cli/src/discovery/agents-md-sweep.js';
 import claudeCodeDiscovery from '../packages/cli/src/discovery/claude-code.js';
+import clineDiscovery from '../packages/cli/src/discovery/cline.js';
 import codexDiscovery from '../packages/cli/src/discovery/codex.js';
 import copilotDiscovery from '../packages/cli/src/discovery/copilot.js';
 import cursorDiscovery from '../packages/cli/src/discovery/cursor.js';
@@ -201,6 +202,87 @@ describe('claude-code: fixture skill tree', () => {
     const skills = await claudeCodeDiscovery.discoverSkills();
     const skill = skills.find((s) => s.name === 'git-helper');
     expect(skill?.treeSha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+// ── cline ───────────────────────────────────────────────────────────────────
+
+describe('cline: fixture skill tree', () => {
+  let tempHome: string;
+  let tempCwd: string;
+  let originalHome: string | undefined;
+  let originalCwd: string | undefined;
+
+  beforeEach(async () => {
+    tempHome = await mkdtemp(join(tmpdir(), 'skillaudit-cline-home-'));
+    tempCwd = await mkdtemp(join(tmpdir(), 'skillaudit-cline-cwd-'));
+    originalHome = process.env['HOME'];
+    originalCwd = process.env['SKILLAUDIT_CWD'];
+    process.env['HOME'] = tempHome;
+    process.env['SKILLAUDIT_CWD'] = tempCwd;
+
+    const globalRulesDir = join(tempHome, 'Documents', 'Cline', 'Rules');
+    await mkdir(globalRulesDir, { recursive: true });
+    await writeFile(join(globalRulesDir, 'coding.md'), await fixture('cline', 'rules', 'coding.md'));
+    await writeFile(join(globalRulesDir, 'notes.txt'), await fixture('cline', 'rules', 'notes.txt'));
+
+    const globalSkillDir = join(tempHome, '.cline', 'skills', 'deploy-helper');
+    await mkdir(globalSkillDir, { recursive: true });
+    await writeFile(
+      join(globalSkillDir, 'SKILL.md'),
+      await fixture('cline', 'skills', 'deploy-helper', 'SKILL.md')
+    );
+
+    const projectRulesDir = join(tempCwd, '.clinerules');
+    await mkdir(projectRulesDir, { recursive: true });
+    await writeFile(
+      join(projectRulesDir, 'project.md'),
+      '# Project Rules\n\nPrefer small changes.\n'
+    );
+
+    const projectWorkflowsDir = join(tempCwd, '.clinerules', 'workflows');
+    await mkdir(projectWorkflowsDir, { recursive: true });
+    await writeFile(
+      join(projectWorkflowsDir, 'release.md'),
+      await fixture('cline', 'workflows', 'release.md')
+    );
+
+    const settingsDir = join(tempHome, '.cline', 'data', 'settings');
+    await mkdir(settingsDir, { recursive: true });
+    await writeFile(
+      join(settingsDir, 'cline_mcp_settings.json'),
+      await fixture('cline', 'cline_mcp_settings.json')
+    );
+  });
+
+  afterEach(async () => {
+    if (originalHome === undefined) {
+      delete process.env['HOME'];
+    } else {
+      process.env['HOME'] = originalHome;
+    }
+    if (originalCwd === undefined) {
+      delete process.env['SKILLAUDIT_CWD'];
+    } else {
+      process.env['SKILLAUDIT_CWD'] = originalCwd;
+    }
+    await rm(tempHome, { recursive: true, force: true });
+    await rm(tempCwd, { recursive: true, force: true });
+  });
+
+  it('discovers rules, skills, workflows, and MCP settings from fixture content', async () => {
+    expect(await clineDiscovery.isInstalled()).toBe(true);
+
+    const skills = await clineDiscovery.discoverSkills();
+    const byName = new Map(skills.map((skill) => [skill.name, skill]));
+
+    expect(byName.get('coding')?.format).toBe('rules-md');
+    expect(byName.get('notes')?.format).toBe('rules-md');
+    expect(byName.get('deploy-helper')?.format).toBe('SKILL.md');
+    expect(byName.get('project')?.scope).toBe('project');
+    expect(byName.get('release')?.format).toBe('prompt-md');
+    expect(byName.get('browser')?.format).toBe('mcp-json');
+    expect(byName.get('coding')?.agentId).toBe('cline');
   });
 });
 

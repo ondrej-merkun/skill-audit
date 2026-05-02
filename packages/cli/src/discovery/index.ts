@@ -2,12 +2,14 @@ import type { DiscoveryProgressCallback } from '../progress.js';
 import type { AgentDiscovery, Skill } from '../types.js';
 import agentsMdSweepDiscovery from './agents-md-sweep.js';
 import claudeCodeDiscovery from './claude-code.js';
+import clineDiscovery from './cline.js';
 import codexDiscovery from './codex.js';
 import copilotDiscovery from './copilot.js';
 import cursorDiscovery from './cursor.js';
 import geminiDiscovery from './gemini.js';
 import { isPluginMarketplacePath, withInstallState } from './marketplace.js';
 import { addModifiedAt } from './modified-at.js';
+import windsurfDiscovery from './windsurf.js';
 
 // Registry starts empty so test files get a clean slate on import.
 // Call initDefaultPlugins() from the CLI entry point to register built-ins.
@@ -123,8 +125,10 @@ export function initDefaultPlugins(): void {
     claudeCodeDiscovery,
     cursorDiscovery,
     copilotDiscovery,
+    clineDiscovery,
     codexDiscovery,
     geminiDiscovery,
+    windsurfDiscovery,
     agentsMdSweepDiscovery
   );
 }

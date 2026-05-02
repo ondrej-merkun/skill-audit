@@ -11,12 +11,12 @@ that section, not the whole file. Token economy.
 
 | Section | Topic |
 |---|---|
-| §1 | Name and positioning |
+| §1 | Package and command names |
 | §2 | Architecture, tech stack, and distribution |
 | §3 | Discovery layer — plugin architecture, canonical install paths |
 | §4 | Local static analysis — 27 rule catalog, scoring, allowlist |
 | §5 | Disabled enrichment design notes — skills.sh, GitHub, deps.dev |
-| §6 | Output & UX — hero screenshot, detail view, HTML report, JSON schema |
+| §6 | Output & UX — example table, detail view, HTML report, JSON schema |
 | §7 | Core commands and UX flow, exit codes |
 | §8 | Claude Code skill wrapper (packages/skill/SKILL.md) |
 | §9 | Risk assessment |
@@ -29,5 +29,5 @@ they encode specific attack signatures observed in the wild.
 
 ## Output format quick reference
 
-See `specs/OUTPUT.md` for the exact JSON schema and hero-mockup
+See `specs/OUTPUT.md` for the exact JSON schema and table-output
 reproduction — these are contracts, not sketches.

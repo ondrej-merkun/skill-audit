@@ -197,7 +197,7 @@ Conventional commits. Scope is the package or subsystem:
 - `feat(rules): add NET-EXFIL-ENV`
 - `fix(scoring): mandatory-fail list should override allowlist demotion`
 - `test(rules): add benign fixture for PI-OVERRIDE`
-- `docs(readme): add hero gif placeholder`
+- `docs(readme): add CLI example`
 - `chore(plan): complete task 3.2`
 
 One concern per commit. If you touched both discovery and rules in one
@@ -225,13 +225,13 @@ A task is done when:
 10. For any task that changes generated HTML controls: verify at least
     one interaction by clicking or dispatching the relevant event in a
     DOM/browser environment.
-11. For any task that changes README screenshots, SVGs, badges, or other
+11. For any task that changes README screenshots, SVGs, or other
     visual assets: render the asset at the size used by README/GitHub in a
     browser or image renderer and check for overlap, clipping, stale output, and
     unreadable text. If the asset is hand-authored SVG, also verify text bounds
     against the visible frame and adjacent labels. If no renderer is available,
     document the blocker instead of marking the task complete.
-12. For any task that changes external links, badges, action examples,
+12. For any task that changes external links, action examples,
     package metadata, or trusted-publishing settings: verify the external
     owner/repo/workflow/package target exists. Do not assemble GitHub URLs
     from partial identity fields.

@@ -91,9 +91,8 @@ without a commit message explaining why it no longer applies.
   test and assert the visible state changes after click/keyboard events.
 
 - **L1.14 — README images need browser-rendered proof, not just existing paths.** _Post-mortem
-  issue: `docs/demo.svg` existed, then task 20 hand-edited it again after
-  reading CLI output, but unmeasured SVG text still overlapped in the README
-  hero._
+  issue: a README SVG existed, then task 20 hand-edited it again after reading
+  CLI output, but unmeasured SVG text still overlapped in the README._
   Render changed docs images at their embedded README/GitHub dimensions in a
   browser or image renderer. If the asset is hand-authored, check text bounds
   for every label/line; no renderer means the task is blocked, not done.
@@ -153,6 +152,12 @@ without a commit message explaining why it no longer applies.
   Route root shortcuts into the real subcommand parser and run both bare and
   explicit-subcommand e2e coverage before calling CLI flag work done.
 
+- **L1.24 — CLI option help must share supported values with validation.** _The
+  `--agent` help for `scan` and `list` still named only `claude-code` and
+  `cursor` after Codex and Gemini discovery shipped._
+  Export one supported-value list and assert every help surface that exposes the
+  option includes every current value.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task
@@ -178,6 +183,13 @@ without a commit message explaining why it no longer applies.
   and add a test at the layer that owns the invariant, not only per-plugin
   fixture tests.
 
+- **L2.4 — Recheck live agent docs before filling deferred support.** _Cline
+  was named in older specs and product text, but current docs added global
+  rules, skills, workflows, CLI config, and IDE storage paths beyond the stale
+  VS Code-only row._
+  For each new agent plugin, verify current official docs first, then update
+  `specs/DISCOVERY.md`, user docs, fixtures, and `--agent` filtering together.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**
@@ -188,9 +200,9 @@ without a commit message explaining why it no longer applies.
   yet, ask — don't guess from paths or git metadata.
 
 - **L3.2 — External GitHub URLs need repository verification, not string assembly.**
-  _Post-mortem issue: the README CI badge linked to a GitHub Actions URL that
+  _Post-mortem issue: a README CI link pointed to a GitHub Actions URL that
   returned 404._
-  Treat badges, action examples, repository URLs, and npm trusted-publisher
+  Treat action examples, repository URLs, and npm trusted-publisher
   settings as external contracts. Verify the exact owner/repo/workflow target
   before changing them; if the canonical slug is missing from `CLAUDE.md`, ask.
 
@@ -222,6 +234,12 @@ without a commit message explaining why it no longer applies.
   state leaked between files._
   Keep isolation on unless the suite is first split so mock-heavy tests remain
   isolated and the no-isolate tier is proven green.
+
+- **L4.5 — Rename contracts when performance fixes change guarantees.** _The
+  regex worker hot path was replaced by safety preflight checks, but the engine
+  API and docs still claimed a hard regex timeout._
+  When replacing hard isolation/timeouts with heuristics, update names, tests,
+  and docs in the same change so security guarantees stay explicit.
 
 ## 5. Orphans, cleanup, and the one-task-per-loop rule
 
@@ -255,7 +273,7 @@ without a commit message explaining why it no longer applies.
   non-HTML formats had no first-class file destination._
   For user-facing command/output tasks, check whether the first screen tells
   users what to fix first, whether machine and human outputs agree, and whether
-  users can save/share the result through normal CLI affordances.
+  users can save or export the result through normal CLI affordances.
 
 - **L6.4 — Re-check release-tool minimums before changing publish workflows.** _Task
   40 found npm trusted publishing needs newer Node/npm than the existing Node 20

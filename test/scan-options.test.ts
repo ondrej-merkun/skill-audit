@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import stripAnsi from './helpers/strip-ansi.js';
+import { SUPPORTED_AGENT_IDS } from '../packages/cli/src/agent-names.js';
 import type { LlmReviewFetch } from '../packages/cli/src/llm/review.js';
 import type { Finding, Skill } from '../packages/cli/src/types.js';
 
@@ -605,6 +606,36 @@ describe('runScan flag wiring', () => {
     });
   });
 
+  it('--agent cline is a supported discovery filter', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({ id: 'cline-skill', agentId: 'cline', name: 'cline-skill' }),
+    ]);
+
+    await runScan({ json: true, agent: 'cline' });
+
+    const json = JSON.parse(stdoutChunks.join(''));
+    expect(json.skills[0].agent_id).toBe('cline');
+    expect(discoverAll).toHaveBeenCalledWith({
+      agent: 'cline',
+      onProgress: expect.any(Function),
+    });
+  });
+
+  it('--agent accepts windsurf as a supported discovery filter', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({ id: 'windsurf-rule', agentId: 'windsurf', name: 'windsurf-rule' }),
+    ]);
+
+    await runScan({ json: true, agent: 'windsurf' });
+
+    expect(discoverAll).toHaveBeenCalledWith({
+      agent: 'windsurf',
+      onProgress: expect.any(Function),
+    });
+    const json = JSON.parse(stdoutChunks.join(''));
+    expect(json.skills[0].agent_id).toBe('windsurf');
+  });
+
   it('--include-marketplaces passes the discovery opt-in', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
 
@@ -752,7 +783,9 @@ describe('runScan flag wiring', () => {
     expect(discoverAll).not.toHaveBeenCalled();
     const errOut = stripAnsi(stderrChunks.join(''));
     expect(errOut).toContain('unsupported agent "unknown-agent"');
-    expect(errOut).toContain('claude-code');
+    for (const agentId of SUPPORTED_AGENT_IDS) {
+      expect(errOut).toContain(agentId);
+    }
   });
 
   it('hidden --offline compatibility flag does not mention enrichment', async () => {

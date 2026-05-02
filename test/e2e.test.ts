@@ -14,6 +14,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import stripAnsi from './helpers/strip-ansi.js';
+import { SUPPORTED_AGENT_IDS } from '../packages/cli/src/agent-names.js';
 
 const CLI = fileURLToPath(new URL('../packages/cli/dist/index.js', import.meta.url));
 const PACKAGE_JSON = fileURLToPath(new URL('../packages/cli/package.json', import.meta.url));
@@ -23,6 +24,17 @@ const ACTION_YML = fileURLToPath(new URL('../action.yml', import.meta.url));
 const FIXTURES_DIR = fileURLToPath(new URL('fixtures', import.meta.url));
 const MALICIOUS_DIR = join(FIXTURES_DIR, 'malicious');
 const BENIGN_DIR = join(FIXTURES_DIR, 'benign');
+
+function expectSupportedAgentHelp(stdout: string): void {
+  expect(stdout).toContain('--agent <id>');
+  let previousIndex = -1;
+  for (const agentId of SUPPORTED_AGENT_IDS) {
+    expect(stdout).toContain(agentId);
+    const index = stdout.indexOf(agentId);
+    expect(index).toBeGreaterThan(previousIndex);
+    previousIndex = index;
+  }
+}
 
 type CliResult = { stdout: string; stderr: string; code: number };
 
@@ -135,10 +147,7 @@ describe('e2e: CLI binary', () => {
       readFile(EXAMPLES_DOC, 'utf-8'),
     ]);
 
-    expect(readme).toContain('https://www.npmjs.com/package/@ondrej-merkun/skill-audit');
-    expect(readme).toContain('img.shields.io/npm/v/%40ondrej-merkun%2Fskill-audit');
-    expect(readme).toContain('img.shields.io/node/v/%40ondrej-merkun%2Fskill-audit');
-    expect(readme).toContain('img.shields.io/badge/rules-46-red');
+    expect(readme).toContain('npx @ondrej-merkun/skill-audit');
     expect(readme).toContain('uses: ondrej-merkun/skill-audit@v1');
     expect(examples).toContain('uses: ondrej-merkun/skill-audit@v1');
     expect(action).toContain('npx --yes "@ondrej-merkun/skill-audit@${SA_VERSION}" scan');
@@ -360,6 +369,7 @@ describe('e2e: scan flags', () => {
     const env = { HOME: tempHome, USERPROFILE: tempHome, SKILLAUDIT_CWD: tempCwd };
     const { code, stdout } = await runCli(['scan', '--help'], env);
     expect(code).toBe(0);
+    expectSupportedAgentHelp(stdout);
     expect(stdout).toContain('--json');
     expect(stdout).toContain('--html <file>');
     expect(stdout).toContain('--include-marketplaces');
@@ -383,6 +393,7 @@ describe('e2e: scan flags', () => {
     const env = { HOME: tempHome, USERPROFILE: tempHome, SKILLAUDIT_CWD: tempCwd };
     const { code, stdout } = await runCli(['list', '--help'], env);
     expect(code).toBe(0);
+    expectSupportedAgentHelp(stdout);
     expect(stdout).toContain('--include-marketplaces');
     expect(stdout).toContain('locally available but inactive marketplace');
   });
