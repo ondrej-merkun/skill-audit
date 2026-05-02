@@ -406,6 +406,30 @@ describe('e2e: scan flags', () => {
     }
   });
 
+  it('root-level scan shortcuts accept scan options', async () => {
+    await cp(join(BENIGN_DIR, 'date-parser'), join(skillsDir, 'date-parser'), { recursive: true });
+    await mkdir(join(tempHome, '.cursor'), { recursive: true });
+    await mkdir(join(tempCwd, '.cursor', 'rules'), { recursive: true });
+    await writeFile(
+      join(tempCwd, '.cursor', 'rules', 'project-style.mdc'),
+      '# Project style\n\nPrefer explicit names and small functions.\n'
+    );
+
+    const env = { HOME: tempHome, USERPROFILE: tempHome, SKILLAUDIT_CWD: tempCwd };
+    const agentRun = await runCli(['--json', '--offline', '--agent', 'claude-code'], env);
+    const htmlPath = join(tempCwd, 'skill-audit-report.html');
+    const htmlRun = await runCli(['--html', htmlPath, '--agent', 'claude-code'], env);
+
+    expect(agentRun.code).toBe(0);
+    const result = JSON.parse(agentRun.stdout) as JsonOutput;
+    expect(result.summary.skills_scanned).toBe(1);
+    expect(result.agents).toEqual([{ id: 'claude-code', installed: true, skills_scanned: 1 }]);
+    expect(result.skills).toHaveLength(1);
+    expect(result.skills[0]?.agent_id).toBe('claude-code');
+    expect(htmlRun.code).toBe(0);
+    expect(await readFile(htmlPath, 'utf-8')).toContain('<!DOCTYPE html>');
+  });
+
   it('--json outputs valid JSON for a benign skill', async () => {
     // Put one benign skill so the CLI has something to scan
     await cp(join(BENIGN_DIR, 'date-parser'), join(skillsDir, 'date-parser'), { recursive: true });

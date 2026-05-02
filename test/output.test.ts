@@ -446,8 +446,9 @@ describe('renderTableToString', () => {
 
   it('renders friendly agent names in the human scan table', () => {
     const out = stripAnsi(renderTableToString(makeScanResult()));
-    expect(out).toContain('Claude Code');
-    expect(out).not.toContain(' claude-code ');
+    const tableAndSummary = out.split('\n  →  ')[0] ?? out;
+    expect(tableAndSummary).toContain('Claude Code');
+    expect(tableAndSummary).not.toContain(' claude-code ');
   });
 
   it('shows 🟢 dot and PASS for a clean skill', () => {
@@ -902,8 +903,18 @@ describe('renderSummaryFooter', () => {
       summary: { skillsScanned: 1, compromised: 1, percentCompromised: 100, verdict: 'FAIL' },
     });
     const out = stripAnsi(renderSummaryFooter(result, [failSkill]));
-    expect(out).toContain('skill-audit explain risky-skill');
-    expect(out).toContain('skill-audit --html report.html');
+    const nextCommands = out
+      .split('\n')
+      .filter((line) => line.includes('→'))
+      .map((line) => line.trim());
+    expect(nextCommands).toEqual([
+      '→  skill-audit explain risky-skill    See full findings',
+      '→  skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model <model_name>    Configure local LLM review',
+      '→  skill-audit --llm local    Add local LLM review',
+      '→  skill-audit ignore <skill>    Allowlist a false positive',
+      '→  skill-audit --html report.html    Generate shareable HTML',
+      '→  skill-audit --agent claude-code    Scan only Claude Code skills',
+    ]);
   });
 
   it('uses the highest-risk skill for next-command suggestions', () => {

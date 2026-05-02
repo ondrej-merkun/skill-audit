@@ -1,11 +1,11 @@
-# Graph Report - skillaudit  (2026-05-02)
+# Graph Report - skillaudit  (2026-05-03)
 
 ## Corpus Check
-- 155 files · ~91,905 words
+- 155 files · ~93,241 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 621 nodes · 992 edges · 26 communities detected
+- 623 nodes · 992 edges · 26 communities detected
 - Extraction: 85% EXTRACTED · 15% INFERRED · 0% AMBIGUOUS · INFERRED: 152 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
@@ -65,11 +65,11 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.06
-Nodes (38): renderDetail(), renderEnrichment(), renderFinding(), runExplain(), shortenPath(), computeExitCode(), llmStatusLine(), loadSelectedLlmConfigs() (+30 more)
+Nodes (37): renderDetail(), renderEnrichment(), renderFinding(), runExplain(), shortenPath(), computeExitCode(), llmStatusLine(), loadSelectedLlmConfigs() (+29 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.09
-Nodes (38): cacheDir(), cacheGet(), cacheKey(), cacheSet(), legacyCacheDir(), depsDevSystem(), enrichDepsDev(), fetchDependencyLookup() (+30 more)
+Cohesion: 0.08
+Nodes (39): cacheDir(), cacheGet(), cacheKey(), cacheSet(), legacyCacheDir(), depsDevSystem(), enrichDepsDev(), fetchDependencyLookup() (+31 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.08
@@ -81,27 +81,27 @@ Nodes (14): executeHtmlReportScript(), FakeClassList, FakeDocument, FakeElement,
 
 ### Community 4 - "Community 4"
 Cohesion: 0.09
-Nodes (19): appendToIgnoreList(), getConfigDir(), getIgnoreListPath(), getLegacyIgnoreListPath(), loadIgnoreList(), readIgnoreListContent(), runIgnore(), clearPlugins() (+11 more)
+Nodes (27): appendToIgnoreList(), getConfigDir(), getIgnoreListPath(), getLegacyIgnoreListPath(), loadIgnoreList(), readIgnoreListContent(), runIgnore(), runList() (+19 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.09
-Nodes (27): escapeHtml(), redactPaths(), renderEnrichmentCells(), renderHtml(), renderLlmOverview(), scoreRingSvg(), verdictColor(), collectLlmComparisons() (+19 more)
+Nodes (12): discoverSingleFile(), discoverSkillsDir(), makeId(), pathExists(), discoverLegacyCursorRules(), discoverMcpJson(), makeId(), pathExists() (+4 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.1
-Nodes (19): discoverAgentEntries(), discoverCommandFiles(), discoverMcpFromClaudeJson(), discoverPluginTree(), discoverSkillDirs(), makeId(), pathSegments(), skillFromDir() (+11 more)
+Nodes (24): escapeHtml(), redactPaths(), renderEnrichmentCells(), renderHtml(), renderLlmOverview(), scoreRingSvg(), verdictColor(), collectLlmComparisons() (+16 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.09
-Nodes (5): chatCompletionsUrl(), checkOpenAiCompatibleConnection(), isAbortError(), validChatCompletionsResponse(), runCli()
+Cohesion: 0.12
+Nodes (19): add_days(), diff_days(), parse(), Date parsing and formatting utilities — pure stdlib., to_iso(), discoverAgentEntries(), discoverCommandFiles(), discoverMcpFromClaudeJson() (+11 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.14
-Nodes (19): add_days(), diff_days(), parse(), Date parsing and formatting utilities — pure stdlib., to_iso(), discoverMcpJson(), discoverAgentMarkdownFiles(), discoverCommandTomlFiles() (+11 more)
+Cohesion: 0.15
+Nodes (20): discoverActivePluginPayloadTree(), discoverAgentFiles(), discoverEnabledPluginCaches(), discoverMcpToml(), discoverPluginTree(), discoverSkillDirs(), discoverUntrustedProjectConfig(), makeId() (+12 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.16
-Nodes (18): discoverActivePluginPayloadTree(), discoverAgentFiles(), discoverEnabledPluginCaches(), discoverMcpToml(), discoverPluginTree(), discoverSkillDirs(), discoverUntrustedProjectConfig(), makeId() (+10 more)
+Cohesion: 0.11
+Nodes (5): chatCompletionsUrl(), checkOpenAiCompatibleConnection(), isAbortError(), validChatCompletionsResponse(), runCli()
 
 ### Community 10 - "Community 10"
 Cohesion: 0.17
@@ -116,8 +116,8 @@ Cohesion: 0.19
 Nodes (17): parseOptionalPositiveInteger(), runLlmAdd(), runLlmCheck(), runLlmList(), serializeHealth(), addLlmConfig(), getConfigDir(), getLlmConfigPath() (+9 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.18
-Nodes (12): runList(), shortenPath(), sortListSkills(), installStateLabel(), colorScore(), colorVerdict(), enrichmentDetails(), renderTable() (+4 more)
+Cohesion: 0.26
+Nodes (12): discoverAgentMarkdownFiles(), discoverCommandTomlFiles(), discoverExtensionManifests(), discoverMcpJson(), isRecord(), makeId(), missingPathWarnings(), namesFromUnknown() (+4 more)
 
 ### Community 14 - "Community 14"
 Cohesion: 0.28
@@ -188,11 +188,11 @@ Nodes (1): Benign scanner fixture catalog.  This file stores quoted payload exam
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `runScan()` connect `Community 0` to `Community 10`, `Community 4`, `Community 5`?**
-  _High betweenness centrality (0.062) - this node is a cross-community bridge._
-- **Why does `readFile()` connect `Community 1` to `Community 2`, `Community 4`, `Community 6`, `Community 7`, `Community 8`, `Community 9`, `Community 12`?**
+- **Why does `runScan()` connect `Community 0` to `Community 10`, `Community 4`, `Community 6`?**
+  _High betweenness centrality (0.063) - this node is a cross-community bridge._
+- **Why does `readFile()` connect `Community 1` to `Community 2`, `Community 4`, `Community 5`, `Community 7`, `Community 8`, `Community 9`, `Community 12`, `Community 13`?**
   _High betweenness centrality (0.060) - this node is a cross-community bridge._
-- **Why does `trim()` connect `Community 2` to `Community 0`, `Community 1`, `Community 4`, `Community 9`, `Community 12`, `Community 14`?**
+- **Why does `trim()` connect `Community 2` to `Community 0`, `Community 1`, `Community 4`, `Community 8`, `Community 12`, `Community 14`?**
   _High betweenness centrality (0.060) - this node is a cross-community bridge._
 - **Are the 13 inferred relationships involving `runScan()` (e.g. with `clearPlugins()` and `initDefaultPlugins()`) actually correct?**
   _`runScan()` has 13 INFERRED edges - model-reasoned connections that need verification._

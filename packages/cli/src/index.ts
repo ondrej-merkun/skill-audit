@@ -12,60 +12,60 @@ import { VERSION } from './version.js';
 
 const program = new Command();
 
+function addScanOptions(command: Command): Command {
+  return command
+    .option('--json', 'emit JSON to stdout instead of TUI table')
+    .option('--summary', 'emit compact one-liner summary instead of full table')
+    .option('--html <file>', 'write standalone HTML report to <file>')
+    .option('-o, --output <file>', 'write selected non-HTML scan output to <file>')
+    .addOption(new Option('--offline', 'skip disabled network enrichment calls').hideHelp())
+    .option('--strict', 'treat REVIEW band as FAIL for exit code purposes')
+    .option('--agent <id>', 'restrict scan to a single agent (e.g. claude-code, cursor)')
+    .option('--include-marketplaces', 'include locally available but inactive marketplace skills')
+    .option(
+      '--llm <name>',
+      'run optional local LLM review; repeat, comma-separate, or use "all"',
+      (value: string, previous: string[]) => [...previous, value],
+      []
+    )
+    .option(
+      '--fail-on <band>',
+      'minimum verdict band that triggers exit code 1 (REVIEW or FAIL)',
+      'FAIL'
+    );
+}
+
+function scanOptionsFrom(cmdOpts: Record<string, unknown>): Partial<ScanOptions> {
+  return {
+    json: cmdOpts.json === true,
+    summary: cmdOpts.summary === true,
+    html: typeof cmdOpts.html === 'string' ? cmdOpts.html : undefined,
+    output: typeof cmdOpts.output === 'string' ? cmdOpts.output : undefined,
+    offline: cmdOpts.offline === true,
+    strict: cmdOpts.strict === true,
+    agent: typeof cmdOpts.agent === 'string' ? cmdOpts.agent : undefined,
+    includeMarketplaces: cmdOpts.includeMarketplaces === true,
+    llm: Array.isArray(cmdOpts.llm) && cmdOpts.llm.length > 0 ? cmdOpts.llm : undefined,
+    failOn: typeof cmdOpts.failOn === 'string' ? cmdOpts.failOn : undefined,
+  };
+}
+
 program
   .name('skill-audit')
   .description('Scan AI agent skills for prompt injection and malicious code')
   .version(VERSION);
 
-program.action(() => {
-  runScan({}).catch((err: unknown) => {
+addScanOptions(
+  program
+    .command('scan', { isDefault: true })
+    .description('Scan installed agent skills for security issues')
+).action((cmdOpts: Record<string, unknown>) => {
+  runScan(scanOptionsFrom(cmdOpts)).catch((err: unknown) => {
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(`[skill-audit] fatal: ${msg}\n`);
     process.exit(2);
   });
 });
-
-program
-  .command('scan')
-  .description('Scan installed agent skills for security issues')
-  .option('--json', 'emit JSON to stdout instead of TUI table')
-  .option('--summary', 'emit compact one-liner summary instead of full table')
-  .option('--html <file>', 'write standalone HTML report to <file>')
-  .option('-o, --output <file>', 'write selected non-HTML scan output to <file>')
-  .addOption(new Option('--offline', 'skip disabled network enrichment calls').hideHelp())
-  .option('--strict', 'treat REVIEW band as FAIL for exit code purposes')
-  .option('--agent <id>', 'restrict scan to a single agent (e.g. claude-code, cursor)')
-  .option('--include-marketplaces', 'include locally available but inactive marketplace skills')
-  .option(
-    '--llm <name>',
-    'run optional local LLM review; repeat, comma-separate, or use "all"',
-    (value: string, previous: string[]) => [...previous, value],
-    []
-  )
-  .option(
-    '--fail-on <band>',
-    'minimum verdict band that triggers exit code 1 (REVIEW or FAIL)',
-    'FAIL'
-  )
-  .action((cmdOpts: Record<string, unknown>) => {
-    const options: Partial<ScanOptions> = {
-      json: cmdOpts.json === true,
-      summary: cmdOpts.summary === true,
-      html: typeof cmdOpts.html === 'string' ? cmdOpts.html : undefined,
-      output: typeof cmdOpts.output === 'string' ? cmdOpts.output : undefined,
-      offline: cmdOpts.offline === true,
-      strict: cmdOpts.strict === true,
-      agent: typeof cmdOpts.agent === 'string' ? cmdOpts.agent : undefined,
-      includeMarketplaces: cmdOpts.includeMarketplaces === true,
-      llm: Array.isArray(cmdOpts.llm) && cmdOpts.llm.length > 0 ? cmdOpts.llm : undefined,
-      failOn: typeof cmdOpts.failOn === 'string' ? cmdOpts.failOn : undefined,
-    };
-    runScan(options).catch((err: unknown) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      process.stderr.write(`[skill-audit] fatal: ${msg}\n`);
-      process.exit(2);
-    });
-  });
 
 program
   .command('list')

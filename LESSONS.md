@@ -146,6 +146,13 @@ without a commit message explaining why it no longer applies.
   After changing package metadata, rerun `pnpm exec vitest run test/e2e.test.ts`
   or the full suite and update the documented package contract before pushing.
 
+- **L1.23 — Root CLI shortcuts must not duplicate subcommand option parsers.** _The
+  root `skill-audit --agent claude-code` fix first accepted root flags by adding
+  scan options to the root command, but full e2e showed `skill-audit scan --json`
+  silently fell back to table output._
+  Route root shortcuts into the real subcommand parser and run both bare and
+  explicit-subcommand e2e coverage before calling CLI flag work done.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

@@ -182,11 +182,43 @@ export function renderSummaryFooter(
   const firstFail = riskOrderedSkills.find((s) => s.summary.verdict === 'FAIL');
   const firstReview = riskOrderedSkills.find((s) => s.summary.verdict === 'REVIEW');
   const highlight = firstFail ?? firstReview;
+  const nextCommands: Array<{ command: string; description: string }> = [];
   if (highlight) {
-    lines.push(`  →  skill-audit explain ${highlight.name}    ${C_GREY('See full findings')}`);
+    nextCommands.push({
+      command: `skill-audit explain ${highlight.name}`,
+      description: 'See full findings',
+    });
   }
-  lines.push(`  →  skill-audit ignore <skill>    ${C_GREY('Allowlist a false positive')}`);
-  lines.push(`  →  skill-audit --html report.html    ${C_GREY('Generate shareable HTML')}`);
+  nextCommands.push(
+    {
+      command: 'skill-audit ignore <skill>',
+      description: 'Allowlist a false positive',
+    },
+    {
+      command: 'skill-audit --html report.html',
+      description: 'Generate shareable HTML',
+    }
+  );
+  nextCommands.splice(
+    1,
+    0,
+    {
+      command:
+        'skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model <model_name>',
+      description: 'Configure local LLM review',
+    },
+    {
+      command: 'skill-audit --llm local',
+      description: 'Add local LLM review',
+    }
+  );
+  nextCommands.push({
+    command: 'skill-audit --agent claude-code',
+    description: 'Scan only Claude Code skills',
+  });
+  for (const { command, description } of nextCommands) {
+    lines.push(`  →  ${command}    ${C_GREY(description)}`);
+  }
   lines.push('');
 
   return lines.join('\n');
