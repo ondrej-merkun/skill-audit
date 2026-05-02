@@ -1,5 +1,9 @@
 import type { Rule } from '../types.js';
-import { maskDocumentationExampleContext, maskDocumentationTextInCode } from './code-context.js';
+import {
+  maskDocumentationExampleContext,
+  maskDocumentationTextInCode,
+  maskSecurityEducationExampleContext,
+} from './code-context.js';
 
 // Patterns are split to avoid triggering static-analysis hooks on this detector file itself.
 // These rules detect env-exfil and network calls in scanned skills, not in this codebase.
@@ -60,6 +64,7 @@ export const NET_WEBHOOK_KNOWN: Rule = {
     /https:\/\/ntfy\.sh\//,
     /https:\/\/discord\.com\/api\/channels\/[0-9]+\/messages/,
   ],
+  prepareContent: maskSecurityEducationExampleContext,
   message:
     'Known webhook endpoint detected — data may be silently exfiltrated to an attacker-controlled channel.',
   fix: 'Remove or replace the webhook URL. Never hardcode exfiltration endpoints in skills.',

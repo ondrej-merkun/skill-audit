@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import stripAnsi from './helpers/strip-ansi.js';
 import type { LlmReviewFetch } from '../packages/cli/src/llm/review.js';
-import type { Skill } from '../packages/cli/src/types.js';
+import type { Finding, Skill } from '../packages/cli/src/types.js';
 
 // Mock discovery and rules engine before importing runScan
 vi.mock('../packages/cli/src/discovery/index.js', () => ({
@@ -58,6 +58,22 @@ function makeSkill(overrides: Partial<Skill> = {}): Skill {
     format: 'SKILL.md',
     scope: 'user',
     treeSha256: 'deadbeef',
+    ...overrides,
+  };
+}
+
+function makeFinding(overrides: Partial<Finding> = {}): Finding {
+  return {
+    ruleId: 'PI-OVERRIDE',
+    severity: 'critical',
+    category: 'prompt-injection',
+    file: 'SKILL.md',
+    line: 1,
+    column: 1,
+    snippet: 'ignore previous instructions',
+    message: 'Instruction override.',
+    fix: 'Remove override instructions.',
+    cwe: ['CWE-1427'],
     ...overrides,
   };
 }
@@ -223,6 +239,42 @@ describe('runScan flag wiring', () => {
     const json = JSON.parse(out);
     expect(json.schema_version).toBe('1.0');
     expect(Array.isArray(json.skills)).toBe(true);
+  });
+
+  it('adds an info context hint for likely security skills with non-info findings', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({ name: 'security-auditor', path: '/tmp/security-auditor' }),
+    ]);
+    vi.mocked(runRules).mockResolvedValue([makeFinding()]);
+
+    await runScan({ json: true, offline: true });
+
+    const json = JSON.parse(stdoutChunks.join(''));
+    const skill = json.skills[0];
+    expect(skill.findings.map((finding: { rule_id: string }) => finding.rule_id)).toEqual([
+      'PI-OVERRIDE',
+      'CTX-SECURITY-EDUCATION',
+    ]);
+    expect(skill.summary).toMatchObject({
+      critical: 1,
+      info: 1,
+      score: 75,
+      verdict: 'REVIEW',
+    });
+  });
+
+  it('does not add the security context hint for ordinary skills', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({ name: 'docs-helper', path: '/tmp/docs-helper' }),
+    ]);
+    vi.mocked(runRules).mockResolvedValue([makeFinding()]);
+
+    await runScan({ json: true, offline: true });
+
+    const json = JSON.parse(stdoutChunks.join(''));
+    expect(json.skills[0].findings.map((finding: { rule_id: string }) => finding.rule_id)).toEqual([
+      'PI-OVERRIDE',
+    ]);
   });
 
   it('keeps JSON stdout clean in an interactive terminal', async () => {

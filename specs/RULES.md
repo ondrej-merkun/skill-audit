@@ -28,6 +28,13 @@ test-only context. Do not weaken a real malicious detection to pass those
 fixtures; add context masking or a narrower operative pattern when the current
 regex cannot tell explanation from behavior.
 
+`CTX-SECURITY-EDUCATION` is an info-only context hint, not a suppression rule.
+It may be emitted when a skill appears to be a security scanner, tester,
+auditor, red-team, or rule-fixture skill and still has non-info findings. It
+does not change score, verdict, mandatory-fail behavior, or exit codes; it tells
+the user to review whether the matched evidence is an inert example before
+using `skill-audit ignore <skill>`.
+
 ## Severity → weight
 
 | Severity | Weight | Verdict-band contribution (count of distinct rule IDs) |

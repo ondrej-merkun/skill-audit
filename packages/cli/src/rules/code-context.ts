@@ -17,8 +17,12 @@ const MARKDOWN_BASENAME_PATTERN =
   /^(?:SKILL|AGENTS|CLAUDE|GEMINI|CONVENTIONS|README|CHANGELOG)\.md$/i;
 const SECURITY_EDUCATION_HEADING_PATTERN =
   /\b(?:detection|detector|scanner|audit(?:or)?|tester|testing|fixture|example|documentation|reference|red[- ]?team|training|rule(?:s)?|false positive|benign corpus|payload catalog)\b/i;
+const SECURITY_EXAMPLE_HEADING_PATTERN =
+  /\b(?:detection|detector|scanner|audit(?:or)?|tester|testing|example|documentation|reference|red[- ]?team|training|rule(?:s)?|false positive|benign corpus|payload catalog)\b/i;
 const SECURITY_EDUCATION_LINE_PATTERN =
   /\b(?:quoted attacks?|fenced examples?|example payload|malicious example|benign example|scanner test|tester fixture|rule documentation|detection docs?|should flag|must flag|flags? quoted|false positive|red[- ]?team training)\b/i;
+const ACTIVE_OR_MALICIOUS_CONTEXT_PATTERN =
+  /\b(?:malicious|operative|active|runtime|run(?:s|time)?|execute|executes?|install|bootstrap|payload)\b/i;
 
 function extensionOf(filePath: string): string {
   const lastSlash = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
@@ -237,6 +241,61 @@ export function maskMarkdownSecurityEducationContext(content: string, filePath: 
           educationHeadingLevel = 0;
         }
         if (SECURITY_EDUCATION_HEADING_PATTERN.test(title)) {
+          educationHeadingLevel = level;
+          return maskLine(line);
+        }
+      }
+
+      if (educationHeadingLevel > 0) return maskLine(line);
+      if (
+        DOCUMENTATION_LINE_CONTEXT_PATTERN.test(line) &&
+        SECURITY_EDUCATION_LINE_PATTERN.test(line)
+      ) {
+        return maskLine(line);
+      }
+
+      return line;
+    })
+    .join('\n');
+}
+
+/**
+ * Suppresses clearly inert security-education examples without hiding active
+ * markdown install/run blocks that a skill may ask the agent to execute.
+ */
+export function maskSecurityEducationExampleContext(content: string, filePath: string): string {
+  if (!isMarkdownPromptFile(filePath)) return maskDocumentationExampleContext(content, filePath);
+  if (pathLooksDocumentationOnly(filePath))
+    return maskDocumentationExampleContext(content, filePath);
+
+  let inFence = false;
+  let educationHeadingLevel = 0;
+
+  return content
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trimStart();
+      const fence = /^(?:```|~~~)/.test(trimmed);
+
+      if (fence) {
+        const masked = educationHeadingLevel > 0 ? maskLine(line) : line;
+        inFence = !inFence;
+        return masked;
+      }
+
+      if (educationHeadingLevel > 0 && inFence) return maskLine(line);
+
+      const heading = /^(#{1,6})\s+(.+)$/.exec(trimmed);
+      if (heading) {
+        const level = heading[1]?.length ?? 0;
+        const title = heading[2] ?? '';
+        if (educationHeadingLevel > 0 && level <= educationHeadingLevel) {
+          educationHeadingLevel = 0;
+        }
+        if (
+          SECURITY_EXAMPLE_HEADING_PATTERN.test(title) &&
+          !ACTIVE_OR_MALICIOUS_CONTEXT_PATTERN.test(title)
+        ) {
           educationHeadingLevel = level;
           return maskLine(line);
         }

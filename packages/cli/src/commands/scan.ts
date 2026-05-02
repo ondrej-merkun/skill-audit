@@ -28,6 +28,7 @@ import {
 } from '../progress.js';
 import { runRules } from '../rules/engine.js';
 import { ALL_RULES } from '../rules/index.js';
+import { withSecurityEducationContextFinding } from '../rules/security-education.js';
 import { scoreFindings } from '../score.js';
 import type {
   AgentInfo,
@@ -370,7 +371,10 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     SCAN_CONCURRENCY,
     async (skill): Promise<{ skill: Skill; scannedSkill?: ScannedSkill; error?: string }> => {
       try {
-        const findings = await runRules(skill.path, ALL_RULES);
+        const findings = withSecurityEducationContextFinding(
+          skill,
+          await runRules(skill.path, ALL_RULES)
+        );
         const summary = scoreFindings(findings, skill.treeSha256);
         return { skill, scannedSkill: { ...skill, findings, enrichment: {}, summary } };
       } catch (err) {

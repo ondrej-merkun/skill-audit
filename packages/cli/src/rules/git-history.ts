@@ -1,4 +1,5 @@
 import type { Rule } from '../types.js';
+import { maskSecurityEducationExampleContext } from './code-context.js';
 
 // Patterns split to avoid triggering static-analysis hooks on this detector file.
 
@@ -15,6 +16,7 @@ export const GIT_CRED_READ: Rule = {
   severity: 'high',
   appliesTo: ['*.sh', '*.bash', '*.py', '*.js', '*.ts', '*.mjs', '*.md'],
   patterns: [gitCredFillPattern, gitCredApprovePattern, gitCredHelperReadPattern],
+  prepareContent: maskSecurityEducationExampleContext,
   message: 'Git credential subsystem access detected — may extract stored credentials.',
   fix: 'Remove git credential fill / git config credential.helper calls. Skills should not access stored VCS credentials.',
   cwe: ['CWE-522'],
@@ -37,6 +39,7 @@ export const GIT_HISTORY_SCAN: Rule = {
     gitLogAllGrepPattern,
     gitGrepAllObjectsPattern,
   ],
+  prepareContent: maskSecurityEducationExampleContext,
   message: 'Git history scanning detected — may uncover secrets from past commits.',
   fix: 'Remove commands that search all git history. Use dedicated secret-scanning tools with explicit consent.',
   cwe: ['CWE-200'],

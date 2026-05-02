@@ -15,6 +15,7 @@ import {
 } from '../progress.js';
 import { runRules } from '../rules/engine.js';
 import { ALL_RULES } from '../rules/index.js';
+import { withSecurityEducationContextFinding } from '../rules/security-education.js';
 import { scoreFindings } from '../score.js';
 import type {
   Enrichment,
@@ -212,7 +213,7 @@ export async function runExplain(
   progress.startScan(1);
   let findings: Finding[];
   try {
-    findings = await runRules(target.path, ALL_RULES);
+    findings = withSecurityEducationContextFinding(target, await runRules(target.path, ALL_RULES));
     progress.updateScan(1, 1, target.name);
   } catch (err) {
     progress.failScan();

@@ -234,6 +234,30 @@ describe('runExplain', () => {
     expect(processExitSpy).not.toHaveBeenCalled();
   });
 
+  it('--json includes security-education context hints for likely security skills', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({ name: 'security-auditor', path: '/tmp/security-auditor' }),
+    ]);
+    vi.mocked(runRules).mockResolvedValue([makeFinding()]);
+    vi.mocked(scoreFindings).mockReturnValue(makeSummary({ critical: 1, info: 1, score: 75 }));
+
+    await runExplain('security-auditor', { offline: true, json: true });
+
+    const parsed = JSON.parse(stripAnsi(stdoutChunks.join('')));
+    const findings = parsed.skills[0].findings as Array<{ ruleId: string }>;
+    expect(findings.map((finding) => finding.ruleId)).toEqual([
+      'NET-EXFIL-ENV',
+      'CTX-SECURITY-EDUCATION',
+    ]);
+    expect(scoreFindings).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ ruleId: 'NET-EXFIL-ENV' }),
+        expect.objectContaining({ ruleId: 'CTX-SECURITY-EDUCATION', severity: 'info' }),
+      ]),
+      'deadbeef'
+    );
+  });
+
   it('matches skill by case-insensitive partial name', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill({ name: 'MyComplexSkill' })]);
     vi.mocked(runRules).mockResolvedValue([]);

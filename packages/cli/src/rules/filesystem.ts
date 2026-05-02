@@ -1,5 +1,8 @@
 import type { Rule } from '../types.js';
-import { maskDocumentationExampleContext } from './code-context.js';
+import {
+  maskDocumentationExampleContext,
+  maskSecurityEducationExampleContext,
+} from './code-context.js';
 
 // Patterns using RegExp constructor to avoid triggering static-analysis hooks on this detector file.
 
@@ -44,6 +47,7 @@ export const FS_KEYCHAIN_ACCESS: Rule = {
   severity: 'critical',
   appliesTo: ['*.py', '*.sh', '*.bash', '*.js', '*.ts', '*.mjs'],
   patterns: [securityCliPattern, pythonKeyringPattern, nodeKeytarPattern],
+  prepareContent: maskSecurityEducationExampleContext,
   message: 'Programmatic access to macOS Keychain or system credential store detected.',
   fix: 'Skills must not read from system credential stores. Remove keychain access calls.',
   cwe: ['CWE-522'],
@@ -71,6 +75,7 @@ export const FS_DOTENV_READ: Rule = {
     shellCatDotenvPattern,
     nodeRequireDotenvPattern,
   ],
+  prepareContent: maskSecurityEducationExampleContext,
   message: 'Explicit .env file read — skill may be harvesting project secrets.',
   fix: 'Skills must not read .env files. Remove dotenv loading and .env file reads.',
   cwe: ['CWE-200'],

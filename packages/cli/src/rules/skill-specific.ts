@@ -1,5 +1,8 @@
 import type { Rule } from '../types.js';
-import { maskMarkdownSecurityEducationContext } from './code-context.js';
+import {
+  maskMarkdownSecurityEducationContext,
+  maskSecurityEducationExampleContext,
+} from './code-context.js';
 
 const SKILL_FILES = [
   '*.md',
@@ -34,6 +37,7 @@ export const SKILL_CURL_BASH_IN_MD: Rule = {
   severity: 'critical',
   appliesTo: [...SKILL_FILES, ...SCRIPT_AND_CODE_FILES],
   patterns: [curlPipeBashPattern, sourceProcessSubstitutionPattern, evalDollarCurlPattern],
+  prepareContent: maskSecurityEducationExampleContext,
   message: 'Pipe-to-shell via curl/wget detected — remote code execution vector.',
   fix: 'Download scripts to a file first, inspect them, then execute explicitly. Never pipe remote content directly to a shell.',
   cwe: ['CWE-78', 'CWE-494'],
@@ -56,6 +60,7 @@ export const SKILL_FETCH_AND_EXEC: Rule = {
   severity: 'critical',
   appliesTo: [...SKILL_FILES, ...SCRIPT_AND_CODE_FILES],
   patterns: [fetchThenEvalPattern, requestsExecPattern, urllibExecPattern, awaitFetchEvalPattern],
+  prepareContent: maskSecurityEducationExampleContext,
   message: 'Remote fetch result passed directly to eval/exec — arbitrary remote code execution.',
   fix: 'Never execute network responses directly. Download to a file, verify integrity (checksum/signature), then run explicitly.',
   cwe: ['CWE-494', 'CWE-78'],
@@ -104,6 +109,7 @@ export const SKILL_PASSWORD_ZIP: Rule = {
   severity: 'critical',
   appliesTo: [...SKILL_FILES, ...SCRIPT_AND_CODE_FILES],
   patterns: [unzipPasswordPattern, sevenZipPasswordPattern],
+  prepareContent: maskSecurityEducationExampleContext,
   message: 'Password-protected zip extraction detected — AV-evasion IOC (ClawHavoc pattern).',
   fix: 'Do not embed or execute password-protected archives. This is a known AV-evasion technique used by ClawHavoc and similar payloads.',
   cwe: ['CWE-506'],
@@ -131,6 +137,7 @@ export const SKILL_MEMORY_WRITE: Rule = {
     appendContextFilePattern,
     fsWriteConfigPattern,
   ],
+  prepareContent: maskSecurityEducationExampleContext,
   message:
     'Writing to agent memory or config directory detected — potential persistent context poisoning.',
   fix: 'Skills should not write to agent config directories. If memory persistence is needed, use the official memory API rather than direct file writes.',

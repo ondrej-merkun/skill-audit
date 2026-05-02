@@ -43,6 +43,18 @@ const HIGH_CONFIDENCE_SECURITY_EDUCATION_CATEGORIES = new Set([
   'skill-specific',
 ]);
 
+const SECURITY_EXAMPLE_RULE_IDS = new Set([
+  'NET-WEBHOOK-KNOWN',
+  'SKILL-CURL-BASH-IN-MD',
+  'SKILL-FETCH-AND-EXEC',
+  'SKILL-PASSWORD-ZIP',
+  'SKILL-MEMORY-WRITE',
+  'FS-KEYCHAIN-ACCESS',
+  'FS-DOTENV-READ',
+  'GIT-CRED-READ',
+  'GIT-HISTORY-SCAN',
+]);
+
 describe('rule fixtures', () => {
   for (const rule of ALL_RULES) {
     const ruleDir = join(FIXTURES_DIR, rule.id);
@@ -119,6 +131,22 @@ describe('security education fixtures', () => {
     }
   });
 
+  it('masks security-education examples for high-risk code and network rules', async () => {
+    const fixtureDirs = [
+      join(FIXTURES_DIR, 'benign', 'security-auditor'),
+      join(FIXTURES_DIR, 'benign', 'skill-tester'),
+    ];
+
+    for (const fixtureDir of fixtureDirs) {
+      const findings = await runRules(fixtureDir, ALL_RULES);
+      const exampleFindings = findings.filter((finding) =>
+        SECURITY_EXAMPLE_RULE_IDS.has(finding.ruleId)
+      );
+
+      expect(exampleFindings).toEqual([]);
+    }
+  });
+
   it('still detects operative security-auditor instructions outside examples', async () => {
     const findings = await runRules(
       join(FIXTURES_DIR, 'malicious', 'security-auditor-override'),
@@ -129,5 +157,12 @@ describe('security education fixtures', () => {
     expect(ruleIds).toContain('PI-OVERRIDE');
     expect(ruleIds).toContain('PI-EXFIL-TRIGGER-CLAUSE');
     expect(ruleIds).toContain('SKILL-DISABLE-SAFETY');
+    expect(ruleIds).toContain('NET-WEBHOOK-KNOWN');
+    expect(ruleIds).toContain('SKILL-CURL-BASH-IN-MD');
+    expect(ruleIds).toContain('SKILL-PASSWORD-ZIP');
+    expect(ruleIds).toContain('SKILL-MEMORY-WRITE');
+    expect(ruleIds).toContain('FS-KEYCHAIN-ACCESS');
+    expect(ruleIds).toContain('FS-DOTENV-READ');
+    expect(ruleIds).toContain('GIT-HISTORY-SCAN');
   });
 });
