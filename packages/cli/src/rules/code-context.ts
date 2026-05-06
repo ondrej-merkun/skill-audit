@@ -18,11 +18,11 @@ const MARKDOWN_BASENAME_PATTERN =
 const SECURITY_EDUCATION_HEADING_PATTERN =
   /\b(?:detection|detector|scanner|audit(?:or)?|tester|testing|fixture|example|documentation|reference|red[- ]?team|training|rule(?:s)?|false positive|benign corpus|payload catalog)\b/i;
 const SECURITY_EXAMPLE_HEADING_PATTERN =
-  /\b(?:detection|detector|scanner|audit(?:or)?|tester|testing|example|documentation|reference|red[- ]?team|training|rule(?:s)?|false positive|benign corpus|payload catalog)\b/i;
+  /\b(?:detection|detector|scanner|audit(?:or)?|tester|testing|example|pattern|documentation|reference|red[- ]?team|training|rule(?:s)?|false positive|benign corpus|payload catalog)\b/i;
 const SECURITY_EDUCATION_LINE_PATTERN =
   /\b(?:quoted attacks?|fenced examples?|example payload|malicious example|benign example|scanner test|tester fixture|rule documentation|detection docs?|should flag|must flag|flags? quoted|false positive|red[- ]?team training)\b/i;
-const ACTIVE_OR_MALICIOUS_CONTEXT_PATTERN =
-  /\b(?:malicious|operative|active|runtime|run(?:s|time)?|execute|executes?|install|bootstrap|payload)\b/i;
+const ACTIVE_RUNTIME_CONTEXT_PATTERN =
+  /\b(?:operative|active|runtime|run(?:s|time)?|execute|executes?|install|bootstrap)\b/i;
 
 function extensionOf(filePath: string): string {
   const lastSlash = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
@@ -294,7 +294,7 @@ export function maskSecurityEducationExampleContext(content: string, filePath: s
         }
         if (
           SECURITY_EXAMPLE_HEADING_PATTERN.test(title) &&
-          !ACTIVE_OR_MALICIOUS_CONTEXT_PATTERN.test(title)
+          !ACTIVE_RUNTIME_CONTEXT_PATTERN.test(title)
         ) {
           educationHeadingLevel = level;
           return maskLine(line);
