@@ -180,6 +180,13 @@ without a commit message explaining why it no longer applies.
   If the scanner has no LLM review context, return a clean zero-finding review
   locally instead of asking a small model to infer from skill name/path only.
 
+- **L1.28 — Reachability demotion must prove malicious fixtures still fire.** _The
+  scan false-positive pass first demoted unreferenced supporting docs too broadly
+  and masked malicious fixture paths because `fixtures/` was treated as
+  documentation._
+  After changing scanner reachability or context masking, run the full rule
+  fixture suite before trusting a real scan improvement.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

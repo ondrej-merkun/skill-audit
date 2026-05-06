@@ -110,6 +110,22 @@ const shellOutboundPattern =
 const pyOutboundPattern =
   /\b(?:requests|httpx)\.\w+\s*\(\s*['"]https?:\/\/(?!localhost|127\.0\.0\.1|::1)[a-zA-Z0-9]/;
 const jsOutboundPattern = /\bfetch\s*\(\s*['"]https?:\/\/(?!localhost|127\.0\.0\.1|::1)[a-zA-Z0-9]/;
+const nonExecutingShellOutputPattern =
+  /^\s*(?:echo|printf|warn|warning|error|info|log|log_warning)\b\s+["'][^"'\n]*\b(?:curl|wget)\b[^"'\n]*https?:\/\/[^"'\n]*["']\s*$/i;
+
+function maskLine(line: string): string {
+  return ' '.repeat(line.length);
+}
+
+function maskNonExecutingOutboundExamples(content: string, filePath: string): string {
+  const shellPrepared = /\.(?:sh|bash)$/i.test(filePath)
+    ? maskDocumentationTextInCode(content, filePath)
+    : content;
+  return maskDocumentationExampleContext(shellPrepared, filePath)
+    .split('\n')
+    .map((line) => (nonExecutingShellOutputPattern.test(line) ? maskLine(line) : line))
+    .join('\n');
+}
 
 export const NET_OUTBOUND_NONLOCAL: Rule = {
   id: 'NET-OUTBOUND-NONLOCAL',
@@ -117,7 +133,7 @@ export const NET_OUTBOUND_NONLOCAL: Rule = {
   severity: 'high',
   appliesTo: ['*.py', '*.sh', '*.bash', '*.js', '*.ts', '*.mjs'],
   patterns: [shellOutboundPattern, pyOutboundPattern, jsOutboundPattern],
-  prepareContent: maskDocumentationExampleContext,
+  prepareContent: maskNonExecutingOutboundExamples,
   message: 'Hardcoded outbound HTTP call to non-localhost address detected.',
   fix: 'Audit the destination. Skills should not make arbitrary external HTTP calls.',
   cwe: ['CWE-918'],

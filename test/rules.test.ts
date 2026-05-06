@@ -120,6 +120,23 @@ describe('DEPS-INLINE-INSTALL runtime contexts', () => {
   });
 });
 
+describe('supporting markdown reachability', () => {
+  it('keeps unreferenced supporting docs out of the verdict for every rule category', async () => {
+    const findings = await runRules(join(FIXTURES_DIR, 'inert-supporting-docs'), ALL_RULES);
+
+    const inertFindings = findings.filter((finding) => finding.file.endsWith('security.md'));
+    expect(inertFindings.length).toBeGreaterThan(0);
+    expect(
+      inertFindings.every(
+        (finding) =>
+          finding.severity === 'info' &&
+          finding.ignoredForVerdict === true &&
+          finding.fileRole === 'inert-supporting-docs'
+      )
+    ).toBe(true);
+  });
+});
+
 describe('security education fixtures', () => {
   it('does not treat scanner and tester examples as active malicious instructions', async () => {
     const fixtureDirs = [

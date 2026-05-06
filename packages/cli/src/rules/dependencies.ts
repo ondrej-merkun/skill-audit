@@ -118,18 +118,50 @@ const inlineInstallPattern =
   /\b(?:pip3?|npm|conda)[^\S\n]+(?:install|i|add)[^\S\n]+(?!(?:-r|--requirement)\b)[A-Za-z0-9@]/i;
 const markdownInstallHeadingPattern = /^\s{0,3}#{1,6}\s+.*\b(?:install|installation|setup)\b/i;
 const markdownCodeFencePattern = /^\s{0,3}```/;
+const markdownTableLinePattern = /^\s*\|.*\|\s*$/;
 const agentRuntimeInstructionPattern =
   /\b(?:agent|assistant|skill|workflow|runtime|execution|before running|when running|when executing|automatically|if missing|if unavailable|ensure|must|should|run)\b/i;
+const activeMarkdownInstallInstructionPattern =
+  /\b(?:run|execute|must|should|ensure|before running|when running|when executing|automatically|if missing|if unavailable)\b/i;
 const documentationInstallContextPattern =
-  /\b(?:no|not|never|without|doesn['’]?t|do not|don't|permanent installation|optional(?: tools?| extras?)|setup example|readme|for humans?|demo locally|preparing the demo)\b/i;
+  /\b(?:no|not|never|without|doesn['’]?t|do not|don't|fails?|failure|offline|proxy|if you have|required package|prevents?|install with|please install|requires? .{0,40}install|permanent installation|optional(?: tools?| extras?)|setup example|readme|for humans?|demo locally|preparing the demo)\b/i;
 const quotedInstallPattern =
   /^\s*(?:echo|printf|console\.log|print)\s*(?:\(|['"`])[\s\S]*\b(?:pip3?|npm|conda)[^\S\n]+(?:install|i|add)\b/i;
 const codeDocumentationLinePattern =
-  /^\s*(?:(?:return|throw\b|raise\b)[\s\S]*|(?:console\.log|print)\s*\()[\s\S]*\b(?:pip3?|npm|conda)[^\S\n]+(?:install|i|add)\b/i;
+  /^\s*(?:(?:return|throw\b|raise\b)[\s\S]*|(?:sys\.stderr\.write|logging\.\w+|logger\.\w+|console\.log|print)\s*\()[\s\S]*\b(?:pip3?|npm|conda)[^\S\n]+(?:install|i|add)\b/i;
+const shellStatusInstallLinePattern =
+  /^\s*(?:warn|warning|error|fail|die|info|log|log_warning)\b[\s\S]*\b(?:install with|please install|requires? .{0,40}install)\b[\s\S]*\b(?:pip3?|npm|conda)[^\S\n]+(?:install|i|add)\b/i;
 const commentLinePattern = /^\s*(?:#|\/\/)/;
 
 function maskLine(line: string): string {
   return ' '.repeat(line.length);
+}
+
+function isDocumentationMarkdownPath(filePath: string): boolean {
+  return /(?:^|[/\\])(?:docs?|documentation|references?|test|tests)(?:[/\\]|$)/i.test(filePath);
+}
+
+function maskPythonModuleDocstringLines(lines: string[], filePath: string): Set<number> {
+  if (!filePath.endsWith('.py')) return new Set();
+
+  const masked = new Set<number>();
+  let index = 0;
+  while (index < lines.length && /^\s*(?:#.*)?$/.test(lines[index] ?? '')) index += 1;
+
+  const startLine = lines[index] ?? '';
+  const start = /^(\s*)([rRuUbBfF]{0,3})(['"]{3})/.exec(startLine);
+  if (start === null) return masked;
+
+  const quote = start[3] ?? '';
+  masked.add(index);
+  if (startLine.slice((start.index ?? 0) + start[0].length).includes(quote)) return masked;
+
+  for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+    masked.add(cursor);
+    if ((lines[cursor] ?? '').includes(quote)) break;
+  }
+
+  return masked;
 }
 
 function prepareInlineInstallContent(content: string, filePath: string): string {
@@ -137,8 +169,10 @@ function prepareInlineInstallContent(content: string, filePath: string): string 
   const isMarkdown = name.endsWith('.md') || name.endsWith('.mdc');
   const lines = content.split('\n');
   const originalLines = content.split('\n');
+  const pythonDocstringLines = maskPythonModuleDocstringLines(originalLines, filePath);
   let inMarkdownInstallSection = false;
   let inMarkdownFence = false;
+  let inMarkdownPreventedCommandsSection = false;
 
   return lines
     .map((line, index) => {
@@ -152,14 +186,36 @@ function prepareInlineInstallContent(content: string, filePath: string): string 
 
         if (/^\s{0,3}#{1,6}\s+/.test(originalLine)) {
           inMarkdownInstallSection = markdownInstallHeadingPattern.test(originalLine);
+          inMarkdownPreventedCommandsSection =
+            /\b(?:prevented|prevents?|blocked|disallowed|restricted)\b/i.test(originalLine);
+        } else if (/^\s*\*\*[^*]+\*\*:?\s*$/.test(originalLine)) {
+          inMarkdownPreventedCommandsSection =
+            /\b(?:prevented|prevents?|blocked|disallowed|restricted)\b/i.test(originalLine);
+        } else if (/^\s*\S/.test(originalLine) && !/^\s*[-*]\s+/.test(originalLine)) {
+          inMarkdownPreventedCommandsSection = false;
         }
       }
 
       if (!hasInlineInstall) return line;
+      if (pythonDocstringLines.has(index)) return maskLine(line);
       if (commentLinePattern.test(originalLine)) return maskLine(line);
+      if (isMarkdown && inMarkdownFence && isDocumentationMarkdownPath(filePath)) {
+        return maskLine(line);
+      }
+      if (isMarkdown && inMarkdownPreventedCommandsSection && /^\s*[-*]\s+/.test(originalLine)) {
+        return maskLine(line);
+      }
       if (quotedInstallPattern.test(originalLine)) return maskLine(line);
       if (codeDocumentationLinePattern.test(originalLine)) return maskLine(line);
+      if (shellStatusInstallLinePattern.test(originalLine)) return maskLine(line);
       if (documentationInstallContextPattern.test(originalLine)) return maskLine(line);
+      if (
+        isMarkdown &&
+        markdownTableLinePattern.test(originalLine) &&
+        !activeMarkdownInstallInstructionPattern.test(originalLine)
+      ) {
+        return maskLine(line);
+      }
 
       if (isMarkdown && (inMarkdownInstallSection || inMarkdownFence)) {
         if (!agentRuntimeInstructionPattern.test(originalLine)) return maskLine(line);

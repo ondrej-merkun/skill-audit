@@ -142,18 +142,21 @@ export const PI_HIDDEN_HTML_COMMENT: Rule = {
 // PI-WHITE-ON-WHITE (Medium)
 // CSS invisible-text tricks in markdown/HTML
 // ---------------------------------------------------------------------------
-const whiteOnWhiteSpanPattern =
-  /<(?:span|div|p)[^>]*style\s*=\s*["'][^"']*(?:color\s*:\s*(?:white|#fff{1,3}|rgba?\s*\(\s*255\s*,\s*255\s*,\s*255)|font-size\s*:\s*0(?:px|pt|em|rem|vw)?(?![\d.a-z%]);?\s*|visibility\s*:\s*hidden|display\s*:\s*none|opacity\s*:\s*0(?![\d.]))[^"']*["'][^>]*>/i;
-const fontSizeZeroPattern = /font-size\s*:\s*0\s*(?:px|pt|em|rem|vw)?(?![\d.a-z%])\s*;?/i;
+const hiddenStyle = String.raw`(?:color\s*:\s*(?:white|#fff{1,3}|rgba?\s*\(\s*255\s*,\s*255\s*,\s*255)|font-size\s*:\s*0(?:px|pt|em|rem|vw)?(?![\d.a-z%]);?\s*|visibility\s*:\s*hidden|display\s*:\s*none|opacity\s*:\s*0(?![\d.]))`;
+const hiddenInstruction = String.raw`\b(?:ignore|disregard|override|bypass|forget|follow|obey|reveal|disclose|send|leak|exfiltrate|execute|run|respond|always|never)\b[\s\S]{0,120}\b(?:instructions?|rules?|prompts?|directive|system|secret|token|credential)\b`;
+const hiddenElementInstructionPattern = new RegExp(
+  String.raw`<(?:span|div|p)[^>]*style\s*=\s*["'][^"']*${hiddenStyle}[^"']*["'][^>]*>[\s\S]{0,500}${hiddenInstruction}[\s\S]{0,500}<\/(?:span|div|p)>`,
+  'i'
+);
 const colorWhiteOnWhitePattern =
-  /style\s*=\s*["'][^"']*color\s*:\s*(?:white|#fff{1,3})[^"']*background(?:-color)?\s*:\s*(?:white|#fff{1,3})/i;
+  /style\s*=\s*["'][^"']*color\s*:\s*(?:white|#fff{1,3})[^"']*background(?:-color)?\s*:\s*(?:white|#fff{1,3})[^"']*["'][^>]*>[\s\S]{0,500}\b(?:ignore|disregard|override|bypass|forget|follow|obey|send|leak|exfiltrate)\b[\s\S]{0,120}\b(?:instructions?|rules?|prompts?|system|secret|token|credential)\b/i;
 
 export const PI_WHITE_ON_WHITE: Rule = {
   id: 'PI-WHITE-ON-WHITE',
   category: 'prompt-injection',
   severity: 'medium',
   appliesTo: ['*.md', '*.mdc', 'SKILL.md', 'AGENTS.md', '*.html'],
-  patterns: [whiteOnWhiteSpanPattern, fontSizeZeroPattern, colorWhiteOnWhitePattern],
+  patterns: [hiddenElementInstructionPattern, colorWhiteOnWhitePattern],
   prepareContent: maskMarkdownSecurityEducationContext,
   message: 'Invisible/white-on-white CSS styling detected — may hide injected instructions.',
   fix: 'Remove styled HTML elements that render text invisible to users.',

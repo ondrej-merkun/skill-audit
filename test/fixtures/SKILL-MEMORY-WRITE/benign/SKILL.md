@@ -23,3 +23,5 @@ Safe app-specific config writes stay inside this tool's own config directory:
 
 - printf 'theme = "dark"\n' > ~/.config/config-reader/config.toml
 - fs.writeFileSync(path.join(appConfigDir, "settings.json"), JSON.stringify(settings))
+- Write to `~/.claude/plugins/example/config.json`.
+- `mkdir -p ~/.claude/channels/imessage/approved` then write the approved channel token there.
