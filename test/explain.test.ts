@@ -244,6 +244,51 @@ describe('runExplain', () => {
     expect(out).toContain('PASS');
   });
 
+  it('lists every agent for a deduped multi-agent skill in human and JSON output', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([
+      makeSkill({
+        agentIds: ['claude-code', 'codex', 'copilot'],
+        agentPaths: [
+          { agentId: 'claude-code', path: '/home/user/.claude/skills/test-skill' },
+          { agentId: 'codex', path: '/home/user/.codex/skills/test-skill' },
+          { agentId: 'copilot', path: '/home/user/.github/skills/test-skill' },
+        ],
+        alsoInstalledAt: [
+          '/home/user/.codex/skills/test-skill',
+          '/home/user/.github/skills/test-skill',
+        ],
+      }),
+    ]);
+    vi.mocked(runRules).mockResolvedValue([]);
+    vi.mocked(scoreFindings).mockReturnValue(makeSummary());
+
+    await runExplain('test-skill', { offline: true });
+
+    let out = stripAnsi(stdoutChunks.join(''));
+    expect(out).toContain('Agent:     Claude Code, OpenAI Codex, GitHub Copilot');
+    expect(out).toContain('Path:      Claude Code: /home/user/.claude/skills/test-skill');
+    expect(out).toContain('OpenAI Codex: /home/user/.codex/skills/test-skill');
+    expect(out).toContain('GitHub Copilot: /home/user/.github/skills/test-skill');
+    expect(out).toContain('skill-audit scan --skill test-skill --json');
+
+    stdoutChunks = [];
+    await runExplain('test-skill', { offline: true, json: true });
+
+    out = stripAnsi(stdoutChunks.join(''));
+    const parsed = JSON.parse(out);
+    expect(parsed.agents.map((agent: { id: string }) => agent.id)).toEqual([
+      'claude-code',
+      'codex',
+      'copilot',
+    ]);
+    expect(parsed.skills[0].agentPaths).toEqual([
+      { agentId: 'claude-code', path: '/home/user/.claude/skills/test-skill' },
+      { agentId: 'codex', path: '/home/user/.codex/skills/test-skill' },
+      { agentId: 'copilot', path: '/home/user/.github/skills/test-skill' },
+    ]);
+  });
+
+
   it('renders findings sorted by severity', async () => {
     const findings = [
       makeFinding({ ruleId: 'FS-DOTENV-READ', severity: 'medium' }),

@@ -90,8 +90,8 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
   new allowlisted vendors.
 - **Discovery dedupes by content, not by path.** `discoverAll()` owns
   cross-plugin normalization: non-empty `treeSha256` duplicates collapse
-  into one skill, with duplicate paths preserved in `alsoInstalledAt`.
-  Empty hashes are config-derived entries and must stay separate.
+  into one skill, with every owning agent and each agent's display path
+  preserved. Empty hashes are config-derived entries and must stay separate.
 - **Plugin caches are not automatically active skills.** Do not scan a
   cache subtree just because it exists. Codex and other plugin discovery
   must prove a cached payload is enabled/exposed before treating it as a

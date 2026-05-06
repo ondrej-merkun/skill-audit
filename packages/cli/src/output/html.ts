@@ -1,6 +1,7 @@
 import { formatAgentName } from '../agent-names.js';
 import { formatCompromisedPercent } from '../percent.js';
 import type { ScanResult, ScannedSkill, Severity } from '../types.js';
+import { skillAgentIds, skillAgentNames } from './agents.js';
 import { installStateLabel } from './install-state.js';
 import { collectLlmComparisons, collectLlmConsensus, highestLlmSeverity } from './llm.js';
 import { sortScanSkills } from './sort.js';
@@ -154,6 +155,9 @@ function redactPaths(skills: ScannedSkill[]): ScannedSkill[] {
     const redacted = {
       ...s,
       path: '[redacted]',
+      ...(s.agentPaths !== undefined
+        ? { agentPaths: s.agentPaths.map((entry) => ({ ...entry, path: '[redacted]' })) }
+        : {}),
       findings: s.findings.map((f) => ({
         ...f,
         file: f.file.replace(/.*\//, '[redacted]/'),
@@ -181,10 +185,10 @@ export function renderHtml(result: ScanResult): string {
   const publicSorted = sorted;
 
   const agentIds = [
-    ...new Set([...result.agents.map((a) => a.id), ...sorted.map((skill) => skill.agentId)]),
+    ...new Set([...result.agents.map((a) => a.id), ...sorted.flatMap(skillAgentIds)]),
   ];
   const agentNames = Object.fromEntries(
-    [...new Set([...agentIds, ...sorted.map((skill) => skill.agentId)])].map((id) => [
+    [...new Set([...agentIds, ...sorted.flatMap(skillAgentIds)])].map((id) => [
       id,
       formatAgentName(id),
     ])
@@ -219,10 +223,11 @@ export function renderHtml(result: ScanResult): string {
         ? ` <span class="tag-state">${escapeHtml(installStateLabel(sk.installState))}</span>`
         : '';
       const topIssue = formatTopIssuePlain(sk);
-      return `<tr class="skill-row" data-idx="${i}" data-agent="${escapeHtml(sk.agentId)}" tabindex="0">
+      const rowAgentIds = skillAgentIds(sk);
+      return `<tr class="skill-row" data-idx="${i}" data-agent="${escapeHtml(sk.agentId)}" data-agents="${escapeHtml(rowAgentIds.join(' '))}" tabindex="0">
       <td><span class="verdict-dot" style="background:${color}"></span> <strong style="color:${color}">${escapeHtml(v)}</strong></td>
       <td>${escapeHtml(sk.name)}${ignoredTag}${allowlistedTag}${stateTag}</td>
-      <td>${escapeHtml(formatAgentName(sk.agentId))}</td>
+      <td>${escapeHtml(skillAgentNames(sk))}</td>
       <td>${escapeHtml(skillSourceLabel(sk))}</td>
       <td style="font-weight:600;color:${color}">${sk.summary.score}</td>
       <td>${sk.summary.critical}C ${sk.summary.high}H ${sk.summary.medium}M ${sk.summary.low}L</td>
@@ -306,6 +311,10 @@ td{padding:10px 12px;vertical-align:middle}
 .enrichment-row{font-size:13px;margin-bottom:6px;color:#374151}
 .enrichment-row.missing{color:#9ca3af}
 .enrichment-source{display:inline-block;min-width:72px;color:#6b7280}
+.agent-paths{border-top:1px solid #e5e7eb;margin-top:14px;padding-top:14px}
+.agent-paths h3{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;margin-bottom:8px}
+.agent-path-row{font-size:12px;margin-bottom:6px;color:#374151;word-break:break-all}
+.agent-path-row span{display:inline-block;min-width:92px;color:#6b7280;word-break:normal}
 .llm-review{border-top:1px solid #e5e7eb;margin-top:14px;padding-top:14px}
 .llm-review h3{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;margin-bottom:8px}
 .llm-model{border:1px solid #e5e7eb;border-radius:6px;padding:10px;margin-bottom:8px}
@@ -334,8 +343,8 @@ function agentName(id){return AGENT_NAMES[id] || id;}
 
 function filterRows(){
   document.querySelectorAll('.skill-row').forEach(function(tr){
-    var ag = tr.getAttribute('data-agent');
-    tr.style.display = (!activeAgent || ag===activeAgent) ? '' : 'none';
+    var agents = (tr.getAttribute('data-agents') || tr.getAttribute('data-agent') || '').split(' ');
+    tr.style.display = (!activeAgent || agents.indexOf(activeAgent) !== -1) ? '' : 'none';
   });
   document.querySelectorAll('.agent-filter').forEach(function(button){
     var selected = button.getAttribute('data-agent')===activeAgent;
@@ -506,6 +515,30 @@ function makeLlmEl(reviews){
   return wrap;
 }
 
+function makeAgentPathsEl(sk){
+  var paths = sk.agentPaths || [{agentId: sk.agentId, path: sk.path}];
+  if(paths.length === 0) return null;
+
+  var wrap = document.createElement('div');
+  wrap.className = 'agent-paths';
+
+  var title = document.createElement('h3');
+  title.textContent = 'Paths';
+  wrap.appendChild(title);
+
+  paths.forEach(function(entry){
+    var row = document.createElement('div');
+    row.className = 'agent-path-row';
+    var label = document.createElement('span');
+    label.textContent = agentName(entry.agentId);
+    row.appendChild(label);
+    row.appendChild(document.createTextNode(entry.path));
+    wrap.appendChild(row);
+  });
+
+  return wrap;
+}
+
 function openPanel(idx){
   var sk = skills[idx];
   if(!sk) return;
@@ -519,13 +552,16 @@ function openPanel(idx){
 
   var metaEl = document.getElementById('panel-meta');
   metaEl.textContent = v + ' · Score: ' + sk.summary.score
-    + ' · ' + agentName(sk.agentId)
+    + ' · ' + ((sk.agentIds || [sk.agentId]).map(agentName).join(', '))
     + ' · ' + sk.summary.critical + 'C ' + sk.summary.high + 'H '
     + sk.summary.medium + 'M ' + sk.summary.low + 'L';
   metaEl.style.color = color;
 
   var findingsEl = document.getElementById('panel-findings');
   while(findingsEl.firstChild) findingsEl.removeChild(findingsEl.firstChild);
+
+  var agentPathsEl = makeAgentPathsEl(sk);
+  if(agentPathsEl) findingsEl.appendChild(agentPathsEl);
 
   if(sk.findings && sk.findings.length > 0){
     sk.findings.forEach(function(f){ findingsEl.appendChild(makeFindingEl(f)); });

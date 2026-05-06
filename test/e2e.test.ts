@@ -90,11 +90,9 @@ type JsonFinding = {
 
 type JsonSkill = {
   id: string;
-  agent_id: string;
+  agents: Array<{ id: string; path: string }>;
   name: string;
-  path: string;
   install_state: string;
-  also_installed_at?: string[];
   modified_at?: string;
   tree_sha256: string;
   findings: JsonFinding[];
@@ -243,10 +241,11 @@ describe('e2e: scan malicious fixtures', () => {
     const result = JSON.parse(stdout) as JsonOutput;
     const skill = result.skills[0];
     expect(skill).toHaveProperty('id');
-    expect(skill).toHaveProperty('agent_id');
+    expect(skill).toHaveProperty('agents');
     expect(skill).toHaveProperty('name');
-    expect(skill).toHaveProperty('path');
     expect(skill).toHaveProperty('modified_at');
+    expect(skill?.agents[0]?.id).toBe('claude-code');
+    expect(skill?.agents[0]?.path).toContain(skill?.name ?? '');
     expect(new Date(skill.modified_at ?? '').toISOString()).toBe(skill.modified_at);
     expect(skill).toHaveProperty('tree_sha256');
     expect(skill).toHaveProperty('findings');
@@ -448,7 +447,7 @@ describe('e2e: scan flags', () => {
     expect(result.summary.skills_scanned).toBe(1);
     expect(result.agents).toEqual([{ id: 'claude-code', installed: true, skills_scanned: 1 }]);
     expect(result.skills).toHaveLength(1);
-    expect(result.skills[0]?.agent_id).toBe('claude-code');
+    expect(result.skills[0]?.agents[0]?.id).toBe('claude-code');
     expect(skillRun.code).toBe(0);
     const skillResult = JSON.parse(skillRun.stdout) as JsonOutput;
     expect(skillResult.skills.map((skill) => skill.name)).toEqual(['date-parser']);
@@ -505,7 +504,7 @@ describe('e2e: scan flags', () => {
     expect(result.summary.skills_scanned).toBe(1);
     expect(result.agents).toEqual([{ id: 'cursor', installed: true, skills_scanned: 1 }]);
     expect(result.skills).toHaveLength(1);
-    expect(result.skills[0]?.agent_id).toBe('cursor');
+    expect(result.skills[0]?.agents[0]?.id).toBe('cursor');
   });
 
   it('does not duplicate nested child skill findings onto the parent in JSON', async () => {

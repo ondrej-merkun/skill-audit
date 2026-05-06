@@ -20,11 +20,12 @@ ship as the hero GIF).
   "skills": [
     {
       "id": "ca-polymarket-trader-a1b2c3",
-      "agent_id": "claude-code",
+      "agents": [
+        { "id": "claude-code", "path": "/Users/.../.claude/skills/polymarket-trader" },
+        { "id": "codex", "path": "/Users/.../.codex/skills/polymarket-trader" }
+      ],
       "name": "polymarket-trader",
-      "path": "/Users/.../skills/polymarket-trader",
       "install_state": "installed",
-      "also_installed_at": ["/Users/.../.agents/skills/polymarket-trader"],
       "modified_at": "2026-04-23T18:12:00.000Z",
       "tree_sha256": "...",
       "allowlisted": false,
@@ -91,9 +92,10 @@ Field notes:
 - `tool_version` matches `package.json` version.
 - `tree_sha256` is the deterministic hash described in
   `discovery/tree-hash.ts`.
-- `also_installed_at` is present only when discovery collapsed duplicate
-  non-empty `treeSha256` values. It contains the other absolute install paths
-  that point at identical content.
+- `agents` is always present on each skill. It lists every active/exposed agent
+  whose payload matched the row and the displayed install path for that agent.
+  When discovery collapses identical non-empty `treeSha256` content from
+  multiple agents, this array has multiple entries.
 - `install_state` is always present and is `"installed"` for active or exposed
   skills, or `"marketplace"` for inactive local marketplace inventory included
   through `--include-marketplaces`.
@@ -275,13 +277,13 @@ README and into the hero GIF. Column widths are fixed.
 
   AGENT           SKILL                         SOURCE                         VERDICT   SCORE   TOP ISSUE
  ─────────────────────────────────────────────────────────────────────────────────
-  claude-code     🔴 polymarket-trader           Plugin - trading-tools        FAIL       0    Environment variables transmitted over outbound HTTP (SKILL.md:14)
-  claude-code     🔴 solana-wallet-tracker       Direct                         FAIL       0    Password-protected zip extraction (install.sh:3)
-  claude-code     🟠 aws-helper@2.0              Plugin - cloud-ops            REVIEW    65    Hardcoded API key or secret (helpers.py:22)
-  cursor          🟠 web-fetcher                 Direct                         REVIEW    75    Hardcoded outbound HTTP call to non-localhost address... (SKILL.md:8)
-  codex           🟡 git-log-pretty              MCP                            REVIEW    82    Git history scanning
-  copilot         🟢 pdf-extractor               Direct                         PASS     100    —
-  claude-code     🟢 anthropic/pdf (official)    Marketplace                    PASS     100    allowlisted ✓
+  2 agents        🔴 polymarket-trader           Plugin - trading-tools        FAIL       0    Environment variables transmitted over outbound HTTP (SKILL.md:14)
+  Claude Code     🔴 solana-wallet-tracker       Direct                         FAIL       0    Password-protected zip extraction (install.sh:3)
+  Claude Code     🟠 aws-helper@2.0              Plugin - cloud-ops            REVIEW    65    Hardcoded API key or secret (helpers.py:22)
+  Cursor          🟠 web-fetcher                 Direct                         REVIEW    75    Hardcoded outbound HTTP call to non-localhost address... (SKILL.md:8)
+  OpenAI Codex    🟡 git-log-pretty              MCP                            REVIEW    82    Git history scanning
+  GitHub Copilot  🟢 pdf-extractor               Direct                         PASS     100    —
+  Claude Code     🟢 anthropic/pdf (official)    Marketplace                    PASS     100    allowlisted ✓
   ...41 more rows
 
   ── Scan summary ──────────────────────────────────────────────────────────────
@@ -341,8 +343,9 @@ blocker for visual-asset tasks, not a reason to rely on source inspection.
 ```
 polymarket-trader
 ──────────────────
-  Agent:     claude-code
-  Path:      ~/.claude/skills/polymarket-trader
+  Agent:     Claude Code, OpenAI Codex
+  Path:      Claude Code: ~/.claude/skills/polymarket-trader
+             OpenAI Codex: ~/.codex/skills/polymarket-trader
   Source:    github.com/Aslaep123/polymarket-traiding-bot ⚠ typosquat
   Installed: 3 days ago
   Verdict:   FAIL ❌   Score 0/100   (3 mandatory-fail triggers)

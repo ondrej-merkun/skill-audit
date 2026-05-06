@@ -315,12 +315,13 @@ function executeHtmlReportScript(html: string): FakeDocument {
   }
 
   for (const match of html.matchAll(
-    /<tr class="skill-row" data-idx="([^"]+)" data-agent="([^"]+)" tabindex="0">/g
+    /<tr class="skill-row" data-idx="([^"]+)" data-agent="([^"]+)"(?: data-agents="([^"]+)")? tabindex="0">/g
   )) {
     registerElement(document, 'tr', {
       class: 'skill-row',
       'data-idx': match[1] ?? '',
       'data-agent': match[2] ?? '',
+      ...(match[3] !== undefined ? { 'data-agents': match[3] } : {}),
       tabindex: '0',
     });
   }
@@ -452,6 +453,32 @@ describe('renderTableToString', () => {
     expect(tableAndSummary).toContain('Claude Code');
     expect(tableAndSummary).not.toContain(' claude-code ');
   });
+
+  it('summarizes deduped multi-agent skills by count in the human scan table', () => {
+    const result = makeScanResult({
+      agents: [
+        { id: 'claude-code', installed: true, skillsScanned: 1 },
+        { id: 'codex', installed: true, skillsScanned: 1 },
+      ],
+      skills: [
+        makeSkill({
+          agentIds: ['claude-code', 'codex'],
+          agentPaths: [
+            { agentId: 'claude-code', path: '/home/user/.claude/skills/test-skill' },
+            { agentId: 'codex', path: '/home/user/.codex/skills/test-skill' },
+          ],
+          alsoInstalledAt: ['/home/user/.codex/skills/test-skill'],
+        }),
+      ],
+    });
+
+    const out = stripAnsi(renderTableToString(result));
+    const tableAndSummary = out.split('\n  →  ')[0] ?? out;
+
+    expect(tableAndSummary).toContain('2 agents');
+    expect(tableAndSummary).not.toContain('Claude Code  🟢');
+  });
+
 
   it('shows source labels in the human scan table', () => {
     const result = makeScanResult({
@@ -1281,33 +1308,73 @@ describe('renderJson', () => {
   it('serializes skill fields with snake_case keys', () => {
     const json = JSON.parse(renderJson(makeScanResult()));
     const skill = json.skills[0];
-    expect(skill.agent_id).toBe('claude-code');
+    expect(skill.agents).toEqual([{ id: 'claude-code', path: '/tmp/test-skill' }]);
+    expect(skill).not.toHaveProperty('agent_id');
+    expect(skill).not.toHaveProperty('path');
     expect(skill.install_state).toBe('installed');
     expect(skill.tree_sha256).toBe('deadbeef');
     expect(skill.allowlisted).toBe(false);
   });
 
-  it('serializes also_installed_at only when duplicate paths are present', () => {
+  it('serializes agents as the path list for each owning agent', () => {
     const result = makeScanResult({
       skills: [
-        makeSkill({ alsoInstalledAt: ['/tmp/copy-a', '/tmp/copy-b'] }),
+        makeSkill({
+          agentPaths: [
+            { agentId: 'claude-code', path: '/tmp/test-skill' },
+            { agentId: 'cursor', path: '/tmp/copy-a' },
+          ],
+          alsoInstalledAt: ['/tmp/copy-a', '/tmp/copy-b'],
+        }),
         makeSkill({ id: 'unique-skill', name: 'unique-skill', path: '/tmp/unique-skill' }),
       ],
     });
 
     const json = JSON.parse(renderJson(result));
-    expect(json.skills[0].also_installed_at).toEqual(['/tmp/copy-a', '/tmp/copy-b']);
-    expect(json.skills[1]).not.toHaveProperty('also_installed_at');
+    expect(json.skills[0].agents).toEqual([
+      { id: 'claude-code', path: '/tmp/test-skill' },
+      { id: 'cursor', path: '/tmp/copy-a' },
+    ]);
+    expect(json.skills[0]).not.toHaveProperty('also_installed_at');
+    expect(json.skills[1].agents).toEqual([{ id: 'claude-code', path: '/tmp/unique-skill' }]);
     expect(Object.keys(json.skills[0]).slice(0, 7)).toEqual([
       'id',
-      'agent_id',
+      'agents',
       'name',
-      'path',
       'install_state',
-      'also_installed_at',
       'tree_sha256',
+      'allowlisted',
+      'ignored',
     ]);
   });
+
+  it('serializes all agent paths for deduped multi-agent skills', () => {
+    const result = makeScanResult({
+      skills: [
+        makeSkill({
+          agentIds: ['claude-code', 'codex', 'copilot'],
+          agentPaths: [
+            { agentId: 'claude-code', path: '/tmp/claude-copy' },
+            { agentId: 'codex', path: '/tmp/codex-copy' },
+            { agentId: 'copilot', path: '/tmp/copilot-copy' },
+          ],
+          alsoInstalledAt: ['/tmp/codex-copy', '/tmp/copilot-copy'],
+        }),
+      ],
+    });
+
+    const json = JSON.parse(renderJson(result));
+    expect(json.skills[0]).not.toHaveProperty('agent_id');
+    expect(json.skills[0]).not.toHaveProperty('agent_ids');
+    expect(json.skills[0]).not.toHaveProperty('agent_paths');
+    expect(json.skills[0]).not.toHaveProperty('also_installed_at');
+    expect(json.skills[0].agents).toEqual([
+      { id: 'claude-code', path: '/tmp/claude-copy' },
+      { id: 'codex', path: '/tmp/codex-copy' },
+      { id: 'copilot', path: '/tmp/copilot-copy' },
+    ]);
+  });
+
 
   it('serializes modified_at only when discovery found an mtime', () => {
     const result = makeScanResult({
@@ -1322,12 +1389,12 @@ describe('renderJson', () => {
     expect(json.skills[1]).not.toHaveProperty('modified_at');
     expect(Object.keys(json.skills[0]).slice(0, 7)).toEqual([
       'id',
-      'agent_id',
+      'agents',
       'name',
-      'path',
       'install_state',
       'modified_at',
       'tree_sha256',
+      'allowlisted',
     ]);
   });
 
@@ -1478,9 +1545,8 @@ describe('renderJson', () => {
     ]);
     expect(Object.keys(json.skills[0]).slice(0, 11)).toEqual([
       'id',
-      'agent_id',
+      'agents',
       'name',
-      'path',
       'install_state',
       'tree_sha256',
       'allowlisted',
@@ -1671,6 +1737,49 @@ describe('renderHtml', () => {
     expect(html).toContain('"claude-code":"Claude Code"');
     expect(html).toContain('>unknown-agent</td>');
   });
+
+  it('renders every agent for deduped multi-agent skills in HTML and filters by aliases', async () => {
+    const { renderHtml } = await import('../packages/cli/src/output/html.js');
+    const html = renderHtml(
+      makeScanResult({
+        agents: [
+          { id: 'claude-code', installed: true, skillsScanned: 1 },
+          { id: 'codex', installed: true, skillsScanned: 1 },
+        ],
+        skills: [
+          makeSkill({
+            agentIds: ['claude-code', 'codex'],
+            agentPaths: [
+              { agentId: 'claude-code', path: '/home/user/.claude/skills/test-skill' },
+              { agentId: 'codex', path: '/home/user/.codex/skills/test-skill' },
+            ],
+            alsoInstalledAt: ['/home/user/.codex/skills/test-skill'],
+          }),
+        ],
+      })
+    );
+
+    expect(html).toContain('>Claude Code, OpenAI Codex</td>');
+    expect(html).toContain('"agentIds":["claude-code","codex"]');
+    expect(html).toContain('"agentPaths":[{"agentId":"claude-code","path":"/home/user/.claude/skills/test-skill"},{"agentId":"codex","path":"/home/user/.codex/skills/test-skill"}]');
+    expect(html).toContain('data-agents="claude-code codex"');
+
+    const document = executeHtmlReportScript(html);
+    const codexFilter = getFilter(document, 'codex');
+    const row = getRow(document, 'claude-code');
+
+    codexFilter.click();
+
+    expect(row.style.display).toBe('');
+
+    row.click();
+
+    const panelText = elementText(getElementById(document, 'panel-findings'));
+    expect(panelText).toContain('Paths');
+    expect(panelText).toContain('Claude Code/home/user/.claude/skills/test-skill');
+    expect(panelText).toContain('OpenAI Codex/home/user/.codex/skills/test-skill');
+  });
+
 
   it('renders source labels in the HTML overview table', async () => {
     const { renderHtml } = await import('../packages/cli/src/output/html.js');

@@ -17,6 +17,7 @@ import {
   loadSelectedLlmConfigs,
   reviewSkillsWithLlm,
 } from '../llm/run.js';
+import { skillAgentIds } from '../output/agents.js';
 import { renderHtml } from '../output/html.js';
 import { renderJson } from '../output/json.js';
 import { sortScanSkills } from '../output/sort.js';
@@ -282,7 +283,9 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   for (const skill of ignoredSkills) {
     const summary = scoreFindings([], skill.treeSha256);
     scannedSkills.push({ ...skill, findings: [], enrichment: {}, summary, ignored: true });
-    agentMap.set(skill.agentId, (agentMap.get(skill.agentId) ?? 0) + 1);
+    for (const agentId of skillAgentIds(skill)) {
+      agentMap.set(agentId, (agentMap.get(agentId) ?? 0) + 1);
+    }
   }
 
   const scanOutcomes = await mapWithConcurrency(
@@ -312,7 +315,9 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   for (const outcome of scanOutcomes) {
     if (outcome.scannedSkill !== undefined) {
       scannedSkills.push(outcome.scannedSkill);
-      agentMap.set(outcome.skill.agentId, (agentMap.get(outcome.skill.agentId) ?? 0) + 1);
+      for (const agentId of skillAgentIds(outcome.skill)) {
+        agentMap.set(agentId, (agentMap.get(agentId) ?? 0) + 1);
+      }
     } else {
       incompleteCount++;
       process.stderr.write(`[skill-audit] skipping "${outcome.skill.name}": ${outcome.error}\n`);

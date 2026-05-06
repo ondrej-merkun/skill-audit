@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
-import { formatAgentName } from '../agent-names.js';
 import type { ScanResult, ScannedSkill } from '../types.js';
+import { skillAgentLabel } from './agents.js';
 import { installStateLabel } from './install-state.js';
 import { formatLlmReviewInline } from './llm.js';
 import { sortScanSkills } from './sort.js';
@@ -164,7 +164,7 @@ export function renderTableToString(result: ScanResult): string {
 
   for (const skill of shown) {
     const row = [
-      formatAgentName(skill.agentId),
+      skillAgentLabel(skill),
       `${verdictDot(skill)} ${skill.name}`,
       skillSourceLabel(skill),
       ...(showInstallStateColumn ? [chalk.dim(installStateLabel(skill.installState))] : []),

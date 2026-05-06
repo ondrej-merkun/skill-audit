@@ -154,9 +154,18 @@ pipe-to-shell.
   "skills": [
     {
       "id": "claude-code:polymarket-trader",
-      "agent_id": "claude-code",
+      "agents": [
+        {
+          "id": "claude-code",
+          "path": "/Users/alice/.claude/skills/polymarket-trader"
+        },
+        {
+          "id": "codex",
+          "path": "/Users/alice/.codex/skills/polymarket-trader"
+        }
+      ],
       "name": "polymarket-trader",
-      "path": "/Users/alice/.claude/skills/polymarket-trader/SKILL.md",
+      "install_state": "installed",
       "tree_sha256": "a1b2c3d4...",
       "allowlisted": false,
       "ignored": false,

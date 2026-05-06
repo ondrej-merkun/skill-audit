@@ -108,8 +108,9 @@ commands.
 - Cross-plugin discovery normalization belongs in
   `src/discovery/index.ts`, not in individual plugins. `discoverAll()`
   must dedupe discovered skills by non-empty `treeSha256` and preserve
-  duplicate install paths in `alsoInstalledAt`. Do not dedupe synthetic
-  config-derived entries with an empty tree hash.
+  every owning agent plus each agent's display path on the normalized
+  skill. Do not dedupe synthetic config-derived entries with an empty
+  tree hash.
 - Discovery plugins must distinguish active/exposed skills from cached
   inventory. A plugin cache directory is metadata until an enabled
   plugin/config/source proves the payload is currently exposed to an

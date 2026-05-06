@@ -19,11 +19,9 @@ type JsonFinding = {
 
 type JsonSkill = {
   id: string;
-  agent_id: string;
+  agents: Array<{ id: string; path: string }>;
   name: string;
-  path: string;
   install_state: string;
-  also_installed_at?: string[];
   modified_at?: string;
   tree_sha256: string;
   findings: JsonFinding[];

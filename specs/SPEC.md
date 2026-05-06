@@ -128,7 +128,9 @@ interface Skill {
   scope: 'user' | 'project' | 'managed';
   treeSha256: string;                // for allowlist matching
   installState?: 'installed' | 'marketplace';
-  alsoInstalledAt?: string[];         // duplicate paths for same content hash
+  agentIds?: string[];                // agents sharing an identical content hash
+  agentPaths?: Array<{ agentId: string; path: string }>; // per-agent display paths
+  alsoInstalledAt?: string[];         // internal duplicate path list
   metadata?: Record<string, unknown>; // agent-specific manifest details
 }
 ```
@@ -175,7 +177,7 @@ metadata, then walk only those active payload roots.
 8. GitHub Copilot (`.github/skills/`, `.github/copilot-instructions.md`)
 
 ### Disambiguation
-When a skill appears at both user scope and project scope, list both rows in the table and mark `scope` column unless the content hash proves it is the same installed payload. Dedupe non-empty `treeSha256` values in the discovery registry (same tree hash → identical content, report once with duplicate paths in `alsoInstalledAt`). Do not dedupe empty hashes used for synthetic config-derived entries. When a skill appears in a project's `.claude/` AND is symlinked from `~/.claude/`, follow the symlink and mark `link`.
+When a skill appears at both user scope and project scope, list both rows in the table and mark `scope` column unless the content hash proves it is the same installed payload. Dedupe non-empty `treeSha256` values in the discovery registry (same tree hash → identical content, report once while preserving every owning agent and each agent's display path). Do not dedupe empty hashes used for synthetic config-derived entries. When a skill appears in a project's `.claude/` AND is symlinked from `~/.claude/`, follow the symlink and mark `link`.
 
 ## 4. Local static analysis layer
 
@@ -365,13 +367,13 @@ Before changing these integrations, verify the current external contract:
 
   AGENT           SKILL                         SOURCE                         VERDICT   SCORE   TOP ISSUE
  ─────────────────────────────────────────────────────────────────────────────────
-  claude-code     🔴 polymarket-trader           Plugin - trading-tools        FAIL       0    Environment variables transmitted over outbound HTTP (SKILL.md:14)
-  claude-code     🔴 solana-wallet-tracker       Direct                         FAIL       0    Password-protected zip extraction (install.sh:3)
-  claude-code     🟠 aws-helper@2.0              Plugin - cloud-ops            REVIEW    65    Hardcoded API key or secret (helpers.py:22)
-  cursor          🟠 web-fetcher                 Direct                         REVIEW    75    Hardcoded outbound HTTP call to non-localhost address... (SKILL.md:8)
-  codex           🟡 git-log-pretty              MCP                            REVIEW    82    Git history scanning
-  copilot         🟢 pdf-extractor               Direct                         PASS     100    —
-  claude-code     🟢 anthropic/pdf (official)    Marketplace                    PASS     100    allowlisted ✓
+  2 agents        🔴 polymarket-trader           Plugin - trading-tools        FAIL       0    Environment variables transmitted over outbound HTTP (SKILL.md:14)
+  Claude Code     🔴 solana-wallet-tracker       Direct                         FAIL       0    Password-protected zip extraction (install.sh:3)
+  Claude Code     🟠 aws-helper@2.0              Plugin - cloud-ops            REVIEW    65    Hardcoded API key or secret (helpers.py:22)
+  Cursor          🟠 web-fetcher                 Direct                         REVIEW    75    Hardcoded outbound HTTP call to non-localhost address... (SKILL.md:8)
+  OpenAI Codex    🟡 git-log-pretty              MCP                            REVIEW    82    Git history scanning
+  GitHub Copilot  🟢 pdf-extractor               Direct                         PASS     100    —
+  Claude Code     🟢 anthropic/pdf (official)    Marketplace                    PASS     100    allowlisted ✓
   ...41 more rows
 
   ── Scan summary ──────────────────────────────────────────────────────────────
@@ -405,8 +407,9 @@ Before changing these integrations, verify the current external contract:
 ```
 polymarket-trader
 ──────────────────
-  Agent:     claude-code
-  Path:      ~/.claude/skills/polymarket-trader
+  Agent:     Claude Code, OpenAI Codex
+  Path:      Claude Code: ~/.claude/skills/polymarket-trader
+             OpenAI Codex: ~/.codex/skills/polymarket-trader
   Source:    github.com/Aslaep123/polymarket-traiding-bot ⚠ typosquat
   Installed: 3 days ago
   Verdict:   FAIL ❌   Score 0/100   (3 mandatory-fail triggers)
@@ -462,9 +465,11 @@ Single standalone HTML file (inlined CSS + JS). Layout:
   "agents": [{ "id": "claude-code", "installed": true, "skills_scanned": 12 }],
   "skills": [{
     "id": "ca-polymarket-trader-a1b2c3",
-    "agent_id": "claude-code",
+    "agents": [
+      { "id": "claude-code", "path": "/Users/.../.claude/skills/polymarket-trader" },
+      { "id": "codex", "path": "/Users/.../.codex/skills/polymarket-trader" }
+    ],
     "name": "polymarket-trader",
-    "path": "/Users/.../skills/polymarket-trader",
     "install_state": "installed",
     "tree_sha256": "...",
     "allowlisted": false,

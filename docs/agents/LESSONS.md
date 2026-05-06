@@ -225,6 +225,13 @@ without a commit message explaining why it no longer applies.
   When an agent accepts extensionless or non-markdown prompt files, discovery
   must preserve a markdown-like scan filename or equivalent rule-match context.
 
+- **L2.6 — Deduped output needs ownership, not just duplicate locations.** _The
+  multi-agent dedupe change first preserved only a primary agent/path plus
+  duplicate path list, so JSON could not tell which path belonged to which
+  agent._
+  When collapsing identical skills across agents, preserve agent-to-path records
+  through discovery, JSON, HTML, explain, docs, and tests.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**
