@@ -16,6 +16,7 @@ export type ProgressModeOptions = {
 export type DiscoveryProgressEvent =
   | { type: 'start'; pluginCount: number }
   | { type: 'checking-agent'; agentId: string; displayName: string }
+  | { type: 'agent-status'; agentId: string; displayName: string; message: string }
   | { type: 'agent-skipped'; agentId: string; displayName: string }
   | { type: 'agent-done'; agentId: string; displayName: string; skillCount: number }
   | { type: 'complete'; skillCount: number; agentCount: number };
@@ -168,6 +169,18 @@ export function createProgressReporter(options: ProgressReporterOptions = {}): P
       }
       if (event.type === 'checking-agent') {
         update(`Checking ${event.displayName}...`);
+        return;
+      }
+      if (event.type === 'agent-status') {
+        update(event.message);
+        return;
+      }
+      if (event.type === 'agent-skipped') {
+        update(`Skipping ${event.displayName} (not installed)`);
+        return;
+      }
+      if (event.type === 'agent-done') {
+        update(`Found ${event.skillCount} ${skillNoun(event.skillCount)} in ${event.displayName}`);
         return;
       }
       if (event.type === 'complete') {
