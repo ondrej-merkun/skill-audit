@@ -4,8 +4,8 @@ import type { ScanResult, ScannedSkill, Severity } from '../types.js';
 import { installStateLabel } from './install-state.js';
 import { collectLlmComparisons, collectLlmConsensus, highestLlmSeverity } from './llm.js';
 import { sortScanSkills } from './sort.js';
-import { formatTopIssuePlain } from './top-issue.js';
 import { skillSourceLabel } from './source.js';
+import { formatTopIssuePlain } from './top-issue.js';
 
 function escapeHtml(s: string): string {
   return s
