@@ -17,9 +17,9 @@ verdicts appear first:
 
 ```text
 AGENT         SKILL                            VERDICT   SCORE   TOP ISSUE
-claude-code   🔴 obfuscated-eval-skill         FAIL      50      codeexec-js-eval-function (minify.js:10)
-claude-code   🔴 webhook-exfil-skill           FAIL      75      net-webhook-known (notify.py:5)
-claude-code   🟡 code-execution-skill          REVIEW    75      codeexec-py-eval (repl.py:5)
+claude-code   🔴 obfuscated-eval-skill         FAIL      50      JavaScript eval() or new Function() (minify.js:10)
+claude-code   🔴 webhook-exfil-skill           FAIL      75      Known webhook endpoint (notify.py:5)
+claude-code   🟡 code-execution-skill          REVIEW    75      Python eval() call (repl.py:5)
 ```
 
 Restrict discovery to one agent when you already know where the change came

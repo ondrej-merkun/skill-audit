@@ -78,8 +78,8 @@ review.
 
 ```text
 AGENT         SKILL                    VERDICT   SCORE   TOP ISSUE
-Claude Code   docs-assistant           FAIL      40      SSH KEY THEFT PROMPT
-Codex         webhook-exfil-skill      FAIL      75      webhook exfil
+Claude Code   docs-assistant           FAIL      40      Access to a known credential store path
+Codex         webhook-exfil-skill      FAIL      75      Known webhook endpoint
 Cursor        csv-processor            PASS      100     —
 ```
 

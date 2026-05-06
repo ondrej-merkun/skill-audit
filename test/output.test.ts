@@ -495,8 +495,52 @@ describe('renderTableToString', () => {
     const out = stripAnsi(renderTableToString(result));
     expect(out).toContain('🔴');
     expect(out).toContain('FAIL');
-    expect(out).toContain('net-exfil-env');
+    expect(out).toContain('Env var exfiltrated via network');
+    expect(out).not.toContain('net-exfil-env');
     expect(out).toContain('SKILL.md:14');
+  });
+
+  it('uses the highest-severity finding message as the brief top issue', () => {
+    const result = makeScanResult({
+      skills: [
+        makeSkill({
+          findings: [
+            {
+              ...makeFinding('medium'),
+              ruleId: 'FS-CREDSTORE',
+              message: 'Access to a known credential store path detected.',
+              line: 8,
+            },
+            {
+              ...makeFinding('critical'),
+              ruleId: 'NET-WEBHOOK-KNOWN',
+              message: 'Known webhook URL detected — common exfiltration endpoint.',
+              line: 4,
+            },
+          ],
+          summary: {
+            critical: 1,
+            high: 0,
+            medium: 1,
+            low: 0,
+            info: 0,
+            score: 0,
+            verdict: 'FAIL',
+            mandatoryFail: ['NET-WEBHOOK-KNOWN'],
+            allowlisted: false,
+          },
+        }),
+      ],
+      summary: { skillsScanned: 1, compromised: 1, percentCompromised: 100, verdict: 'FAIL' },
+    });
+
+    const out = stripAnsi(renderTableToString(result));
+
+    expect(out).toContain('Known webhook URL');
+    expect(out).toContain('SKILL.md:4');
+    expect(out).not.toContain('Known webhook URL detected');
+    expect(out).not.toContain('net-webhook-known');
+    expect(out).not.toContain('Access to a known credential store path');
   });
 
   it('shows orange dot 🟠 for REVIEW at score < 75', () => {
@@ -1594,6 +1638,48 @@ describe('renderHtml', () => {
     expect(html).toContain('invalid-response');
     expect(html).toContain('"llmReviews"');
     expect(html).not.toContain('llm_reviews');
+  });
+
+  it('renders a human-readable top issue in the HTML overview table', async () => {
+    const { renderHtml } = await import('../packages/cli/src/output/html.js');
+    const html = renderHtml(
+      makeScanResult({
+        skills: [
+          makeSkill({
+            findings: [
+              {
+                ruleId: 'NET-EXFIL-ENV',
+                severity: 'critical',
+                category: 'network-exfil',
+                file: 'SKILL.md',
+                line: 14,
+                column: 1,
+                snippet: 'os.environ',
+                message: 'Env var exfiltrated via network.',
+                fix: 'Remove network calls that include env vars.',
+                cwe: ['CWE-200'],
+              },
+            ],
+            summary: {
+              critical: 1,
+              high: 0,
+              medium: 0,
+              low: 0,
+              info: 0,
+              score: 0,
+              verdict: 'FAIL',
+              mandatoryFail: ['NET-EXFIL-ENV'],
+              allowlisted: false,
+            },
+          }),
+        ],
+        summary: { skillsScanned: 1, compromised: 1, percentCompromised: 100, verdict: 'FAIL' },
+      })
+    );
+
+    expect(html).toContain('Env var exfiltrated via network');
+    expect(html).toContain('SKILL.md:14');
+    expect(html).not.toContain('>NET-EXFIL-ENV</td>');
   });
 
   it('opens HTML detail panel with LLM findings grouped by model', async () => {

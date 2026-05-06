@@ -6,6 +6,7 @@ import { installStateLabel } from './install-state.js';
 import { formatLlmReviewInline } from './llm.js';
 import { sortScanSkills } from './sort.js';
 import { renderSummaryFooter } from './summary.js';
+import { topIssueForSkill } from './top-issue.js';
 
 const C_CRITICAL = chalk.hex('#FF4444');
 const C_HIGH = chalk.hex('#FF8C00');
@@ -56,22 +57,11 @@ function colorScore(skill: ScannedSkill): string {
 }
 
 function topIssue(skill: ScannedSkill): string {
-  if (skill.summary.allowlisted) return C_PASS('allowlisted ✓');
-  if (skill.findings.length === 0) return C_GREY('—');
-
-  const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
-  const sorted = [...skill.findings].sort(
-    (a, b) => (order[a.severity] ?? 99) - (order[b.severity] ?? 99)
-  );
-  const top = sorted[0];
-  if (!top) return C_GREY('—');
-
-  const ruleLabel = top.ruleId.toLowerCase();
-  if (top.line > 0) {
-    const loc = top.file.replace(/^.*[\\/]/, ''); // basename only
-    return `${ruleLabel} ${C_GREY(`(${loc}:${top.line})`)}`;
-  }
-  return ruleLabel;
+  const issue = topIssueForSkill(skill);
+  if (issue.kind === 'allowlisted') return C_PASS(issue.label);
+  if (issue.kind === 'none') return C_GREY(issue.label);
+  if (issue.location !== undefined) return `${issue.label} ${C_GREY(`(${issue.location})`)}`;
+  return issue.label;
 }
 
 function enrichmentDetails(skill: ScannedSkill): string {
