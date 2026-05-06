@@ -13,6 +13,7 @@ import { VERSION } from './version.js';
 
 const program = new Command();
 const SUPPORTED_AGENT_OPTION_HELP = `Supported agents: ${formatSupportedAgentIds()}`;
+const DEFAULT_HTML_OUTPUT = 'scan.html';
 
 function collectRepeatedOption(value: string, previous: string[]): string[] {
   return [...previous, value];
@@ -22,7 +23,7 @@ function addScanOptions(command: Command): Command {
   return command
     .option('--json', 'emit JSON to stdout instead of TUI table')
     .option('--summary', 'emit compact one-liner summary instead of full table')
-    .option('--html <file>', 'write standalone HTML report to <file>')
+    .option('--html [file]', 'write standalone HTML report to [file] (default: scan.html)')
     .option('-o, --output <file>', 'write selected non-HTML scan output to <file>')
     .addOption(new Option('--offline', 'skip disabled network enrichment calls').hideHelp())
     .option('--strict', 'treat REVIEW band as FAIL for exit code purposes')
@@ -50,7 +51,12 @@ function scanOptionsFrom(cmdOpts: Record<string, unknown>): Partial<ScanOptions>
   return {
     json: cmdOpts.json === true,
     summary: cmdOpts.summary === true,
-    html: typeof cmdOpts.html === 'string' ? cmdOpts.html : undefined,
+    html:
+      cmdOpts.html === true
+        ? DEFAULT_HTML_OUTPUT
+        : typeof cmdOpts.html === 'string'
+          ? cmdOpts.html
+          : undefined,
     output: typeof cmdOpts.output === 'string' ? cmdOpts.output : undefined,
     offline: cmdOpts.offline === true,
     strict: cmdOpts.strict === true,

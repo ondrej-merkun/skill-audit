@@ -38,7 +38,11 @@ function expectSupportedAgentHelp(stdout: string): void {
 
 type CliResult = { stdout: string; stderr: string; code: number };
 
-async function runCli(args: string[], extraEnv: Record<string, string> = {}): Promise<CliResult> {
+async function runCli(
+  args: string[],
+  extraEnv: Record<string, string> = {},
+  options: { cwd?: string } = {}
+): Promise<CliResult> {
   const captureDir = await mkdtemp(join(tmpdir(), 'skill-audit-cli-capture-'));
   const stdoutPath = join(captureDir, 'stdout');
   const stderrPath = join(captureDir, 'stderr');
@@ -48,6 +52,7 @@ async function runCli(args: string[], extraEnv: Record<string, string> = {}): Pr
   try {
     const result = spawnSync('node', [CLI, ...args], {
       env: { ...process.env, ...extraEnv },
+      cwd: options.cwd,
       timeout: 60_000,
       stdio: ['ignore', stdoutHandle.fd, stderrHandle.fd],
     });
@@ -375,7 +380,8 @@ describe('e2e: scan flags', () => {
     expect(code).toBe(0);
     expectSupportedAgentHelp(stdout);
     expect(stdout).toContain('--json');
-    expect(stdout).toContain('--html <file>');
+    expect(stdout).toContain('--html [file]');
+    expect(normalizedStdout).toContain('default: scan.html');
     expect(stdout).toContain('--include-marketplaces');
     expect(normalizedStdout).toContain('locally available but inactive marketplace');
     expect(stdout).toContain('--scan-all-supporting-files');
@@ -447,6 +453,22 @@ describe('e2e: scan flags', () => {
     const skillResult = JSON.parse(skillRun.stdout) as JsonOutput;
     expect(skillResult.skills.map((skill) => skill.name)).toEqual(['date-parser']);
     expect(htmlRun.code).toBe(0);
+    expect(await readFile(htmlPath, 'utf-8')).toContain('<!DOCTYPE html>');
+  });
+
+  it('scan --html without a file writes scan.html in the current directory', async () => {
+    await cp(join(BENIGN_DIR, 'date-parser'), join(skillsDir, 'date-parser'), { recursive: true });
+
+    const env = { HOME: tempHome, USERPROFILE: tempHome, SKILL_AUDIT_CWD: tempCwd };
+    const htmlRun = await runCli(
+      ['scan', '--html', '--offline', '--agent', 'claude-code'],
+      env,
+      { cwd: tempCwd }
+    );
+    const htmlPath = join(tempCwd, 'scan.html');
+
+    expect(htmlRun.code).toBe(0);
+    expect(stripAnsi(htmlRun.stderr)).toContain('HTML report written to scan.html');
     expect(await readFile(htmlPath, 'utf-8')).toContain('<!DOCTYPE html>');
   });
 

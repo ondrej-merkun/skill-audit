@@ -113,7 +113,8 @@ Write reports:
 ```bash
 skill-audit scan --json -o skill-audit-report.json   # machine-readable JSON
 skill-audit scan --summary -o skill-audit-summary.txt # compact text summary
-skill-audit scan --html skill-audit-report.html      # standalone HTML report
+skill-audit scan --html                              # standalone HTML report at scan.html
+skill-audit scan --html skill-audit-report.html      # standalone HTML report at a custom path
 ```
 
 Add local LLM review:

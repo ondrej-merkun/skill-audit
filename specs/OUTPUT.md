@@ -257,8 +257,9 @@ For enrichment specifically, track and render source-level truth:
   text to the file.
 - `skill-audit scan --output report.txt` writes the default table output to the
   file without duplicating the payload on stdout.
-- `--html <file>` remains the dedicated HTML report destination. Supplying both
-  `--html` and `--output` is a usage error with exit code 2.
+- `--html [file]` remains the dedicated HTML report destination. If `file` is
+  omitted, it writes `scan.html`. Supplying both `--html` and `--output` is a
+  usage error with exit code 2.
 
 Verdict exit codes are unchanged and must be set only after file writes flush.
 
