@@ -335,6 +335,14 @@ without a commit message explaining why it no longer applies.
   For compact table/report labels, describe the issue itself and drop generic
   scanner verbs like "detected"; keep those verbs for detailed finding messages.
 
+- **L6.12 — PR mergeable is not PR rebaseable.** _PR #29 was reported
+  `mergeable: true` after merging `origin/main` into the branch, but GitHub
+  still could not use "Rebase and merge" because replaying the feature commit
+  onto `main` had conflicts._
+  When resolving PR conflicts, verify the repository's intended merge strategy:
+  for rebase workflows, run `git rebase origin/main`, resolve conflicts in the
+  linear history, and push with `--force-with-lease`.
+
 ## 7. Rule fixtures
 
 - **L7.1 — Malicious secret fixtures must not use provider placeholder keys.** _Task
