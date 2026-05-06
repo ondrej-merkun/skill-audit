@@ -1,5 +1,9 @@
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import stripAnsi from './helpers/strip-ansi.js';
+import type { LlmReviewFetch } from '../packages/cli/src/llm/review.js';
 import type { Enrichment, Finding, Skill, SkillSummary } from '../packages/cli/src/types.js';
 
 vi.mock('../packages/cli/src/discovery/index.js', () => ({
@@ -43,8 +47,17 @@ vi.mock('../packages/cli/src/output/json.js', () => ({
   renderJson: vi.fn((result: unknown) => JSON.stringify(result)),
 }));
 
+vi.mock('../packages/cli/src/progress.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../packages/cli/src/progress.js')>();
+  return {
+    ...actual,
+    createProgressReporter: vi.fn(actual.createProgressReporter),
+  };
+});
+
 import { discoverAll } from '../packages/cli/src/discovery/index.js';
 import { enrichSkillWithOutcomes } from '../packages/cli/src/enrich/index.js';
+import { createProgressReporter } from '../packages/cli/src/progress.js';
 import { runRulesForSkill as runRules } from '../packages/cli/src/rules/engine.js';
 import { scoreFindings } from '../packages/cli/src/score.js';
 import { runExplain } from '../packages/cli/src/commands/explain.js';
@@ -124,6 +137,7 @@ describe('runExplain', () => {
   let stdoutChunks: string[];
   let stderrChunks: string[];
   let processExitSpy: ReturnType<typeof mockProcessExit>;
+  const originalXdgConfigHome = process.env['XDG_CONFIG_HOME'];
 
   beforeEach(() => {
     stdoutChunks = [];
@@ -140,8 +154,81 @@ describe('runExplain', () => {
   });
 
   afterEach(() => {
+    if (originalXdgConfigHome === undefined) {
+      delete process.env['XDG_CONFIG_HOME'];
+    } else {
+      process.env['XDG_CONFIG_HOME'] = originalXdgConfigHome;
+    }
     vi.restoreAllMocks();
   });
+
+  async function withTempDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
+    const dir = await mkdtemp(join(tmpdir(), 'skill-audit-explain-'));
+    try {
+      return await fn(dir);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }
+
+  async function writeLlmConfig(configDir: string): Promise<void> {
+    const llmDir = join(configDir, 'skill-audit');
+    await mkdir(llmDir, { recursive: true });
+    await writeFile(
+      join(llmDir, 'llms.json'),
+      JSON.stringify(
+        {
+          version: 1,
+          models: [
+            {
+              name: 'reviewer',
+              provider: 'openai-compatible',
+              baseUrl: 'http://localhost:11434',
+              model: 'local-reviewer',
+              timeoutMs: 1000,
+              contextTokens: 800,
+            },
+          ],
+        },
+        null,
+        2
+      ),
+      'utf-8'
+    );
+  }
+
+  async function withTtyStreams<T>(fn: () => Promise<T>): Promise<T> {
+    const originalStdoutIsTty = process.stdout.isTTY;
+    const originalStderrIsTty = process.stderr.isTTY;
+    const originalCi = process.env['CI'];
+    const originalTerm = process.env['TERM'];
+    Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
+    Object.defineProperty(process.stderr, 'isTTY', { value: true, configurable: true });
+    delete process.env['CI'];
+    process.env['TERM'] = 'xterm-256color';
+    try {
+      return await fn();
+    } finally {
+      if (originalCi === undefined) {
+        delete process.env['CI'];
+      } else {
+        process.env['CI'] = originalCi;
+      }
+      if (originalTerm === undefined) {
+        delete process.env['TERM'];
+      } else {
+        process.env['TERM'] = originalTerm;
+      }
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: originalStdoutIsTty,
+        configurable: true,
+      });
+      Object.defineProperty(process.stderr, 'isTTY', {
+        value: originalStderrIsTty,
+        configurable: true,
+      });
+    }
+  }
 
   it('renders skill name as header when found by exact name match', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
@@ -386,5 +473,104 @@ describe('runExplain', () => {
     expect(out).toContain('Evidence:');
     expect(out).toContain('Issue: Outbound HTTP transmission of os.environ.');
     expect(out).toContain('Fix: Remove credential exfiltration.');
+  });
+
+  it('--llm reviews the explained skill with the configured local model', async () => {
+    await withTempDir(async (dir) => {
+      process.env['XDG_CONFIG_HOME'] = dir;
+      await writeLlmConfig(dir);
+      vi.mocked(discoverAll).mockResolvedValue([
+        makeSkill({ name: 'test-skill', path: '/tmp/test-skill' }),
+        makeSkill({ id: 'other', name: 'other-skill', path: '/tmp/other-skill' }),
+      ]);
+      vi.mocked(runRules).mockResolvedValue([makeFinding({ file: '/tmp/test-skill/SKILL.md' })]);
+      vi.mocked(scoreFindings).mockReturnValue(
+        makeSummary({ critical: 1, score: 75, verdict: 'REVIEW' })
+      );
+      vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult());
+      const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
+      const fetchImpl: LlmReviewFetch = async (url, init) => {
+        calls.push({ url, body: JSON.parse(init.body) as Record<string, unknown> });
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    findings: [
+                      {
+                        severity: 'high',
+                        category: 'prompt-injection',
+                        confidence: 0.9,
+                        rationale: 'The model found an override instruction.',
+                        file: 'SKILL.md',
+                        suggested_fix: 'Delete the override.',
+                      },
+                    ],
+                  }),
+                },
+              },
+            ],
+          }),
+        };
+      };
+      const options = { llm: 'reviewer', llmFetchImpl: fetchImpl };
+
+      await runExplain('test-skill', options);
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.url).toBe('http://localhost:11434/v1/chat/completions');
+      const request = calls[0]?.body as { messages?: Array<{ role: string; content: string }> };
+      const userMessage = request.messages?.find((message) => message.role === 'user');
+      const payload = JSON.parse(userMessage?.content ?? '{}').payload as {
+        skill: { name: string };
+      };
+      expect(payload.skill.name).toBe('test-skill');
+
+      const out = stripAnsi(stdoutChunks.join(''));
+      expect(out).toContain('LLM Review');
+      expect(out).toContain('reviewer');
+      expect(out).toContain('The model found an override instruction.');
+      expect(out).toContain('Delete the override.');
+
+      const errOut = stripAnsi(stderrChunks.join(''));
+      expect(errOut).toContain('LLM review: reviewer');
+      expect(errOut).toContain('test-skill: ❌ reviewer ok (1 LLM-only finding)');
+      expect(errOut).not.toContain('LLM review: details:');
+      expect(runRules).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('--llm does not show discovery or scan progress banners for explain details', async () => {
+    await withTempDir(async (dir) => {
+      process.env['XDG_CONFIG_HOME'] = dir;
+      await writeLlmConfig(dir);
+      vi.mocked(discoverAll).mockResolvedValue([
+        makeSkill({ name: 'test-skill', path: '/tmp/test-skill' }),
+        makeSkill({ id: 'other', name: 'other-skill', path: '/tmp/other-skill' }),
+      ]);
+      vi.mocked(runRules).mockResolvedValue([]);
+      vi.mocked(scoreFindings).mockReturnValue(makeSummary());
+      vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult());
+      const fetchImpl: LlmReviewFetch = async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          choices: [{ message: { content: JSON.stringify({ findings: [] }) } }],
+        }),
+      });
+
+      await withTtyStreams(() => runExplain('test-skill', { llm: 'reviewer', llmFetchImpl: fetchImpl }));
+
+      const out = stripAnsi(stdoutChunks.join(''));
+      const err = stripAnsi(stderrChunks.join(''));
+      expect(out).toContain('test-skill');
+      expect(`${out}\n${err}`).not.toContain('Found 2 skills across');
+      expect(`${out}\n${err}`).not.toContain('Scan complete: 1 skill checked');
+      expect(`${out}\n${err}`).not.toContain('LLM review complete: 1 skill reviewed');
+      expect(createProgressReporter).toHaveBeenCalledWith({ mode: 'silent' });
+    });
   });
 });

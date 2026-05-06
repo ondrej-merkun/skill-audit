@@ -97,8 +97,9 @@ Field notes:
 - `install_state` is always present and is `"installed"` for active or exposed
   skills, or `"marketplace"` for inactive local marketplace inventory included
   through `--include-marketplaces`.
-- `llm_reviews` is present only when `scan --llm ...` requested local model
-  review. It preserves one record per selected model, ordered by model name.
+- `llm_reviews` is present only when `scan --llm ...` or `explain --llm ...`
+  requested local model review. It preserves one record per selected model,
+  ordered by model name.
   `status` is `"not-run" | "ok" | "unavailable" | "timeout" |
   "invalid-response" | "skipped-offline"`. Findings are model-specific second
   opinions and do not change deterministic rule findings or scan exit codes in
@@ -163,10 +164,12 @@ in.
 
 ## Local LLM review output contract
 
-Local LLM review is disabled unless `scan --llm <name>` or an equivalent
-multi-model selection is passed. When enabled, every scan output keeps
-deterministic scanner findings visible as the baseline and shows LLM review as
-a separate comparison layer.
+Local LLM review is disabled unless `scan --llm <name>`, `explain --llm
+<name>`, or an equivalent multi-model selection is passed. `scan --skill
+<name-or-id> --llm <name>` narrows both deterministic scanning and model review
+to the matched skill. When enabled, every scan output keeps deterministic
+scanner findings visible as the baseline and shows LLM review as a separate
+comparison layer.
 
 LLM review is local-first and optional. It must not imply that cloud access,
 hosted model accounts, or API keys are required. Model output is advisory:
@@ -188,6 +191,9 @@ remain visible and authoritative for the baseline scan.
 - HTML reports include a model comparison view and per-skill detail records
   grouped by model. The local `file://` report must work without network
   access.
+- `explain --llm <name>` renders the selected skill's model statuses and
+  LLM-only finding details inline in the detail view; JSON explain output uses
+  the same `skills[].llm_reviews[]` records as scan JSON.
 - Agreement is shown by repeated model-specific findings on the same skill or
   file; JSON keeps the underlying model records instead of merging or averaging
   confidence values. Disagreement remains visible as model-specific findings,
@@ -284,8 +290,13 @@ README and into the hero GIF. Column widths are fixed.
   Duration .................. 1.32s
 
   →  skill-audit explain polymarket-trader    See full findings
+  →  skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model <model_name>    Configure local LLM review
+  →  skill-audit --llm local    Add local LLM review
+  →  skill-audit scan --skill polymarket-trader --llm local    Review this skill with local LLM
+  →  skill-audit explain polymarket-trader --llm local    Explain this skill with local LLM
   →  skill-audit ignore aws-helper            Allowlist a false positive
   →  skill-audit --html report.html           Generate HTML report (contains full findings)
+  →  skill-audit --agent claude-code          Scan only Claude Code skills
 
   Want the details? https://skill-audit.dev/rules
 ```
@@ -312,9 +323,9 @@ checkmark (✓). No other emoji.
 The "── Scan summary ──" rule is a box-drawing horizontal line
 character `─` repeated to 78 chars wide minus the label.
 
-Always end with 2-3 arrow-prefixed next-commands. This is the pattern
-across `snyk test`, `semgrep scan`, `npm audit`, `trivy image`. Never
-skip it.
+Always end with arrow-prefixed next-commands, including local LLM setup and
+targeted review commands when a FAIL or REVIEW skill is highlighted. Never
+skip them.
 
 README screenshots, SVG demos, and terminal recordings derived from this output
 must be rendered in a browser or image renderer at the embedded README/GitHub

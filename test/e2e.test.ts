@@ -431,6 +431,7 @@ describe('e2e: scan flags', () => {
 
     const env = { HOME: tempHome, USERPROFILE: tempHome, SKILL_AUDIT_CWD: tempCwd };
     const agentRun = await runCli(['--json', '--offline', '--agent', 'claude-code'], env);
+    const skillRun = await runCli(['--json', '--offline', '--skill', 'date-parser'], env);
     const htmlPath = join(tempCwd, 'skill-audit-report.html');
     const htmlRun = await runCli(['--html', htmlPath, '--agent', 'claude-code'], env);
 
@@ -440,6 +441,9 @@ describe('e2e: scan flags', () => {
     expect(result.agents).toEqual([{ id: 'claude-code', installed: true, skills_scanned: 1 }]);
     expect(result.skills).toHaveLength(1);
     expect(result.skills[0]?.agent_id).toBe('claude-code');
+    expect(skillRun.code).toBe(0);
+    const skillResult = JSON.parse(skillRun.stdout) as JsonOutput;
+    expect(skillResult.skills.map((skill) => skill.name)).toEqual(['date-parser']);
     expect(htmlRun.code).toBe(0);
     expect(await readFile(htmlPath, 'utf-8')).toContain('<!DOCTYPE html>');
   });

@@ -864,6 +864,60 @@ describe('runScan flag wiring', () => {
     });
   });
 
+  it('--skill --llm reviews only the matching discovered skill', async () => {
+    await withTempDir(async (dir) => {
+      process.env['XDG_CONFIG_HOME'] = dir;
+      await writeLlmConfig(dir);
+      vi.mocked(discoverAll).mockResolvedValue([
+        makeSkill({ id: 'other-id', name: 'other-skill', path: '/tmp/other-skill' }),
+        makeSkill({ id: 'review-id', name: 'review-me', path: '/tmp/review-me' }),
+      ]);
+      const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
+      const fetchImpl: LlmReviewFetch = async (url, init) => {
+        calls.push({ url, body: JSON.parse(init.body) as Record<string, unknown> });
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ choices: [{ message: { content: '{"findings":[]}' } }] }),
+        };
+      };
+      const options = {
+        json: true,
+        skill: 'review-me',
+        llm: 'reviewer',
+        llmFetchImpl: fetchImpl,
+      };
+
+      await runScan(options);
+
+      expect(runRules).toHaveBeenCalledTimes(1);
+      expect(runRules).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'review-me' }),
+        expect.any(Array)
+      );
+      expect(calls).toHaveLength(1);
+      const json = JSON.parse(stdoutChunks.join(''));
+      expect(json.skills.map((skill: { name: string }) => skill.name)).toEqual(['review-me']);
+      expect(json.summary.skills_scanned).toBe(1);
+      const errOut = stripAnsi(stderrChunks.join(''));
+      expect(errOut).toContain('LLM review 1/1: review-me');
+      expect(errOut).not.toContain('other-skill');
+    });
+  });
+
+  it('--skill exits before scanning when no discovered skill matches', async () => {
+    vi.mocked(discoverAll).mockResolvedValue([makeSkill({ name: 'other-skill' })]);
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as never);
+    const options = { json: true, offline: true, skill: 'missing-skill' };
+
+    await runScan(options);
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(runRules).not.toHaveBeenCalled();
+    expect(stdoutChunks.join('')).toBe('');
+    expect(stripAnsi(stderrChunks.join(''))).toContain('no skill matching "missing-skill" found');
+  });
+
   it('--llm writes live review progress to stderr for interactive pretty output', async () => {
     await withTempDir(async (dir) => {
       makeInteractiveTTY();

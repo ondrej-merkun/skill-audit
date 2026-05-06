@@ -1025,6 +1025,8 @@ describe('renderSummaryFooter', () => {
       '→  skill-audit explain risky-skill    See full findings',
       '→  skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model <model_name>    Configure local LLM review',
       '→  skill-audit --llm local    Add local LLM review',
+      '→  skill-audit scan --skill risky-skill --llm local    Review this skill with local LLM',
+      '→  skill-audit explain risky-skill --llm local    Explain this skill with local LLM',
       '→  skill-audit ignore <skill>    Allowlist a false positive',
       '→  skill-audit --html report.html    Generate HTML report (contains full findings)',
       '→  skill-audit --agent claude-code    Scan only Claude Code skills',
@@ -1043,7 +1045,10 @@ describe('renderSummaryFooter', () => {
     );
 
     expect(out).toContain('skill-audit explain fail-score-0');
+    expect(out).toContain('skill-audit scan --skill fail-score-0 --llm local');
+    expect(out).toContain('skill-audit explain fail-score-0 --llm local');
     expect(out).not.toContain('skill-audit explain fail-score-40');
+    expect(out).not.toContain('skill-audit scan --skill fail-score-40 --llm local');
   });
 
   it('omits Enrichment line when no enrichment data', () => {

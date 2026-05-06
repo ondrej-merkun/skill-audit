@@ -21,8 +21,10 @@ skill-audit scan
 ```bash
 skill-audit scan
 skill-audit scan --json -o skill-audit-report.json
+skill-audit scan --skill <name-or-id>
 skill-audit list
 skill-audit explain <name>
+skill-audit explain <name> --llm local
 skill-audit ignore <name>
 ```
 
