@@ -12,7 +12,7 @@ ship as the hero GIF).
   "scan": {
     "started_at": "2026-04-23T19:00:00Z",
     "duration_ms": 1320,
-    "tool_version": "0.1.1"
+    "tool_version": "0.1.3"
   },
   "agents": [
     { "id": "claude-code", "installed": true, "skills_scanned": 12 }

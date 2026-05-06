@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MockInstance } from 'vitest';
 import stripAnsi from './helpers/strip-ansi.js';
 import type { Enrichment, Finding, Skill, SkillSummary } from '../packages/cli/src/types.js';
 
@@ -115,10 +114,16 @@ function makeEnrichmentResult(enrichment: Enrichment = {}) {
   };
 }
 
+function mockProcessExit() {
+  return vi.spyOn(process, 'exit').mockImplementation((() => {
+    throw new Error('process.exit called');
+  }) as never);
+}
+
 describe('runExplain', () => {
   let stdoutChunks: string[];
   let stderrChunks: string[];
-  let processExitSpy: MockInstance<[code?: string | number | null | undefined], never>;
+  let processExitSpy: ReturnType<typeof mockProcessExit>;
 
   beforeEach(() => {
     stdoutChunks = [];
@@ -131,9 +136,7 @@ describe('runExplain', () => {
       stderrChunks.push(String(chunk));
       return true;
     });
-    processExitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
-      throw new Error('process.exit called');
-    }) as never);
+    processExitSpy = mockProcessExit();
   });
 
   afterEach(() => {
