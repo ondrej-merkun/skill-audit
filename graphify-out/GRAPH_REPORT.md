@@ -1,12 +1,12 @@
 # Graph Report - skillaudit  (2026-05-06)
 
 ## Corpus Check
-- 176 files · ~99,550 words
+- 176 files · ~99,554 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 700 nodes · 1258 edges · 25 communities detected
-- Extraction: 86% EXTRACTED · 14% INFERRED · 0% AMBIGUOUS · INFERRED: 175 edges (avg confidence: 0.8)
+- 700 nodes · 1257 edges · 25 communities detected
+- Extraction: 86% EXTRACTED · 14% INFERRED · 0% AMBIGUOUS · INFERRED: 174 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -41,8 +41,8 @@
 2. `readFile()` - 19 edges
 3. `trim()` - 19 edges
 4. `parse()` - 17 edges
-5. `runExplain()` - 15 edges
-6. `computeTreeSha256()` - 14 edges
+5. `computeTreeSha256()` - 14 edges
+6. `runExplain()` - 14 edges
 7. `renderTableToString()` - 13 edges
 8. `add()` - 12 edges
 9. `renderSummaryFooter()` - 12 edges
@@ -188,7 +188,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `add()` connect `Community 10` to `Community 0`, `Community 8`, `Community 2`, `Community 11`?**
   _High betweenness centrality (0.035) - this node is a cross-community bridge._
 - **Why does `trim()` connect `Community 6` to `Community 0`, `Community 1`, `Community 2`, `Community 4`, `Community 7`, `Community 11`?**
-  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+  _High betweenness centrality (0.029) - this node is a cross-community bridge._
 - **Why does `parse()` connect `Community 9` to `Community 3`, `Community 4`, `Community 6`, `Community 7`, `Community 12`?**
   _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **Are the 14 inferred relationships involving `runScan()` (e.g. with `formatSupportedAgentIds()` and `clearPlugins()`) actually correct?**

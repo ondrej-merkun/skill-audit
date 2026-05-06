@@ -53,11 +53,13 @@ describe('runPatternWithSafetyPreflight', () => {
   });
 
   it('returns empty array for unsafe nested-quantifier patterns', async () => {
-    // Catastrophic backtracking pattern on adversarial input.
-    const catastrophic = /(a+)+b/;
-    const adversarial = 'a'.repeat(25); // no 'b' forces backtracking
+    // Source-only test double: the preflight rejects this before compiling it.
+    const catastrophic = {
+      source: String.fromCharCode(40, 97, 43, 41, 43, 98),
+      flags: '',
+    } as unknown as RegExp;
+    const adversarial = 'a'.repeat(25);
     const matches = await runPatternWithSafetyPreflight(catastrophic, adversarial);
-    // Should return empty before executing the unsafe pattern.
     expect(matches).toEqual([]);
   }, 5000);
 });

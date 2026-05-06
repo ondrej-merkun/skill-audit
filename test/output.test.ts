@@ -325,7 +325,7 @@ function executeHtmlReportScript(html: string): FakeDocument {
     });
   }
 
-  const script = html.match(/<script>([\s\S]*)<\/script>/)?.[1];
+  const script = html.match(/<script\b[^>]*>([\s\S]*?)<\/script\b[^>]*>/i)?.[1];
   if (script === undefined) throw new Error('HTML report script not found');
 
   const clipboard = { writeText: vi.fn() };
