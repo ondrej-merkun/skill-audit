@@ -268,11 +268,11 @@ README and into the hero GIF. Column widths are fixed.
 
   AGENT           SKILL                         VERDICT   SCORE   TOP ISSUE
  ─────────────────────────────────────────────────────────────────────────────────
-  claude-code     🔴 polymarket-trader           FAIL       0    exfil-env (SKILL.md:14)
-  claude-code     🔴 solana-wallet-tracker       FAIL       0    password-zip (install.sh:3)
-  claude-code     🟠 aws-helper@2.0              REVIEW    65    hardcoded-secret (helpers.py:22)
-  cursor          🟠 web-fetcher                 REVIEW    75    untrusted-fetch (SKILL.md:8)
-  codex           🟡 git-log-pretty              REVIEW    82    git-history-scan
+  claude-code     🔴 polymarket-trader           FAIL       0    Environment variables transmitted over outbound HTTP (SKILL.md:14)
+  claude-code     🔴 solana-wallet-tracker       FAIL       0    Password-protected zip extraction (install.sh:3)
+  claude-code     🟠 aws-helper@2.0              REVIEW    65    Hardcoded API key or secret (helpers.py:22)
+  cursor          🟠 web-fetcher                 REVIEW    75    Hardcoded outbound HTTP call to non-localhost address... (SKILL.md:8)
+  codex           🟡 git-log-pretty              REVIEW    82    Git history scanning
   copilot         🟢 pdf-extractor               PASS     100    —
   claude-code     🟢 anthropic/pdf (official)    PASS     100    allowlisted ✓
   ...41 more rows

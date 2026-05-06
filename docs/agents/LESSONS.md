@@ -329,6 +329,12 @@ without a commit message explaining why it no longer applies.
   Before tagging, verify `git merge-base --is-ancestor HEAD origin/main` for
   the release commit or push/merge the release commit to `main` first.
 
+- **L6.11 — Brief issue labels should avoid scanner-verdict words.** _A human
+  scan-output pass replaced rule IDs with messages, but reused redundant
+  wording such as "Known webhook endpoint detected"._
+  For compact table/report labels, describe the issue itself and drop generic
+  scanner verbs like "detected"; keep those verbs for detailed finding messages.
+
 ## 7. Rule fixtures
 
 - **L7.1 — Malicious secret fixtures must not use provider placeholder keys.** _Task

@@ -1,12 +1,12 @@
 # Graph Report - skillaudit  (2026-05-06)
 
 ## Corpus Check
-- 176 files · ~109,841 words
+- 177 files · ~110,356 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 700 nodes · 1257 edges · 25 communities detected
-- Extraction: 86% EXTRACTED · 14% INFERRED · 0% AMBIGUOUS · INFERRED: 174 edges (avg confidence: 0.8)
+- 706 nodes · 1271 edges · 26 communities detected
+- Extraction: 86% EXTRACTED · 14% INFERRED · 0% AMBIGUOUS · INFERRED: 176 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -26,6 +26,7 @@
 - [[_COMMUNITY_Community 13|Community 13]]
 - [[_COMMUNITY_Community 14|Community 14]]
 - [[_COMMUNITY_Community 15|Community 15]]
+- [[_COMMUNITY_Community 16|Community 16]]
 - [[_COMMUNITY_Community 17|Community 17]]
 - [[_COMMUNITY_Community 18|Community 18]]
 - [[_COMMUNITY_Community 19|Community 19]]
@@ -38,8 +39,8 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `runScan()` - 23 edges
-2. `readFile()` - 19 edges
-3. `trim()` - 19 edges
+2. `trim()` - 20 edges
+3. `readFile()` - 19 edges
 4. `parse()` - 17 edges
 5. `computeTreeSha256()` - 14 edges
 6. `runExplain()` - 14 edges
@@ -51,8 +52,8 @@
 ## Surprising Connections (you probably didn't know these)
 - `parse()` --calls--> `readPackageVersion()`  [INFERRED]
   test/fixtures/benign/date-parser/parse.py → packages/cli/src/version.ts
-- `fetchImpl()` --calls--> `reviewWithOpenAiCompatibleModel()`  [INFERRED]
-  test/scan-options.test.ts → packages/cli/src/llm/review.ts
+- `fetchImpl()` --calls--> `checkOpenAiCompatibleConnection()`  [INFERRED]
+  test/scan-options.test.ts → packages/cli/src/llm/openai-compatible.ts
 - `readFile()` --calls--> `readIgnoreListContent()`  [INFERRED]
   test/fixtures/malicious/remote-import-skill/utils.js → packages/cli/src/allowlist/ignore.ts
 - `readFile()` --calls--> `discoverMcpSettings()`  [INFERRED]
@@ -64,65 +65,69 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.05
-Nodes (41): appendToIgnoreList(), getConfigDir(), getIgnoreListPath(), loadIgnoreList(), readIgnoreListContent(), renderDetail(), renderEnrichment(), renderFinding() (+33 more)
+Nodes (47): appendToIgnoreList(), getConfigDir(), getIgnoreListPath(), loadIgnoreList(), readIgnoreListContent(), renderDetail(), renderEnrichment(), renderFinding() (+39 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.06
-Nodes (50): computeExitCode(), llmStatusLine(), loadSelectedLlmConfigs(), mapWithConcurrency(), parseLlmSelections(), renderScanPayload(), reviewSkillsWithLlm(), runScan() (+42 more)
+Nodes (44): escapeHtml(), redactPaths(), renderEnrichmentCells(), renderHtml(), renderLlmOverview(), scoreRingSvg(), verdictColor(), installStateLabel() (+36 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.06
-Nodes (31): basenameOf(), extensionOf(), isMarkdownPromptFile(), isStringPrefixChar(), maskDocumentationExampleContext(), maskDocumentationTextInCode(), maskJavaScriptStringsAndComments(), maskMarkdownSecurityEducationContext() (+23 more)
+Nodes (20): basenameOf(), extensionOf(), isMarkdownPromptFile(), isStringPrefixChar(), maskDocumentationExampleContext(), maskDocumentationTextInCode(), maskJavaScriptStringsAndComments(), maskMarkdownSecurityEducationContext() (+12 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.07
-Nodes (32): appDataDir(), clineExtensionStorageDirs(), discoverLegacyRulesFile(), discoverRuleFiles(), discoverSkillsDir(), discoverWorkflowFiles(), getClineDir(), getCwd() (+24 more)
+Nodes (35): discoverAgentEntries(), discoverCommandFiles(), discoverMcpFromClaudeJson(), discoverMcpJson(), discoverPluginTree(), discoverSkillDirs(), makeId(), pathSegments() (+27 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.1
 Nodes (37): cacheDir(), cacheGet(), cacheKey(), cacheSet(), depsDevSystem(), enrichDepsDev(), fetchDependencyLookup(), fetchProjectScorecard() (+29 more)
 
 ### Community 5 - "Community 5"
+Cohesion: 0.08
+Nodes (26): convert(), extract_audio(), Thin wrapper around the local ffmpeg binary for common media operations., _run(), thumbnail(), trim(), buildLlmReviewMessages(), buildLlmReviewPayload() (+18 more)
+
+### Community 6 - "Community 6"
 Cohesion: 0.07
 Nodes (14): executeHtmlReportScript(), FakeClassList, FakeDocument, FakeElement, FakeEvent, FakeTextNode, getFilter(), getRow() (+6 more)
 
-### Community 6 - "Community 6"
-Cohesion: 0.11
-Nodes (25): convert(), extract_audio(), Thin wrapper around the local ffmpeg binary for common media operations., _run(), thumbnail(), trim(), buildLlmReviewMessages(), buildLlmReviewPayload() (+17 more)
-
 ### Community 7 - "Community 7"
-Cohesion: 0.11
-Nodes (22): parseOptionalPositiveInteger(), runLlmAdd(), runLlmCheck(), runLlmList(), serializeHealth(), addLlmConfig(), getConfigDir(), getLlmConfigPath() (+14 more)
+Cohesion: 0.12
+Nodes (27): appDataDir(), clineExtensionStorageDirs(), discoverLegacyRulesFile(), discoverRuleFiles(), discoverSkillsDir(), discoverWorkflowFiles(), getClineDir(), getCwd() (+19 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.16
-Nodes (19): isPluginMarketplacePath(), normalizedSegments(), shouldSkipMarketplacePath(), withInstallState(), ancestorDirsToGitRoot(), descendantWindsurfRulesDirs(), discoverRuleFile(), discoverRulesDir() (+11 more)
+Cohesion: 0.12
+Nodes (21): parseOptionalPositiveInteger(), runLlmAdd(), runLlmCheck(), runLlmList(), serializeHealth(), addLlmConfig(), getConfigDir(), getLlmConfigPath() (+13 more)
 
 ### Community 9 - "Community 9"
+Cohesion: 0.15
+Nodes (19): ancestorDirsToGitRoot(), descendantWindsurfRulesDirs(), discoverRuleFile(), gitRootFromAncestors(), hasNestedWorkspaceRules(), hasWorkspaceRules(), isDirectory(), isRegularFile() (+11 more)
+
+### Community 10 - "Community 10"
 Cohesion: 0.14
 Nodes (19): add_days(), diff_days(), parse(), Date parsing and formatting utilities — pure stdlib., to_iso(), discoverMcpSettings(), discoverAgentMarkdownFiles(), discoverCommandTomlFiles() (+11 more)
 
-### Community 10 - "Community 10"
+### Community 11 - "Community 11"
 Cohesion: 0.15
 Nodes (18): col_sum(), dedup(), describe(), filter_rows(), head(), CSV data processing helpers — pure stdlib., _read(), to_json() (+10 more)
 
-### Community 11 - "Community 11"
-Cohesion: 0.19
-Nodes (16): discoverActivePluginPayloadTree(), discoverAgentFiles(), discoverEnabledPluginCaches(), discoverMcpToml(), discoverPluginTree(), discoverSkillDirs(), discoverUntrustedProjectConfig(), makeId() (+8 more)
-
 ### Community 12 - "Community 12"
-Cohesion: 0.18
-Nodes (13): discoverAgentEntries(), discoverCommandFiles(), discoverMcpFromClaudeJson(), discoverMcpJson(), discoverPluginTree(), discoverSkillDirs(), makeId(), pathSegments() (+5 more)
-
-### Community 13 - "Community 13"
-Cohesion: 0.11
+Cohesion: 0.12
 Nodes (1): runCli()
 
+### Community 13 - "Community 13"
+Cohesion: 0.22
+Nodes (11): extractSnippet(), globalPattern(), hasNestedQuantifier(), isNestedScanRoot(), isPromptBearingCommandOrAgentDir(), isSafeRegexInput(), lineCol(), runPatternWithSafetyPreflight() (+3 more)
+
 ### Community 14 - "Community 14"
+Cohesion: 0.28
+Nodes (4): discoverLegacyCursorRules(), discoverMcpJson(), makeId(), pathExists()
+
+### Community 15 - "Community 15"
 Cohesion: 0.43
 Nodes (7): container_logs(), _docker(), list_containers(), prune(), Local Docker management helpers — wraps the docker CLI., stats(), stop_all()
 
-### Community 15 - "Community 15"
+### Community 16 - "Community 16"
 Cohesion: 0.29
 Nodes (6): eval_expr(), import_module(), Dynamically import a module by name., Evaluate arbitrary Python expression., Execute arbitrary Python code block., run_snippet()
 
@@ -165,7 +170,7 @@ Nodes (1): Benign scanner fixture catalog.  This file stores quoted payload exam
 ## Knowledge Gaps
 - **14 isolated node(s):** `Evaluate arbitrary Python expression.`, `Execute arbitrary Python code block.`, `Dynamically import a module by name.`, `Benign scanner fixture catalog.  This file stores quoted payload examples for ru`, `Test runner helper — autodetects framework and runs tests.` (+9 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 13`** (18 nodes): `stripAnsi()`, `expectSupportedAgentHelp()`, `runCli()`, `e2e.test.ts`, `strip-ansi.ts`, `makeDepsDevPackageResponse()`, `makeDepsDevProjectResponse()`, `makeDepsDevVersionResponse()`, `makeSkill()`, `scan-enrichment-pipeline.test.ts`, `makeFinding()`, `makeInteractiveTTY()`, `makeSkill()`, `restoreProgressEnv()`, `restoreTTY()`, `scan-options.test.ts`, `withTempDir()`, `writeLlmConfig()`
+- **Thin community `Community 12`** (16 nodes): `stripAnsi()`, `expectSupportedAgentHelp()`, `runCli()`, `e2e.test.ts`, `makeEnrichmentResult()`, `makeFinding()`, `makeSkill()`, `makeSummary()`, `mockProcessExit()`, `explain.test.ts`, `strip-ansi.ts`, `makeDepsDevPackageResponse()`, `makeDepsDevProjectResponse()`, `makeDepsDevVersionResponse()`, `makeSkill()`, `scan-enrichment-pipeline.test.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 18`** (6 nodes): `check_syntax()`, `minify()`, `pretty()`, `JSON syntax checking and schema validation helpers.`, `validate_schema()`, `validate.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -185,17 +190,17 @@ Nodes (1): Benign scanner fixture catalog.  This file stores quoted payload exam
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `add()` connect `Community 10` to `Community 0`, `Community 8`, `Community 2`, `Community 11`?**
+- **Why does `add()` connect `Community 11` to `Community 0`, `Community 9`, `Community 3`, `Community 13`?**
   _High betweenness centrality (0.035) - this node is a cross-community bridge._
-- **Why does `trim()` connect `Community 6` to `Community 0`, `Community 1`, `Community 2`, `Community 4`, `Community 7`, `Community 11`?**
-  _High betweenness centrality (0.029) - this node is a cross-community bridge._
-- **Why does `parse()` connect `Community 9` to `Community 3`, `Community 4`, `Community 6`, `Community 7`, `Community 12`?**
+- **Why does `trim()` connect `Community 5` to `Community 0`, `Community 1`, `Community 3`, `Community 4`, `Community 8`, `Community 13`?**
+  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+- **Why does `parse()` connect `Community 10` to `Community 3`, `Community 4`, `Community 5`, `Community 8`, `Community 14`?**
   _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **Are the 14 inferred relationships involving `runScan()` (e.g. with `formatSupportedAgentIds()` and `clearPlugins()`) actually correct?**
   _`runScan()` has 14 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 18 inferred relationships involving `trim()` (e.g. with `minify()` and `extractGitHubSlugFromUrl()`) actually correct?**
+  _`trim()` has 18 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 18 inferred relationships involving `readFile()` (e.g. with `runCli()` and `fixture()`) actually correct?**
   _`readFile()` has 18 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 17 inferred relationships involving `trim()` (e.g. with `minify()` and `extractGitHubSlugFromUrl()`) actually correct?**
-  _`trim()` has 17 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 13 inferred relationships involving `parse()` (e.g. with `fetchImpl()` and `parseJson()`) actually correct?**
   _`parse()` has 13 INFERRED edges - model-reasoned connections that need verification._

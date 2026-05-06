@@ -4,6 +4,7 @@ import type { ScanResult, ScannedSkill, Severity } from '../types.js';
 import { installStateLabel } from './install-state.js';
 import { collectLlmComparisons, collectLlmConsensus, highestLlmSeverity } from './llm.js';
 import { sortScanSkills } from './sort.js';
+import { formatTopIssuePlain } from './top-issue.js';
 
 function escapeHtml(s: string): string {
   return s
@@ -216,7 +217,7 @@ export function renderHtml(result: ScanResult): string {
       const stateTag = showInstallState
         ? ` <span class="tag-state">${escapeHtml(installStateLabel(sk.installState))}</span>`
         : '';
-      const topIssue = sk.findings[0]?.ruleId ?? '—';
+      const topIssue = formatTopIssuePlain(sk);
       return `<tr class="skill-row" data-idx="${i}" data-agent="${escapeHtml(sk.agentId)}" tabindex="0">
       <td><span class="verdict-dot" style="background:${color}"></span> <strong style="color:${color}">${escapeHtml(v)}</strong></td>
       <td>${escapeHtml(sk.name)}${ignoredTag}${allowlistedTag}${stateTag}</td>
@@ -264,7 +265,7 @@ tbody tr:hover{background:#f9fafb}
 tbody tr.selected{background:#eff6ff}
 td{padding:10px 12px;vertical-align:middle}
 .verdict-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
-.top-issue{font-family:monospace;font-size:12px;color:#6b7280}
+.top-issue{font-size:12px;color:#6b7280}
 .enrichment-cell{font-size:12px;line-height:1.45;color:#374151;min-width:230px}
 .enrichment-cell span{display:inline-block;min-width:54px;color:#6b7280}
 .enrichment-missing{color:#9ca3af}
