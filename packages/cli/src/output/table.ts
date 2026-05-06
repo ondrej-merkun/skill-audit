@@ -5,6 +5,7 @@ import type { ScanResult, ScannedSkill } from '../types.js';
 import { installStateLabel } from './install-state.js';
 import { formatLlmReviewInline } from './llm.js';
 import { sortScanSkills } from './sort.js';
+import { skillSourceLabel } from './source.js';
 import { renderSummaryFooter } from './summary.js';
 import { topIssueForSkill } from './top-issue.js';
 
@@ -138,6 +139,7 @@ export function renderTableToString(result: ScanResult): string {
   const head = [
     chalk.bold('AGENT'),
     chalk.bold('SKILL'),
+    chalk.bold('SOURCE'),
     ...(showInstallStateColumn ? [chalk.bold('STATE')] : []),
     chalk.bold('VERDICT'),
     chalk.bold('SCORE'),
@@ -164,6 +166,7 @@ export function renderTableToString(result: ScanResult): string {
     const row = [
       formatAgentName(skill.agentId),
       `${verdictDot(skill)} ${skill.name}`,
+      skillSourceLabel(skill),
       ...(showInstallStateColumn ? [chalk.dim(installStateLabel(skill.installState))] : []),
       colorVerdict(skill),
       colorScore(skill),

@@ -81,7 +81,8 @@ async function skillFromDir(
   dirPath: string,
   format: Skill['format'],
   scope: Skill['scope'],
-  manifestFile: string
+  manifestFile: string,
+  metadata?: Skill['metadata']
 ): Promise<Skill> {
   return {
     id: makeId(dirPath),
@@ -92,6 +93,7 @@ async function skillFromDir(
     format,
     scope,
     treeSha256: await computeTreeSha256(dirPath),
+    ...(metadata === undefined ? {} : { metadata }),
   };
 }
 
@@ -100,7 +102,8 @@ async function skillFromFile(
   name: string,
   format: Skill['format'],
   scope: Skill['scope'],
-  trusted?: boolean
+  trusted?: boolean,
+  metadata?: Skill['metadata']
 ): Promise<Skill> {
   return {
     id: makeId(filePath),
@@ -112,6 +115,7 @@ async function skillFromFile(
     scope,
     treeSha256: await computeTreeSha256(filePath),
     ...(trusted === undefined ? {} : { trusted }),
+    ...(metadata === undefined ? {} : { metadata }),
   };
 }
 
@@ -145,7 +149,8 @@ async function discoverSkillDirs(
 async function discoverPluginTree(
   dir: string,
   scope: Skill['scope'],
-  options: DiscoverSkillsOptions = {}
+  options: DiscoverSkillsOptions = {},
+  metadata?: Skill['metadata']
 ): Promise<Skill[]> {
   const files = await walkFiles(dir, {
     ...(options.includeMarketplaces === true ? { includeMarketplaces: true } : {}),
@@ -159,11 +164,13 @@ async function discoverPluginTree(
 
     if (name === 'SKILL.md') {
       skills.push(
-        withInstallState(await skillFromDir(dirname(file), 'SKILL.md', scope, 'SKILL.md'))
+        withInstallState(await skillFromDir(dirname(file), 'SKILL.md', scope, 'SKILL.md', metadata))
       );
     } else if (name.endsWith('.md') && segments.includes('commands')) {
       skills.push(
-        withInstallState(await skillFromFile(file, basename(file, '.md'), 'prompt-md', scope))
+        withInstallState(
+          await skillFromFile(file, basename(file, '.md'), 'prompt-md', scope, undefined, metadata)
+        )
       );
     }
   }
@@ -174,7 +181,8 @@ async function discoverPluginTree(
 async function discoverActivePluginPayloadTree(
   dir: string,
   scope: Skill['scope'],
-  options: DiscoverSkillsOptions = {}
+  options: DiscoverSkillsOptions = {},
+  metadata?: Skill['metadata']
 ): Promise<Skill[]> {
   const files = await walkFiles(dir, options);
   const skills: Skill[] = [];
@@ -185,15 +193,19 @@ async function discoverActivePluginPayloadTree(
 
     if (name === 'SKILL.md') {
       skills.push(
-        withInstallState(await skillFromDir(dirname(file), 'SKILL.md', scope, 'SKILL.md'))
+        withInstallState(await skillFromDir(dirname(file), 'SKILL.md', scope, 'SKILL.md', metadata))
       );
     } else if (name.endsWith('.md') && segments.includes('commands')) {
       skills.push(
-        withInstallState(await skillFromFile(file, basename(file, '.md'), 'prompt-md', scope))
+        withInstallState(
+          await skillFromFile(file, basename(file, '.md'), 'prompt-md', scope, undefined, metadata)
+        )
       );
     } else if (name.endsWith('.md') && segments.includes('agents')) {
       skills.push(
-        withInstallState(await skillFromFile(file, basename(file, '.md'), 'agents-md', scope))
+        withInstallState(
+          await skillFromFile(file, basename(file, '.md'), 'agents-md', scope, undefined, metadata)
+        )
       );
     }
   }
@@ -276,6 +288,28 @@ function parseEnabledPluginCaches(toml: string): EnabledPluginCache[] {
     .sort((a, b) => a.marketplace.localeCompare(b.marketplace) || a.plugin.localeCompare(b.plugin));
 }
 
+async function readPluginManifestName(pluginDir: string): Promise<string | null> {
+  let raw: string;
+  try {
+    raw = await readFile(join(pluginDir, 'plugin.json'), 'utf8');
+  } catch {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as { name?: unknown };
+    return typeof parsed.name === 'string' && parsed.name.trim().length > 0
+      ? parsed.name.trim()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function sourcePluginMetadata(pluginName: string | null): Skill['metadata'] | undefined {
+  return pluginName === null ? undefined : { sourcePluginName: pluginName };
+}
+
 async function discoverMcpToml(configPath: string, scope: Skill['scope']): Promise<Skill[]> {
   let raw: string;
   try {
@@ -314,7 +348,11 @@ async function discoverEnabledPluginCaches(
 
   for (const ref of refs) {
     const cacheRoot = join(codexHome, 'plugins', 'cache', ref.marketplace, ref.plugin);
-    skills.push(...(await discoverActivePluginPayloadTree(cacheRoot, scope, options)));
+    skills.push(
+      ...(await discoverActivePluginPayloadTree(cacheRoot, scope, options, {
+        sourcePluginName: ref.plugin,
+      }))
+    );
   }
 
   return skills;
@@ -352,7 +390,12 @@ const codexDiscovery: AgentDiscovery = {
     );
     skills.push(...(await discoverPromptFiles(join(codexHome, 'prompts'))));
     skills.push(
-      ...(await discoverActivePluginPayloadTree(join(cwd, '.codex-plugin'), 'project', options))
+      ...(await discoverActivePluginPayloadTree(
+        join(cwd, '.codex-plugin'),
+        'project',
+        options,
+        sourcePluginMetadata(await readPluginManifestName(join(cwd, '.codex-plugin')))
+      ))
     );
     skills.push(...(await discoverUntrustedProjectConfig(join(cwd, '.codex', 'config.toml'))));
 

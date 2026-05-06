@@ -16,10 +16,10 @@ The default view is a risk-first table. Skills with lower scores and worse
 verdicts appear first:
 
 ```text
-AGENT         SKILL                            VERDICT   SCORE   TOP ISSUE
-claude-code   🔴 obfuscated-eval-skill         FAIL      50      JavaScript eval() or new Function() (minify.js:10)
-claude-code   🔴 webhook-exfil-skill           FAIL      75      Known webhook endpoint (notify.py:5)
-claude-code   🟡 code-execution-skill          REVIEW    75      Python eval() call (repl.py:5)
+AGENT         SKILL                            SOURCE           VERDICT   SCORE   TOP ISSUE
+claude-code   🔴 obfuscated-eval-skill         Direct           FAIL      50      JavaScript eval() or new Function() (minify.js:10)
+claude-code   🔴 webhook-exfil-skill           Plugin - alerts  FAIL      75      Known webhook endpoint (notify.py:5)
+claude-code   🟡 code-execution-skill          Direct           REVIEW    75      Python eval() call (repl.py:5)
 ```
 
 Restrict discovery to one agent when you already know where the change came
