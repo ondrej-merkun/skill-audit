@@ -40,10 +40,12 @@ produce shareable CLI output without an account.
 ```bash
 skill-audit scan               # scan all discovered skills (default)
 skill-audit scan --json -o skill-audit-report.json
+skill-audit scan --skill <name-or-id>
 skill-audit scan --include-marketplaces
 skill-audit list               # list installed skills without scanning
 skill-audit list --include-marketplaces
 skill-audit explain <name>     # full detail view for one skill
+skill-audit explain <name> --llm local
 skill-audit ignore <name>      # add a skill's treeSha256 to your ignore list
 ```
 
@@ -52,7 +54,9 @@ skill-audit ignore <name>      # add a skill's treeSha256 to your ignore list
 | `--json` | Emit machine-readable JSON (schema v1.0) |
 | `--summary` | One-line summary footer only |
 | `--agent <id>` | Restrict to one agent (`claude-code`, `codex`, `cross-agent`, `cursor`, `gemini`, `copilot`, `windsurf`, `cline`) |
+| `--skill <name-or-id>` | Restrict `scan` to one matching skill |
 | `--include-marketplaces` | Include inactive local marketplace inventory and label rows as `marketplace` |
+| `--llm <name>` | Add optional local LLM review; repeat, comma-separate, or use `all` |
 | `-o, --output <file>` | Write the selected non-HTML scan output to file |
 | `--strict` | Treat REVIEW as FAIL for exit-code purposes |
 | `--fail-on <band>` | Override exit-code threshold (`REVIEW` or `FAIL`) |
@@ -74,7 +78,10 @@ For the full security boundary, see [`THREAT_MODEL.md`](THREAT_MODEL.md).
 | `skill-audit scan --summary` | Skill contents | No | Nothing |
 | `skill-audit scan --json` | Skill contents and dependency manifests | No | Nothing |
 | `skill-audit scan --html <file>` | Skill contents and dependency manifests | No | Nothing |
+| `skill-audit scan --llm local` | Skill contents and deterministic findings | Only to loopback model URL | Bounded skill metadata, findings, and capped snippets |
+| `skill-audit scan --skill <name> --llm local` | Selected skill contents and deterministic findings | Only to loopback model URL | Bounded selected-skill metadata, findings, and capped snippets |
 | `skill-audit explain <name>` | Selected skill contents | No | Nothing |
+| `skill-audit explain <name> --llm local` | Selected skill contents and deterministic findings | Only to loopback model URL | Bounded selected-skill metadata, findings, and capped snippets |
 
 ## Example Findings
 

@@ -32,6 +32,13 @@ skill-audit scan --agent cursor
 skill-audit scan --agent cline
 ```
 
+Scan a single row by name or id when you already know which skill needs review:
+
+```bash
+skill-audit scan --skill obfuscated-eval-skill
+skill-audit scan --skill obfuscated-eval-skill --llm local
+```
+
 Marketplace payloads under `plugins/marketplaces/` are inactive local
 inventory and are skipped by default. Include them only when you want to inspect
 uninstalled marketplace content:
@@ -126,6 +133,13 @@ Machine-readable detail is also available:
 
 ```bash
 skill-audit explain obfuscated-eval-skill --json
+```
+
+If you have configured a loopback local model, `explain` can add model review
+for only that selected skill:
+
+```bash
+skill-audit explain obfuscated-eval-skill --llm local
 ```
 
 ## CI

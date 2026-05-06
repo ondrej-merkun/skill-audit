@@ -191,18 +191,6 @@ export function renderSummaryFooter(
   }
   nextCommands.push(
     {
-      command: 'skill-audit ignore <skill>',
-      description: 'Allowlist a false positive',
-    },
-    {
-      command: 'skill-audit --html report.html',
-      description: 'Generate HTML report (contains full findings)',
-    }
-  );
-  nextCommands.splice(
-    1,
-    0,
-    {
       command:
         'skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model <model_name>',
       description: 'Configure local LLM review',
@@ -212,10 +200,32 @@ export function renderSummaryFooter(
       description: 'Add local LLM review',
     }
   );
-  nextCommands.push({
-    command: 'skill-audit --agent claude-code',
-    description: 'Scan only Claude Code skills',
-  });
+  if (highlight) {
+    nextCommands.push(
+      {
+        command: `skill-audit scan --skill ${highlight.name} --llm local`,
+        description: 'Review this skill with local LLM',
+      },
+      {
+        command: `skill-audit explain ${highlight.name} --llm local`,
+        description: 'Explain this skill with local LLM',
+      }
+    );
+  }
+  nextCommands.push(
+    {
+      command: 'skill-audit ignore <skill>',
+      description: 'Allowlist a false positive',
+    },
+    {
+      command: 'skill-audit --html report.html',
+      description: 'Generate HTML report (contains full findings)',
+    },
+    {
+      command: 'skill-audit --agent claude-code',
+      description: 'Scan only Claude Code skills',
+    }
+  );
   for (const { command, description } of nextCommands) {
     lines.push(`  →  ${command}    ${C_GREY(description)}`);
   }

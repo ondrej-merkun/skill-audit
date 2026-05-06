@@ -103,6 +103,7 @@ Scan and filter:
 ```bash
 skill-audit                                          # default scan
 skill-audit scan --agent claude-code                 # restrict discovery to one agent
+skill-audit scan --skill docs-assistant              # scan one matching skill
 skill-audit scan --include-marketplaces              # include inactive local marketplace inventory
 ```
 
@@ -121,6 +122,7 @@ skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model llama3.1
 skill-audit llm list                                 # configured local models
 skill-audit llm check local                          # local model health check
 skill-audit scan --llm local                         # add local LLM review
+skill-audit scan --skill docs-assistant --llm local   # review one skill with a local model
 skill-audit scan --llm local --llm qwen              # compare multiple local models
 skill-audit scan --llm all --html skill-audit-report.html
 ```
@@ -131,6 +133,7 @@ Inventory and follow up:
 skill-audit list                                     # inventory without scanning
 skill-audit list --include-marketplaces              # show installed and inactive marketplace skills
 skill-audit explain <name>                           # inspect one result
+skill-audit explain <name> --llm local               # inspect one result with local LLM review
 skill-audit ignore <name>                            # suppress a reviewed tree hash
 ```
 
@@ -159,6 +162,7 @@ OpenAI-compatible model server, you can add LLM review as a second opinion:
 skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model llama3.1
 skill-audit llm check local
 skill-audit scan --llm local
+skill-audit explain docs-assistant --llm local
 ```
 
 `skill-audit llm add` writes model config to
@@ -172,6 +176,7 @@ For comparison runs, repeat `--llm`, pass comma-separated names, or use
 
 ```bash
 skill-audit scan --llm local --llm qwen
+skill-audit scan --skill docs-assistant --llm local
 skill-audit scan --llm local,qwen --summary
 skill-audit scan --llm all --html skill-audit-report.html
 ```

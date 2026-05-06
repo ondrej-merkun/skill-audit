@@ -14,6 +14,10 @@ import { VERSION } from './version.js';
 const program = new Command();
 const SUPPORTED_AGENT_OPTION_HELP = `Supported agents: ${formatSupportedAgentIds()}`;
 
+function collectRepeatedOption(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
 function addScanOptions(command: Command): Command {
   return command
     .option('--json', 'emit JSON to stdout instead of TUI table')
@@ -23,11 +27,12 @@ function addScanOptions(command: Command): Command {
     .addOption(new Option('--offline', 'skip disabled network enrichment calls').hideHelp())
     .option('--strict', 'treat REVIEW band as FAIL for exit code purposes')
     .option('--agent <id>', `restrict scan to a single agent. ${SUPPORTED_AGENT_OPTION_HELP}`)
+    .option('--skill <name-or-id>', 'scan only one matching skill')
     .option('--include-marketplaces', 'include locally available but inactive marketplace skills')
     .option(
       '--llm <name>',
       'run optional local LLM review; repeat, comma-separate, or use "all"',
-      (value: string, previous: string[]) => [...previous, value],
+      collectRepeatedOption,
       []
     )
     .option(
@@ -46,6 +51,7 @@ function scanOptionsFrom(cmdOpts: Record<string, unknown>): Partial<ScanOptions>
     offline: cmdOpts.offline === true,
     strict: cmdOpts.strict === true,
     agent: typeof cmdOpts.agent === 'string' ? cmdOpts.agent : undefined,
+    skill: typeof cmdOpts.skill === 'string' ? cmdOpts.skill : undefined,
     includeMarketplaces: cmdOpts.includeMarketplaces === true,
     llm: Array.isArray(cmdOpts.llm) && cmdOpts.llm.length > 0 ? cmdOpts.llm : undefined,
     failOn: typeof cmdOpts.failOn === 'string' ? cmdOpts.failOn : undefined,
@@ -93,10 +99,17 @@ program
   .description('Show full detail view for a single skill')
   .addOption(new Option('--offline', 'skip disabled network enrichment calls').hideHelp())
   .option('--json', 'emit JSON to stdout instead of detail view')
+  .option(
+    '--llm <name>',
+    'run optional local LLM review; repeat, comma-separate, or use "all"',
+    collectRepeatedOption,
+    []
+  )
   .action((nameOrId: string, cmdOpts: Record<string, unknown>) => {
     const options: Partial<ExplainOptions> = {
       offline: cmdOpts.offline === true,
       json: cmdOpts.json === true,
+      llm: Array.isArray(cmdOpts.llm) && cmdOpts.llm.length > 0 ? cmdOpts.llm : undefined,
     };
     runExplain(nameOrId, options).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);

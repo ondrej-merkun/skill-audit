@@ -42,8 +42,8 @@ function validChatCompletionsResponse(value: unknown): boolean {
   return Array.isArray(choices);
 }
 
-// 30s - intentionally long as cold-starting a local LLM can genuinely take a while
-const DEFAULT_LLM_LOAD_TIMEOUT_MS = 30_000;
+// 60s - intentionally long as cold-starting a local LLM can genuinely take a while
+const DEFAULT_LLM_LOAD_TIMEOUT_MS = 60_000;
 
 export async function checkOpenAiCompatibleConnection(
   config: LocalLlmConfig,

@@ -10,11 +10,13 @@ import {
   summarizeEnrichmentOutcomes,
 } from '../enrich/index.js';
 import type { EnrichmentSource } from '../enrich/index.js';
-import { loadLlmRegistry } from '../llm/config.js';
 import type { LocalLlmConfig } from '../llm/config.js';
-import { LLM_REVIEW_PROMPT_VERSION, buildLlmReviewPayload } from '../llm/prompt.js';
-import { reviewWithOpenAiCompatibleModel } from '../llm/review.js';
 import type { LlmReviewFetch } from '../llm/review.js';
+import {
+  LLM_REVIEW_PROMPT_VERSION,
+  loadSelectedLlmConfigs,
+  reviewSkillsWithLlm,
+} from '../llm/run.js';
 import { renderHtml } from '../output/html.js';
 import { renderJson } from '../output/json.js';
 import { sortScanSkills } from '../output/sort.js';
@@ -23,7 +25,6 @@ import { renderTableToString } from '../output/table.js';
 import { calculateCompromisedPercent } from '../percent.js';
 import {
   type ProgressOutputKind,
-  type ProgressReporter,
   createProgressReporter,
   selectProgressMode,
 } from '../progress.js';
@@ -35,13 +36,13 @@ import type {
   AgentInfo,
   EnrichmentSourceOutcome,
   EnrichmentStatus,
-  LlmReviewResult,
   ScanResult,
   ScannedSkill,
   Skill,
   Verdict,
 } from '../types.js';
 import { VERSION } from '../version.js';
+import { findSkillByNameOrId } from './skill-match.js';
 
 export function computeExitCode(
   verdict: Verdict,
@@ -65,6 +66,7 @@ export type ScanOptions = {
   offline: boolean;
   strict: boolean;
   agent: string | undefined;
+  skill: string | undefined;
   failOn: string | undefined;
   includeMarketplaces: boolean;
   llm: string | string[] | undefined;
@@ -79,6 +81,7 @@ const DEFAULT_OPTIONS: ScanOptions = {
   offline: false,
   strict: false,
   agent: undefined,
+  skill: undefined,
   failOn: undefined,
   includeMarketplaces: false,
   llm: undefined,
@@ -86,8 +89,6 @@ const DEFAULT_OPTIONS: ScanOptions = {
 };
 
 const SCAN_CONCURRENCY = 8;
-const LLM_REVIEW_DETAILS_HINT =
-  '[skill-audit] LLM review: details: rerun this scan with --json or --html report.html to inspect LLM-only finding details\n';
 const SUPPORTED_SCAN_AGENTS: ReadonlySet<string> = new Set(SUPPORTED_AGENT_IDS);
 
 export function selectScanEnrichmentSources(
@@ -169,95 +170,6 @@ function scanProgressOutputKind(options: ScanOptions): ProgressOutputKind {
   return 'pretty';
 }
 
-function parseLlmSelections(selection: string | string[]): string[] {
-  const selections = Array.isArray(selection) ? selection : [selection];
-  const names: string[] = [];
-  for (const entry of selections) {
-    for (const name of entry.split(',')) {
-      const trimmed = name.trim();
-      if (trimmed !== '') names.push(trimmed);
-    }
-  }
-  return [...new Set(names)];
-}
-
-async function loadSelectedLlmConfigs(selection: string | string[]): Promise<LocalLlmConfig[]> {
-  const selectedNames = parseLlmSelections(selection);
-  if (selectedNames.length === 0) throw new Error('at least one local LLM name is required');
-
-  const registry = await loadLlmRegistry();
-  const enabledModels = registry.models.filter((model) => model.disabled !== true);
-  const selectedConfigs =
-    selectedNames.length === 1 && selectedNames[0] === 'all'
-      ? enabledModels
-      : selectedNames.map((name) => {
-          const config = registry.models.find((model) => model.name === name);
-          if (config === undefined) throw new Error(`local LLM "${name}" is not configured`);
-          if (config.disabled === true) throw new Error(`local LLM "${name}" is disabled`);
-          return config;
-        });
-
-  if (selectedConfigs.length === 0) throw new Error('no enabled local LLMs are configured');
-  return [...selectedConfigs].sort((a, b) => a.name.localeCompare(b.name));
-}
-
-function llmStatusLine(result: LlmReviewResult): string {
-  if (result.status === 'ok') {
-    const marker = result.findings.length === 0 ? '✅' : '❌';
-    return `${marker} ${result.modelName} ok (${result.findings.length} LLM-only finding${result.findings.length === 1 ? '' : 's'})`;
-  }
-  return `${result.modelName} ${result.status}`;
-}
-
-async function reviewSkillsWithLlm(
-  skills: ScannedSkill[],
-  configs: LocalLlmConfig[],
-  fetchImpl: LlmReviewFetch | undefined,
-  progress: ProgressReporter
-): Promise<ScannedSkill[]> {
-  const reviewed: ScannedSkill[] = [];
-  const reviewableTotal = skills.filter((skill) => skill.ignored !== true).length;
-  const contextTokens = configs
-    .map((config) => config.contextTokens)
-    .filter((value): value is number => value !== undefined)
-    .sort((a, b) => a - b)[0];
-  let completedReviews = 0;
-  let hasLlmOnlyFindings = false;
-
-  if (reviewableTotal > 0) progress.startLlmReview(reviewableTotal);
-  for (const skill of skills) {
-    if (skill.ignored === true) {
-      reviewed.push(skill);
-      continue;
-    }
-    const payload = await buildLlmReviewPayload(
-      skill,
-      contextTokens !== undefined ? { contextTokens } : {}
-    );
-    const results = (
-      await Promise.all(
-        configs.map((config) => reviewWithOpenAiCompatibleModel(config, payload, fetchImpl))
-      )
-    ).sort((a, b) => a.modelName.localeCompare(b.modelName));
-    reviewed.push({ ...skill, llmReviews: results });
-    completedReviews++;
-    progress.updateLlmReview(completedReviews, reviewableTotal, skill.name);
-    for (const result of results) {
-      if (result.status === 'ok' && result.findings.length > 0) {
-        hasLlmOnlyFindings = true;
-      }
-      process.stderr.write(
-        `[skill-audit] LLM review ${completedReviews}/${reviewableTotal}: ${skill.name}: ${llmStatusLine(result)}\n`
-      );
-    }
-  }
-  if (reviewableTotal > 0) progress.succeedLlmReview(reviewableTotal);
-  if (hasLlmOnlyFindings) {
-    process.stderr.write(LLM_REVIEW_DETAILS_HINT);
-  }
-  return reviewed;
-}
-
 export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   const options: ScanOptions = { ...DEFAULT_OPTIONS, ...opts };
 
@@ -314,6 +226,18 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(`[skill-audit] ${msg}\n`);
     process.exit(2);
+  }
+
+  if (options.skill !== undefined) {
+    const target = findSkillByNameOrId(skills, options.skill);
+    if (target === undefined) {
+      process.stderr.write(
+        `[skill-audit] no skill matching "${options.skill}" found. Run \`skill-audit list\` to see installed skills.\n`
+      );
+      process.exit(1);
+      return;
+    }
+    skills = [target];
   }
 
   if (options.offline && ENRICHMENT_ENABLED) {

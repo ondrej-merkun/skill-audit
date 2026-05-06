@@ -82,6 +82,7 @@ Options:
 | `--strict` | Treat REVIEW as FAIL for exit-code purposes. |
 | `--fail-on <band>` | Set exit threshold to `FAIL` or `REVIEW`; default is `FAIL`. |
 | `--agent <id>` | Restrict scan to one agent id. |
+| `--skill <name-or-id>` | Restrict scan to one matching skill. |
 | `--include-marketplaces` | Include inactive local marketplace inventory as well as installed/exposed skills. |
 | `--llm <name>` | Add optional local LLM review; repeat, comma-separate, or pass `all`. |
 | `--offline` | Hidden maintenance option; skip enrichment and LLM review. Use only when explicitly requested. |
@@ -107,6 +108,7 @@ Scope examples:
 ```bash
 npx --yes @ondrej-merkun/skill-audit@latest scan --agent claude-code
 npx --yes @ondrej-merkun/skill-audit@latest scan --agent codex --json
+npx --yes @ondrej-merkun/skill-audit@latest scan --skill obfuscated-eval-skill
 npx --yes @ondrej-merkun/skill-audit@latest scan --include-marketplaces
 npx --yes @ondrej-merkun/skill-audit@latest scan --json --fail-on REVIEW
 npx --yes @ondrej-merkun/skill-audit@latest scan --strict
@@ -116,6 +118,7 @@ Local LLM review examples:
 
 ```bash
 npx --yes @ondrej-merkun/skill-audit@latest scan --llm local
+npx --yes @ondrej-merkun/skill-audit@latest scan --skill obfuscated-eval-skill --llm local
 npx --yes @ondrej-merkun/skill-audit@latest scan --llm local --llm qwen
 npx --yes @ondrej-merkun/skill-audit@latest scan --llm local,qwen --summary
 npx --yes @ondrej-merkun/skill-audit@latest scan --llm all --html skill-audit-report.html
@@ -164,12 +167,14 @@ Options:
 | Option | Use |
 |---|---|
 | `--json` | Emit the detail payload as JSON. |
+| `--llm <name>` | Add optional local LLM review for this selected skill. |
 | `--offline` | Hidden maintenance option; skip disabled network enrichment. |
 
 Examples:
 
 ```bash
 npx --yes @ondrej-merkun/skill-audit@latest explain obfuscated-eval-skill
+npx --yes @ondrej-merkun/skill-audit@latest explain obfuscated-eval-skill --llm local
 npx --yes @ondrej-merkun/skill-audit@latest explain obfuscated-eval-skill --json
 ```
 

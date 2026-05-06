@@ -381,8 +381,13 @@ Before changing these integrations, verify the current external contract:
   Duration .................. 1.32s
 
   →  skill-audit explain polymarket-trader    See full findings
+  →  skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model <model_name>    Configure local LLM review
+  →  skill-audit --llm local    Add local LLM review
+  →  skill-audit scan --skill polymarket-trader --llm local    Review this skill with local LLM
+  →  skill-audit explain polymarket-trader --llm local    Explain this skill with local LLM
   →  skill-audit ignore aws-helper            Allowlist a false positive
-  →  skill-audit --html report.html           Write HTML report
+  →  skill-audit --html report.html           Generate HTML report (contains full findings)
+  →  skill-audit --agent claude-code          Scan only Claude Code skills
 
   Rules reference: specs/RULES.md
 ```
@@ -391,7 +396,8 @@ Before changing these integrations, verify the current external contract:
 - Exactly two emoji types: severity dots (`🔴🟠🟡🟢`) and the checkmark (`✓`).
 - Palette: critical red `#FF4444`, high orange `#FF8C00`, medium yellow `#FFD700`, pass teal `#4EC9B0`. Grey `#8B8B8B` for file paths.
 - Never center-align columns. Severity is a fixed 6-char column.
-- Always end with 2-3 arrow-prefixed next-commands.
+- Always end with arrow-prefixed next-commands, including local LLM setup and
+  targeted review commands when a FAIL or REVIEW skill is highlighted.
 - Include the percentage ("17% of installed").
 
 ### Detail view — `skill-audit explain <skill>`
@@ -485,6 +491,7 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 |---|---|
 | `skill-audit` / `skill-audit scan` | Default — discover and scan all agents, TUI output |
 | `skill-audit scan --agent claude-code` | Restrict to one agent |
+| `skill-audit scan --skill <skill-name-or-id>` | Restrict scan to one matching skill |
 | `skill-audit scan --include-marketplaces` | Include inactive local marketplace inventory and label it separately |
 | `skill-audit scan --json` / `--html <file>` / `--summary` | Output formats |
 | `skill-audit scan --llm <name>` | Optional local LLM review; repeat, comma-separate, or use `all` |
@@ -495,6 +502,7 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 | `skill-audit list` | List installed or exposed skills without scanning (fast inventory) |
 | `skill-audit list --include-marketplaces` | Also list inactive local marketplace inventory |
 | `skill-audit explain <skill-name-or-id>` | Detail view (mockup above) |
+| `skill-audit explain <skill-name-or-id> --llm <name>` | Detail view with local LLM review for that skill |
 | `skill-audit ignore <skill-name>` | Append skill's tree sha256 to `~/.config/skill-audit/ignore.yaml` |
 
 **Exit codes** (CI-friendly):
@@ -532,6 +540,8 @@ Scan review stays bounded and redacted:
 - `skill-audit scan` with no `--llm` performs no model requests.
 - `--llm <name>` accepts repeated flags, comma-separated names, or `all` for
   every enabled configured local model.
+- `scan --skill <name-or-id> --llm <name>` and `explain <name-or-id> --llm
+  <name>` review only the matched skill.
 - Each selected model receives the same prompt version and normalized payload:
   skill metadata, deterministic findings, relevant file paths, and capped
   snippets from files that produced findings after obvious secret redaction.
