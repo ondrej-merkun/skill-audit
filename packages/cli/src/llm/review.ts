@@ -1,4 +1,5 @@
 import type { LlmReviewFinding, LlmReviewResult, Severity } from '../types.js';
+import { LLM_REVIEW_CATEGORIES } from './categories.js';
 import type { LocalLlmConfig } from './config.js';
 import { LLM_REVIEW_PROMPT_VERSION, buildLlmReviewMessages } from './prompt.js';
 import type { LlmReviewPayload } from './prompt.js';
@@ -18,15 +19,7 @@ export type LlmReviewFetch = (
 }>;
 
 const SEVERITIES = new Set<Severity>(['critical', 'high', 'medium', 'low', 'info']);
-const CATEGORIES = new Set([
-  'prompt-injection',
-  'network',
-  'filesystem',
-  'secrets',
-  'persistence',
-  'dependency',
-  'other',
-]);
+const CATEGORIES = new Set<string>(LLM_REVIEW_CATEGORIES);
 const PLACEHOLDER_STRINGS = new Set([
   'short reason',
   'optional relative path',
@@ -67,6 +60,19 @@ function normalizeCategory(value: unknown): string | null {
   if (category.includes('|')) return null;
   if (CATEGORIES.has(category)) return category;
   if (category.includes('prompt')) return 'prompt-injection';
+  if (category.includes('obfus')) return 'obfuscation';
+  if (category.includes('git') && category.includes('history')) return 'git-history';
+  if (category.includes('skill specific') || category.includes('skill-specific')) {
+    return 'skill-specific';
+  }
+  if (
+    category.includes('code') ||
+    category.includes('exec') ||
+    category.includes('command') ||
+    category.includes('shell')
+  ) {
+    return 'code-execution';
+  }
   if (category.includes('network')) return 'network';
   if (category.includes('file')) return 'filesystem';
   if (category.includes('credential') || category.includes('secret')) return 'secrets';
@@ -134,13 +140,94 @@ function parseReviewFinding(value: unknown): ParsedReviewFinding {
   };
 }
 
-export function parseLlmReviewResponse(content: string): LlmReviewFinding[] | null {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    return null;
+function repairMissingJsonSuffix(content: string): string | null {
+  const trimmed = content.trim();
+  if (!trimmed.startsWith('{')) return null;
+
+  const expectedClosers: string[] = [];
+  let repaired = '';
+  let changed = false;
+  let inString = false;
+  let escaped = false;
+
+  for (const char of trimmed) {
+    repaired += char;
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+    } else if (char === '{') {
+      expectedClosers.push('}');
+    } else if (char === '[') {
+      expectedClosers.push(']');
+    } else if (char === '}' || char === ']') {
+      const expected = expectedClosers.pop();
+      if (expected === char) continue;
+      if (expected !== undefined && expectedClosers.at(-1) === char) {
+        repaired = `${repaired.slice(0, -1)}${expected}${char}`;
+        expectedClosers.pop();
+        changed = true;
+        continue;
+      }
+      return null;
+    }
   }
+
+  if (inString || /,\s*$/.test(trimmed)) return null;
+  if (expectedClosers.length > 0) {
+    changed = true;
+    repaired = `${repaired}${expectedClosers.reverse().join('')}`;
+  }
+  return changed ? repaired : null;
+}
+
+function repairEscapedJsonSyntax(content: string): string | null {
+  const trimmed = content.trim();
+  if (!trimmed.startsWith('{')) return null;
+
+  const repaired = trimmed
+    .replace(/([,{]\s*)\\\"([A-Za-z_][A-Za-z0-9_]*)\\\"(?=\s*:)/g, '$1"$2"')
+    .replace(/(:\s*)\\\"/g, '$1"')
+    .replace(/\\\"(?=\s*:)/g, '"')
+    .replace(/\\\"(?=\s*[,}])/g, '"');
+
+  return repaired === trimmed ? null : repaired;
+}
+
+function parseJsonWithRepairs(content: string): unknown | null {
+  const candidates = [content];
+  const escapedSyntaxRepair = repairEscapedJsonSyntax(content);
+  if (escapedSyntaxRepair !== null) candidates.push(escapedSyntaxRepair);
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      const suffixRepair = repairMissingJsonSuffix(candidate);
+      if (suffixRepair === null) continue;
+      try {
+        return JSON.parse(suffixRepair);
+      } catch {
+        // Try the next narrowly repaired candidate.
+      }
+    }
+  }
+
+  return null;
+}
+
+export function parseLlmReviewResponse(content: string): LlmReviewFinding[] | null {
+  const parsed = parseJsonWithRepairs(content);
+  if (parsed === null) return null;
 
   if (!isRecord(parsed) || !Array.isArray(parsed.findings)) return null;
   const findings: LlmReviewFinding[] = [];
@@ -153,14 +240,25 @@ export function parseLlmReviewResponse(content: string): LlmReviewFinding[] | nu
   return findings;
 }
 
-// 60s - intentionally long as local LLMs can be slow
-const DEFAULT_LLM_REVIEW_TIMEOUT_MS = 60_000;
+// 120s - intentionally long as small local LLMs can be slow on snippet-heavy skills
+const DEFAULT_LLM_REVIEW_TIMEOUT_MS = 120_000;
 
 export async function reviewWithOpenAiCompatibleModel(
   config: LocalLlmConfig,
   payload: LlmReviewPayload,
   fetchImpl: LlmReviewFetch = fetch
 ): Promise<LlmReviewResult> {
+  if (payload.deterministicFindings.length === 0 && payload.snippets.length === 0) {
+    return {
+      modelName: config.name,
+      provider: config.provider,
+      model: config.model,
+      status: 'ok',
+      promptVersion: LLM_REVIEW_PROMPT_VERSION,
+      findings: [],
+    };
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(
     () => controller.abort(),

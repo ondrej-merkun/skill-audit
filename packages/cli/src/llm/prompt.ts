@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { relative } from 'node:path';
 import type { Finding, ScannedSkill } from '../types.js';
+import { LLM_REVIEW_CATEGORIES } from './categories.js';
 
 export const LLM_REVIEW_PROMPT_VERSION = '2026-04-28.schema-v2';
 
@@ -129,15 +130,7 @@ export function buildLlmReviewMessages(payload: LlmReviewPayload): Array<{
           no_findings: { findings: [] },
           finding_fields: {
             severity: ['critical', 'high', 'medium', 'low', 'info'],
-            category: [
-              'prompt-injection',
-              'network',
-              'filesystem',
-              'secrets',
-              'persistence',
-              'dependency',
-              'other',
-            ],
+            category: LLM_REVIEW_CATEGORIES,
             confidence: 'number from 0 to 1',
             rationale: 'specific reason tied to the payload',
             file: 'optional relative file path from the payload',

@@ -112,9 +112,13 @@ describe('LLM review prompt and parsing', () => {
     expect(serialized).not.toContain('optional relative path');
     const userMessage = messages.find((message) => message.role === 'user');
     expect(userMessage).toBeDefined();
-    expect(JSON.parse(userMessage?.content ?? '{}').output_contract.no_findings).toEqual({
+    const contract = JSON.parse(userMessage?.content ?? '{}').output_contract;
+    expect(contract.no_findings).toEqual({
       findings: [],
     });
+    expect(contract.finding_fields.category).toContain('code-execution');
+    expect(contract.finding_fields.category).toContain('obfuscation');
+    expect(contract.finding_fields.category).toContain('git-history');
   });
 
   it('strictly parses structured model findings', () => {
@@ -263,6 +267,28 @@ describe('LLM review prompt and parsing', () => {
       JSON.stringify({
         findings: [
           {
+            file: 'scripts/worktree-manager.sh',
+            category: 'code-execution',
+            severity: 'high',
+            confidence: 0.9,
+            rationale: 'The script uses a shell command pattern that can execute attacker input.',
+            suggested_fix: 'Validate inputs before invoking shell commands.',
+          },
+          {
+            file: 'scripts/encoded.js',
+            category: 'obfuscated code',
+            severity: 'medium',
+            confidence: 0.7,
+            rationale: 'The payload hides behavior with encoded strings.',
+          },
+          {
+            file: 'README.md',
+            category: 'git history',
+            severity: 'low',
+            confidence: 0.6,
+            rationale: 'The instructions scan repository history for secrets.',
+          },
+          {
             file: 'scripts/install_tools.sh',
             line: 49,
             category: 'network-exfil',
@@ -285,6 +311,28 @@ describe('LLM review prompt and parsing', () => {
     expect(findings).toEqual([
       {
         severity: 'high',
+        category: 'code-execution',
+        confidence: 0.9,
+        rationale: 'The script uses a shell command pattern that can execute attacker input.',
+        file: 'scripts/worktree-manager.sh',
+        suggestedFix: 'Validate inputs before invoking shell commands.',
+      },
+      {
+        severity: 'medium',
+        category: 'obfuscation',
+        confidence: 0.7,
+        rationale: 'The payload hides behavior with encoded strings.',
+        file: 'scripts/encoded.js',
+      },
+      {
+        severity: 'low',
+        category: 'git-history',
+        confidence: 0.6,
+        rationale: 'The instructions scan repository history for secrets.',
+        file: 'README.md',
+      },
+      {
+        severity: 'high',
         category: 'network',
         confidence: 0.9,
         rationale: 'Uses non-local curl command to download act.',
@@ -298,6 +346,76 @@ describe('LLM review prompt and parsing', () => {
         rationale: 'insecure credential storage',
         file: 'config.json',
         suggestedFix: 'update to use secure storage',
+      },
+    ]);
+  });
+
+  it('accepts the valid JSON shape returned by llama for scanner code-execution findings', () => {
+    const findings = parseLlmReviewResponse(
+      JSON.stringify({
+        findings: [
+          {
+            severity: 'high',
+            category: 'code-execution',
+            confidence: 0.9,
+            rationale: 'The script uses a shell command that can be influenced by repository state.',
+            file: '/home/linuxuser/.codex/plugins/cache/compound-engineering-plugin/compound-engineering/3.6.1/skills/ce-worktree/scripts/worktree-manager.sh',
+            suggested_fix: 'Validate inputs before invoking shell commands.',
+          },
+        ],
+      })
+    );
+
+    expect(findings).toEqual([
+      {
+        severity: 'high',
+        category: 'code-execution',
+        confidence: 0.9,
+        rationale: 'The script uses a shell command that can be influenced by repository state.',
+        file: '/home/linuxuser/.codex/plugins/cache/compound-engineering-plugin/compound-engineering/3.6.1/skills/ce-worktree/scripts/worktree-manager.sh',
+        suggestedFix: 'Validate inputs before invoking shell commands.',
+      },
+    ]);
+  });
+
+  it('repairs llama responses that only omit terminal JSON closers', () => {
+    const findings = parseLlmReviewResponse(
+      '{"findings":[{"ruleId":"CODEEXEC-SHELL-BACKTICK","severity":"high","category":"code-execution","file":"scripts/worktree-manager.sh","line":5,"snippet":"","rationale":"The worktree script copies environment files from the main repo.","suggested_fix":"Validate and sanitize all user input"}}'
+    );
+
+    expect(findings).toEqual([
+      {
+        severity: 'high',
+        category: 'code-execution',
+        confidence: 0.5,
+        rationale: 'The worktree script copies environment files from the main repo.',
+        file: 'scripts/worktree-manager.sh',
+        suggestedFix: 'Validate and sanitize all user input',
+      },
+    ]);
+  });
+
+  it('repairs llama responses that escape property keys after copied snippets', () => {
+    const findings = parseLlmReviewResponse(
+      '{"findings":[{"ruleId":"NET-OUTBOUND-NONLOCAL","severity":"high","category":"network-exfil","file":"scripts/install_tools.sh","line":49,"snippet":"curl --proto \'=https\' --tlsv1.2 -sSf https://raw.githubusercontent.com/nektos/act/master/install.sh | bash -s -- -b \\"${T}",\\"rationale\\":\\"Non-local outbound network behavior detected\\",\\"suggested_fix\\":\\"Verify the tool is used for its intended purpose only.\\"},{"ruleId":"NET-OUTBOUND-NONLOCAL","severity":"high","category":"network-exfil","file":"scripts/install_tools.sh","line":80,"snippet":"bash <(curl https://raw.githubusercontent.[REDACTED]-actionlint.bash)","rationale\\":\\"Non-local outbound network behavior detected\\",\\"suggested_fix\\":\\"Verify the tool is used for its intended purpose only.\\"}]}'
+    );
+
+    expect(findings).toEqual([
+      {
+        severity: 'high',
+        category: 'network',
+        confidence: 0.5,
+        rationale: 'Non-local outbound network behavior detected',
+        file: 'scripts/install_tools.sh',
+        suggestedFix: 'Verify the tool is used for its intended purpose only.',
+      },
+      {
+        severity: 'high',
+        category: 'network',
+        confidence: 0.5,
+        rationale: 'Non-local outbound network behavior detected',
+        file: 'scripts/install_tools.sh',
+        suggestedFix: 'Verify the tool is used for its intended purpose only.',
       },
     ]);
   });
