@@ -105,6 +105,7 @@ skill-audit                                          # default scan
 skill-audit scan --agent claude-code                 # restrict discovery to one agent
 skill-audit scan --skill docs-assistant              # scan one matching skill
 skill-audit scan --include-marketplaces              # include inactive local marketplace inventory
+skill-audit scan --scan-all-supporting-files         # paranoid supporting Markdown scan
 ```
 
 Write reports:

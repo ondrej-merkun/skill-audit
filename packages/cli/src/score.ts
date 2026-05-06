@@ -46,7 +46,9 @@ function verdictFromScore(score: number): Verdict {
  * Empty array means no override applies.
  */
 function getMandatoryFailIds(findings: Finding[]): string[] {
-  const ruleIds = new Set(findings.map((f) => f.ruleId));
+  const ruleIds = new Set(
+    findings.filter((f) => f.ignoredForVerdict !== true).map((f) => f.ruleId)
+  );
   const triggered = new Set<string>();
 
   for (const id of MANDATORY_FAIL_STANDALONE) {

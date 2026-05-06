@@ -159,6 +159,13 @@ without a commit message explaining why it no longer applies.
   Export one supported-value list and assert every help surface that exposes the
   option includes every current value.
 
+- **L1.25 — Do not run build variants in parallel.** _Supporting-file role work
+  briefly ran `pnpm build:release` beside the clean build-warning check; both
+  commands clean and rewrite `dist/`, so a passing result could have been
+  timing-dependent._
+  Run `pnpm build`, `pnpm build:release`, and build-warning checks as separate
+  sequential verification steps.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

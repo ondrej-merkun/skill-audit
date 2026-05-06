@@ -69,6 +69,7 @@ export type ScanOptions = {
   skill: string | undefined;
   failOn: string | undefined;
   includeMarketplaces: boolean;
+  scanAllSupportingFiles: boolean;
   llm: string | string[] | undefined;
   llmFetchImpl: LlmReviewFetch | undefined;
 };
@@ -84,6 +85,7 @@ const DEFAULT_OPTIONS: ScanOptions = {
   skill: undefined,
   failOn: undefined,
   includeMarketplaces: false,
+  scanAllSupportingFiles: false,
   llm: undefined,
   llmFetchImpl: undefined,
 };
@@ -290,7 +292,9 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
       try {
         const findings = withSecurityEducationContextFinding(
           skill,
-          await runRulesForSkill(skill, ALL_RULES)
+          await runRulesForSkill(skill, ALL_RULES, {
+            scanAllSupportingFiles: options.scanAllSupportingFiles,
+          })
         );
         const summary = scoreFindings(findings, skill.treeSha256);
         return { skill, scannedSkill: { ...skill, findings, enrichment: {}, summary } };
