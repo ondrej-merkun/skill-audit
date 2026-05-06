@@ -17,9 +17,9 @@ verdicts appear first:
 
 ```text
 AGENT         SKILL                            SOURCE           VERDICT   SCORE   TOP ISSUE
-claude-code   🔴 obfuscated-eval-skill         Direct           FAIL      50      JavaScript eval() or new Function() (minify.js:10)
-claude-code   🔴 webhook-exfil-skill           Plugin - alerts  FAIL      75      Known webhook endpoint (notify.py:5)
-claude-code   🟡 code-execution-skill          Direct           REVIEW    75      Python eval() call (repl.py:5)
+2 agents      🔴 obfuscated-eval-skill         Direct           FAIL      50      JavaScript eval() or new Function() (minify.js:10)
+Claude Code   🔴 webhook-exfil-skill           Plugin - alerts  FAIL      75      Known webhook endpoint (notify.py:5)
+Claude Code   🟡 code-execution-skill          Direct           REVIEW    75      Python eval() call (repl.py:5)
 ```
 
 Restrict discovery to one agent when you already know where the change came
@@ -115,7 +115,9 @@ Shortened output:
 ```text
 obfuscated-eval-skill
 ───────────────────────
-  Agent:     claude-code
+  Agent:     Claude Code, OpenAI Codex
+  Path:      Claude Code: ~/.claude/skills/obfuscated-eval-skill
+             OpenAI Codex: ~/.codex/skills/obfuscated-eval-skill
   Verdict:   FAIL ❌   Score 50/100   (1 mandatory-fail trigger)
 
   🔴 CRITICAL  CODEEXEC-JS-EVAL-FUNCTION
@@ -126,7 +128,7 @@ obfuscated-eval-skill
   Next steps
   ────────────────────────────────────────
   →  rm -rf ~/.claude/skills/obfuscated-eval-skill     # remove now
-  →  skill-audit scan --agent claude-code --json
+  →  skill-audit scan --skill obfuscated-eval-skill --json
 ```
 
 Machine-readable detail is also available:

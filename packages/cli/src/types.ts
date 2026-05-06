@@ -21,6 +21,8 @@ export type DiscoverSkillsOptions = {
 export type Skill = {
   id: string; // stable hash of agentId + path
   agentId: string;
+  agentIds?: string[];
+  agentPaths?: Array<{ agentId: string; path: string }>;
   name: string;
   path: string; // absolute dir or file path
   alsoInstalledAt?: string[];

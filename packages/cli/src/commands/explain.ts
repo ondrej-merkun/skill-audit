@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import { formatAgentName } from '../agent-names.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
 import {
   ENRICHMENT_ENABLED,
@@ -14,6 +13,7 @@ import {
   loadSelectedLlmConfigs,
   reviewSkillsWithLlm,
 } from '../llm/run.js';
+import { skillAgentIds, skillAgentNames, skillAgentPaths } from '../output/agents.js';
 import { renderJson } from '../output/json.js';
 import { createProgressReporter, formatEnrichmentOutcome } from '../progress.js';
 import { runRulesForSkill } from '../rules/engine.js';
@@ -174,8 +174,16 @@ function renderDetail(skill: ScannedSkill, enrichmentStatus: EnrichmentStatus): 
 
   process.stdout.write(`\n${chalk.bold(skill.name)}\n`);
   process.stdout.write(`${'─'.repeat(Math.max(skill.name.length + 2, 18))}\n`);
-  process.stdout.write(`  ${chalk.dim('Agent:')}     ${formatAgentName(skill.agentId)}\n`);
-  process.stdout.write(`  ${chalk.dim('Path:')}      ${shortPath}\n`);
+  process.stdout.write(`  ${chalk.dim('Agent:')}     ${skillAgentNames(skill)}\n`);
+  const agentPaths = skillAgentPaths(skill);
+  if (agentPaths.length === 1) {
+    process.stdout.write(`  ${chalk.dim('Path:')}      ${shortPath}\n`);
+  } else {
+    process.stdout.write(`  ${chalk.dim('Path:')}      ${formatAgentPath(agentPaths[0])}\n`);
+    for (const entry of agentPaths.slice(1)) {
+      process.stdout.write(`             ${formatAgentPath(entry)}\n`);
+    }
+  }
 
   const mandatoryNote =
     summary.mandatoryFail.length > 0
@@ -208,8 +216,16 @@ function renderDetail(skill: ScannedSkill, enrichmentStatus: EnrichmentStatus): 
       `  ${chalk.cyan('→')}  ${chalk.dim(`rm -rf ${shortPath}`)}     ${chalk.dim('# remove now')}\n`
     );
   }
-  process.stdout.write(`  ${chalk.cyan('→')}  skill-audit scan --agent ${skill.agentId} --json\n`);
+  const rescanCommand =
+    skillAgentIds(skill).length > 1
+      ? `skill-audit scan --skill ${skill.name} --json`
+      : `skill-audit scan --agent ${skill.agentId} --json`;
+  process.stdout.write(`  ${chalk.cyan('→')}  ${rescanCommand}\n`);
   process.stdout.write('\n');
+}
+
+function formatAgentPath(entry: { agentId: string; path: string }): string {
+  return `${skillAgentNames({ agentId: entry.agentId })}: ${shortenPath(entry.path)}`;
 }
 
 export async function runExplain(
@@ -335,7 +351,7 @@ export async function runExplain(
     const jsonOutput = renderJson({
       schemaVersion: '1.0',
       scan: { startedAt, durationMs: 0, toolVersion: VERSION },
-      agents: [{ id: target.agentId, installed: true, skillsScanned: 1 }],
+      agents: skillAgentIds(target).map((id) => ({ id, installed: true, skillsScanned: 1 })),
       skills: [scannedSkill],
       summary: {
         skillsScanned: 1,

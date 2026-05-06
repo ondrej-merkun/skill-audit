@@ -6,6 +6,7 @@ import type {
   ScanResult,
   ScannedSkill,
 } from '../types.js';
+import { skillAgentPaths } from './agents.js';
 import { installStateLabel } from './install-state.js';
 import { sortScanSkills } from './sort.js';
 
@@ -77,13 +78,9 @@ function serializeSkill(s: ScannedSkill): object {
   const hasEnrichment = Object.keys(enrichment).length > 0;
   return {
     id: s.id,
-    agent_id: s.agentId,
+    agents: skillAgentPaths(s).map((entry) => ({ id: entry.agentId, path: entry.path })),
     name: s.name,
-    path: s.path,
     install_state: installStateLabel(s.installState),
-    ...(s.alsoInstalledAt !== undefined && s.alsoInstalledAt.length > 0
-      ? { also_installed_at: s.alsoInstalledAt }
-      : {}),
     ...(s.modifiedAt !== undefined ? { modified_at: s.modifiedAt } : {}),
     tree_sha256: s.treeSha256,
     allowlisted: s.summary.allowlisted,

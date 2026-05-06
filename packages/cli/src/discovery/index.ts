@@ -25,6 +25,10 @@ type DedupeGroup = {
 function cloneSkill(skill: Skill): Skill {
   return {
     ...skill,
+    ...(skill.agentIds !== undefined ? { agentIds: [...skill.agentIds] } : {}),
+    ...(skill.agentPaths !== undefined
+      ? { agentPaths: skill.agentPaths.map((path) => ({ ...path })) }
+      : {}),
     ...(skill.alsoInstalledAt !== undefined ? { alsoInstalledAt: [...skill.alsoInstalledAt] } : {}),
   };
 }
@@ -65,6 +69,23 @@ function selectPrimarySkill(group: DedupeGroup, primaryPath: string): Skill {
   );
 }
 
+function collectAgentPaths(skills: Skill[]): Array<{ agentId: string; path: string }> {
+  const pathsByAgent = new Map<string, Set<string>>();
+
+  for (const skill of skills) {
+    const entries = skill.agentPaths ?? [{ agentId: skill.agentId, path: skill.path }];
+    for (const entry of entries) {
+      const paths = pathsByAgent.get(entry.agentId) ?? new Set<string>();
+      paths.add(entry.path);
+      pathsByAgent.set(entry.agentId, paths);
+    }
+  }
+
+  return [...pathsByAgent.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([agentId, paths]) => ({ agentId, path: selectPrimaryPath(paths) }));
+}
+
 export function dedupeDiscoveredSkills(skills: Skill[]): Skill[] {
   const output: Skill[] = [];
   const byTreeHash = new Map<string, DedupeGroup>();
@@ -101,13 +122,22 @@ export function dedupeDiscoveredSkills(skills: Skill[]): Skill[] {
   for (const group of byTreeHash.values()) {
     const primaryPath = selectPrimaryPath(group.paths);
     const selectedPrimary = selectPrimarySkill(group, primaryPath);
-    const { alsoInstalledAt: _alsoInstalledAt, ...primaryWithoutAliases } = selectedPrimary;
+    const {
+      alsoInstalledAt: _alsoInstalledAt,
+      agentIds: _agentIds,
+      agentPaths: _agentPaths,
+      ...primaryWithoutAliases
+    } = selectedPrimary;
 
     const alsoInstalledAt = [...group.paths].filter((path) => path !== primaryPath).sort();
+    const agentPaths = collectAgentPaths(group.skills);
+    const agentIds = agentPaths.map((entry) => entry.agentId);
     output[group.outputIndex] = {
       ...primaryWithoutAliases,
       path: primaryPath,
       installState: isPluginMarketplacePath(primaryPath) ? 'marketplace' : 'installed',
+      ...(agentIds.length > 1 ? { agentIds } : {}),
+      ...(agentPaths.length > 1 ? { agentPaths } : {}),
       ...(alsoInstalledAt.length > 0 ? { alsoInstalledAt } : {}),
     };
   }

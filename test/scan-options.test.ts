@@ -611,7 +611,7 @@ describe('runScan flag wiring', () => {
     const out = stdoutChunks.join('');
     const json = JSON.parse(out);
     expect(json.skills).toHaveLength(1);
-    expect(json.skills[0].agent_id).toBe('claude-code');
+    expect(json.skills[0].agents[0].id).toBe('claude-code');
     expect(discoverAll).toHaveBeenCalledWith({
       agent: 'claude-code',
       onProgress: expect.any(Function),
@@ -626,7 +626,7 @@ describe('runScan flag wiring', () => {
     await runScan({ json: true, agent: 'cline' });
 
     const json = JSON.parse(stdoutChunks.join(''));
-    expect(json.skills[0].agent_id).toBe('cline');
+    expect(json.skills[0].agents[0].id).toBe('cline');
     expect(discoverAll).toHaveBeenCalledWith({
       agent: 'cline',
       onProgress: expect.any(Function),
@@ -645,7 +645,7 @@ describe('runScan flag wiring', () => {
       onProgress: expect.any(Function),
     });
     const json = JSON.parse(stdoutChunks.join(''));
-    expect(json.skills[0].agent_id).toBe('windsurf');
+    expect(json.skills[0].agents[0].id).toBe('windsurf');
   });
 
   it('--include-marketplaces passes the discovery opt-in', async () => {

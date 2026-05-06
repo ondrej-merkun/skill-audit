@@ -150,9 +150,9 @@ Report each as a `Skill` with `agentId: "cross-agent"` and
    both rows in output and mark the `scope` column (`user` vs
    `project`).
 2. Dedupe by `treeSha256` — if two discovered paths have identical
-   content hash, report once with all paths in an `alsoInstalledAt`
-   array. This is a registry-level invariant owned by `discoverAll()`,
-   because duplicates can come from different agents/plugins.
+   content hash, report once and preserve the agent-to-path mapping on
+   the normalized skill. This is a registry-level invariant owned by
+   `discoverAll()`, because duplicates can come from different agents/plugins.
    Do not dedupe entries whose `treeSha256` is empty; those are synthetic
    config-derived scan targets such as individual MCP servers.
 3. When a project's `.claude/` directory contains a symlink to a
@@ -193,7 +193,7 @@ Each discovery plugin must have tests that:
    - Both user-scope and project-scope placements where applicable.
 3. Include registry-level tests for cross-plugin invariants:
    - Duplicate non-empty `treeSha256` values collapse into one skill.
-   - Duplicate paths are preserved in `alsoInstalledAt`.
+   - Duplicate agent/path ownership is preserved on the collapsed skill.
    - Empty `treeSha256` entries are not deduped.
 4. For plugin cache discovery, include fixtures for active and inactive
    cache entries. Inactive cache-only payloads must not be scan targets.

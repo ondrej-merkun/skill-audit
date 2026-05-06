@@ -218,6 +218,11 @@ describe('discoverAll', () => {
     expect(skills).toEqual([
       {
         ...earlierPath,
+        agentIds: ['cursor', 'test-agent'],
+        agentPaths: [
+          { agentId: 'cursor', path: earlierPath.path },
+          { agentId: 'test-agent', path: laterPath.path },
+        ],
         alsoInstalledAt: ['/tmp/skills/b-primary'],
       },
     ]);
@@ -269,6 +274,49 @@ describe('discoverAll', () => {
       'checking:plugin-b',
       'done:plugin-b:2',
       'complete:2:2',
+    ]);
+  });
+
+  it('preserves every agent id when identical skill content is deduped across agents', async () => {
+    const sharedTree = 'same-tree';
+    const claudeSkill = makeSkill({
+      id: 'claude-skill',
+      agentId: 'claude-code',
+      path: '/tmp/claude/shared-skill',
+      treeSha256: sharedTree,
+    });
+    const codexSkill = makeSkill({
+      id: 'codex-skill',
+      agentId: 'codex',
+      path: '/tmp/codex/shared-skill',
+      treeSha256: sharedTree,
+    });
+
+    registerPlugin({
+      id: 'plugin-a',
+      displayName: 'Plugin A',
+      isInstalled: async () => true,
+      discoverSkills: async () => [claudeSkill],
+    });
+    registerPlugin({
+      id: 'plugin-b',
+      displayName: 'Plugin B',
+      isInstalled: async () => true,
+      discoverSkills: async () => [codexSkill],
+    });
+
+    const skills = await discoverAll();
+
+    expect(skills).toEqual([
+      {
+        ...claudeSkill,
+        agentIds: ['claude-code', 'codex'],
+        agentPaths: [
+          { agentId: 'claude-code', path: claudeSkill.path },
+          { agentId: 'codex', path: codexSkill.path },
+        ],
+        alsoInstalledAt: [codexSkill.path],
+      },
     ]);
   });
 
@@ -381,6 +429,11 @@ describe('discoverAll', () => {
     expect(skills).toEqual([
       {
         ...installedPlugin,
+        agentIds: ['claude-code', 'codex'],
+        agentPaths: [
+          { agentId: 'claude-code', path: installedPlugin.path },
+          { agentId: 'codex', path: codexCache.path },
+        ],
         alsoInstalledAt: [claudeCache.path, codexCache.path],
       },
     ]);
