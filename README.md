@@ -77,10 +77,10 @@ The default scan sorts findings by risk, so the first row is the next thing to
 review.
 
 ```text
-AGENT         SKILL                    VERDICT   SCORE   TOP ISSUE
-Claude Code   docs-assistant           FAIL      40      Access to a known credential store path
-Codex         webhook-exfil-skill      FAIL      75      Known webhook endpoint
-Cursor        csv-processor            PASS      100     —
+AGENT         SKILL                    SOURCE           VERDICT   SCORE   TOP ISSUE
+Claude Code   docs-assistant           Direct           FAIL      40      Access to a known credential store path
+Codex         webhook-exfil-skill      Plugin - alerts  FAIL      75      Known webhook endpoint
+Cursor        csv-processor            Direct           PASS      100     —
 ```
 
 - **FAIL** means a high-risk or mandatory-fail rule fired. Remove or review the

@@ -439,6 +439,7 @@ describe('codex: fixture skill tree', () => {
     expect(byName.has('project-plugin')).toBe(false);
     expect(byName.get('project-helper')?.format).toBe('SKILL.md');
     expect(byName.get('project-helper')?.scope).toBe('project');
+    expect(byName.get('project-helper')?.metadata?.sourcePluginName).toBe('project-plugin');
   });
 
   it('discovers only enabled Codex plugin cache payload leaves', async () => {

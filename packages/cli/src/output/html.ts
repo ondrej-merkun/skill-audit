@@ -5,6 +5,7 @@ import { installStateLabel } from './install-state.js';
 import { collectLlmComparisons, collectLlmConsensus, highestLlmSeverity } from './llm.js';
 import { sortScanSkills } from './sort.js';
 import { formatTopIssuePlain } from './top-issue.js';
+import { skillSourceLabel } from './source.js';
 
 function escapeHtml(s: string): string {
   return s
@@ -222,6 +223,7 @@ export function renderHtml(result: ScanResult): string {
       <td><span class="verdict-dot" style="background:${color}"></span> <strong style="color:${color}">${escapeHtml(v)}</strong></td>
       <td>${escapeHtml(sk.name)}${ignoredTag}${allowlistedTag}${stateTag}</td>
       <td>${escapeHtml(formatAgentName(sk.agentId))}</td>
+      <td>${escapeHtml(skillSourceLabel(sk))}</td>
       <td style="font-weight:600;color:${color}">${sk.summary.score}</td>
       <td>${sk.summary.critical}C ${sk.summary.high}H ${sk.summary.medium}M ${sk.summary.low}L</td>
       ${showEnrichment ? `<td class="enrichment-cell">${renderEnrichmentCells(sk)}</td>` : ''}
@@ -651,6 +653,7 @@ document.getElementById('btn-share').addEventListener('click', function(){
           <th>Verdict</th>
           <th>Skill</th>
           <th>Agent</th>
+          <th>Source</th>
           <th>Score</th>
           <th>Findings</th>
           ${showEnrichment ? '<th>Enrichment</th>' : ''}

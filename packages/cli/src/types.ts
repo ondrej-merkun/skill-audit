@@ -44,6 +44,7 @@ export type Skill = {
   trusted?: boolean;
   metadata?: Record<string, unknown> & {
     ruleScanFilename?: string;
+    sourcePluginName?: string;
   };
 };
 

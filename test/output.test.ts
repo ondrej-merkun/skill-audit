@@ -453,6 +453,74 @@ describe('renderTableToString', () => {
     expect(tableAndSummary).not.toContain(' claude-code ');
   });
 
+  it('shows source labels in the human scan table', () => {
+    const result = makeScanResult({
+      skills: [
+        makeSkill({
+          id: 'direct-skill',
+          name: 'direct-skill',
+          path: '/home/user/.claude/skills/direct-skill',
+        }),
+        makeSkill({
+          id: 'plugin-skill',
+          name: 'plugin-skill',
+          path: '/home/user/.claude/plugins/vendor/tool/skills/plugin-skill',
+        }),
+        makeSkill({
+          id: 'codex-cache-plugin-skill',
+          agentId: 'codex',
+          name: 'codex-cache-plugin-skill',
+          path: '/home/user/.codex/plugins/cache/openai/compound-engineering/3.6.1/skills/review',
+        }),
+        makeSkill({
+          id: 'project-wrapper-plugin-skill',
+          name: 'project-wrapper-plugin-skill',
+          path: '/home/user/project/.claude-plugin/skills/wrapped-review',
+          metadata: { sourcePluginName: 'project-review-plugin' },
+        }),
+        makeSkill({
+          id: 'project-direct-skill',
+          name: 'project-direct-skill',
+          path: '/home/user/project/plugins/project-direct-skill',
+          scope: 'project',
+        }),
+        makeSkill({
+          id: 'marketplace-skill',
+          name: 'marketplace-skill',
+          path: '/home/user/.claude/plugins/marketplaces/vendor/tool/skills/marketplace-skill',
+          installState: 'marketplace',
+        }),
+        makeSkill({
+          id: 'mcp-server',
+          name: 'mcp-server',
+          path: '/home/user/.claude.json',
+          manifestPath: '/home/user/.claude.json',
+          format: 'mcp-server',
+          treeSha256: '',
+        }),
+        makeSkill({
+          id: 'gemini-extension',
+          agentId: 'gemini',
+          name: 'gemini-extension',
+          path: '/home/user/.gemini/extensions/gemini-extension',
+          format: 'gemini-extension-json',
+        }),
+      ],
+      summary: { skillsScanned: 8, compromised: 0, percentCompromised: 0, verdict: 'PASS' },
+    });
+
+    const out = stripAnsi(renderTableToString(result));
+
+    expect(out).toContain('SOURCE');
+    expect(out).toMatch(/project-direct-skill\s+Direct/);
+    expect(out).toContain('Plugin - tool');
+    expect(out).toContain('Plugin - compound-engineering');
+    expect(out).toContain('Plugin - project-review-plugin');
+    expect(out).toContain('Marketplace');
+    expect(out).toContain('MCP');
+    expect(out).toContain('Extension');
+  });
+
   it('shows 🟢 dot and PASS for a clean skill', () => {
     const out = stripAnsi(renderTableToString(makeScanResult()));
     expect(out).toContain('🟢');
@@ -1597,6 +1665,47 @@ describe('renderHtml', () => {
     expect(html).toContain('aria-pressed="false"');
     expect(html).toContain('"claude-code":"Claude Code"');
     expect(html).toContain('>unknown-agent</td>');
+  });
+
+  it('renders source labels in the HTML overview table', async () => {
+    const { renderHtml } = await import('../packages/cli/src/output/html.js');
+    const html = renderHtml(
+      makeScanResult({
+        skills: [
+          makeSkill({
+            id: 'direct-skill',
+            name: 'direct-skill',
+            path: '/home/user/.claude/skills/direct-skill',
+          }),
+          makeSkill({
+            id: 'plugin-skill',
+            name: 'plugin-skill',
+            path: '/home/user/.claude/plugins/vendor/tool/skills/plugin-skill',
+          }),
+          makeSkill({
+            id: 'project-wrapper-plugin-skill',
+            name: 'project-wrapper-plugin-skill',
+            path: '/home/user/project/.claude-plugin/skills/wrapped-review',
+            metadata: { sourcePluginName: 'project-review-plugin' },
+          }),
+          makeSkill({
+            id: 'mcp-server',
+            name: 'mcp-server',
+            path: '/home/user/.claude.json',
+            manifestPath: '/home/user/.claude.json',
+            format: 'mcp-server',
+            treeSha256: '',
+          }),
+        ],
+        summary: { skillsScanned: 4, compromised: 0, percentCompromised: 0, verdict: 'PASS' },
+      })
+    );
+
+    expect(html).toContain('<th>Source</th>');
+    expect(html).toContain('>Direct</td>');
+    expect(html).toContain('>Plugin - tool</td>');
+    expect(html).toContain('>Plugin - project-review-plugin</td>');
+    expect(html).toContain('>MCP</td>');
   });
 
   it('renders model comparison and per-model LLM findings in HTML', async () => {

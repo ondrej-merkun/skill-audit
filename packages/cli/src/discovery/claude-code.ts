@@ -36,7 +36,8 @@ async function skillFromDir(
   dirPath: string,
   format: Skill['format'],
   scope: Skill['scope'],
-  manifestFile: string | null
+  manifestFile: string | null,
+  metadata?: Skill['metadata']
 ): Promise<Skill> {
   return {
     id: makeId(dirPath),
@@ -47,13 +48,15 @@ async function skillFromDir(
     format,
     scope,
     treeSha256: await computeTreeSha256(dirPath),
+    ...(metadata === undefined ? {} : { metadata }),
   };
 }
 
 async function skillFromFile(
   filePath: string,
   format: Skill['format'],
-  scope: Skill['scope']
+  scope: Skill['scope'],
+  metadata?: Skill['metadata']
 ): Promise<Skill> {
   return {
     id: makeId(filePath),
@@ -64,6 +67,7 @@ async function skillFromFile(
     format,
     scope,
     treeSha256: await computeTreeSha256(filePath),
+    ...(metadata === undefined ? {} : { metadata }),
   };
 }
 
@@ -117,7 +121,8 @@ async function discoverSkillDirs(
 async function discoverPluginTree(
   dir: string,
   scope: Skill['scope'],
-  options: DiscoverSkillsOptions = {}
+  options: DiscoverSkillsOptions = {},
+  metadata?: Skill['metadata']
 ): Promise<Skill[]> {
   const files = await walkFiles(dir, options);
   const skills: Skill[] = [];
@@ -128,16 +133,38 @@ async function discoverPluginTree(
 
     if (name === 'SKILL.md') {
       skills.push(
-        withInstallState(await skillFromDir(dirname(file), 'SKILL.md', scope, 'SKILL.md'))
+        withInstallState(await skillFromDir(dirname(file), 'SKILL.md', scope, 'SKILL.md', metadata))
       );
     } else if (name.endsWith('.md') && segments.includes('commands')) {
-      skills.push(withInstallState(await skillFromFile(file, 'SKILL.md', scope)));
+      skills.push(withInstallState(await skillFromFile(file, 'SKILL.md', scope, metadata)));
     } else if (name.endsWith('.md') && segments.includes('agents')) {
-      skills.push(withInstallState(await skillFromFile(file, 'agents-md', scope)));
+      skills.push(withInstallState(await skillFromFile(file, 'agents-md', scope, metadata)));
     }
   }
 
   return skills;
+}
+
+async function readPluginManifestName(pluginDir: string): Promise<string | null> {
+  let raw: string;
+  try {
+    raw = await readFile(join(pluginDir, 'plugin.json'), 'utf-8');
+  } catch {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as { name?: unknown };
+    return typeof parsed.name === 'string' && parsed.name.trim().length > 0
+      ? parsed.name.trim()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function sourcePluginMetadata(pluginName: string | null): Skill['metadata'] | undefined {
+  return pluginName === null ? undefined : { sourcePluginName: pluginName };
 }
 
 async function discoverCommandFiles(
@@ -292,7 +319,14 @@ const claudeCodeDiscovery: AgentDiscovery = {
 
     // Project-scoped: .claude-plugin/plugin.json
     const claudePluginDir = join(cwd, '.claude-plugin');
-    skills.push(...(await discoverPluginTree(claudePluginDir, 'project', options)));
+    skills.push(
+      ...(await discoverPluginTree(
+        claudePluginDir,
+        'project',
+        options,
+        sourcePluginMetadata(await readPluginManifestName(claudePluginDir))
+      ))
+    );
 
     return skills;
   },

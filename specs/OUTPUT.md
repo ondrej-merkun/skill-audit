@@ -266,15 +266,15 @@ README and into the hero GIF. Column widths are fixed.
 │  skill-audit  scanned 47 skills across 4 agents in 1.3s                         │
 └────────────────────────────────────────────────────────────────────────────────┘
 
-  AGENT           SKILL                         VERDICT   SCORE   TOP ISSUE
+  AGENT           SKILL                         SOURCE                         VERDICT   SCORE   TOP ISSUE
  ─────────────────────────────────────────────────────────────────────────────────
-  claude-code     🔴 polymarket-trader           FAIL       0    Environment variables transmitted over outbound HTTP (SKILL.md:14)
-  claude-code     🔴 solana-wallet-tracker       FAIL       0    Password-protected zip extraction (install.sh:3)
-  claude-code     🟠 aws-helper@2.0              REVIEW    65    Hardcoded API key or secret (helpers.py:22)
-  cursor          🟠 web-fetcher                 REVIEW    75    Hardcoded outbound HTTP call to non-localhost address... (SKILL.md:8)
-  codex           🟡 git-log-pretty              REVIEW    82    Git history scanning
-  copilot         🟢 pdf-extractor               PASS     100    —
-  claude-code     🟢 anthropic/pdf (official)    PASS     100    allowlisted ✓
+  claude-code     🔴 polymarket-trader           Plugin - trading-tools        FAIL       0    Environment variables transmitted over outbound HTTP (SKILL.md:14)
+  claude-code     🔴 solana-wallet-tracker       Direct                         FAIL       0    Password-protected zip extraction (install.sh:3)
+  claude-code     🟠 aws-helper@2.0              Plugin - cloud-ops            REVIEW    65    Hardcoded API key or secret (helpers.py:22)
+  cursor          🟠 web-fetcher                 Direct                         REVIEW    75    Hardcoded outbound HTTP call to non-localhost address... (SKILL.md:8)
+  codex           🟡 git-log-pretty              MCP                            REVIEW    82    Git history scanning
+  copilot         🟢 pdf-extractor               Direct                         PASS     100    —
+  claude-code     🟢 anthropic/pdf (official)    Marketplace                    PASS     100    allowlisted ✓
   ...41 more rows
 
   ── Scan summary ──────────────────────────────────────────────────────────────
@@ -300,6 +300,8 @@ Palette (hex, use chalk.hex):
 Column widths:
 - AGENT: 15 chars left-aligned
 - SKILL: 28 chars left-aligned (2 for severity dot + space + name)
+- SOURCE: label derived from local provenance (`Direct`, `Plugin - <plugin name>`,
+  `Marketplace`, `MCP`, or `Extension`)
 - VERDICT: 7 chars left-aligned (PASS/REVIEW/FAIL padded)
 - SCORE: 5 chars right-aligned
 - TOP ISSUE: remainder, left-aligned

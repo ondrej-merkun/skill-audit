@@ -276,6 +276,7 @@ describe('claude-code discovery plugin', () => {
 
     expect(skill?.format).toBe('SKILL.md');
     expect(skill?.scope).toBe('project');
+    expect(skill?.metadata?.sourcePluginName).toBe('plugin');
   });
 
   // --- IDs and structure ---
