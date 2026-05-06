@@ -272,6 +272,41 @@ describe('discoverAll', () => {
     ]);
   });
 
+  it('reports agent-specific status while checking installation and searching skills', async () => {
+    const events: string[] = [];
+
+    registerPlugin({
+      id: 'plugin-a',
+      displayName: 'Plugin A',
+      isInstalled: async (options?: { onProgress?: (message: string) => void }) => {
+        options?.onProgress?.('Checking Plugin A install state...');
+        return true;
+      },
+      discoverSkills: async () => [
+        makeSkill({ id: 'skill-a', agentId: 'plugin-a', treeSha256: 'plugin-a-tree' }),
+      ],
+    });
+
+    await discoverAll({
+      onProgress: (event) => {
+        if (event.type === 'checking-agent') events.push(`checking:${event.agentId}`);
+        if (event.type === 'agent-status') events.push(`status:${event.agentId}:${event.message}`);
+        if (event.type === 'agent-done') events.push(`done:${event.agentId}:${event.skillCount}`);
+        if (event.type === 'complete') {
+          events.push(`complete:${event.skillCount}:${event.agentCount}`);
+        }
+      },
+    });
+
+    expect(events).toEqual([
+      'checking:plugin-a',
+      'status:plugin-a:Checking Plugin A install state...',
+      'status:plugin-a:Searching Plugin A skills...',
+      'done:plugin-a:1',
+      'complete:1:1',
+    ]);
+  });
+
   it('merges preexisting duplicate install paths lexicographically', async () => {
     const primary = makeSkill({
       id: 'primary-skill',

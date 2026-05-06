@@ -150,6 +150,15 @@ export async function discoverAll(options: DiscoverAllOptions = {}): Promise<Ski
     options.agent === undefined ? PLUGINS : PLUGINS.filter((plugin) => plugin.id === options.agent);
   options.onProgress?.({ type: 'start', pluginCount: plugins.length });
 
+  const reportAgentStatus = (plugin: AgentDiscovery, message: string): void => {
+    options.onProgress?.({
+      type: 'agent-status',
+      agentId: plugin.id,
+      displayName: plugin.displayName,
+      message,
+    });
+  };
+
   for (const plugin of plugins) {
     options.onProgress?.({
       type: 'checking-agent',
@@ -159,7 +168,9 @@ export async function discoverAll(options: DiscoverAllOptions = {}): Promise<Ski
 
     let installed: boolean;
     try {
-      installed = await plugin.isInstalled();
+      installed = await plugin.isInstalled({
+        onProgress: (message) => reportAgentStatus(plugin, message),
+      });
     } catch {
       // If we can't determine installation, skip the plugin
       continue;
@@ -175,6 +186,7 @@ export async function discoverAll(options: DiscoverAllOptions = {}): Promise<Ski
     }
 
     try {
+      reportAgentStatus(plugin, `Searching ${plugin.displayName} skills...`);
       const discoverOptions =
         options.includeMarketplaces === true ? { includeMarketplaces: true } : {};
       const skills = await addModifiedAt(

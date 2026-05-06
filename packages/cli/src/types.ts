@@ -3,10 +3,14 @@ export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info';
 export type Verdict = 'PASS' | 'REVIEW' | 'FAIL';
 
 // Plugin contract — interface because discovery plugins implement it
+export type AgentDiscoveryCheckOptions = {
+  onProgress?: (message: string) => void;
+};
+
 export interface AgentDiscovery {
   id: string;
   displayName: string;
-  isInstalled(): Promise<boolean>;
+  isInstalled(options?: AgentDiscoveryCheckOptions): Promise<boolean>;
   discoverSkills(options?: DiscoverSkillsOptions): Promise<Skill[]>;
 }
 

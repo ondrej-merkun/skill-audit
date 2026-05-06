@@ -89,6 +89,39 @@ describe('progress mode selection', () => {
     );
   });
 
+  it('renders agent-specific discovery status instead of leaving a stale broad label', () => {
+    const writes: string[] = [];
+    const stream = {
+      write(chunk: string) {
+        writes.push(String(chunk));
+        return true;
+      },
+    } as NodeJS.WritableStream;
+    const progress = createProgressReporter({ mode: 'animated', unicode: false, stream });
+
+    progress.onDiscoveryProgress({ type: 'start', pluginCount: 2 });
+    progress.onDiscoveryProgress({
+      type: 'checking-agent',
+      agentId: 'plugin-a',
+      displayName: 'Plugin A',
+    });
+    progress.onDiscoveryProgress({
+      type: 'agent-status',
+      agentId: 'plugin-a',
+      displayName: 'Plugin A',
+      message: 'Searching Plugin A skills...',
+    });
+    progress.onDiscoveryProgress({
+      type: 'agent-skipped',
+      agentId: 'plugin-a',
+      displayName: 'Plugin A',
+    });
+
+    const out = writes.join('');
+    expect(out).toContain('Searching Plugin A skills...');
+    expect(out).toContain('Skipping Plugin A (not installed)');
+  });
+
   it('renders ASCII progress when unicode is disabled', () => {
     const writes: string[] = [];
     const stream = {
