@@ -5,3 +5,5 @@ secrets_path = "../../etc/sudoers"
 with open(secrets_path) as f:
     content = f.read()
 print(content)
+
+open("../../outside-workspace/session.json").read()

@@ -27,6 +27,8 @@ const psInvokeDownloadPattern =
   /\b(?:IEX|Invoke-Expression)\b\s*[\s(]{0,20}[^\n#]{0,240}\b(?:iwr|Invoke-WebRequest|DownloadString)\b/i;
 const psDownloadPipeInvokePattern =
   /\b(?:iwr|Invoke-WebRequest|DownloadString)\b[^\n#|]{0,240}\|\s*(?:IEX|Invoke-Expression)\b/i;
+const dangerousHexEscapedCommandPattern =
+  /(?:\\x62\\x61\\x73\\x68|\\x63\\x75\\x72\\x6c|\\x77\\x67\\x65\\x74|\\x70\\x79\\x74\\x68\\x6f\\x6e|\\x72\\x6d\\x20\\x2d\\x72\\x66|\\x73\\x68\\x20\\x2d\\x63|\\x63\\x68\\x6d\\x6f\\x64)/i;
 
 const TEXT_FILES = [
   '*.md',
@@ -179,8 +181,8 @@ export const OBFS_STRING_CONCAT_CMD: Rule = {
     // String concatenation assembling dangerous shell command fragments
     // e.g. "ba"+"sh", "cur"+"l", "rm"+" -rf", "ch"+"mod"
     /["'](?:ba|cu|rm|wg|py|nc|ch|sc|dd|mk)["']\s*\+\s*["']/i,
-    // Hex escape sequences constructing command chars, e.g. \x62\x61\x73\x68 = "bash"
-    /(?:\\x[0-9a-fA-F]{2}){4,}/,
+    // Hex escape sequences constructing known dangerous command chars, e.g. \x62\x61\x73\x68 = "bash"
+    dangerousHexEscapedCommandPattern,
   ],
   prepareContent: maskObfuscationExampleContext,
   message: 'String concatenation or hex escapes constructing shell command fragments.',

@@ -124,8 +124,16 @@ export const FS_DOTENV_READ: Rule = {
 };
 
 // FS-BOUNDARY-ESCAPE: path traversal or access to protected system paths
-// Two or more ../ traversal sequences indicating escape attempts.
-const pathTraversalPattern = /(?:\.\.\/){2,}/;
+const traversalSequence = String.raw`(?:\.\.\/){2,}`;
+const shellTraversalReadPattern = new RegExp(
+  String.raw`\b(?:cat|less|more|head|tail|cp|mv|rm|chmod|chown)\b[^#\n]{0,240}${traversalSequence}`
+);
+const pyTraversalReadPattern = new RegExp(
+  String.raw`\b(?:open|read_text|read_bytes|write_text|write_bytes)\s*\([^#\n]{0,240}${traversalSequence}`
+);
+const jsTraversalReadPattern = new RegExp(
+  String.raw`\b(?:readFile(?:Sync)?|writeFile(?:Sync)?|createReadStream|createWriteStream)\s*\([^#\n]{0,240}${traversalSequence}`
+);
 // /proc/<pid>/environ — process environment harvesting. Split to avoid self-match.
 const procEnvironPattern = new RegExp(['\\/proc\\/', '(?:self|[0-9]+)\\/environ'].join(''));
 // /etc/sudoers — privilege escalation indicator. Split to avoid self-match.
@@ -136,7 +144,13 @@ export const FS_BOUNDARY_ESCAPE: Rule = {
   category: 'filesystem',
   severity: 'high',
   appliesTo: ['*.py', '*.sh', '*.bash', '*.js', '*.ts', '*.mjs'],
-  patterns: [pathTraversalPattern, procEnvironPattern, etcSudoersPattern],
+  patterns: [
+    shellTraversalReadPattern,
+    pyTraversalReadPattern,
+    jsTraversalReadPattern,
+    procEnvironPattern,
+    etcSudoersPattern,
+  ],
   prepareContent: maskDocumentationExampleContext,
   message: 'Path traversal or access to protected system path detected.',
   fix: 'Do not use ../../ traversal sequences or read /proc/*/environ or /etc/sudoers.',

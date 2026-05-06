@@ -85,6 +85,7 @@ export const CODEEXEC_SHELL_BACKTICK: Rule = {
   severity: 'high',
   appliesTo: ['*.sh', '*.bash'],
   patterns: [/`[^`\n]{5,}`/],
+  prepareContent: maskDocumentationTextInCode,
   message: 'Shell backtick command substitution — executes arbitrary commands.',
   fix: 'Replace backtick substitution with $(...) and validate all inputs.',
   cwe: ['CWE-78'],

@@ -1,9 +1,12 @@
 const PYTHON_CODE_EXTENSIONS = new Set(['.py']);
 const JAVASCRIPT_CODE_EXTENSIONS = new Set(['.js', '.ts', '.mjs', '.cjs', '.jsx', '.tsx']);
+const SHELL_CODE_EXTENSIONS = new Set(['.sh', '.bash']);
 const DOCUMENTATION_PATH_SEGMENTS = new Set([
   'docs',
   'documentation',
   'examples',
+  'reference',
+  'references',
   'samples',
   'assets',
   '__tests__',
@@ -11,14 +14,14 @@ const DOCUMENTATION_PATH_SEGMENTS = new Set([
 const DOCUMENTATION_BASENAME_PATTERN =
   /^(?:readme|changelog|threat[-_]?model)\b|(?:\.test|\.spec)\.[^.]+$|^test[_-]|(?:^|[-_])(?:fixture|sample|example|asset)(?:[-_.]|$)/i;
 const DOCUMENTATION_LINE_CONTEXT_PATTERN =
-  /\b(?:docs?|documentation|reference|example|sample|test(?:s|ing)?|fixture|asset|image|opengraph|threat[- ]?model|table|benign|false positive|payload|informational|mock|demo)\b/i;
+  /\b(?:docs?|documentation|reference|example|sample|test(?:s|ing)?|fixture|asset|image|opengraph|threat[- ]?model|pattern|risk|fix|table|benign|false positive|payload|informational|mock|demo)\b/i;
 const COMMENT_LINE_PATTERN = /^\s*(?:#|\/\/|\/\*|\*|<!--)/;
 const MARKDOWN_BASENAME_PATTERN =
   /^(?:SKILL|AGENTS|CLAUDE|GEMINI|CONVENTIONS|README|CHANGELOG)\.md$/i;
 const SECURITY_EDUCATION_HEADING_PATTERN =
-  /\b(?:detection|detector|scanner|audit(?:or)?|tester|testing|fixture|example|documentation|reference|red[- ]?team|training|rule(?:s)?|false positive|benign corpus|payload catalog)\b/i;
+  /\b(?:detection|detector|scanner|audit(?:or)?|tester|testing|fixture|example|documentation|reference|threat|attack|red[- ]?team|training|rule(?:s)?|false positive|benign corpus|payload catalog)\b/i;
 const SECURITY_EXAMPLE_HEADING_PATTERN =
-  /\b(?:detection|detector|scanner|audit(?:or)?|tester|testing|example|pattern|documentation|reference|red[- ]?team|training|rule(?:s)?|false positive|benign corpus|payload catalog)\b/i;
+  /\b(?:detection|detector|scanner|audit(?:or)?|tester|testing|example|pattern|documentation|reference|threat|attack|red[- ]?team|training|rule(?:s)?|false positive|benign corpus|payload catalog)\b/i;
 const SECURITY_EDUCATION_LINE_PATTERN =
   /\b(?:quoted attacks?|fenced examples?|example payload|malicious example|benign example|scanner test|tester fixture|rule documentation|detection docs?|should flag|must flag|flags? quoted|false positive|red[- ]?team training)\b/i;
 const ACTIVE_RUNTIME_CONTEXT_PATTERN =
@@ -172,10 +175,49 @@ function maskJavaScriptStringsAndComments(content: string): string {
   return chars.join('');
 }
 
+function maskShellCommentsAndSingleQuotedStrings(content: string): string {
+  const chars = content.split('');
+  let idx = 0;
+  let lineStart = true;
+
+  while (idx < content.length) {
+    const char = content[idx];
+
+    if (lineStart) {
+      let lookahead = idx;
+      while (content[lookahead] === ' ' || content[lookahead] === '\t') lookahead += 1;
+      if (content[lookahead] === '#') {
+        const end = content.indexOf('\n', lookahead);
+        const commentEnd = end >= 0 ? end : content.length;
+        maskRange(chars, lookahead, commentEnd);
+        idx = commentEnd;
+        lineStart = true;
+        continue;
+      }
+    }
+
+    if (char === "'") {
+      let end = idx + 1;
+      while (end < content.length && content[end] !== "'") end += 1;
+      if (end < content.length) end += 1;
+      maskRange(chars, idx, end);
+      idx = end;
+      lineStart = false;
+      continue;
+    }
+
+    lineStart = char === '\n' || char === '\r';
+    idx += 1;
+  }
+
+  return chars.join('');
+}
+
 export function maskDocumentationTextInCode(content: string, filePath: string): string {
   const ext = extensionOf(filePath);
   if (PYTHON_CODE_EXTENSIONS.has(ext)) return maskPythonStringsAndComments(content);
   if (JAVASCRIPT_CODE_EXTENSIONS.has(ext)) return maskJavaScriptStringsAndComments(content);
+  if (SHELL_CODE_EXTENSIONS.has(ext)) return maskShellCommentsAndSingleQuotedStrings(content);
   return content;
 }
 

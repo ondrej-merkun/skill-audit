@@ -136,8 +136,12 @@ const SUPPORTING_MARKDOWN_DIRS = new Set([
   'documentation',
   'example',
   'examples',
+  'fixture',
+  'fixtures',
   'reference',
   'references',
+  'test',
+  'tests',
 ]);
 
 function isPromptBearingCommandOrAgentDir(dirName: string, entries: Dirent[]) {
@@ -392,9 +396,7 @@ export async function runRules(
             fix: rule.fix,
             cwe: rule.cwe,
           };
-          findings.push(
-            findingForRole(finding, rule.category === 'prompt-injection' ? fileRole : 'operative')
-          );
+          findings.push(findingForRole(finding, fileRole));
         }
       }
     }
