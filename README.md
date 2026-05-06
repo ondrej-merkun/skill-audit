@@ -1,15 +1,19 @@
 <p align="center">
-  <img src="docs/demo.svg" alt="skill-audit terminal demo showing scan results" width="660" />
+  <img src="docs/demo.gif" alt="skill-audit animated terminal demo showing scan and explain results" width="660" />
 </p>
 
 <h1 align="center">skill-audit</h1>
 
 <p align="center">
-  Scan every AI agent skill on your machine for prompt injection and malicious code.<br/>
-  Fast local rules by default, with optional local LLM review for deeper context.
+  Scan AI agent skills for prompt injection and malicious code, fully on your machine.<br/>
+  No cloud upload, no hosted model, no account. Optional LLM review stays on localhost.
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/scans-fully%20local-brightgreen" alt="Scans: fully local" />
+  &nbsp;
+  <img src="https://img.shields.io/badge/cloud%20upload-never-brightgreen" alt="Cloud upload: never" />
+  &nbsp;
   <a href="https://www.npmjs.com/package/@ondrej-merkun/skill-audit"><img src="https://img.shields.io/npm/v/%40ondrej-merkun%2Fskill-audit" alt="npm version" /></a>
   &nbsp;
   <a href="https://www.npmjs.com/package/@ondrej-merkun/skill-audit"><img src="https://img.shields.io/node/v/%40ondrej-merkun%2Fskill-audit" alt="Node version" /></a>
@@ -30,17 +34,21 @@
 > **36% of agent skills ship with a security flaw. 13% with a critical one.**
 > — [Snyk ToxicSkills study, Feb 2026](https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/)
 
-`skill-audit` is a fast local first pass for AI-agent skills, plugins, MCP
-configs, and project instruction files. It discovers content exposed to Claude
-Code, OpenAI Codex, GitHub Copilot, Cursor, Gemini CLI, Windsurf, Cline, and
-cross-agent project files, then shows the riskiest result first in a colorized
-verdict table.
-When you want a deeper semantic pass, add optional local LLM review over the
-same discovered skills, deterministic findings, relevant file paths, and capped
-snippets.
+`skill-audit` is a fully local scanner for AI-agent skills, plugins, MCP
+configs, and project instruction files. It reads files from your machine, runs
+shipped deterministic rules locally, and does not upload skill contents,
+snippets, environment variables, or findings to a cloud service. It discovers
+content exposed to Claude Code, OpenAI Codex, GitHub Copilot, Cursor, Gemini
+CLI, Windsurf, Cline, and cross-agent project files, then shows the riskiest
+result first in a colorized verdict table.
+When you want a deeper semantic pass, add optional localhost-only LLM review over
+the same discovered skills, deterministic findings, relevant file paths, and
+capped snippets.
 
 Run a one-off scan with `npx`, or install the `skill-audit` binary globally
 before using the commands below, including local LLM review.
+`npx` may fetch the package from npm. The scan itself runs locally after the CLI
+starts.
 
 ```bash
 # One-off scan
@@ -51,15 +59,15 @@ npm install -g @ondrej-merkun/skill-audit
 skill-audit
 ```
 
-Need the deeper local review?
+Want deeper review without sending skills to a cloud model?
 
 ```bash
 skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model llama3.1
 skill-audit scan --llm local
 ```
 
-Default rule scanning runs on your machine with no model calls. Optional local
-LLM review uses your loopback OpenAI-compatible server, labels model findings
+Default scans make no model calls and no enrichment lookups. Optional local LLM
+review uses your loopback OpenAI-compatible server, labels model findings
 separately from rule findings, and does not require a cloud account or remote
 model. This version does not perform enrichment lookups in the user-facing CLI.
 
@@ -70,9 +78,9 @@ review.
 
 ```text
 AGENT         SKILL                    VERDICT   SCORE   TOP ISSUE
-Claude Code   obfuscated-eval-skill    FAIL      50      CODEEXEC-JS-EVAL-FUNCTION
-Claude Code   webhook-exfil-skill      FAIL      75      NET-WEBHOOK-KNOWN
-Codex         review-helper            REVIEW    82      PI-OVERRIDE
+Claude Code   docs-assistant           FAIL      40      SSH KEY THEFT PROMPT
+Codex         webhook-exfil-skill      FAIL      75      webhook exfil
+Cursor        csv-processor            PASS      100     —
 ```
 
 - **FAIL** means a high-risk or mandatory-fail rule fired. Remove or review the
@@ -85,7 +93,7 @@ Codex         review-helper            REVIEW    82      PI-OVERRIDE
 Investigate one row with:
 
 ```bash
-skill-audit explain obfuscated-eval-skill
+skill-audit explain docs-assistant
 ```
 
 ## Common Commands
@@ -155,9 +163,9 @@ skill-audit scan --llm local
 
 `skill-audit llm add` writes model config to
 `$XDG_CONFIG_HOME/skill-audit/llms.json`, or `~/.config/skill-audit/llms.json`
-when `XDG_CONFIG_HOME` is unset. Base URLs must be loopback URLs such as
-`127.0.0.1` or `localhost`; no cloud API key, hosted account, or remote model is
-required.
+when `XDG_CONFIG_HOME` is unset. Cloud model URLs are not accepted here. Base
+URLs must be loopback URLs such as `127.0.0.1` or `localhost`; no cloud API key,
+hosted account, or remote model is required.
 
 For comparison runs, repeat `--llm`, pass comma-separated names, or use
 `--llm all` for every enabled configured local model:
@@ -199,7 +207,10 @@ ships a GitHub Action:
 - uses: ondrej-merkun/skill-audit@v1
 ```
 
-See the [CI reference](docs/REFERENCE.md#use-in-ci) for the full workflow.
+See the [CI reference](docs/REFERENCE.md#use-in-ci) for the full workflow. In
+CI, `skill-audit` scans files locally inside the GitHub Actions runner and
+writes report artifacts. It does not upload skill contents to a separate
+analysis service.
 
 ## Limitations
 
