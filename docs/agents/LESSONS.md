@@ -323,6 +323,12 @@ without a commit message explaining why it no longer applies.
   new imported files, tests, and fixtures are tracked or staged so
   `git diff <base>` includes them.
 
+- **L6.10 — Release tags must be on main's history.** _The `v0.1.2` tag
+  pointed at a release commit that was published to npm but not merged into
+  `origin/main`, so the next release started from stale `0.1.1` metadata._
+  Before tagging, verify `git merge-base --is-ancestor HEAD origin/main` for
+  the release commit or push/merge the release commit to `main` first.
+
 ## 7. Rule fixtures
 
 - **L7.1 — Malicious secret fixtures must not use provider placeholder keys.** _Task
