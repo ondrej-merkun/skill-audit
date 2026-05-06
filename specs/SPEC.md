@@ -458,7 +458,7 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 ```json
 {
   "schema_version": "1.0",
-  "scan": { "started_at": "...", "duration_ms": 1320, "tool_version": "0.1.3" },
+  "scan": { "started_at": "...", "duration_ms": 1320, "tool_version": "0.2.0" },
   "agents": [{ "id": "claude-code", "installed": true, "skills_scanned": 12 }],
   "skills": [{
     "id": "ca-polymarket-trader-a1b2c3",

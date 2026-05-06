@@ -1,6 +1,6 @@
 {
   "name": "@ondrej-merkun/skill-audit",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Scan AI agent skills for prompt injection and malicious code",
   "license": "Apache-2.0",
   "author": "Ondrej Merkun",

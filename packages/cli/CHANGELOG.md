@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.2.0
+
+- Add targeted skill review with `skill-audit scan --skill <name-or-id>` and
+  `skill-audit explain <name> --llm <model>` so users can scan or locally
+  LLM-review one matching skill instead of the full inventory.
+- Show skill provenance in scan results and HTML reports with a new SOURCE
+  column that distinguishes direct installs, plugins, marketplace inventory,
+  MCP entries, and extensions, including plugin names when available.
+- Replace terse rule IDs in top-issue summaries with readable finding labels
+  and keep those labels consistent across README examples, table output, and
+  HTML reports.
+- Treat unreferenced supporting Markdown docs as inert context for
+  prompt-injection verdicts by default, while adding
+  `--scan-all-supporting-files` for stricter scans of every supporting file.
+- Improve local LLM review reliability by sharing scan/explain review logic,
+  accepting broader finding categories, repairing narrow malformed JSON cases,
+  skipping empty review payloads, and allowing slower local models more time.
+- Reduce markdown-obfuscation false positives in scanner docs, examples, and
+  rule documentation while preserving detection for executable base64/eval
+  payloads.
+- Improve scan progress copy so discovery can report active skill-search work
+  instead of stale broad agent-check labels.
+- Refresh the README, package README, examples, demo GIF, badges, and social
+  preview around the fully local scan boundary and localhost-only optional LLM
+  review.
+
 ## 0.1.3
 
 - Resolve GitHub code scanning alerts by tightening CI permissions and avoiding
