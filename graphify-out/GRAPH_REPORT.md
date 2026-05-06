@@ -1,12 +1,12 @@
 # Graph Report - skillaudit  (2026-05-07)
 
 ## Corpus Check
-- 181 files · ~114,005 words
+- 181 files · ~114,148 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 736 nodes · 1348 edges · 25 communities detected
-- Extraction: 86% EXTRACTED · 14% INFERRED · 0% AMBIGUOUS · INFERRED: 194 edges (avg confidence: 0.8)
+- 738 nodes · 1353 edges · 26 communities detected
+- Extraction: 85% EXTRACTED · 15% INFERRED · 0% AMBIGUOUS · INFERRED: 197 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -25,6 +25,7 @@
 - [[_COMMUNITY_Community 12|Community 12]]
 - [[_COMMUNITY_Community 13|Community 13]]
 - [[_COMMUNITY_Community 14|Community 14]]
+- [[_COMMUNITY_Community 15|Community 15]]
 - [[_COMMUNITY_Community 16|Community 16]]
 - [[_COMMUNITY_Community 17|Community 17]]
 - [[_COMMUNITY_Community 18|Community 18]]
@@ -49,34 +50,34 @@
 10. `renderSummaryFooter()` - 12 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `parse()` --calls--> `readPackageVersion()`  [INFERRED]
-  test/fixtures/benign/date-parser/parse.py → packages/cli/src/version.ts
-- `fetchImpl()` --calls--> `reviewWithOpenAiCompatibleModel()`  [INFERRED]
-  test/scan-options.test.ts → packages/cli/src/llm/review.ts
-- `readFile()` --calls--> `readPackageJson()`  [INFERRED]
-  test/fixtures/malicious/remote-import-skill/utils.js → packages/cli/src/enrich/metadata.ts
-- `readFile()` --calls--> `resolveGitHubSlug()`  [INFERRED]
-  test/fixtures/malicious/remote-import-skill/utils.js → packages/cli/src/enrich/metadata.ts
-- `readFile()` --calls--> `readDependencyRefs()`  [INFERRED]
-  test/fixtures/malicious/remote-import-skill/utils.js → packages/cli/src/enrich/metadata.ts
+- `readPackageVersion()` --calls--> `parse()`  [INFERRED]
+  packages/cli/src/version.ts → test/fixtures/benign/date-parser/parse.py
+- `reviewWithOpenAiCompatibleModel()` --calls--> `fetchImpl()`  [INFERRED]
+  packages/cli/src/llm/review.ts → test/scan-options.test.ts
+- `readPackageJson()` --calls--> `readFile()`  [INFERRED]
+  packages/cli/src/enrich/metadata.ts → test/fixtures/malicious/remote-import-skill/utils.js
+- `resolveGitHubSlug()` --calls--> `readFile()`  [INFERRED]
+  packages/cli/src/enrich/metadata.ts → test/fixtures/malicious/remote-import-skill/utils.js
+- `readDependencyRefs()` --calls--> `readFile()`  [INFERRED]
+  packages/cli/src/enrich/metadata.ts → test/fixtures/malicious/remote-import-skill/utils.js
 
 ## Communities
 
 ### Community 0 - "Community 0"
 Cohesion: 0.04
-Nodes (50): appendToIgnoreList(), getConfigDir(), getIgnoreListPath(), loadIgnoreList(), readIgnoreListContent(), renderDetail(), renderEnrichment(), renderFinding() (+42 more)
+Nodes (54): appendToIgnoreList(), getConfigDir(), getIgnoreListPath(), loadIgnoreList(), readIgnoreListContent(), renderDetail(), renderEnrichment(), renderFinding() (+46 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.05
-Nodes (40): basenameOf(), extensionOf(), isMarkdownPromptFile(), isStringPrefixChar(), maskDocumentationExampleContext(), maskDocumentationTextInCode(), maskJavaScriptStringsAndComments(), maskMarkdownSecurityEducationContext() (+32 more)
+Nodes (44): add_days(), diff_days(), parse(), Date parsing and formatting utilities — pure stdlib., to_iso(), discoverAgentEntries(), discoverCommandFiles(), discoverMcpFromClaudeJson() (+36 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.06
-Nodes (48): escapeHtml(), redactPaths(), renderEnrichmentCells(), renderHtml(), renderLlmOverview(), scoreRingSvg(), verdictColor(), installStateLabel() (+40 more)
+Nodes (22): basenameOf(), extensionOf(), isMarkdownPromptFile(), isStringPrefixChar(), maskDocumentationExampleContext(), maskDocumentationTextInCode(), maskJavaScriptStringsAndComments(), maskMarkdownSecurityEducationContext() (+14 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.05
-Nodes (44): add_days(), diff_days(), parse(), Date parsing and formatting utilities — pure stdlib., to_iso(), discoverAgentEntries(), discoverCommandFiles(), discoverMcpFromClaudeJson() (+36 more)
+Cohesion: 0.07
+Nodes (41): escapeHtml(), redactPaths(), renderEnrichmentCells(), renderHtml(), renderLlmOverview(), scoreRingSvg(), verdictColor(), installStateLabel() (+33 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.1
@@ -87,12 +88,12 @@ Cohesion: 0.07
 Nodes (14): executeHtmlReportScript(), FakeClassList, FakeDocument, FakeElement, FakeEvent, FakeTextNode, getFilter(), getRow() (+6 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.12
-Nodes (27): appDataDir(), clineExtensionStorageDirs(), discoverLegacyRulesFile(), discoverRuleFiles(), discoverSkillsDir(), discoverWorkflowFiles(), getClineDir(), getCwd() (+19 more)
+Cohesion: 0.1
+Nodes (29): convert(), extract_audio(), Thin wrapper around the local ffmpeg binary for common media operations., _run(), thumbnail(), trim(), buildLlmReviewMessages(), buildLlmReviewPayload() (+21 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.11
-Nodes (25): convert(), extract_audio(), Thin wrapper around the local ffmpeg binary for common media operations., _run(), thumbnail(), trim(), buildLlmReviewMessages(), buildLlmReviewPayload() (+17 more)
+Cohesion: 0.12
+Nodes (27): appDataDir(), clineExtensionStorageDirs(), discoverLegacyRulesFile(), discoverRuleFiles(), discoverSkillsDir(), discoverWorkflowFiles(), getClineDir(), getCwd() (+19 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.1
@@ -103,22 +104,26 @@ Cohesion: 0.11
 Nodes (19): isPluginMarketplacePath(), normalizedSegments(), shouldSkipMarketplacePath(), withInstallState(), ancestorDirsToGitRoot(), descendantWindsurfRulesDirs(), discoverRuleFile(), discoverRulesDir() (+11 more)
 
 ### Community 10 - "Community 10"
+Cohesion: 0.16
+Nodes (20): addReachablePath(), buildReachabilityIndex(), classifySupportingFileRole(), extractSnippet(), findingForRole(), globalPattern(), hasNestedQuantifier(), isMarkdownPromptFile() (+12 more)
+
+### Community 11 - "Community 11"
 Cohesion: 0.15
 Nodes (18): col_sum(), dedup(), describe(), filter_rows(), head(), CSV data processing helpers — pure stdlib., _read(), to_json() (+10 more)
 
-### Community 11 - "Community 11"
-Cohesion: 0.1
-Nodes (2): runCli(), fetchImpl()
-
 ### Community 12 - "Community 12"
+Cohesion: 0.11
+Nodes (1): runCli()
+
+### Community 13 - "Community 13"
 Cohesion: 0.26
 Nodes (12): discoverAgentMarkdownFiles(), discoverCommandTomlFiles(), discoverExtensionManifests(), discoverMcpJson(), isRecord(), makeId(), missingPathWarnings(), namesFromUnknown() (+4 more)
 
-### Community 13 - "Community 13"
+### Community 14 - "Community 14"
 Cohesion: 0.43
 Nodes (7): container_logs(), _docker(), list_containers(), prune(), Local Docker management helpers — wraps the docker CLI., stats(), stop_all()
 
-### Community 14 - "Community 14"
+### Community 15 - "Community 15"
 Cohesion: 0.29
 Nodes (6): eval_expr(), import_module(), Dynamically import a module by name., Evaluate arbitrary Python expression., Execute arbitrary Python code block., run_snippet()
 
@@ -165,7 +170,7 @@ Nodes (1): Benign scanner fixture catalog.  This file stores quoted payload exam
 ## Knowledge Gaps
 - **14 isolated node(s):** `Evaluate arbitrary Python expression.`, `Execute arbitrary Python code block.`, `Dynamically import a module by name.`, `Benign scanner fixture catalog.  This file stores quoted payload examples for ru`, `Test runner helper — autodetects framework and runs tests.` (+9 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 11`** (20 nodes): `stripAnsi()`, `expectSupportedAgentHelp()`, `runCli()`, `e2e.test.ts`, `fetchImpl()`, `makeEnrichmentResult()`, `makeFinding()`, `makeSkill()`, `makeSummary()`, `mockProcessExit()`, `explain.test.ts`, `withTempDir()`, `withTtyStreams()`, `writeLlmConfig()`, `strip-ansi.ts`, `makeDepsDevPackageResponse()`, `makeDepsDevProjectResponse()`, `makeDepsDevVersionResponse()`, `makeSkill()`, `scan-enrichment-pipeline.test.ts`
+- **Thin community `Community 12`** (18 nodes): `stripAnsi()`, `expectSupportedAgentHelp()`, `runCli()`, `e2e.test.ts`, `strip-ansi.ts`, `makeDepsDevPackageResponse()`, `makeDepsDevProjectResponse()`, `makeDepsDevVersionResponse()`, `makeSkill()`, `scan-enrichment-pipeline.test.ts`, `makeFinding()`, `makeInteractiveTTY()`, `makeSkill()`, `restoreProgressEnv()`, `restoreTTY()`, `scan-options.test.ts`, `withTempDir()`, `writeLlmConfig()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 17`** (6 nodes): `check_syntax()`, `minify()`, `pretty()`, `JSON syntax checking and schema validation helpers.`, `validate_schema()`, `validate.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -185,11 +190,11 @@ Nodes (1): Benign scanner fixture catalog.  This file stores quoted payload exam
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `trim()` connect `Community 7` to `Community 0`, `Community 1`, `Community 2`, `Community 3`, `Community 4`, `Community 8`?**
+- **Why does `trim()` connect `Community 6` to `Community 0`, `Community 1`, `Community 3`, `Community 4`, `Community 8`, `Community 10`?**
   _High betweenness centrality (0.035) - this node is a cross-community bridge._
-- **Why does `add()` connect `Community 10` to `Community 0`, `Community 9`, `Community 3`, `Community 1`?**
+- **Why does `add()` connect `Community 11` to `Community 0`, `Community 9`, `Community 10`, `Community 1`?**
   _High betweenness centrality (0.034) - this node is a cross-community bridge._
-- **Why does `parse()` connect `Community 3` to `Community 4`, `Community 7`, `Community 8`, `Community 11`, `Community 12`?**
+- **Why does `parse()` connect `Community 1` to `Community 0`, `Community 4`, `Community 6`, `Community 8`, `Community 13`?**
   _High betweenness centrality (0.021) - this node is a cross-community bridge._
 - **Are the 23 inferred relationships involving `trim()` (e.g. with `minify()` and `extractGitHubSlugFromUrl()`) actually correct?**
   _`trim()` has 23 INFERRED edges - model-reasoned connections that need verification._

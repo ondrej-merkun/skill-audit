@@ -15,7 +15,10 @@ import {
   DEPENDENCIES_RULES,
   DEPS_INLINE_INSTALL,
 } from '../packages/cli/src/rules/dependencies.js';
-import { OBFUSCATION_RULES } from '../packages/cli/src/rules/obfuscation.js';
+import {
+  OBFS_EVAL_ATOB,
+  OBFUSCATION_RULES,
+} from '../packages/cli/src/rules/obfuscation.js';
 import { SKILL_SPECIFIC_RULES } from '../packages/cli/src/rules/skill-specific.js';
 import { SECRETS_RULES } from '../packages/cli/src/rules/secrets.js';
 
@@ -44,6 +47,11 @@ const HIGH_CONFIDENCE_SECURITY_EDUCATION_CATEGORIES = new Set([
 ]);
 
 const SECURITY_EXAMPLE_RULE_IDS = new Set([
+  'OBFS-BASE64-LARGE',
+  'OBFS-HEX-LARGE',
+  'OBFS-EVAL-ATOB',
+  'OBFS-DECODE-EXEC',
+  'OBFS-STRING-CONCAT-CMD',
   'NET-WEBHOOK-KNOWN',
   'SKILL-CURL-BASH-IN-MD',
   'SKILL-FETCH-AND-EXEC',
@@ -164,5 +172,20 @@ describe('security education fixtures', () => {
     expect(ruleIds).toContain('FS-KEYCHAIN-ACCESS');
     expect(ruleIds).toContain('FS-DOTENV-READ');
     expect(ruleIds).toContain('GIT-HISTORY-SCAN');
+  });
+});
+
+describe('OBFS-EVAL-ATOB markdown contexts', () => {
+  it('keeps active markdown runtime code detectable', async () => {
+    const findings = await runRules(join(FIXTURES_DIR, 'OBFS-EVAL-ATOB', 'malicious'), [
+      OBFS_EVAL_ATOB,
+    ]);
+
+    expect(
+      findings.some(
+        (finding) =>
+          finding.ruleId === 'OBFS-EVAL-ATOB' && basename(finding.file) === 'SKILL.md'
+      )
+    ).toBe(true);
   });
 });

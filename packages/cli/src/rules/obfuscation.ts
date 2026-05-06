@@ -99,6 +99,17 @@ function maskDecodeExecDocumentation(content: string, filePath: string): string 
   );
 }
 
+function maskEvalAtobDocumentation(content: string, filePath: string): string {
+  return maskSecurityEducationExampleContext(
+    maskDocumentationTextInCode(content, filePath),
+    filePath
+  );
+}
+
+function maskObfuscationExampleContext(content: string, filePath: string): string {
+  return maskSecurityEducationExampleContext(content, filePath);
+}
+
 export const OBFS_BASE64_LARGE: Rule = {
   id: 'OBFS-BASE64-LARGE',
   category: 'obfuscation',
@@ -108,6 +119,7 @@ export const OBFS_BASE64_LARGE: Rule = {
     // Base64 blob > 200 chars (~150 decoded bytes) with optional padding
     /[A-Za-z0-9+/]{200,}={0,2}/,
   ],
+  prepareContent: maskObfuscationExampleContext,
   message: 'Large base64 literal detected — possible obfuscated payload.',
   fix: 'Replace inline base64 blobs with named resource files. If this is legitimate data, document its source.',
   cwe: ['CWE-506'],
@@ -122,6 +134,7 @@ export const OBFS_HEX_LARGE: Rule = {
     // Hex blob > 400 chars (= 200 bytes)
     /(?:0x)?[0-9a-fA-F]{400,}/,
   ],
+  prepareContent: maskObfuscationExampleContext,
   message: 'Large hex literal detected — possible obfuscated shellcode or binary payload.',
   fix: 'Remove inline hex blobs. If legitimate (e.g. a public key), reference it from a named file.',
   cwe: ['CWE-506'],
@@ -133,7 +146,7 @@ export const OBFS_EVAL_ATOB: Rule = {
   severity: 'critical',
   appliesTo: ['*.js', '*.ts', '*.mjs', '*.cjs', '*.jsx', '*.tsx', '*.py', '*.sh', '*.md'],
   patterns: [evalAtobPattern, pyB64DecodePattern, evalBufferPattern],
-  prepareContent: maskDocumentationTextInCode,
+  prepareContent: maskEvalAtobDocumentation,
   message: 'eval(atob(...)) or exec(base64.b64decode(...)) — executing base64-decoded payload.',
   fix: 'Remove the eval/exec wrapper. Decode to a variable first and inspect before any execution.',
   cwe: ['CWE-95', 'CWE-506'],
@@ -169,6 +182,7 @@ export const OBFS_STRING_CONCAT_CMD: Rule = {
     // Hex escape sequences constructing command chars, e.g. \x62\x61\x73\x68 = "bash"
     /(?:\\x[0-9a-fA-F]{2}){4,}/,
   ],
+  prepareContent: maskObfuscationExampleContext,
   message: 'String concatenation or hex escapes constructing shell command fragments.',
   fix: 'Use literal command strings. Deliberate splitting to avoid static analysis is a red flag.',
   cwe: ['CWE-78'],
