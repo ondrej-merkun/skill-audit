@@ -13,9 +13,14 @@
   "devDependencies": {
     "@types/node": "^20.14.0",
     "typescript": "^5.5.2",
-    "vitest": "^1.6.0"
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=20"
+  },
+  "pnpm": {
+    "overrides": {
+      "vite": "6.4.2"
+    }
   }
 }
