@@ -166,6 +166,20 @@ without a commit message explaining why it no longer applies.
   Run `pnpm build`, `pnpm build:release`, and build-warning checks as separate
   sequential verification steps.
 
+- **L1.26 — Capture raw local LLM content before parser fixes.** _The local
+  `llama` review reported `invalid-response` even when the model returned a
+  usable finding with scanner-native `code-execution` categories and once with a
+  missing array closer._
+  Put a proxy or fixture around the exact chat-completions payload, then add
+  parser tests for that raw shape before changing prompt or parsing behavior.
+
+- **L1.27 — Empty LLM review payloads must not hit the model.** _The
+  `caveman` skill timeout reproduced with only 231 payload characters, zero
+  deterministic findings, and zero snippets; the local model spent 84s looping
+  on malformed placeholder JSON._
+  If the scanner has no LLM review context, return a clean zero-finding review
+  locally instead of asking a small model to infer from skill name/path only.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task

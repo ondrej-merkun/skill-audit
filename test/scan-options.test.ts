@@ -883,6 +883,7 @@ describe('runScan flag wiring', () => {
         makeSkill({ id: 'other-id', name: 'other-skill', path: '/tmp/other-skill' }),
         makeSkill({ id: 'review-id', name: 'review-me', path: '/tmp/review-me' }),
       ]);
+      vi.mocked(runRules).mockResolvedValue([makeFinding({ file: '/tmp/review-me/SKILL.md' })]);
       const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
       const fetchImpl: LlmReviewFetch = async (url, init) => {
         calls.push({ url, body: JSON.parse(init.body) as Record<string, unknown> });
@@ -958,6 +959,21 @@ describe('runScan flag wiring', () => {
     });
   });
 
+  it('--llm does not call the model when no review context is available', async () => {
+    await withTempDir(async (dir) => {
+      process.env['XDG_CONFIG_HOME'] = dir;
+      await writeLlmConfig(dir);
+      vi.mocked(discoverAll).mockResolvedValue([makeSkill({ name: 'empty-context' })]);
+      vi.mocked(runRules).mockResolvedValue([]);
+      const fetchImpl = vi.fn();
+
+      await runScan({ llm: 'reviewer', llmFetchImpl: fetchImpl });
+
+      expect(fetchImpl).not.toHaveBeenCalled();
+      expect(stripAnsi(stderrChunks.join(''))).toContain('empty-context: ✅ 0 LLM findings');
+    });
+  });
+
   it('--llm excludes ignored skills from the review progress denominator', async () => {
     await withTempDir(async (dir) => {
       makeInteractiveTTY();
@@ -968,6 +984,7 @@ describe('runScan flag wiring', () => {
         makeSkill({ id: 'ignored', name: 'ignored', treeSha256: 'ignored-hash' }),
         makeSkill({ id: 'active', name: 'active', path: '/tmp/active', treeSha256: 'active-hash' }),
       ]);
+      vi.mocked(runRules).mockResolvedValue([makeFinding({ file: '/tmp/active/SKILL.md' })]);
       const fetchImpl = vi.fn(async () => ({
         ok: true,
         status: 200,
@@ -1007,6 +1024,7 @@ describe('runScan flag wiring', () => {
         },
       ]);
       vi.mocked(discoverAll).mockResolvedValue([makeSkill({ name: 'multi-review' })]);
+      vi.mocked(runRules).mockResolvedValue([makeFinding()]);
 
       const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
       const fetchImpl: LlmReviewFetch = async (url, init) => {
@@ -1107,6 +1125,7 @@ describe('runScan flag wiring', () => {
         },
       ]);
       vi.mocked(discoverAll).mockResolvedValue([makeSkill({ name: 'partial-review' })]);
+      vi.mocked(runRules).mockResolvedValue([makeFinding()]);
       const fetchImpl: LlmReviewFetch = async (url, init) => {
         if (url.includes('11435')) {
           await new Promise((_resolve, reject) => {
@@ -1148,6 +1167,7 @@ describe('runScan flag wiring', () => {
       process.env['XDG_CONFIG_HOME'] = dir;
       await writeLlmConfig(dir);
       vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+      vi.mocked(runRules).mockResolvedValue([makeFinding()]);
       const fetchImpl = async () => ({
         ok: true,
         status: 200,
@@ -1182,6 +1202,7 @@ describe('runScan flag wiring', () => {
         makeSkill({ id: 'noop-skill', name: 'noop-skill' }),
         makeSkill({ id: 'real-finding', name: 'real-finding' }),
       ]);
+      vi.mocked(runRules).mockResolvedValue([makeFinding()]);
       const fetchImpl: LlmReviewFetch = async (_url, init) => {
         const request = JSON.parse(init.body) as {
           messages: Array<{ role: string; content: string }>;
