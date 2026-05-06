@@ -47,10 +47,14 @@ export async function loadSelectedLlmConfigs(
 
 export function llmStatusLine(result: LlmReviewResult): string {
   if (result.status === 'ok') {
-    const marker = result.findings.length === 0 ? '✅' : '❌';
-    return `${marker} ${result.modelName} ok (${result.findings.length} LLM-only finding${result.findings.length === 1 ? '' : 's'})`;
+    return llmFindingsStatusLine(result.findings.length);
   }
   return `${result.modelName} ${result.status}`;
+}
+
+function llmFindingsStatusLine(findingsCount: number): string {
+  const marker = findingsCount === 0 ? '✅' : '❌';
+  return `${marker} ${findingsCount} LLM finding${findingsCount === 1 ? '' : 's'}`;
 }
 
 export async function reviewSkillsWithLlm(
@@ -87,10 +91,19 @@ export async function reviewSkillsWithLlm(
     reviewed.push({ ...skill, llmReviews: results });
     completedReviews++;
     progress.updateLlmReview(completedReviews, reviewableTotal, skill.name);
+    const okFindingCount = results
+      .filter((result) => result.status === 'ok')
+      .reduce((total, result) => total + result.findings.length, 0);
+    if (results.some((result) => result.status === 'ok')) {
+      process.stderr.write(
+        `[skill-audit] LLM review ${completedReviews}/${reviewableTotal}: ${skill.name}: ${llmFindingsStatusLine(okFindingCount)}\n`
+      );
+    }
     for (const result of results) {
       if (result.status === 'ok' && result.findings.length > 0) {
         hasLlmOnlyFindings = true;
       }
+      if (result.status === 'ok') continue;
       process.stderr.write(
         `[skill-audit] LLM review ${completedReviews}/${reviewableTotal}: ${skill.name}: ${llmStatusLine(result)}\n`
       );

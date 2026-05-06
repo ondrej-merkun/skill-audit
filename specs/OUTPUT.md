@@ -180,8 +180,8 @@ remain visible and authoritative for the baseline scan.
   Each cell shows per-model status and, for successful models, the highest
   model finding severity plus finding count.
 - Per-skill LLM review progress lines on stderr prefix successful model reviews
-  with `✅` for zero LLM-only findings and `❌` for one or more LLM-only
-  findings. When any LLM-only finding exists, stderr prints one brief hint to
+  with `✅` for zero LLM findings and `❌` for one or more LLM findings. When
+  any LLM-only finding exists, stderr prints one brief hint to
   rerun with `--json` or `--html report.html` for details.
 - Summary output adds a compact `LLM review` line with per-model status and
   total model finding counts by highest severity.

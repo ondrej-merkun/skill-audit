@@ -537,7 +537,7 @@ describe('runExplain', () => {
 
       const errOut = stripAnsi(stderrChunks.join(''));
       expect(errOut).toContain('LLM review: reviewer');
-      expect(errOut).toContain('test-skill: ❌ reviewer ok (1 LLM-only finding)');
+      expect(errOut).toContain('LLM review 1/1: test-skill: ❌ 1 LLM finding');
       expect(errOut).not.toContain('LLM review: details:');
       expect(runRules).toHaveBeenCalledTimes(1);
     });
