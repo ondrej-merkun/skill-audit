@@ -71,6 +71,8 @@ export type Finding = {
   message: string;
   fix: string;
   cwe: string[];
+  ignoredForVerdict?: boolean;
+  fileRole?: 'inert-supporting-docs';
 };
 
 export type LlmReviewFinding = {

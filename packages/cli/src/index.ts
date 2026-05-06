@@ -30,6 +30,10 @@ function addScanOptions(command: Command): Command {
     .option('--skill <name-or-id>', 'scan only one matching skill')
     .option('--include-marketplaces', 'include locally available but inactive marketplace skills')
     .option(
+      '--scan-all-supporting-files',
+      'scan supporting Markdown with normal prompt-risk severity'
+    )
+    .option(
       '--llm <name>',
       'run optional local LLM review; repeat, comma-separate, or use "all"',
       collectRepeatedOption,
@@ -53,6 +57,7 @@ function scanOptionsFrom(cmdOpts: Record<string, unknown>): Partial<ScanOptions>
     agent: typeof cmdOpts.agent === 'string' ? cmdOpts.agent : undefined,
     skill: typeof cmdOpts.skill === 'string' ? cmdOpts.skill : undefined,
     includeMarketplaces: cmdOpts.includeMarketplaces === true,
+    scanAllSupportingFiles: cmdOpts.scanAllSupportingFiles === true,
     llm: Array.isArray(cmdOpts.llm) && cmdOpts.llm.length > 0 ? cmdOpts.llm : undefined,
     failOn: typeof cmdOpts.failOn === 'string' ? cmdOpts.failOn : undefined,
   };

@@ -371,12 +371,14 @@ describe('e2e: scan flags', () => {
   it('scan help only lists supported scan flags', async () => {
     const env = { HOME: tempHome, USERPROFILE: tempHome, SKILL_AUDIT_CWD: tempCwd };
     const { code, stdout } = await runCli(['scan', '--help'], env);
+    const normalizedStdout = stdout.replace(/\s+/g, ' ');
     expect(code).toBe(0);
     expectSupportedAgentHelp(stdout);
     expect(stdout).toContain('--json');
     expect(stdout).toContain('--html <file>');
     expect(stdout).toContain('--include-marketplaces');
-    expect(stdout).toContain('locally available but inactive marketplace');
+    expect(normalizedStdout).toContain('locally available but inactive marketplace');
+    expect(stdout).toContain('--scan-all-supporting-files');
     expect(stdout).not.toContain('--offline');
     expect(stdout).not.toContain('enrichment');
     expect(stdout).not.toContain('--deep');

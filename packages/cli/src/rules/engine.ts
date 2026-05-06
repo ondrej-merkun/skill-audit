@@ -1,5 +1,5 @@
 import { type Dirent, readFileSync, readdirSync, statSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, extname, join, relative, sep } from 'node:path';
 import type { Finding, Rule, Skill } from '../types.js';
 
 const MAX_SCANNED_CONTENT_CHARS = 1_000_000;
@@ -8,7 +8,17 @@ type RawMatch = { index: number; text: string };
 type PrepareContent = NonNullable<Rule['prepareContent']>;
 type RunRulesOptions = {
   filenameOverride?: string;
+  scanAllSupportingFiles?: boolean;
 };
+
+type ReachabilityIndex = {
+  root: string;
+  referencedFiles: Set<string>;
+  referencedDirs: Set<string>;
+  allSupportingMarkdownReachable: boolean;
+};
+
+type SupportingFileRole = 'operative' | 'inert-supporting-docs';
 
 const safePatternCache = new WeakMap<RegExp, boolean>();
 const globalPatternCache = new Map<string, RegExp>();
@@ -110,6 +120,26 @@ const NESTED_SCAN_ROOT_MARKERS = new Set([
   'gemini-extension.json',
 ]);
 
+const OPERATIVE_ENTRYPOINT_NAMES = new Set([
+  ...NESTED_SCAN_ROOT_MARKERS,
+  'README.md',
+  'COMMAND.md',
+  'config.toml',
+  'settings.json',
+  '.mcp.json',
+  'mcp.json',
+]);
+
+const SUPPORTING_MARKDOWN_DIRS = new Set([
+  'doc',
+  'docs',
+  'documentation',
+  'example',
+  'examples',
+  'reference',
+  'references',
+]);
+
 function isPromptBearingCommandOrAgentDir(dirName: string, entries: Dirent[]) {
   if (dirName !== 'commands' && dirName !== 'agents') return false;
   return entries.some(
@@ -132,6 +162,145 @@ function isNestedScanRoot(dir: string): boolean {
   }
 
   return isPromptBearingCommandOrAgentDir(basename(dir), entries);
+}
+
+function normalizeRelativePath(path: string): string {
+  return path.split(sep).join('/');
+}
+
+function normalizeReferencedPath(rawPath: string): string | undefined {
+  let candidate = rawPath.trim();
+  if (candidate === '') return undefined;
+  candidate = candidate.replace(/^<|>$/g, '');
+  candidate = candidate.replace(/[),.;:]+$/g, '');
+  candidate = candidate.split('#')[0] ?? '';
+  candidate = candidate.split('?')[0] ?? '';
+  candidate = candidate.replace(/^\.\//, '');
+  if (
+    candidate === '' ||
+    candidate.startsWith('/') ||
+    candidate.startsWith('../') ||
+    candidate.startsWith('#') ||
+    /^[a-z][a-z0-9+.-]*:/i.test(candidate)
+  ) {
+    return undefined;
+  }
+  return candidate.replaceAll('\\', '/');
+}
+
+function addReachablePath(index: ReachabilityIndex, rawPath: string): void {
+  const ref = normalizeReferencedPath(rawPath);
+  if (ref === undefined) return;
+
+  const globIndex = ref.search(/[*?[{]/);
+  if (globIndex >= 0) {
+    const prefix = ref.slice(0, globIndex);
+    const dir = prefix.includes('/') ? prefix.slice(0, prefix.lastIndexOf('/') + 1) : '';
+    if (dir !== '') index.referencedDirs.add(dir);
+    return;
+  }
+
+  if (ref.endsWith('/')) {
+    index.referencedDirs.add(ref);
+    return;
+  }
+
+  if (extname(ref) === '') {
+    index.referencedDirs.add(`${ref}/`);
+    return;
+  }
+
+  index.referencedFiles.add(ref);
+}
+
+function buildReachabilityIndex(skillRoot: string, files: string[]): ReachabilityIndex | undefined {
+  const skillMdPath = join(skillRoot, 'SKILL.md');
+  if (!files.includes(skillMdPath)) return undefined;
+
+  let content: string;
+  try {
+    content = readFileSync(skillMdPath, 'utf-8');
+  } catch {
+    return undefined;
+  }
+
+  const index: ReachabilityIndex = {
+    root: skillRoot,
+    referencedFiles: new Set(),
+    referencedDirs: new Set(),
+    allSupportingMarkdownReachable:
+      /\b(?:nearby files|bundled resources|all supporting (?:files|docs|documents)|all docs)\b/i.test(
+        content
+      ),
+  };
+
+  for (const match of content.matchAll(/\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g)) {
+    if (match[1] !== undefined) addReachablePath(index, match[1]);
+  }
+
+  for (const match of content.matchAll(
+    /(?:^|[\s`"'(])((?:\.\/)?[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.{}*?[\]-]+)+(?:\/)?|(?:\.\/)?[A-Za-z0-9_.-]+\.(?:md|mdc|txt|json|toml|ya?ml|js|ts|mjs|cjs|py|sh|bash))(?:[\s`"',).;:]|$)/g
+  )) {
+    if (match[1] !== undefined) addReachablePath(index, match[1]);
+  }
+
+  for (const match of content.matchAll(
+    /\b(?:in|under|from|inside|within)\s+(?:the\s+)?(docs?|documentation|examples?|references?)\b/gi
+  )) {
+    if (match[1] !== undefined) addReachablePath(index, `${match[1]}/`);
+  }
+
+  return index;
+}
+
+function isMarkdownPromptFile(scanName: string): boolean {
+  return scanName.endsWith('.md') || scanName.endsWith('.mdc');
+}
+
+function isSupportingMarkdownPath(filePath: string, index: ReachabilityIndex): boolean {
+  const rel = normalizeRelativePath(relative(index.root, filePath));
+  const segments = rel.split('/');
+  return segments.some((segment) => SUPPORTING_MARKDOWN_DIRS.has(segment.toLowerCase()));
+}
+
+function isReachableFromSkillMd(filePath: string, index: ReachabilityIndex): boolean {
+  const rel = normalizeRelativePath(relative(index.root, filePath));
+  if (index.referencedFiles.has(rel)) return true;
+  for (const dir of index.referencedDirs) {
+    if (rel.startsWith(dir)) return true;
+  }
+  return false;
+}
+
+function classifySupportingFileRole(
+  filePath: string,
+  scanName: string,
+  index: ReachabilityIndex | undefined,
+  options: Pick<RunRulesOptions, 'scanAllSupportingFiles'>
+): SupportingFileRole {
+  if (
+    options.scanAllSupportingFiles === true ||
+    index === undefined ||
+    !isMarkdownPromptFile(scanName) ||
+    OPERATIVE_ENTRYPOINT_NAMES.has(basename(filePath)) ||
+    index.allSupportingMarkdownReachable ||
+    isReachableFromSkillMd(filePath, index) ||
+    !isSupportingMarkdownPath(filePath, index)
+  ) {
+    return 'operative';
+  }
+  return 'inert-supporting-docs';
+}
+
+function findingForRole(finding: Finding, role: SupportingFileRole): Finding {
+  if (role !== 'inert-supporting-docs') return finding;
+  return {
+    ...finding,
+    severity: 'info',
+    message: `Inert supporting docs: ${finding.message}`,
+    ignoredForVerdict: true,
+    fileRole: role,
+  };
 }
 
 /** Recursively collects file paths under a scan target without entering child scan roots. */
@@ -162,15 +331,19 @@ export async function runRules(
   const findings: Finding[] = [];
 
   let files: string[];
+  let isDirectory: boolean;
   try {
     const st = statSync(skillPath);
-    files = st.isDirectory() ? walkDir(skillPath) : [skillPath];
+    isDirectory = st.isDirectory();
+    files = isDirectory ? walkDir(skillPath) : [skillPath];
   } catch {
     return [];
   }
+  const reachability = isDirectory ? buildReachabilityIndex(skillPath, files) : undefined;
 
   for (const filePath of files) {
     const name = options.filenameOverride ?? basename(filePath);
+    const fileRole = classifySupportingFileRole(filePath, name, reachability, options);
     const preparePath =
       options.filenameOverride === undefined ? filePath : join(dirname(filePath), name);
     const applicableRules = rules.filter((rule) =>
@@ -207,7 +380,7 @@ export async function runRules(
           if (seenLines.has(line)) continue;
           seenLines.add(line);
 
-          findings.push({
+          const finding: Finding = {
             ruleId: rule.id,
             severity: rule.severity,
             category: rule.category,
@@ -218,7 +391,10 @@ export async function runRules(
             message: rule.message,
             fix: rule.fix,
             cwe: rule.cwe,
-          });
+          };
+          findings.push(
+            findingForRole(finding, rule.category === 'prompt-injection' ? fileRole : 'operative')
+          );
         }
       }
     }
@@ -227,10 +403,17 @@ export async function runRules(
   return findings;
 }
 
-export async function runRulesForSkill(skill: Skill, rules: Rule[]): Promise<Finding[]> {
+export async function runRulesForSkill(
+  skill: Skill,
+  rules: Rule[],
+  options: Pick<RunRulesOptions, 'scanAllSupportingFiles'> = {}
+): Promise<Finding[]> {
   return runRules(skill.path, rules, {
     ...(skill.metadata?.ruleScanFilename !== undefined
       ? { filenameOverride: skill.metadata.ruleScanFilename }
+      : {}),
+    ...(options.scanAllSupportingFiles !== undefined
+      ? { scanAllSupportingFiles: options.scanAllSupportingFiles }
       : {}),
   });
 }

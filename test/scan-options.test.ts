@@ -243,6 +243,17 @@ describe('runScan flag wiring', () => {
     expect(Array.isArray(json.skills)).toBe(true);
   });
 
+  it('passes paranoid supporting-file scanning to the rule engine', async () => {
+    const skill = makeSkill();
+    vi.mocked(discoverAll).mockResolvedValue([skill]);
+
+    await runScan({ json: true, offline: true, scanAllSupportingFiles: true });
+
+    expect(runRules).toHaveBeenCalledWith(skill, expect.any(Array), {
+      scanAllSupportingFiles: true,
+    });
+  });
+
   it('adds an info context hint for likely security skills with non-info findings', async () => {
     vi.mocked(discoverAll).mockResolvedValue([
       makeSkill({ name: 'security-auditor', path: '/tmp/security-auditor' }),
@@ -893,7 +904,8 @@ describe('runScan flag wiring', () => {
       expect(runRules).toHaveBeenCalledTimes(1);
       expect(runRules).toHaveBeenCalledWith(
         expect.objectContaining({ name: 'review-me' }),
-        expect.any(Array)
+        expect.any(Array),
+        { scanAllSupportingFiles: false }
       );
       expect(calls).toHaveLength(1);
       const json = JSON.parse(stdoutChunks.join(''));

@@ -57,6 +57,7 @@ skill-audit ignore <name>      # add a skill's treeSha256 to your ignore list
 | `--skill <name-or-id>` | Restrict `scan` to one matching skill |
 | `--include-marketplaces` | Include inactive local marketplace inventory and label rows as `marketplace` |
 | `--llm <name>` | Add optional local LLM review; repeat, comma-separate, or use `all` |
+| `--scan-all-supporting-files` | Scan supporting Markdown with normal prompt-risk severity |
 | `-o, --output <file>` | Write the selected non-HTML scan output to file |
 | `--strict` | Treat REVIEW as FAIL for exit-code purposes |
 | `--fail-on <band>` | Override exit-code threshold (`REVIEW` or `FAIL`) |
