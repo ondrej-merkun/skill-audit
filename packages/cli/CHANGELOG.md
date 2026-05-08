@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.1
+
+- Preserve multi-agent skill ownership in table, JSON, and HTML output so
+  skills discovered through more than one agent keep their full source context.
+- Let `skill-audit scan --html` write to `scan.html` by default while preserving
+  custom `--html <file>` output.
+- Suppress inert false positives in scanner-oriented examples and supporting
+  docs while keeping malicious execution, filesystem, network, and memory-write
+  fixtures covered.
+
 ## 0.2.0
 
 - Add targeted skill review with `skill-audit scan --skill <name-or-id>` and

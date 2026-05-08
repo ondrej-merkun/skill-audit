@@ -7,7 +7,7 @@ branding:
 
 inputs:
   version:
-    description: '@ondrej-merkun/skill-audit npm package version to run (e.g. "0.2.0" or "latest")'
+    description: '@ondrej-merkun/skill-audit npm package version to run (e.g. "0.2.1" or "latest")'
     required: false
     default: 'latest'
   path:

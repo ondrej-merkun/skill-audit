@@ -142,7 +142,7 @@ pipe-to-shell.
   "scan": {
     "started_at": "2026-04-24T10:00:00.000Z",
     "duration_ms": 1840,
-    "tool_version": "0.2.0"
+    "tool_version": "0.2.1"
   },
   "agents": [
     {
