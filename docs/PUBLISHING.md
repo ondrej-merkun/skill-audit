@@ -24,3 +24,6 @@ publishing should provide the provenance metadata for the package release.
 
 After a trusted-publishing release succeeds, keep npm package publishing access
 restricted to trusted publishers and revoke any unused automation write tokens.
+Also create the matching GitHub Release for the pushed tag using the package
+changelog entry as the release notes; a package release is not complete until
+npm `latest` and the GitHub Release both show the new version.

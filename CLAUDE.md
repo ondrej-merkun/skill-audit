@@ -151,15 +151,20 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
 10. For any task that changes external links, badges, action examples,
     package metadata, or trusted-publishing settings: verify the external
     target exists and matches the canonical repository/package target.
-11. For any task that changes README screenshots, SVGs, or visual docs
+11. For any npm release: after the tag-triggered publish workflow succeeds,
+    verify npm `latest` points to the new version, then create or update the
+    matching GitHub Release for the same tag using the changelog entry as the
+    release notes. The release is not done until both npm and GitHub show the
+    new version.
+12. For any task that changes README screenshots, SVGs, or visual docs
     assets: render them in a browser or image renderer at their embedded
     README/GitHub size and inspect for overflow, clipping, overlap, stale
     output, and unreadable text. For hand-authored SVGs, check text bounds
     against adjacent labels and the visible frame.
-12. For any task that changes generated HTML interactions: verify a
+13. For any task that changes generated HTML interactions: verify a
     click/keyboard interaction in a DOM/browser environment.
-13. `.ralph/fix_plan.md` checkbox flipped to `- [x]`.
-14. Two conventional commits: one for the feature, one for the checkbox.
+14. `.ralph/fix_plan.md` checkbox flipped to `- [x]`.
+15. Two conventional commits: one for the feature, one for the checkbox.
 
 ## Never
 

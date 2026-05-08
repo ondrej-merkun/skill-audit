@@ -378,6 +378,11 @@ without a commit message explaining why it no longer applies.
   for rebase workflows, run `git rebase origin/main`, resolve conflicts in the
   linear history, and push with `--force-with-lease`.
 
+- **L6.13 — npm publishing is not the whole release.** _The v0.2.1 package was
+  published and tagged before a GitHub Release was created._
+  After npm `latest` moves, create or verify the matching GitHub Release using
+  the changelog entry before calling the release done.
+
 ## 7. Rule fixtures
 
 - **L7.1 — Malicious secret fixtures must not use provider placeholder keys.** _Task

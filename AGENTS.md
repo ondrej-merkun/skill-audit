@@ -52,6 +52,9 @@ pnpm typecheck        # tsc --noEmit — must pass on every package
   intentionally look like secrets — those are expected.
 - **Never push to `main` without `pnpm typecheck` passing locally.**
   CI runs it on Node 20 + 22; you should too.
+- **npm releases need GitHub releases.** After a tag-triggered npm release
+  succeeds and npm `latest` points at the new version, create or update the
+  matching GitHub Release for the same tag using the changelog entry as notes.
 - **External docs targets must be verified.** Badges, GitHub Action
   examples, repository URLs, trusted-publishing settings, and README demo
   assets are product surface. Do not assemble URLs from partial identity

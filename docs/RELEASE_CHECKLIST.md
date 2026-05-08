@@ -104,6 +104,9 @@ Before pushing the release tag, verify:
 
 After the workflow finishes, inspect the npm package version and confirm the
 package page shows provenance or trusted-publishing metadata for the release.
+Then create the matching GitHub Release for the same tag. Use the matching
+[`CHANGELOG.md`](../packages/cli/CHANGELOG.md) entry as the release notes, and
+mark the release as the latest stable release unless this is a pre-release.
 
 ## Tagging
 
@@ -119,3 +122,19 @@ Use the actual package version from
 [`packages/cli/package.json`](../packages/cli/package.json). If the GitHub
 Action wrapper is released from the same repository tag, use the same tag in
 workflow examples.
+
+## GitHub Release
+
+The npm release is not complete until the GitHub Release exists too:
+
+```bash
+VERSION=$(node -p "require('./packages/cli/package.json').version")
+gh release view "v${VERSION}" --json tagName,url,isDraft,isPrerelease \
+  || gh release create "v${VERSION}" --title "v${VERSION}" --notes-file /tmp/skill-audit-release-notes.md --latest
+```
+
+Before running `gh release create`, write `/tmp/skill-audit-release-notes.md`
+from the matching section in
+[`packages/cli/CHANGELOG.md`](../packages/cli/CHANGELOG.md). After creating the
+release, run `gh release view "v${VERSION}" --json tagName,url,isDraft,isPrerelease`
+and confirm it points at the pushed tag.

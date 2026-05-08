@@ -236,8 +236,13 @@ A task is done when:
     package metadata, or trusted-publishing settings: verify the external
     owner/repo/workflow/package target exists. Do not assemble GitHub URLs
     from partial identity fields.
-13. You've updated `.ralph/fix_plan.md` checkbox.
-14. You've committed both the feature and the checkbox change.
+13. For any npm release: after the tag-triggered publish workflow succeeds,
+    verify npm `latest` points to the new version, then create or update the
+    matching GitHub Release for the same tag using the changelog entry as the
+    release notes. The release is not done until both npm and GitHub show the
+    new version.
+14. You've updated `.ralph/fix_plan.md` checkbox.
+15. You've committed both the feature and the checkbox change.
 
 ## When the spec and docs/agents/AGENT.md disagree
 
