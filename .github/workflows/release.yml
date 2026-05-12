@@ -24,7 +24,9 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: pnpm
+          # Do NOT use any cache on purpose
+          # it increases the chance of a compromised release being published
+          # see https://github.com/actions/setup-node/issues/1445
           registry-url: https://registry.npmjs.org
 
       - name: Use npm with trusted publishing support
