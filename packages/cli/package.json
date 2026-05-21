@@ -64,7 +64,7 @@
     "@biomejs/biome": "^1.8.3",
     "@types/node": "^20.14.0",
     "tsup": "^8.1.0",
-    "typescript": "^5.5.2",
+    "typescript": "^6.0.3",
     "vitest": "^3.2.4"
   },
   "engines": {
