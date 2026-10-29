@@ -8,6 +8,14 @@ import {
 // Patterns are split to avoid triggering static-analysis hooks on this detector file itself.
 // These rules detect env-exfil and network calls in scanned skills, not in this codebase.
 
+// A shell line that only prints a quoted curl or wget command, such as a usage hint.
+const nonExecutingShellOutputPattern =
+  /^\s*(?:echo|printf|warn|warning|error|info|log|log_warning)\b\s+["'][^"'\n]*\b(?:curl|wget)\b[^"'\n]*https?:\/\/[^"'\n]*["']\s*$/i;
+
+function maskLine(line: string): string {
+  return ' '.repeat(line.length);
+}
+
 // NET-EXFIL-ENV: the whole environment (os.environ, process.env, env) sent over the network
 const pyEnvPostPattern = new RegExp(
   ['(?:requests|httpx)\\.\\w+\\s*\\([^)]{0,200}(?:json|data)\\s*=\\s*os\\.', 'environ'].join('')
@@ -18,26 +26,35 @@ const jsEnvStringifyPattern = new RegExp(
 
 // Shell commands that print every variable. With an argument (`printenv PATH`) they print one
 // value, so each pattern requires the dump to end at a `)`, a backtick, or a pipe.
-const SHELL_ENV_DUMP = '(?:env|printenv|export\\s+-p|set)';
+const SHELL_ENV_DUMP =
+  '(?:(?:\\/usr)?\\/bin\\/)?(?:env|printenv|export(?:\\s+-p)?|declare\\s+-[px]|set)';
 // Text of one shell command: stops at a comment or a newline, but follows `\` continuations.
 const SHELL_COMMAND_TEXT = '(?:[^#\\n]|\\\\\\r?\\n)';
 // Text of one pipeline stage: also stops at `;`, `&`, and `|`.
 const SHELL_PIPELINE_STAGE_TEXT = '(?:[^#;&|\\n]|\\\\\\r?\\n)';
+// Short options can share one dash (`-sd`). The option that takes the value comes last.
 const CURL_WGET_DATA_FLAG =
-  '(?:-d|-F|--data(?:-ascii|-binary|-raw|-urlencode)?|--form|--post-data|--body-data)';
-// Text between a data flag and the dump: a field name (`vars=`), a file marker (`@`), or the
-// start of a double-quoted body.
-const DATA_VALUE_PREFIX = '(?:"(?:[^"\\\\\\n]|\\\\.){0,80}|[^\\s"\']{0,40})';
+  '(?:-[A-Za-z]*[dF]|--data(?:-ascii|-binary|-raw|-urlencode)?|--form|--post-data|--body-data)';
+// Text between a data flag and the dump: an optional unquoted field name or file marker
+// (`env=`, `@`), then an optional double-quoted body up to the dump.
+const DATA_VALUE_PREFIX = '[^\\s"\']{0,40}(?:"(?:[^"\\\\\\n]|\\\\.){0,200})?';
 // $(env), `env`, or <(env), optionally piped through an encoder such as base64.
 const ENV_DUMP_SUBSTITUTION = [
   '(?:\\$\\(|`|<\\()\\s*',
   SHELL_ENV_DUMP,
   '\\s*(?:\\|[^)`\\n]{0,80})?[)`]',
 ].join('');
-// Network clients that send their stdin: curl with `@-`, wget with a stdin post file, and netcat,
-// which sends stdin by default.
+// Network clients that send their stdin: curl with `@-` or an upload of `-`, wget with a stdin
+// post file, and netcat, which sends stdin by default.
 const STDIN_ARGUMENT = '(?:-|\\/dev\\/stdin)(?![\\w/.-])';
-const CURL_SENDS_STDIN = `curl\\b${SHELL_PIPELINE_STAGE_TEXT}{0,200}@${STDIN_ARGUMENT}`;
+const CURL_STDIN_MARKER = '(?:@|\\s(?:-[A-Za-z]*T|--upload-file)\\s*)';
+const CURL_SENDS_STDIN = [
+  'curl\\b',
+  SHELL_PIPELINE_STAGE_TEXT,
+  '{0,200}',
+  CURL_STDIN_MARKER,
+  STDIN_ARGUMENT,
+].join('');
 const WGET_SENDS_STDIN = [
   'wget\\b',
   SHELL_PIPELINE_STAGE_TEXT,
@@ -70,6 +87,35 @@ const shellEnvDumpPipePattern = new RegExp(
     STDIN_NETWORK_CLIENT,
   ].join('')
 );
+// curl --data-binary @- URL <<< "$(env)", nc HOST PORT < <(printenv)
+const shellEnvDumpRedirectPattern = new RegExp(
+  [
+    '\\b(?:curl|wget|nc|ncat|netcat)\\b',
+    SHELL_COMMAND_TEXT,
+    '{0,200}(?:<<<\\s*"?|<\\s*)',
+    ENV_DUMP_SUBSTITUTION,
+  ].join('')
+);
+
+// A single-quoted stdin argument ('@-') reaches the client unchanged, but the shell mask blanks
+// single-quoted text. The quotes become trailing spaces, so finding offsets do not move.
+const SINGLE_QUOTED_STDIN_ARGUMENT = /'(@?(?:-|\/dev\/stdin))'/g;
+// A command substitution inside a printed string still runs, so its line stays visible.
+const COMMAND_SUBSTITUTION = /\$\(|`/;
+
+function maskNonExecutingEnvDumpText(content: string, filePath: string): string {
+  if (!/\.(?:sh|bash)$/i.test(filePath)) return maskDocumentationTextInCode(content, filePath);
+
+  const unquoted = content.replace(SINGLE_QUOTED_STDIN_ARGUMENT, '$1  ');
+  return maskDocumentationTextInCode(unquoted, filePath)
+    .split('\n')
+    .map((line) =>
+      nonExecutingShellOutputPattern.test(line) && !COMMAND_SUBSTITUTION.test(line)
+        ? maskLine(line)
+        : line
+    )
+    .join('\n');
+}
 
 export const NET_EXFIL_ENV: Rule = {
   id: 'NET-EXFIL-ENV',
@@ -81,8 +127,9 @@ export const NET_EXFIL_ENV: Rule = {
     jsEnvStringifyPattern,
     shellEnvDumpDataPattern,
     shellEnvDumpPipePattern,
+    shellEnvDumpRedirectPattern,
   ],
-  prepareContent: maskDocumentationTextInCode,
+  prepareContent: maskNonExecutingEnvDumpText,
   message: 'Environment variables transmitted over outbound HTTP — credential exfiltration.',
   fix: 'Remove code that sends os.environ / process.env to external endpoints.',
   cwe: ['CWE-200'],
@@ -166,12 +213,6 @@ const shellOutboundPattern =
 const pyOutboundPattern =
   /\b(?:requests|httpx)\.\w+\s*\(\s*['"]https?:\/\/(?!localhost|127\.0\.0\.1|::1)[a-zA-Z0-9]/;
 const jsOutboundPattern = /\bfetch\s*\(\s*['"]https?:\/\/(?!localhost|127\.0\.0\.1|::1)[a-zA-Z0-9]/;
-const nonExecutingShellOutputPattern =
-  /^\s*(?:echo|printf|warn|warning|error|info|log|log_warning)\b\s+["'][^"'\n]*\b(?:curl|wget)\b[^"'\n]*https?:\/\/[^"'\n]*["']\s*$/i;
-
-function maskLine(line: string): string {
-  return ' '.repeat(line.length);
-}
 
 function maskNonExecutingOutboundExamples(content: string, filePath: string): string {
   const shellPrepared = /\.(?:sh|bash)$/i.test(filePath)
@@ -197,7 +238,9 @@ export const NET_OUTBOUND_NONLOCAL: Rule = {
 
 // NET-WEBHOOK-KNOWN: chat webhooks, request catchers, and paste upload APIs.
 // Request catcher patterns need a bin token in the subdomain or path, so docs can still link a
-// service home page such as https://webhook.site.
+// service home page such as https://webhook.site or its docs and dashboard hosts. The token can be
+// literal or come from a variable (`$BIN`, `${BIN}`, `{BIN}`) or string concatenation.
+const CATCHER_SERVICE_SUBDOMAINS = '(?:www|docs|app)';
 const TOKEN_SUBDOMAIN_CATCHER_HOSTS = [
   'webhook\\.site',
   'requestbin\\.(?:net|com)',
@@ -215,11 +258,14 @@ const TOKEN_PATH_CATCHER_HOSTS = [
   'hookb\\.in',
 ].join('|');
 const tokenSubdomainCatcherPattern = new RegExp(
-  `https?:\\/\\/(?!www\\.)[\\w.-]+\\.(?:${TOKEN_SUBDOMAIN_CATCHER_HOSTS})(?![\\w.-])`,
+  [
+    `https?:\\/\\/(?!${CATCHER_SERVICE_SUBDOMAINS}\\.)[\\w.\${}-]+`,
+    `\\.(?:${TOKEN_SUBDOMAIN_CATCHER_HOSTS})(?![\\w.-])`,
+  ].join(''),
   'i'
 );
 const tokenPathCatcherPattern = new RegExp(
-  `https?:\\/\\/(?:${TOKEN_PATH_CATCHER_HOSTS})\\/[\\w-]`,
+  `https?:\\/\\/(?:${TOKEN_PATH_CATCHER_HOSTS})\\/(?:[\\w\${-]|["'\`]\\s*\\+)`,
   'i'
 );
 const pastebinUploadPattern = /https?:\/\/pastebin\.com\/api\/api_post\.php/i;

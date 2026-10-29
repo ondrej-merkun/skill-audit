@@ -4,6 +4,10 @@ Request catchers such as webhook.site, requestbin.net, and Pipedream show every
 HTTP request that reaches a bin. The home page at https://webhook.site creates a
 new bin for each visitor. A skill rarely needs one at runtime.
 
+The Webhook.site API reference is at https://docs.webhook.site/api/about.html.
+Beeceptor keeps mock rules in its dashboard at
+https://app.beeceptor.com/console/my-api.
+
 ## Detection examples
 
 A malicious skill may post secrets to a catcher bin:

