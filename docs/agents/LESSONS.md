@@ -523,6 +523,16 @@ without a commit message explaining why it no longer applies.
   then restore the parent so pnpm resolves the peer fresh. Confirm the result
   with `pnpm why -r <pkg>` and `pnpm audit`.
 
+- **L6.15 — pnpm 11 and later read settings only from `pnpm-workspace.yaml`.**
+  _With pnpm 9 settings in the `package.json` `pnpm` field, pnpm 11.1.1 ignored
+  the `tsup>esbuild` override. The frozen install failed with
+  ERR_PNPM_LOCKFILE_CONFIG_MISMATCH. A plain install failed with
+  ERR_PNPM_IGNORED_BUILDS and rewrote the lockfile back to the unpatched
+  esbuild 0.27.7._
+  Keep `overrides`, `allowBuilds`, and other pnpm settings in
+  `pnpm-workspace.yaml`. Keep `packageManager` pinned, so CI installs one exact
+  pnpm version.
+
 ## 7. Rule fixtures
 
 - **L7.1 — Malicious secret fixtures must not use provider placeholder keys.** _Task
