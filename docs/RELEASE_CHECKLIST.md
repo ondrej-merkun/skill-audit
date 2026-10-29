@@ -15,6 +15,11 @@ tag is not the first place a problem appears.
   package version. `test/version-pins.test.ts` fails when the two differ.
 - Confirm npm trusted publishing is configured as described in
   [`docs/PUBLISHING.md`](PUBLISHING.md).
+- Update every `@ondrej-merkun/skill-audit@<version>` pin in
+  [`packages/skill/SKILL.md`](../packages/skill/SKILL.md), including the
+  `allowed-tools` rules, and in
+  [`packages/skill/README.md`](../packages/skill/README.md) to the new package
+  version. `test/version-pins.test.ts` fails until they match.
 - Confirm public docs changed in the release have working local links and image
   paths.
 - Confirm changed README screenshots, SVGs, and badges render at their embedded

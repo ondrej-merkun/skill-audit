@@ -16,11 +16,24 @@ const CLI_PACKAGE_JSON = 'packages/cli/package.json';
 // The 2-space `version:` key exists only under `inputs:`.
 const ACTION_VERSION_DEFAULT = /^ {2}version:\n(?: {4}.*\n)*? {4}default: *'([^']*)'/gm;
 
+// Matches every `@ondrej-merkun/skill-audit` reference. Group 1 is the version
+// after the package name. A reference with no version yields an empty string,
+// so an unpinned command also fails the test.
+const CLI_PACKAGE_REFERENCE = /@ondrej-merkun\/skill-audit(?:@([\w.+-]+))?/g;
+
 // Add one row per file that pins the CLI version.
 const PINNED_LOCATIONS: PinnedLocation[] = [
   {
     file: 'action.yml',
     extractPinnedVersions: (text) => matchedGroups(text, ACTION_VERSION_DEFAULT),
+  },
+  {
+    file: 'packages/skill/SKILL.md',
+    extractPinnedVersions: (text) => matchedGroups(text, CLI_PACKAGE_REFERENCE),
+  },
+  {
+    file: 'packages/skill/README.md',
+    extractPinnedVersions: (text) => matchedGroups(text, CLI_PACKAGE_REFERENCE),
   },
 ];
 
