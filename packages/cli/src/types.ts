@@ -39,7 +39,8 @@ export type Skill = {
     | 'agents-md'
     | 'gemini-extension-json'
     | 'gemini-command-toml'
-    | 'gemini-agent-md';
+    | 'gemini-agent-md'
+    | 'agent-config';
   scope: 'user' | 'project' | 'managed';
   installState?: 'installed' | 'marketplace';
   treeSha256: string;

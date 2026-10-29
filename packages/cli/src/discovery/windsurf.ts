@@ -4,6 +4,7 @@ import os from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { enterDirOnce, readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
+import { discoverAgentConfigFiles } from './agent-config.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
 import { discoverSharedAgentSkills } from './shared-agent-skills.js';
 import { computeTreeSha256 } from './tree-hash.js';
@@ -20,6 +21,15 @@ const SKIPPED_DESCENDANT_DIRS = new Set([
   '.next',
 ]);
 const NESTED_RULE_PROBE_MAX_DEPTH = 4;
+
+// Directories that hold hooks.json: IDE and JetBrains plugin user hooks, then workspace
+// hooks and their legacy fallback. User dirs are under home, project dirs under cwd.
+const HOOK_DIRS: Array<{ dir: string; scope: Skill['scope'] }> = [
+  { dir: '.codeium/windsurf', scope: 'user' },
+  { dir: '.codeium', scope: 'user' },
+  { dir: '.devin', scope: 'project' },
+  { dir: '.windsurf', scope: 'project' },
+];
 
 function getHomeDir(): string {
   return process.env.HOME ?? process.env.USERPROFILE ?? os.homedir();
@@ -257,6 +267,19 @@ const windsurfDiscovery: AgentDiscovery = {
     );
 
     skills.push(...(await discoverSharedAgentSkills(AGENT_ID)));
+
+    for (const hooks of HOOK_DIRS) {
+      const isUserDir = hooks.scope === 'user';
+      skills.push(
+        ...(await discoverAgentConfigFiles({
+          agentId: AGENT_ID,
+          dir: join(isUserDir ? home : cwd, hooks.dir),
+          displayDir: isUserDir ? `~/${hooks.dir}` : hooks.dir,
+          fileNames: ['hooks.json'],
+          scope: hooks.scope,
+        }))
+      );
+    }
 
     return skills;
   },

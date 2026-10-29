@@ -4,6 +4,7 @@ import os from 'node:os';
 import { basename, dirname, join, relative } from 'node:path';
 import { enterDirOnce, readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
+import { discoverAgentConfigFiles, mcpServerScanMetadata } from './agent-config.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
 import { fallbackSkillNameFromDirectory } from './names.js';
 import { computeTreeSha256 } from './tree-hash.js';
@@ -136,6 +137,20 @@ async function discoverPluginTree(
       skills.push(withInstallState(await skillFromFile(file, 'SKILL.md', scope, metadata)));
     } else if (name.endsWith('.md') && segments.includes('agents')) {
       skills.push(withInstallState(await skillFromFile(file, 'agents-md', scope, metadata)));
+    } else if (name === 'hooks.json' && basename(dirname(file)) === 'hooks') {
+      // Name hook files after their plugin: every plugin uses hooks/hooks.json.
+      const pluginRoot = dirname(dirname(file));
+      const hooks = await discoverAgentConfigFiles({
+        agentId: AGENT_ID,
+        dir: dirname(file),
+        displayDir: `${fallbackSkillNameFromDirectory(pluginRoot)}/hooks`,
+        fileNames: [name],
+        scope,
+        ...(metadata === undefined ? {} : { metadata }),
+      });
+      skills.push(...hooks.map(withInstallState));
+    } else if (name === '.mcp.json') {
+      skills.push(...(await discoverMcpJson(file, scope)).map(withInstallState));
     }
   }
 
@@ -212,7 +227,7 @@ async function discoverMcpFromClaudeJson(jsonPath: string): Promise<Skill[]> {
 
   const skills: Skill[] = [];
 
-  for (const name of Object.keys(parsed.mcpServers ?? {})) {
+  for (const [name, definition] of Object.entries(parsed.mcpServers ?? {})) {
     skills.push({
       id: makeId(`${jsonPath}:${name}`),
       agentId: AGENT_ID,
@@ -222,12 +237,13 @@ async function discoverMcpFromClaudeJson(jsonPath: string): Promise<Skill[]> {
       format: 'mcp-server',
       scope: 'user',
       treeSha256: '',
+      metadata: mcpServerScanMetadata(name, definition),
     });
   }
 
   // Project-specific MCP servers are "managed" — global file, project-scoped config.
   for (const [projectPath, projectCfg] of Object.entries(parsed.projects ?? {})) {
-    for (const name of Object.keys(projectCfg.mcpServers ?? {})) {
+    for (const [name, definition] of Object.entries(projectCfg.mcpServers ?? {})) {
       skills.push({
         id: makeId(`${jsonPath}:${projectPath}:${name}`),
         agentId: AGENT_ID,
@@ -237,6 +253,7 @@ async function discoverMcpFromClaudeJson(jsonPath: string): Promise<Skill[]> {
         format: 'mcp-server',
         scope: 'managed',
         treeSha256: '',
+        metadata: mcpServerScanMetadata(name, definition),
       });
     }
   }
@@ -259,7 +276,7 @@ async function discoverMcpJson(mcpJsonPath: string, scope: Skill['scope']): Prom
     return [];
   }
 
-  return Object.keys(parsed.mcpServers ?? {}).map((name) => ({
+  return Object.entries(parsed.mcpServers ?? {}).map(([name, definition]) => ({
     id: makeId(`${mcpJsonPath}:${name}`),
     agentId: AGENT_ID,
     name,
@@ -268,7 +285,18 @@ async function discoverMcpJson(mcpJsonPath: string, scope: Skill['scope']): Prom
     format: 'mcp-server' as const,
     scope,
     treeSha256: '',
+    metadata: mcpServerScanMetadata(name, definition),
   }));
+}
+
+/** Claude Code runs hooks and helper commands from these settings files. */
+async function discoverSettingsFiles(
+  dir: string,
+  displayDir: string,
+  fileNames: string[],
+  scope: Skill['scope']
+): Promise<Skill[]> {
+  return discoverAgentConfigFiles({ agentId: AGENT_ID, dir, displayDir, fileNames, scope });
 }
 
 const claudeCodeDiscovery: AgentDiscovery = {
@@ -290,6 +318,7 @@ const claudeCodeDiscovery: AgentDiscovery = {
     skills.push(...(await discoverPluginTree(join(userBase, 'plugins'), 'user', options)));
     skills.push(...(await discoverCommandFiles(join(userBase, 'commands'), 'user', options)));
     skills.push(...(await discoverAgentEntries(join(userBase, 'agents'), 'user', options)));
+    skills.push(...(await discoverSettingsFiles(userBase, '~/.claude', ['settings.json'], 'user')));
 
     // User-scoped MCP servers from ~/.claude.json
     skills.push(...(await discoverMcpFromClaudeJson(join(home, '.claude.json'))));
@@ -297,6 +326,14 @@ const claudeCodeDiscovery: AgentDiscovery = {
     // Project-scoped: .claude/ subtree in cwd
     const projectClaudeDir = join(cwd, '.claude');
     if (await pathExists(projectClaudeDir)) {
+      skills.push(
+        ...(await discoverSettingsFiles(
+          projectClaudeDir,
+          '.claude',
+          ['settings.json', 'settings.local.json'],
+          'project'
+        ))
+      );
       skills.push(
         ...(await discoverSkillDirs(join(projectClaudeDir, 'skills'), 'project', options))
       );

@@ -4,6 +4,7 @@ import os from 'node:os';
 import { basename, join } from 'node:path';
 import { readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
+import { discoverAgentConfigFiles } from './agent-config.js';
 import { discoverSharedAgentSkills } from './shared-agent-skills.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
@@ -98,6 +99,20 @@ async function discoverLegacyCursorRules(filePath: string): Promise<Skill[]> {
   ];
 }
 
+async function discoverHooksFile(
+  dir: string,
+  displayDir: string,
+  scope: Skill['scope']
+): Promise<Skill[]> {
+  return discoverAgentConfigFiles({
+    agentId: AGENT_ID,
+    dir,
+    displayDir,
+    fileNames: ['hooks.json'],
+    scope,
+  });
+}
+
 const cursorDiscovery: AgentDiscovery = {
   id: AGENT_ID,
   displayName: 'Cursor',
@@ -128,6 +143,10 @@ const cursorDiscovery: AgentDiscovery = {
 
     // Shared: ~/.agents/skills/*/SKILL.md and .agents/skills/*/SKILL.md
     skills.push(...(await discoverSharedAgentSkills(AGENT_ID)));
+
+    // Hooks: ~/.cursor/hooks.json and .cursor/hooks.json
+    skills.push(...(await discoverHooksFile(join(home, '.cursor'), '~/.cursor', 'user')));
+    skills.push(...(await discoverHooksFile(join(cwd, '.cursor'), '.cursor', 'project')));
 
     return skills;
   },

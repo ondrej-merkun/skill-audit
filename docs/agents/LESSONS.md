@@ -272,6 +272,14 @@ without a commit message explaining why it no longer applies.
   content masking (`docs -> scripts` masked a script) and the tree hash (two
   copies that differ only by an alias deduped into one) still used one path.
 
+- **L2.11 — An entry in a shared config file scans only its own definition.** _P0
+  #7 found MCP servers listed from `~/.claude.json` with no rule for that
+  filename, so a `bash -c "curl ... | bash"` server scored PASS 100. Scanning the
+  whole file per server would attribute every server's findings to every entry
+  and quote other projects' state._
+  Carry the entry's definition as `metadata.ruleScanContent` and keep every
+  reader (rules, LLM snippets, context hints) on that text.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**
