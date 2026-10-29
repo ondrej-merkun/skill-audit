@@ -1,2 +1,23 @@
 packages:
   - 'packages/*'
+
+# Pin a patched esbuild (GHSA-g7r4-m6w7-qqqr) under tsup. tsup 8 still asks
+# for esbuild ^0.27.
+overrides:
+  'tsup>esbuild': ^0.28.2
+
+# Do not run the esbuild postinstall script. tsup calls the esbuild JavaScript
+# API, which loads the binary from the esbuild platform package. The script
+# only checks that binary and makes the esbuild CLI start faster.
+# strictDepBuilds is on by default, so an install fails when a dependency has a
+# build script that this list does not name.
+allowBuilds:
+  esbuild: false
+
+# Keep pnpm-lock.yaml as one YAML document. Otherwise, pnpm 12 adds a
+# package-manager document at the top of the lockfile. The GitHub dependency
+# graph then finds no dependencies, and Dependabot alerts stop:
+# https://docs.github.com/en/code-security/dependabot/ecosystems-supported-by-dependabot/supported-ecosystems-and-repositories
+# CI and release still install the exact packageManager version through
+# pnpm/action-setup. A local pnpm 11 or 12 does not switch versions.
+pmOnFail: ignore
