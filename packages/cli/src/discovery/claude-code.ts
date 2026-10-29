@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, realpath, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, dirname, join, relative } from 'node:path';
 import { enterDirOnce, isRegularFile, readDirFollowingLinks } from '../fs-walk.js';
@@ -25,11 +25,13 @@ function getCwd(): string {
   return process.env.SKILL_AUDIT_CWD ?? process.cwd();
 }
 
-// Claude Code moves the synced plugins that it removes to this dir and never loads them again.
-// Only this exact dir is skipped: a plugin manifest can load skills or hooks from a nested
-// `plugins/.trash` dir, so a path-segment match would hide a loaded payload.
-function pluginTrashDir(): string {
-  return join(getHomeDir(), '.claude', 'plugins', '.trash');
+// Claude Code moves the synced plugins that it removes to `~/.claude/plugins/.trash` and never
+// loads them again. Only that exact dir is skipped: a plugin manifest can load skills or hooks
+// from a nested `plugins/.trash` dir, so a path-segment match would hide a loaded payload.
+const PLUGIN_TRASH_DIR_NAME = '.trash';
+
+function claudePluginsDir(): string {
+  return join(getHomeDir(), '.claude', 'plugins');
 }
 
 function makeId(input: string): string {
@@ -87,7 +89,7 @@ async function skillFromFile(
 async function walkFiles(root: string, options: DiscoverSkillsOptions = {}): Promise<string[]> {
   const files: string[] = [];
   const visitedRealDirs = new Set<string>();
-  const trashDir = pluginTrashDir();
+  const realPluginsDir = await realpath(claudePluginsDir()).catch(() => undefined);
 
   async function walk(dir: string): Promise<void> {
     if (!(await enterDirOnce(visitedRealDirs, dir))) return;
@@ -96,7 +98,7 @@ async function walkFiles(root: string, options: DiscoverSkillsOptions = {}): Pro
       const fullPath = join(dir, entry.name);
       if (entry.kind === 'dir') {
         if (shouldSkipMarketplacePath(fullPath, options.includeMarketplaces)) continue;
-        if (fullPath === trashDir) continue;
+        if (await isPluginTrashDir(dir, entry.name, realPluginsDir)) continue;
         await walk(fullPath);
       } else {
         files.push(fullPath);
@@ -107,6 +109,19 @@ async function walkFiles(root: string, options: DiscoverSkillsOptions = {}): Pro
   await walk(root);
   files.sort((a, b) => a.localeCompare(b));
   return files;
+}
+
+// Compares real paths: a run from home through another name for it, such as a symlink, makes
+// the project walk reach `~/.claude/plugins` as `<cwd>/.claude/plugins`. Only `.trash` entries
+// are resolved, so the walk does not pay one realpath call per dir.
+async function isPluginTrashDir(
+  parentDir: string,
+  entryName: string,
+  realPluginsDir: string | undefined
+): Promise<boolean> {
+  if (entryName !== PLUGIN_TRASH_DIR_NAME || realPluginsDir === undefined) return false;
+
+  return (await realpath(parentDir).catch(() => undefined)) === realPluginsDir;
 }
 
 function pathSegments(root: string, filePath: string): string[] {
