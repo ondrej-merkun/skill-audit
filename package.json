@@ -13,14 +13,14 @@
   "devDependencies": {
     "@types/node": "^20.14.0",
     "typescript": "^5.5.2",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.12"
   },
   "engines": {
     "node": ">=20"
   },
   "pnpm": {
     "overrides": {
-      "vite": "6.4.2"
+      "tsup>esbuild": "^0.28.2"
     }
   }
 }

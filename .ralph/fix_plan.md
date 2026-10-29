@@ -121,6 +121,12 @@ at the bottom and the loop will stop.
 (If Ralph makes a choice that is not obvious from the task text or specs,
 document it here.)
 
+- The root `pnpm.overrides` entry `tsup>esbuild: ^0.28.2` resolves
+  GHSA-g7r4-m6w7-qqqr, because tsup 8.5.1 still asks for esbuild `^0.27.0`.
+  The tsup bundle is byte-identical with esbuild 0.28.2. Remove the override
+  when a tsup release that supports Node 20 depends on esbuild 0.28 or later.
+  (tsup 9 needs Node 22.18 or later, and CI still builds on Node 20.)
+
 ## Blockers
 
 (If Ralph hits something it cannot proceed past, document the exact error

@@ -43,6 +43,8 @@ describe('runList', () => {
   });
 
   afterEach(() => {
+    // Vitest 4 restoreAllMocks only restores vi.spyOn spies, so reset module mocks too.
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 

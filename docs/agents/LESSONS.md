@@ -187,6 +187,14 @@ without a commit message explaining why it no longer applies.
   After changing scanner reachability or context masking, run the full rule
   fixture suite before trusting a real scan improvement.
 
+- **L1.29 — Test-runner upgrades can weaken mock isolation silently.** _Vitest
+  4 `vi.restoreAllMocks()` stopped resetting `vi.fn()` module mocks, so
+  `explain.test.ts` saw 18 `runRules` calls instead of 1, and three other files
+  kept leaked mock state while still passing._
+  When upgrading Vitest, check every `afterEach` that relies on mock restore,
+  not only the tests that fail. Pair `vi.resetAllMocks()` with
+  `vi.restoreAllMocks()` where module mocks must not leak.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task
@@ -382,6 +390,14 @@ without a commit message explaining why it no longer applies.
   published and tagged before a GitHub Release was created._
   After npm `latest` moves, create or verify the matching GitHub Release using
   the changelog entry before calling the release done.
+
+- **L6.14 — pnpm keeps locked peer versions through overrides and `update`.**
+  _The Vitest 4 alert fix left Vite at the vulnerable locked 6.4.2 even with a
+  `vite` override and `pnpm update --depth Infinity`, because Vite is an
+  auto-installed peer of Vitest._
+  For a stale transitive peer, remove its parent from the manifests, install,
+  then restore the parent so pnpm resolves the peer fresh. Confirm the result
+  with `pnpm why -r <pkg>` and `pnpm audit`.
 
 ## 7. Rule fixtures
 

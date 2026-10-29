@@ -141,6 +141,8 @@ describe('scan enrichment pipeline', () => {
   afterEach(async () => {
     await rm(testHome, { recursive: true, force: true });
     process.exitCode = undefined;
+    // Vitest 4 restoreAllMocks only restores vi.spyOn spies, so reset module mocks too.
+    vi.resetAllMocks();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
