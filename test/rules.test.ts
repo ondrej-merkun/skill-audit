@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { runRules } from '../packages/cli/src/rules/engine.js';
+import { runPatternWithSafetyPreflight, runRules } from '../packages/cli/src/rules/engine.js';
 import { CODE_EXECUTION_RULES } from '../packages/cli/src/rules/code-execution.js';
 import {
   NET_EXFIL_ENV,
@@ -28,9 +28,11 @@ import {
 import {
   SKILL_CURL_BASH_IN_MD,
   SKILL_FETCH_AND_EXEC,
+  SKILL_MEMORY_WRITE,
   SKILL_SPECIFIC_RULES,
 } from '../packages/cli/src/rules/skill-specific.js';
 import { SECRETS_RULES } from '../packages/cli/src/rules/secrets.js';
+import { FS_DESTRUCTIVE_HOME_DELETE } from '../packages/cli/src/rules/destructive.js';
 import type { Rule } from '../packages/cli/src/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -333,4 +335,32 @@ describe('OBFS-EVAL-ATOB markdown contexts', () => {
       )
     ).toBe(true);
   });
+});
+
+describe('rule cost on masked content', () => {
+  // Context masking turns minified bundles and large test files into whitespace.
+  // A linear scan takes about 1 ms; a quadratic scan takes several seconds.
+  const SCAN_BUDGET_MS = 500;
+  const MASKED_INPUTS = [
+    { rule: SKILL_MEMORY_WRITE, shape: 'one long whitespace line', content: ' '.repeat(40_000) },
+    {
+      rule: FS_DESTRUCTIVE_HOME_DELETE,
+      shape: 'many whitespace lines',
+      content: `${' '.repeat(40)}\n`.repeat(8_000),
+    },
+  ];
+
+  it.each(MASKED_INPUTS)(
+    'should scan $shape within the time budget for $rule.id',
+    async ({ rule, content }) => {
+      const startedAt = performance.now();
+      const matches = await Promise.all(
+        rule.patterns.map((pattern) => runPatternWithSafetyPreflight(pattern, content))
+      );
+      const elapsedMs = performance.now() - startedAt;
+
+      expect(matches.flat()).toEqual([]);
+      expect(elapsedMs).toBeLessThan(SCAN_BUDGET_MS);
+    }
+  );
 });

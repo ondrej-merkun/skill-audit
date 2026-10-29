@@ -148,11 +148,14 @@ const fsWriteOperation = [
   String.raw`open\s*\([^#\n]*${agentContextWriteTarget}[^#\n]*,\s*["'][wa]`,
 ].join('|');
 const notNegatedLine = String.raw`(?![^#\n]*\b(?:[Mm]ust\s+[Nn][Oo][Tt]|[Dd]o\s+[Nn]ot|[Nn]ever)\b)`;
+// The line start has no separate indentation quantifier: [^#\n]* already spans
+// it, and two adjacent quantifiers over the same spaces backtrack quadratically
+// on long whitespace lines, such as a minified bundle after context masking.
 const writeToAgentContextPattern = new RegExp(
-  String.raw`(?:^|\n)[^\S\n]*${notNegatedLine}[^#\n]*(?<finding>(?:${writeOperation}[^#\n]*${agentContextWriteTarget}|${agentContextWriteTarget}[^#\n]*\b(?:[Ww]rite|[Aa]ppend)\b))`
+  String.raw`(?:^|\n)${notNegatedLine}[^#\n]*(?<finding>(?:${writeOperation}[^#\n]*${agentContextWriteTarget}|${agentContextWriteTarget}[^#\n]*\b(?:[Ww]rite|[Aa]ppend)\b))`
 );
 const fsWriteAgentContextPattern = new RegExp(
-  String.raw`(?:^|\n)[^\S\n]*${notNegatedLine}[^#\n]*(?<finding>(?:${fsWriteOperation}))`
+  String.raw`(?:^|\n)${notNegatedLine}[^#\n]*(?<finding>(?:${fsWriteOperation}))`
 );
 
 export const SKILL_MEMORY_WRITE: Rule = {

@@ -30,8 +30,11 @@ const rmRecursiveForceFlag =
 const destructiveShellPath =
   '(?:\\/|~|\\$HOME|\\$\\{HOME\\}|~\\/\\.(?:ssh|aws)|\\$HOME\\/\\.(?:ssh|aws)|\\$\\{HOME\\}\\/\\.(?:ssh|aws)|\\.git)';
 const shellDeleteTarget = `(?:"${destructiveShellPath}"|'${destructiveShellPath}'|${destructiveShellPath})`;
+// Leading whitespace stops at a newline because the multiline ^ already anchors
+// each line. A \s* here crosses newlines, so every line start rescans a masked
+// whitespace run, which is quadratic on large masked files.
 const shellDestructiveDeletePattern = new RegExp(
-  `(?:^|[;&|])\\s*(?:sudo\\s+)?rm\\s+${rmRecursiveForceFlag}\\s+(?:--\\s+)?(?<finding>${shellDeleteTarget})(?=\\s*(?:--no-preserve-root\\b\\s*)?(?:$|[;#&|]))`,
+  `(?:^|[;&|])[^\\S\\n]*(?:sudo\\s+)?rm\\s+${rmRecursiveForceFlag}\\s+(?:--\\s+)?(?<finding>${shellDeleteTarget})(?=\\s*(?:--no-preserve-root\\b\\s*)?(?:$|[;#&|]))`,
   'im'
 );
 
