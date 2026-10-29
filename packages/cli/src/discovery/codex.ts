@@ -4,6 +4,7 @@ import os from 'node:os';
 import { basename, dirname, join, relative } from 'node:path';
 import { enterDirOnce, readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
+import { discoverAgentConfigFiles } from './agent-config.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
 import { fallbackSkillNameFromDirectory } from './names.js';
 import { discoverSharedAgentSkills } from './shared-agent-skills.js';
@@ -392,6 +393,26 @@ const codexDiscovery: AgentDiscovery = {
     );
     skills.push(...(await discoverUntrustedProjectConfig(join(cwd, '.codex', 'config.toml'))));
     skills.push(...(await discoverSharedAgentSkills(AGENT_ID)));
+
+    // Hooks: $CODEX_HOME/hooks.json and .codex/hooks.json
+    skills.push(
+      ...(await discoverAgentConfigFiles({
+        agentId: AGENT_ID,
+        dir: codexHome,
+        displayDir: '',
+        fileNames: ['hooks.json'],
+        scope: 'user',
+      }))
+    );
+    skills.push(
+      ...(await discoverAgentConfigFiles({
+        agentId: AGENT_ID,
+        dir: join(cwd, '.codex'),
+        displayDir: '.codex',
+        fileNames: ['hooks.json'],
+        scope: 'project',
+      }))
+    );
 
     return skills;
   },

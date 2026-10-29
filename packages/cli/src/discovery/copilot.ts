@@ -4,6 +4,7 @@ import os from 'node:os';
 import { basename, join } from 'node:path';
 import { readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
+import { discoverAgentConfigFiles } from './agent-config.js';
 import { discoverSharedAgentSkills } from './shared-agent-skills.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
@@ -94,6 +95,26 @@ async function discoverInstructionsDir(dir: string, scope: Skill['scope']): Prom
   );
 }
 
+// Copilot loads every *.json file in a hooks directory, so each one is scanned as hooks.json.
+async function discoverHookFiles(
+  dir: string,
+  displayDir: string,
+  scope: Skill['scope']
+): Promise<Skill[]> {
+  const hookFiles = (await readDirFollowingLinks(dir)).filter(
+    (e) => e.kind === 'file' && e.name.endsWith('.json')
+  );
+
+  return discoverAgentConfigFiles({
+    agentId: AGENT_ID,
+    dir,
+    displayDir,
+    fileNames: hookFiles.map((e) => e.name),
+    scope,
+    metadata: { ruleScanFilename: 'hooks.json' },
+  });
+}
+
 const copilotDiscovery: AgentDiscovery = {
   id: AGENT_ID,
   displayName: 'GitHub Copilot',
@@ -129,6 +150,32 @@ const copilotDiscovery: AgentDiscovery = {
 
     // Shared: ~/.agents/skills/*/SKILL.md and .agents/skills/*/SKILL.md
     skills.push(...(await discoverSharedAgentSkills(AGENT_ID)));
+
+    // Hooks: hook directories plus the inline `hooks` block of the settings files
+    skills.push(
+      ...(await discoverHookFiles(join(home, '.copilot', 'hooks'), '~/.copilot/hooks', 'user'))
+    );
+    skills.push(
+      ...(await discoverHookFiles(join(cwd, '.github', 'hooks'), '.github/hooks', 'project'))
+    );
+    skills.push(
+      ...(await discoverAgentConfigFiles({
+        agentId: AGENT_ID,
+        dir: join(home, '.copilot'),
+        displayDir: '~/.copilot',
+        fileNames: ['settings.json'],
+        scope: 'user',
+      }))
+    );
+    skills.push(
+      ...(await discoverAgentConfigFiles({
+        agentId: AGENT_ID,
+        dir: join(cwd, '.github', 'copilot'),
+        displayDir: '.github/copilot',
+        fileNames: ['settings.json', 'settings.local.json'],
+        scope: 'project',
+      }))
+    );
 
     return skills;
   },
