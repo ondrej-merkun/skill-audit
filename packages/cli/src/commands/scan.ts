@@ -29,7 +29,7 @@ import {
   type ProgressOutputKind,
   selectProgressMode,
 } from '../progress.js';
-import { runRulesForSkill } from '../rules/engine.js';
+import { collectScanTargetPaths, runRulesForSkill } from '../rules/engine.js';
 import { ALL_RULES } from '../rules/index.js';
 import { withSecurityEducationContextFinding } from '../rules/security-education.js';
 import { scoreFindings } from '../score.js';
@@ -231,6 +231,10 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     process.exit(2);
   }
 
+  // Collect targets from every discovered skill, not only the --skill match, so a parent
+  // skill gets the same findings with or without the filter.
+  const scanTargetPaths = collectScanTargetPaths(skills);
+
   if (options.skill !== undefined) {
     const target = findSkillByNameOrId(skills, options.skill);
     if (target === undefined) {
@@ -297,6 +301,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
           skill,
           await runRulesForSkill(skill, ALL_RULES, {
             scanAllSupportingFiles: options.scanAllSupportingFiles,
+            scanTargetPaths,
           })
         );
         const summary = scoreFindings(findings, skill.treeSha256);
