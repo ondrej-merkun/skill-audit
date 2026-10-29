@@ -571,6 +571,14 @@ without a commit message explaining why it no longer applies.
   When a view decodes string escapes, keep decoded quotes from matching the
   delimiters that the patterns depend on.
 
+- **L7.8 — Rules see each MCP server as pretty-printed JSON.** _A one-line
+  `.mcp.json` with `"args":["-c","$(curl ...)"]` scored PASS. Discovery scans
+  each server as `JSON.stringify(..., null, 2)` output, which puts `"-c"` and
+  its command on separate lines, and the pattern allowed no line break between
+  them._
+  When a pattern spans two array elements, let the separator cross a line
+  break, and keep a multi-line fixture for that pattern.
+
 ---
 
 ## How to add a new lesson

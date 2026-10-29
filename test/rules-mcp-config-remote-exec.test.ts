@@ -51,9 +51,11 @@ describe(RULE_ID, () => {
     const rule = requireRule();
     const findings = await runRules(join(FIXTURE_DIR, 'malicious', 'formatted'), [rule]);
 
-    expect(findings).toHaveLength(1);
-    expect(findings[0]?.ruleId).toBe(RULE_ID);
-    expect(basename(findings[0]?.file ?? '')).toBe('mcp.json');
+    expect(findings.map((finding) => basename(finding.file)).sort()).toEqual([
+      '.mcp.json',
+      'mcp.json',
+    ]);
+    expect(findings.every((finding) => finding.ruleId === RULE_ID)).toBe(true);
   });
 
   it('detects remote execution with escaped URLs in Gemini settings that contain comments', async () => {
