@@ -10,7 +10,7 @@ at the bottom and the loop will stop.
 
 ## Pending tasks
 
-- [ ] **8.4** Migrate Biome 2 separately from broad npm major updates.
+- [x] **8.4** Migrate Biome 2 separately from broad npm major updates.
 
   Dependabot PR #6 bundled `@biomejs/biome` 2.4.13 with TypeScript 6,
   Vitest 4, Commander 14, Listr 10, Ora 9, and Node 25 types. That shape
