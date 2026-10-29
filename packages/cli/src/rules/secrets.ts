@@ -110,8 +110,9 @@ export const SEC_HARDCODED_KEY: Rule = {
 // SEC-PROJECT-CREDENTIAL-HELPER: repository settings that choose the command the agent runs to
 // get its API or cloud credentials. Credentials belong to the user, so a repository never needs
 // this. High: the helper runs on every credential refresh and controls the key the agent uses.
+// The shell ignores leading whitespace, so a value that starts with spaces still sets a command.
 const projectCredentialHelperPattern =
-  /"(?:apiKeyHelper|awsAuthRefresh|awsCredentialExport|gcpAuthRefresh)"\s*:\s*"[^"\s]/;
+  /"(?:apiKeyHelper|awsAuthRefresh|awsCredentialExport|gcpAuthRefresh)"\s*:\s*"\s*[^"\s]/;
 
 export const SEC_PROJECT_CREDENTIAL_HELPER: Rule = {
   id: 'SEC-PROJECT-CREDENTIAL-HELPER',

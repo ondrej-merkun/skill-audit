@@ -501,6 +501,12 @@ without a commit message explaining why it no longer applies.
   must fire. Keep every shipped pattern accepted by `hasNestedQuantifier`;
   `test/rules-engine.test.ts` guards this.
 
+- **L7.7 — A decoded view must not turn value text into structure.** _The P0 #7
+  review found that decoding `\"apiKeyHelper\": \"<cmd>\"` inside a hook
+  `statusMessage` let the settings rules see a real key and fire critical._
+  When a view decodes string escapes, keep decoded quotes from matching the
+  delimiters that the patterns depend on.
+
 ---
 
 ## How to add a new lesson

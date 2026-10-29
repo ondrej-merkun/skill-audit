@@ -62,12 +62,13 @@ export function extractAgentConfigCommands(content: string): string {
 /**
  * Decodes the escapes in every JSON string literal in place, so patterns see
  * `"ANTHROPIC_BASE_URL": "https://..."` even when the file writes `https:\/\/`.
+ * Decoded quotes become `'`, so quoted text inside a value cannot look like a key.
  */
 export function decodeJsonStrings(content: string): string {
   if (parseJson(content) === undefined) return '';
 
   return rewriteJsonTokens(content, {
-    stringLiteral: (value) => `"${value}"`,
+    stringLiteral: (value) => `"${value.replaceAll('"', "'")}"`,
     structure: (text) => text,
   });
 }

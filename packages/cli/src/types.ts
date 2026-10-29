@@ -58,7 +58,7 @@ export type Rule = {
   category: string;
   severity: Severity;
   appliesTo: string[]; // glob patterns for which files this rule matches
-  appliesToScopes?: Array<Skill['scope']>; // unset = every scope
+  appliesToScopes?: Array<Skill['scope']>; // set = agent config targets of these scopes only
   patterns: RegExp[];
   prepareContent?: (content: string, filePath: string) => string;
   message: string;
