@@ -116,16 +116,18 @@ at the bottom and the loop will stop.
 
 (Append to this list when Ralph adds anything beyond the list in `AGENT.md`.)
 
+- `tsdown` `^0.23.3`, dev dependency of `packages/cli`, added in #69. It
+  replaced `tsup`, which is no longer maintained, and builds the one ESM bin,
+  `dist/index.js`. It needs Node.js `^22.18.0 || ^24.11.0 || >=26.0.0`.
+
 ## Decisions made during implementation
 
 (If Ralph makes a choice that is not obvious from the task text or specs,
 document it here.)
 
-- The root `pnpm.overrides` entry `tsup>esbuild: ^0.28.2` resolves
-  GHSA-g7r4-m6w7-qqqr, because tsup 8.5.1 still asks for esbuild `^0.27.0`.
-  The tsup bundle is byte-identical with esbuild 0.28.2. Remove the override
-  when a tsup release that supports Node 20 depends on esbuild 0.28 or later.
-  (tsup 9 needs Node 22.18 or later, and CI still builds on Node 20.)
+- #52 added the root `pnpm.overrides` entry `tsup>esbuild: ^0.28.2` to
+  resolve GHSA-g7r4-m6w7-qqqr, because tsup 8.5.1 still asked for esbuild
+  `^0.27.0`. #69 removed the override together with tsup.
 
 ## Blockers
 
