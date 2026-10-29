@@ -251,21 +251,33 @@ values and does not stop the scan.
 A hook that runs a script by path does not hold the payload itself. For Claude
 Code, discovery also reports the scripts that project settings and plugin
 `hooks/hooks.json` hooks name, as separate `agent-config` targets (see
-`specs/DISCOVERY.md`). Those scripts go through the rules for their own file
+`specs/DISCOVERY.md`). Those scripts go through the rules for their scan
 names.
 
-Rules pick files by name, so a script without a file extension, such as
-`scripts/setup`, gets a scan name from the program that runs it. For a hook
-script, the interpreter word before the script in the same command sets it:
-`bash`, `sh`, `dash`, `zsh`, and `ksh` select the `*.sh` rules, `python` and
-`python3` the `*.py` rules, and `node` the `*.js` rules. Otherwise the shebang
-line sets it with the same names, such as `#!/bin/sh` or
-`#!/usr/bin/env python3`. The shebang check applies to every file without an
-extension that the engine scans, also in skill directories. A file without an
-extension and without a known interpreter gets no script rules.
+Rules pick files by name, so a hook script gets a scan name from the program
+that runs it. The interpreter word before the script in the same command sets
+it: `bash`, `sh`, `dash`, `zsh`, and `ksh` select the `*.sh` rules, `python`
+(also versioned, such as `python3.12`) the `*.py` rules, and `node` the `*.js`
+rules. The interpreter ignores the file extension, so `bash scripts/setup.cfg`
+is scanned as `setup.cfg.sh`. A name that already ends in the extension keeps
+its name. A sourced script (`. scripts/setup`, `source scripts/setup`) gets the
+`*.sh` rules. When the command runs the script directly, also after `bash -c`,
+the shebang line names the program, such as `#!/bin/sh` or
+`#!/usr/bin/env python3`. A text file without a shebang and without a script
+extension gets the `*.sh` rules, because the shell runs such a file itself.
+
+In skill directories, a file without an extension whose own name selects no
+rule, such as `scripts/setup`, gets its scan name from its shebang line. A name
+that selects rules, such as `Pipfile` or `.cursorrules`, keeps them.
 
 Known gap: an HTTP hook (`"type": "http"`) sends hook input to its `url`. No
 rule checks that host yet.
+
+Known gap: a script that hooks run with two interpreters gets the rules of the
+first one only. An interpreter option that takes a separate value, such as
+`python3 -W ignore scripts/check`, hides the interpreter. In skill directories,
+a script with an extension that selects no rule, such as `setup.cfg`, gets no
+script rules.
 
 ## Agent settings rules (project scope only)
 
