@@ -20,7 +20,8 @@ const COMMENT_LINE_PATTERN = /^\s*(?:#|\/\/|\/\*|\*|<!--)/;
 // fix, or docs also name operative sections and skills (`## Testing`, `# docs-helper`).
 const EXAMPLE_WORDS = '(?:examples?|samples?|threat[- ]?models?|false positives?)';
 const EXAMPLE_MATERIAL_WORDS = `(?:${EXAMPLE_WORDS}|references?)`;
-const EXAMPLE_HEADING_PATTERN = new RegExp(String.raw`\b${EXAMPLE_MATERIAL_WORDS}\b`, 'i');
+// Marks a heading outside SKILL.md, or a blockquote, as example material.
+const EXAMPLE_MATERIAL_PATTERN = new RegExp(String.raw`\b${EXAMPLE_MATERIAL_WORDS}\b`, 'i');
 // In SKILL.md, the level-1 title names the skill, and `## Quick reference` lists commands
 // that the agent runs. So only a subsection opens an example section, and a reference
 // heading does so only when it starts with the word (`## References`).
@@ -28,9 +29,9 @@ const SKILL_MD_EXAMPLE_HEADING_PATTERN = new RegExp(
   String.raw`^\s{0,3}#{2,6}\s+(?:references?\b|.*\b${EXAMPLE_WORDS}\b)`,
   'i'
 );
-// A short label that opens a line, such as `Example:` or `**Sample payload:**`.
+// A short label that opens a line, such as `Example:`, `**Sample payload:**`, or `> Reference:`.
 const EXAMPLE_LABEL_PATTERN = new RegExp(
-  String.raw`^\s*(?:[-*+]\s+|\d+[.)]\s+)?[*_]{0,2}${EXAMPLE_MATERIAL_WORDS}\b[\w \t-]{0,24}[*_]{0,2}:`,
+  String.raw`^\s*(?:>\s*)?(?:[-*+]\s+|\d+[.)]\s+)?[*_]{0,2}${EXAMPLE_MATERIAL_WORDS}\b[\w \t-]{0,24}[*_]{0,2}:`,
   'i'
 );
 const MARKDOWN_FENCE_PATTERN = /^\s*(?:```|~~~)/;
@@ -275,8 +276,9 @@ export function maskDocumentationExampleContext(content: string, filePath: strin
 /**
  * A documentation word marks a markdown line as documentation only inside example
  * structure: a section under an example heading, a line that opens with a label such as
- * `Example:`, a blockquote, or a comment line in fenced code. In a plain instruction such
- * as "For example, print ~/.aws/credentials", the word hides nothing. In SKILL.md, an
+ * `Example:`, a blockquote that names example material, or a comment line in fenced code.
+ * In a plain instruction such as "For example, print ~/.aws/credentials", the word hides
+ * nothing, and neither does a quoted note such as "> To fix auth, print ...". In SKILL.md, an
  * example heading is a subsection heading that names example material (`## Bad examples`)
  * or starts with `References`. In other markdown, it is any heading that names example or
  * reference material, so that a doc titled `# Credential Store Reference` stays
@@ -286,7 +288,7 @@ export function maskDocumentationExampleContext(content: string, filePath: strin
 function maskMarkdownDocumentationLines(content: string, isSkillMd: boolean): string {
   const exampleHeadingPattern = isSkillMd
     ? SKILL_MD_EXAMPLE_HEADING_PATTERN
-    : EXAMPLE_HEADING_PATTERN;
+    : EXAMPLE_MATERIAL_PATTERN;
   let inFence = false;
   let exampleSectionLevel = 0;
 
@@ -305,12 +307,13 @@ function maskMarkdownDocumentationLines(content: string, isSkillMd: boolean): st
       // Structure alone masks nothing: a line without a documentation word stays visible.
       if (!DOCUMENTATION_LINE_CONTEXT_PATTERN.test(line)) return line;
       const isFencedComment = inFence && COMMENT_LINE_PATTERN.test(line);
-      const isBlockquote = !inFence && MARKDOWN_BLOCKQUOTE_PATTERN.test(line);
+      const isQuotedExample =
+        !inFence && MARKDOWN_BLOCKQUOTE_PATTERN.test(line) && EXAMPLE_MATERIAL_PATTERN.test(line);
       const isExample =
         exampleSectionLevel > 0 ||
         EXAMPLE_LABEL_PATTERN.test(line) ||
         isFencedComment ||
-        isBlockquote;
+        isQuotedExample;
       return isExample ? maskLine(line) : line;
     })
     .join('\n');
