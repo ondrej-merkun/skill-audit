@@ -107,7 +107,7 @@ showing what the content looks like with the invisibles stripped.
 ### SKILL-CURL-BASH-IN-MD (Critical)
 In fenced code blocks within `.md` files:
 ```regex
-(curl|wget|fetch)\s+(-[A-Za-z]+\s+)*(https?://\S+)\s*(\||\&\&\s*(bash|sh|zsh|python|node))
+\b(curl|wget|fetch)\s[-A-Za-z \t]{0,80}(https?://\S+)\s*(\||&&)\s*(sudo\s+)?(bash|sh|zsh|python3?|node)\b
 source\s*<\(\s*(curl|wget)\s+\S+\s*\)
 eval\s*["'`]?\$\(\s*(curl|wget)
 ```
