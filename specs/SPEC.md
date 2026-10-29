@@ -166,10 +166,11 @@ agent. For Codex, do not scan `~/.codex/plugins/cache` wholesale; resolve
 enabled plugins from `~/.codex/config.toml` or documented built-in runtime
 metadata, then walk only those active payload roots.
 
-**Shared Agent Skills rule.** `~/.agents/skills/*/SKILL.md` (user) and
-`.agents/skills/*/SKILL.md` (project) are read by Codex, Cursor, GitHub
-Copilot, Gemini CLI, Windsurf, and Cline (verified against official docs in
-October 2026). Each installed agent among them reports these skills, and the
+**Shared Agent Skills rule.** `~/.agents/skills/` (user) and `.agents/skills/`
+(project) are read by Codex, Cursor, GitHub Copilot, Gemini CLI, Windsurf, and
+Cline (verified against official docs in October 2026). Discovery reports every
+directory under these roots that holds a `SKILL.md`, at any depth and including
+the root itself. Each installed agent among them reports these skills, and the
 registry dedupe collapses them into one skill that keeps every owning agent.
 
 **MVP discovery shortlist** (covers ~85% of user value):

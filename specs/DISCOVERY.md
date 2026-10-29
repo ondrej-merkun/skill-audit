@@ -149,9 +149,15 @@ Report each as a `Skill` with `agentId: "cross-agent"` and
 OpenAI Codex, Cursor, GitHub Copilot, Gemini CLI, Windsurf, and Cline read the
 cross-agent `.agents/skills` directory. Claude Code does not.
 
-**User-global:** `~/.agents/skills/*/SKILL.md`
+**User-global:** `~/.agents/skills/**/SKILL.md`
 
-**Project-local:** `.agents/skills/*/SKILL.md` in the current directory
+**Project-local:** `.agents/skills/**/SKILL.md` in the current directory
+
+Every directory that holds a `SKILL.md` is one skill, at any depth and with
+the skills root itself included. Codex and Cursor load skills nested under
+grouping directories, and Gemini CLI loads a root `SKILL.md`. The walk has no
+depth limit and does not skip hidden directories, because the rule engine
+scans each `SKILL.md` directory as its own root.
 
 One shared walker emits these skills once for each of those agents that is
 installed. `discoverAll()` then collapses the identical rows into one skill
