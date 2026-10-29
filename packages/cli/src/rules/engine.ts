@@ -191,6 +191,9 @@ const SUPPORTING_MARKDOWN_DIRS = new Set([
   'tests',
 ]);
 
+// A file name that no docs masking matches, unlike README.md or setup-example.md.
+const REFERENCED_DOC_PREPARE_STEM = 'referenced-doc';
+
 function normalizeRelativePath(path: string): string {
   return path.split(sep).join('/');
 }
@@ -353,12 +356,15 @@ function hasOperativeAliasPath(filePath: string, index: ReachabilityIndex): bool
  * The path that rules prepare a file under. A docs-like path masks every line of
  * the file, so a file that a dir alias also reaches through a path that does not
  * look like docs is prepared under that path. Otherwise `docs -> scripts` would
- * hide a script that the agent runs. A docs file that SKILL.md references, by
- * path or as part of all its docs, is operative too, so it is prepared like a
- * file of the same name at the skill root.
+ * hide a script that the agent runs. A markdown doc that SKILL.md references, by
+ * path or as part of all its docs, is operative too, so it is prepared under a
+ * neutral name at the skill root, whatever its own name (`references/README.md`).
+ * ponytail: a script in a docs dir stays masked even when SKILL.md names it, because
+ * security-education skills point at sample code (`see examples/loader.js`).
  */
 function preparePathFor(
   filePath: string,
+  scanName: string,
   dirAliases: DirAlias[],
   index: ReachabilityIndex | undefined
 ): string {
@@ -368,11 +374,15 @@ function preparePathFor(
   const operativePath = aliasPaths.find((aliasPath) => !pathLooksDocumentationOnly(aliasPath));
   if (operativePath !== undefined) return operativePath;
 
+  // The same signals make a markdown doc operative in classifySupportingFileRole.
+  if (index === undefined || !isMarkdownPromptFile(scanName)) return filePath;
+
   const isReferenced =
-    index !== undefined &&
-    (index.allSupportingMarkdownReachable ||
-      [filePath, ...aliasPaths].some((path) => isReachableFromSkillMd(path, index)));
-  return isReferenced ? join(index.root, basename(filePath)) : filePath;
+    index.allSupportingMarkdownReachable ||
+    [filePath, ...aliasPaths].some((path) => isReachableFromSkillMd(path, index));
+  return isReferenced
+    ? join(index.root, `${REFERENCED_DOC_PREPARE_STEM}${extname(scanName)}`)
+    : filePath;
 }
 
 /**
@@ -498,7 +508,10 @@ export async function runRules(
     : undefined;
 
   for (const filePath of files) {
-    const scanPath = preparePathFor(filePath, dirAliases, reachability);
+    // The file's own name: a shebang scan name applies only to a file without an extension,
+    // never to the markdown docs that preparePathFor unmasks.
+    const fileName = options.filenameOverride ?? basename(filePath);
+    const scanPath = preparePathFor(filePath, fileName, dirAliases, reachability);
     const { name, passes } = scanNameAndPasses(filePath, scanPath, rules, options);
     if (passes.length === 0) continue;
 
