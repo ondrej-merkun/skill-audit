@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { isRegularFile } from '../fs-walk.js';
 
 const TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -32,9 +33,11 @@ export type CacheGetResult<T> = {
  * if no entry exists at all.
  */
 export async function cacheGet<T>(source: string, key: string): Promise<CacheGetResult<T> | null> {
-  const filename = cacheKey(key);
+  const path = join(cacheDir(source), cacheKey(key));
+  if (!(await isRegularFile(path))) return null;
+
   try {
-    const raw = await readFile(join(cacheDir(source), filename), 'utf8');
+    const raw = await readFile(path, 'utf8');
     const entry: CacheEntry<T> = JSON.parse(raw) as CacheEntry<T>;
     const stale = Date.now() - entry.cachedAt > TTL_MS;
     return {

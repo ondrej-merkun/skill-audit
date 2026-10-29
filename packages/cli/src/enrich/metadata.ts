@@ -1,6 +1,6 @@
 import { readFile, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { enterDirOnce, readDirFollowingLinks } from '../fs-walk.js';
+import { enterDirOnce, isRegularFile, readDirFollowingLinks } from '../fs-walk.js';
 import type { Skill } from '../types.js';
 
 const MAX_MANIFEST_FILES = 40;
@@ -132,6 +132,8 @@ export async function resolveGitHubSlug(skill: Skill): Promise<string | null> {
   if (packageJsonPaths.length > 0) return null;
 
   const skillMdPath = skill.manifestPath ?? join(root, 'SKILL.md');
+  if (!(await isRegularFile(skillMdPath))) return null;
+
   try {
     const text = await readFile(skillMdPath, 'utf8');
     for (const match of text.matchAll(/github\.com[/:][^\s)>"']+/gi)) {
