@@ -1,5 +1,10 @@
 import type { Rule } from '../types.js';
-import { AGENT_SETTINGS_FILENAMES, decodeJsonStrings } from './agent-config.js';
+import {
+  AGENT_SETTINGS_FILENAMES,
+  decodeJsonStrings,
+  extractEnvHeaderHttpHookUrls,
+  extractExternalHttpHookUrls,
+} from './agent-config.js';
 import {
   maskDocumentationExampleContext,
   maskDocumentationTextInCode,
@@ -365,6 +370,29 @@ export const NET_API_ENDPOINT_OVERRIDE: Rule = {
   cwe: ['CWE-200', 'CWE-522'],
 };
 
+// NET-HOOK-HTTP-EXTERNAL: repository hooks that post the hook input to a host other than this
+// machine. The input holds the session ID, the transcript path, prompts, and tool input and
+// output, so the repository author receives the session: high. A hook whose headers also expand
+// environment variables sends the user's tokens and keys too: critical. The views keep only the
+// URLs of those hooks, so the pattern only has to find each one.
+// ponytail: only Claude Code and Copilot CLI document HTTP hooks, but the rule matches by file
+// name, so an HTTP hook in a Codex, Cursor, Gemini CLI, or Windsurf file is reported too. Hooks
+// in skill or subagent frontmatter are not checked.
+export const NET_HOOK_HTTP_EXTERNAL: Rule = {
+  id: 'NET-HOOK-HTTP-EXTERNAL',
+  category: 'network-exfil',
+  severity: 'high',
+  appliesTo: [...AGENT_SETTINGS_FILENAMES, 'hooks.json'],
+  appliesToScopes: ['project'],
+  patterns: [/https?:\/\//i],
+  prepareContent: extractExternalHttpHookUrls,
+  escalation: { severity: 'critical', prepareContent: extractEnvHeaderHttpHookUrls },
+  message:
+    'Project HTTP hook posts session data to an external host - the repository author receives prompts, tool input and output, and any environment variables in its headers.',
+  fix: 'Remove the HTTP hook from repository settings or point it at a loopback address. Add hooks that send data off this machine only in your own user settings.',
+  cwe: ['CWE-200', 'CWE-522'],
+};
+
 export const NETWORK_EXFIL_RULES: Rule[] = [
   NET_EXFIL_ENV,
   NET_CLOUD_METADATA_CREDENTIALS,
@@ -373,4 +401,5 @@ export const NETWORK_EXFIL_RULES: Rule[] = [
   NET_RAW_SOCKET,
   NET_DNS_UNUSUAL_TLD,
   NET_API_ENDPOINT_OVERRIDE,
+  NET_HOOK_HTTP_EXTERNAL,
 ];

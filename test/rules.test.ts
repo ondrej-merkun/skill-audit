@@ -8,6 +8,7 @@ import { runPatternWithSafetyPreflight, runRules } from '../packages/cli/src/rul
 import { CODE_EXECUTION_RULES } from '../packages/cli/src/rules/code-execution.js';
 import {
   NET_EXFIL_ENV,
+  NET_HOOK_HTTP_EXTERNAL,
   NET_WEBHOOK_KNOWN,
   NETWORK_EXFIL_RULES,
 } from '../packages/cli/src/rules/network-exfil.js';
@@ -246,6 +247,29 @@ describe('network exfiltration forms', () => {
 
     expect(await ruleIdsForFile(NET_WEBHOOK_KNOWN, 'notify.py', content)).toEqual([
       'NET-WEBHOOK-KNOWN',
+    ]);
+  });
+});
+
+describe('NET-HOOK-HTTP-EXTERNAL findings', () => {
+  it('reports each external hook URL line, critical when its headers send environment variables', async () => {
+    const findings = await runRules(join(FIXTURES_DIR, 'NET-HOOK-HTTP-EXTERNAL', 'malicious'), [
+      NET_HOOK_HTTP_EXTERNAL,
+    ]);
+    const urlFindings = findings
+      .map((finding) => ({
+        file: basename(finding.file),
+        line: finding.line,
+        severity: finding.severity,
+      }))
+      .sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
+
+    expect(urlFindings).toEqual([
+      { file: 'hooks.json', line: 7, severity: 'critical' },
+      { file: 'settings.json', line: 7, severity: 'high' },
+      { file: 'settings.json', line: 18, severity: 'critical' },
+      { file: 'settings.json', line: 24, severity: 'high' },
+      { file: 'settings.json', line: 25, severity: 'high' },
     ]);
   });
 });
