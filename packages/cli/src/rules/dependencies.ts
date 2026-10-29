@@ -286,10 +286,17 @@ const shellCRemoteDownloadSubstitutionPattern = new RegExp(
   ].join(''),
   'i'
 );
+// Pretty-printed JSON, such as the per-server scan content, and multi-line TOML arrays put "-c"
+// and the command that it runs on separate lines. The separator ends at the quote of the next
+// element, so its whitespace never overlaps the quantifier that follows (LESSONS L4.7).
+const arrayElementSeparator = '\\s{0,80},\\s{0,80}["\']';
 const shellArgRemoteDownloadSubstitutionPattern = new RegExp(
-  [mcpStartupFieldPrefix, '["\']-c["\'][^\\n]{0,120}\\$\\(\\s*(?:curl|wget)\\b[^)]*https?://'].join(
-    ''
-  ),
+  [
+    mcpStartupFieldPrefix,
+    '["\']-c["\']',
+    `(?:${arrayElementSeparator})?`,
+    '[^\\n]{0,120}\\$\\(\\s*(?:curl|wget)\\b[^)]*https?://',
+  ].join(''),
   'i'
 );
 
