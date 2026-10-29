@@ -4,7 +4,7 @@ Thanks for helping improve `skill-audit`.
 
 ## Development
 
-Use Node.js 20 or newer and pnpm.
+Use Node.js 22 or newer and pnpm.
 
 ```bash
 pnpm install

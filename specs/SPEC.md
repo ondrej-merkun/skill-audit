@@ -14,7 +14,7 @@ CLI or binary name.
 
 ## 2. Architecture and tech stack
 
-### Language: **TypeScript on Node.js 20+**
+### Language: **TypeScript on Node.js 22+**
 Justification, in order of weight:
 1. **`npx @ondrej-merkun/skill-audit` is the primary distribution channel.** It uses the existing Node runtime on typical agent-development machines.
 2. Excellent TUI ecosystem (`ink`, `chalk`, `cli-table3`, `listr2`, `ora`) in a single runtime.

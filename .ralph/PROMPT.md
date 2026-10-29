@@ -54,7 +54,7 @@ Do not leave two files with the same purpose.
 
 Rules for implementation:
 - Follow conventions in `AGENT.md` (file layout, testing, commit style).
-- Use the specified tech stack: TypeScript on Node 20+, pnpm, tsup,
+- Use the specified tech stack: TypeScript on Node 22+, pnpm, tsup,
   commander, chalk v5, cli-table3, ora, vitest, biome.
 - Write tests for every new rule, every new discovery plugin, and every
   new command. Put them in `test/fixtures/` with clear benign vs
