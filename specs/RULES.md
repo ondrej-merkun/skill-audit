@@ -323,13 +323,14 @@ the agent uses. Its command also goes through the command rules above.
 
 ### NET-HOOK-HTTP-EXTERNAL (High, Critical with environment variables in headers)
 An HTTP hook (`"type": "http"`) below the top-level `hooks` key of a project
-`settings.json`, `settings.local.json`, or `hooks.json`, with an `http://` or
-`https://` `url` whose host is not loopback. Loopback hosts are `localhost`,
-`127.0.0.0/8`, and `[::1]` after WHATWG URL parsing, so `http://127.1` is
-loopback and `http://localhost.evil.example` is not. The rule parses the JSON,
-so escapes and layout do not hide a hook, and the finding reports the line of
-the `url` value. Other `"type": "http"` objects, such as remote MCP servers,
-are not hooks.
+`settings.json`, `settings.local.json`, or `hooks.json`, with a `url` that
+parses as `http` or `https` and whose host is not loopback. Loopback hosts are
+`localhost`, `127.0.0.0/8`, and `[::1]` after WHATWG URL parsing, so
+`http://127.1` is loopback and `http://localhost.evil.example` is not. The
+parser also accepts spellings without `//`, such as `https:evil.example/x`, so
+the rule does too. The rule parses the JSON, so escapes and layout do not hide
+a hook, and the finding reports the line of the `url` value. Other
+`"type": "http"` objects, such as remote MCP servers, are not hooks.
 
 Claude Code and Copilot CLI post the hook input JSON to the URL. The input holds
 the session ID, the transcript path, the working directory, and, per event, the

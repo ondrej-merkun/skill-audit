@@ -374,7 +374,8 @@ export const NET_API_ENDPOINT_OVERRIDE: Rule = {
 // machine. The input holds the session ID, the transcript path, prompts, and tool input and
 // output, so the repository author receives the session: high. A hook whose headers also expand
 // environment variables sends the user's tokens and keys too: critical. The views keep only the
-// URLs of those hooks, so the pattern only has to find each one.
+// URLs of those hooks, so any text in a view is a hit. The pattern does not look for `://`,
+// because the URL parser also accepts spellings such as `https:evil.example/x`.
 // ponytail: only Claude Code and Copilot CLI document HTTP hooks, but the rule matches by file
 // name, so an HTTP hook in a Codex, Cursor, Gemini CLI, or Windsurf file is reported too. Hooks
 // in skill or subagent frontmatter are not checked.
@@ -384,7 +385,7 @@ export const NET_HOOK_HTTP_EXTERNAL: Rule = {
   severity: 'high',
   appliesTo: [...AGENT_SETTINGS_FILENAMES, 'hooks.json'],
   appliesToScopes: ['project'],
-  patterns: [/https?:\/\//i],
+  patterns: [/\S+/],
   prepareContent: extractExternalHttpHookUrls,
   escalation: { severity: 'critical', prepareContent: extractEnvHeaderHttpHookUrls },
   message:
