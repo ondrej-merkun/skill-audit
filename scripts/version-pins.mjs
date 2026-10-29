@@ -12,9 +12,10 @@ export const CLI_PACKAGE_JSON = 'packages/cli/package.json';
 const ACTION_VERSION_DEFAULT = /^ {2}version:\n(?: {4}.*\n)*? {4}default: *'([^']*)'/gm;
 
 // Matches every `@ondrej-merkun/skill-audit` reference. Group 1 is the version
-// after the package name. A reference with no version yields an empty string,
-// so an unpinned command also fails the check.
-const CLI_PACKAGE_REFERENCE = /@ondrej-merkun\/skill-audit(?:@([\w.+-]+))?/g;
+// after the package name. It never ends with a dot, so a pin at the end of a
+// sentence keeps its period. A reference with no version yields an empty
+// string, so an unpinned command also fails the check.
+const CLI_PACKAGE_REFERENCE = /@ondrej-merkun\/skill-audit(?:@([\w.+-]*[\w+-]))?/g;
 
 /**
  * Add one row per file that pins the CLI version. Each pattern is global, and
