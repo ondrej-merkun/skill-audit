@@ -17,17 +17,18 @@ const githubPatPattern = /\bgh[pousr]_[A-Za-z0-9]{36}\b/;
 const awsKeyPattern = new RegExp(['AKIA', '[A-Z0-9]{16}'].join(''));
 
 // Generic high-entropy secret assignment pattern:
-// api_key = "...", TOKEN: '...', password = "...", etc.
+// api_key = "...", TOKEN: '...', password = "...", etc. Group 1 is the assigned value.
 const genericSecretPattern =
-  /(?:api[_-]?key|secret|password|passwd|token|credential|auth[_-]?token)\s*[=:]\s*['"][A-Za-z0-9+/=_.~-]{32,}['"]/i;
+  /(?:api[_-]?key|secret|password|passwd|token|credential|auth[_-]?token)\s*[=:]\s*['"]([A-Za-z0-9+/=_.~-]{32,})['"]/i;
+const genericSecretAssignments = new RegExp(genericSecretPattern.source, 'gi');
 
-const secretLikePatterns = [
+const providerKeyPatterns = [
   openAiKeyPattern,
   anthropicKeyPattern,
   githubPatPattern,
   awsKeyPattern,
-  genericSecretPattern,
 ];
+const secretLikePatterns = [...providerKeyPatterns, genericSecretPattern];
 
 const placeholderSecretPatterns = [
   /\bAKIAIOSFODNN7EXAMPLE\b/,
@@ -42,6 +43,12 @@ const exampleContextPattern =
 const exampleHeadingPattern =
   /^\s*(?:#{1,6}\s+|\/\/\s*|#\s*|\/\*\s*|\*\s*)?(?:bad|wrong|never do this|example|fixture|test data|dummy|placeholder|sample|fake)\b/i;
 
+// One alphanumeric segment of a generic value that marks the value as made up: test
+// vocabulary, x filler, or counting digits ('synthetic-secret-for-testing',
+// 'browser-token-0123456789'). A random key almost never has such a whole segment.
+const syntheticValueSegmentPattern =
+  /^(?:tests?|testing|e2e|synthetic|example|dummy|fake|placeholder|changeme|x{3,}|0?1234567890?)$/i;
+
 function maskLine(line: string): string {
   return ' '.repeat(line.length);
 }
@@ -52,6 +59,22 @@ function hasSecretLikeValue(line: string): boolean {
 
 function hasPlaceholderSecret(line: string): boolean {
   return placeholderSecretPatterns.some((pattern) => pattern.test(line));
+}
+
+/**
+ * True when every generic assignment on the line holds a made-up value. A line that also
+ * holds a provider-format key stays: only the placeholder list above clears a key with a
+ * live shape, so a real key in a test file still fires.
+ */
+function hasOnlySyntheticGenericValues(line: string): boolean {
+  if (providerKeyPatterns.some((pattern) => pattern.test(line))) return false;
+
+  const values = Array.from(line.matchAll(genericSecretAssignments), (match) => match[1] ?? '');
+  return values.length > 0 && values.every(isSyntheticValue);
+}
+
+function isSyntheticValue(value: string): boolean {
+  return value.split(/[^A-Za-z0-9]+/).some((segment) => syntheticValueSegmentPattern.test(segment));
 }
 
 function hasNearbyExampleHeading(lines: string[], index: number): boolean {
@@ -73,6 +96,7 @@ function prepareSecretContent(content: string): string {
       if (hasPlaceholderSecret(line)) return maskLine(line);
       if (exampleContextPattern.test(line)) return maskLine(line);
       if (hasNearbyExampleHeading(lines, index)) return maskLine(line);
+      if (hasOnlySyntheticGenericValues(line)) return maskLine(line);
       return line;
     })
     .join('\n');

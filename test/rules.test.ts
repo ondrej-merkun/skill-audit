@@ -32,7 +32,7 @@ import {
   SKILL_MEMORY_WRITE,
   SKILL_SPECIFIC_RULES,
 } from '../packages/cli/src/rules/skill-specific.js';
-import { SECRETS_RULES } from '../packages/cli/src/rules/secrets.js';
+import { SEC_HARDCODED_KEY, SECRETS_RULES } from '../packages/cli/src/rules/secrets.js';
 import { FS_DESTRUCTIVE_HOME_DELETE } from '../packages/cli/src/rules/destructive.js';
 import type { Rule } from '../packages/cli/src/types.js';
 
@@ -163,6 +163,22 @@ describe('remote code execution attack lines', () => {
     const firedLines = findings.map((finding) => finding.snippet).sort();
 
     expect(firedLines).toEqual([...attackLines].sort());
+  });
+});
+
+describe('SEC-HARDCODED-KEY in test files', () => {
+  // A synthetic value on the line must not hide a provider key that has a live shape.
+  it('reports a live-shape provider key next to a synthetic value as critical', async () => {
+    const testsDir = join(FIXTURES_DIR, SEC_HARDCODED_KEY.id, 'malicious', 'tests');
+    const findings = await runRules(testsDir, [SEC_HARDCODED_KEY]);
+
+    expect(findings.map(({ snippet, severity }) => ({ snippet, severity }))).toEqual([
+      {
+        snippet:
+          'client = Client(token="synthetic-token-that-is-long-enough-for-testing", key_id="AKIAZ7Q3M9X2V5T8R4W6")',
+        severity: 'critical',
+      },
+    ]);
   });
 });
 

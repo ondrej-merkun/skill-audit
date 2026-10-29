@@ -652,6 +652,15 @@ without a commit message explaining why it no longer applies.
   probe the loosest prose that each rule matches, not only admin and teaching
   text.
 
+- **L7.12 — Judge a secret by its value, not by its file path.** _The autoreview
+  skill got REVIEW 75 from made-up values in its `tests/*.py` files, such as
+  `very-long-browser-token-0123456789`. A test-path rule would also hide a real
+  key that someone commits in a test file. `prepareContent` gets the absolute
+  path, so a `test/` or `fixtures/` dir above the skill root also matches._
+  Recognize made-up values by whole value segments (test words, x filler,
+  counting digits). Never let them clear a line that also holds a
+  provider-format key.
+
 ---
 
 ## How to add a new lesson
