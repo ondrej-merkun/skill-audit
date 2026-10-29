@@ -611,6 +611,12 @@ without a commit message explaining why it no longer applies.
   line is a comment with an LF, so the comment cannot hide the next value on the
   same JSON line. Find line starts with `(?<=^|\n)`: a multiline `^` also
   matches after U+2028, which is not a shell line break.
+  Kept line breaks alone lost matches that span what the shell joins: a
+  pipeline after `|`, blank or comment lines in a pending pipeline, a quoted
+  multi-line body, a quoted `#`. Four review rounds each found a new form, and
+  each special case had a gap. Match both layouts instead: the shell's lines,
+  and one line per command with comment-only lines blanked. Keep one finding
+  per rule per line across the two passes.
 
 ---
 
