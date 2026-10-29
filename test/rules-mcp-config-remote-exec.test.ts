@@ -47,13 +47,15 @@ describe(RULE_ID, () => {
     expect(findings).toEqual([]);
   });
 
-  it('detects remote execution split across formatted args arrays', async () => {
+  it('detects remote execution split across formatted or commented args arrays', async () => {
     const rule = requireRule();
     const findings = await runRules(join(FIXTURE_DIR, 'malicious', 'formatted'), [rule]);
 
     expect(findings.map((finding) => basename(finding.file)).sort()).toEqual([
       '.mcp.json',
+      'config.toml',
       'mcp.json',
+      'settings.json',
     ]);
     expect(findings.every((finding) => finding.ruleId === RULE_ID)).toBe(true);
   });
