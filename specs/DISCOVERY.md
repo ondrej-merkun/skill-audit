@@ -187,6 +187,15 @@ the repo root and `/etc/codex/skills`, and Cursor nested project directories.
    individual plugin still emits. Callers may opt in to include these
    skills; included rows carry `installState: "marketplace"`. All other
    discovered skills default to `installState: "installed"`.
+5. Follow symlinks to directories and files in every discovery walker,
+   in `treeSha256`, and in the rule engine. `npx skills` and skillshare
+   install skills as links (for example `~/.claude/skills/<name>` into
+   `~/.agents/skills/<name>`), and agents load the link target. A
+   symlinked skill is discovered and scanned like a real one, under its
+   link path, and hashes like a real copy, so rule 2 collapses it with
+   its target. Each walk enters a real directory once, so a symlink
+   loop (`a -> ..`) ends. A second link to an already walked directory
+   in the same walk is skipped. Dangling links are skipped silently.
 
 ## Path expansion
 
@@ -199,8 +208,10 @@ the repo root and `/etc/codex/skills`, and Cursor nested project directories.
 
 - Skip any path that fails `fs.access(path, R_OK)`. Log a `warn`-level
   line to stderr but do not fail the whole scan.
-- Never follow symlinks that resolve outside the user's home dir
-  (mitigation for malicious skill placing a symlink to `/etc/shadow`).
+- Follow symlinks that resolve outside the user's home dir too. The agent
+  reads the link target, so a refused link would hide a payload (for
+  example `scripts -> /tmp/payload`) from the scan. The scan can only
+  read files that the current user can read.
 
 ## Tests
 
@@ -210,7 +221,8 @@ Each discovery plugin must have tests that:
 2. Have fixtures under `test/fixtures/discovery/<agent>/` that include:
    - A minimal correct skill tree that should be discovered.
    - A skill tree with a missing manifest (should be skipped).
-   - A skill tree with a symlink escape attempt (should be refused).
+   - A symlinked skill tree (should be discovered) and a symlink loop
+     (the walk should end).
    - Both user-scope and project-scope placements where applicable.
 3. Include registry-level tests for cross-plugin invariants:
    - Duplicate non-empty `treeSha256` values collapse into one skill.
