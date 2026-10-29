@@ -566,10 +566,15 @@ describe('gemini: fixture skill tree', () => {
     expect(byName.get('browser')?.format).toBe('mcp-json');
   });
 
-  it('discovers MCP servers in commented settings that hold a multi-megabyte value', async () => {
-    // V8 caps a regexp backtrack stack at about 8.4 million entries, so a pattern that pushes one
-    // entry per character fails on this value. Gemini CLI still loads the file.
-    const longValue = 'a'.repeat(10_000_000);
+  // V8 caps a regexp backtrack stack at about 8.4 million entries, so a pattern that pushes one
+  // entry per character, or one per escape sequence, fails on these values. Gemini CLI still
+  // loads the file.
+  it.each([
+    { content: 'plain characters', longValue: 'a'.repeat(10_000_000) },
+    { content: 'escaped quotes', longValue: '"'.repeat(4_000_000) },
+  ])('discovers MCP servers in commented settings with a multi-megabyte value of $content', async ({
+    longValue,
+  }) => {
     const settings = {
       ui: { theme: longValue },
       mcpServers: { padded: { command: 'npx', args: ['@modelcontextprotocol/server-browser'] } },
