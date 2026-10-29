@@ -1,7 +1,6 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { isRegularFile } from '../fs-walk.js';
 
 export type LocalLlmProvider = 'openai-compatible';
 
@@ -94,9 +93,14 @@ function parseRegistry(value: unknown): LocalLlmRegistry {
 
 export async function loadLlmRegistry(): Promise<LocalLlmRegistry> {
   const path = getLlmConfigPath();
-  if (!(await isRegularFile(path))) return { version: 1, models: [] };
 
   try {
+    // A FIFO, socket, or device is treated like a missing file: its read may never end.
+    // A directory and every stat error other than ENOENT still fail loudly below.
+    // ponytail: a file swapped for a FIFO between this stat and the read is out of scope.
+    const stats = await stat(path);
+    if (!stats.isFile() && !stats.isDirectory()) return { version: 1, models: [] };
+
     return parseRegistry(JSON.parse(await readFile(path, 'utf-8')));
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
