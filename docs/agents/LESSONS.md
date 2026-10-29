@@ -240,6 +240,20 @@ without a commit message explaining why it no longer applies.
   When collapsing identical skills across agents, preserve agent-to-path records
   through discovery, JSON, HTML, explain, docs, and tests.
 
+- **L2.7 — `Dirent.isDirectory()` and `isFile()` are false for symlinks.** _P0:
+  78 of 84 entries in a real `~/.claude/skills` were links into
+  `~/.agents/skills` (`npx skills`, skillshare). Every walker skipped them, so
+  none of these skills were discovered or scanned._
+  Walk directories with the `src/fs-walk.ts` helpers, which follow links and
+  stop at loops. Test each new walker with a symlinked skill dir.
+
+- **L2.8 — A followed link can point at a file the user cannot read.** _The
+  symlink fix first let one link to a mode-000 file make `computeTreeSha256`
+  throw, so the Claude Code plugin failed and the scan printed "No skills
+  found" with exit 0._
+  Code that reads files reached through links must skip an unreadable file,
+  not throw out of discovery.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**

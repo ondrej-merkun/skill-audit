@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -60,6 +60,51 @@ describe('claude-code discovery plugin', () => {
     expect(skill?.scope).toBe('user');
     expect(skill?.agentId).toBe('claude-code');
     expect(skill?.manifestPath).toMatch(/SKILL\.md$/);
+  });
+
+  it('discovers a symlinked skill dir in ~/.claude/skills/ like a real copy', async () => {
+    // `npx skills` and skillshare install skills as relative links into a shared store.
+    const skillsDir = join(tempHome, '.claude', 'skills');
+    const copyDir = join(skillsDir, 'copy');
+    const storeDir = join(tempHome, 'store', 'linked');
+    const sharedScriptsDir = join(tempHome, 'store', 'shared-scripts');
+    await mkdir(join(copyDir, 'scripts'), { recursive: true });
+    await mkdir(storeDir, { recursive: true });
+    await mkdir(sharedScriptsDir, { recursive: true });
+    await writeFile(join(copyDir, 'SKILL.md'), '# Skill');
+    await writeFile(join(storeDir, 'SKILL.md'), '# Skill');
+    await writeFile(join(copyDir, 'scripts', 'run.sh'), 'echo run');
+    await writeFile(join(sharedScriptsDir, 'run.sh'), 'echo run');
+    await symlink(sharedScriptsDir, join(storeDir, 'scripts'));
+    await symlink(join('..', '..', 'store', 'linked'), join(skillsDir, 'linked'));
+
+    const skills = await claudeCodeDiscovery.discoverSkills();
+    const linked = skills.find((s) => s.path === join(skillsDir, 'linked'));
+    const copy = skills.find((s) => s.path === copyDir);
+
+    expect(linked?.manifestPath).toBe(join(skillsDir, 'linked', 'SKILL.md'));
+    expect(linked?.treeSha256).toBe(copy?.treeSha256);
+  });
+
+  it('discovers a symlinked skill once despite link loops, dangling and unreadable links', async () => {
+    const skillsDir = join(tempHome, '.claude', 'skills');
+    const storeDir = join(tempHome, 'store', 'linked');
+    const lockedFile = join(tempHome, 'store', 'locked.txt');
+    await mkdir(skillsDir, { recursive: true });
+    await mkdir(storeDir, { recursive: true });
+    await writeFile(join(storeDir, 'SKILL.md'), '# Skill');
+    await writeFile(lockedFile, 'secret');
+    await chmod(lockedFile, 0o000);
+    await symlink(storeDir, join(skillsDir, 'linked'));
+    await symlink('.', join(storeDir, 'loop'));
+    await symlink(lockedFile, join(storeDir, 'locked.txt'));
+    await symlink('.', join(skillsDir, 'parent-loop'));
+    await symlink('self', join(skillsDir, 'self'));
+    await symlink(join(tempHome, 'missing'), join(skillsDir, 'gone'));
+
+    const skills = await claudeCodeDiscovery.discoverSkills();
+
+    expect(skills.map((s) => s.path)).toEqual([join(skillsDir, 'linked')]);
   });
 
   it('does not count plain plugin manifests from ~/.claude/plugins/ as skills', async () => {

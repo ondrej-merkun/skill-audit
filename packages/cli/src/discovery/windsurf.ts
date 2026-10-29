@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { lstat, readdir, stat } from 'node:fs/promises';
+import { stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, dirname, join } from 'node:path';
+import { enterDirOnce, readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
 import { discoverSharedAgentSkills } from './shared-agent-skills.js';
@@ -43,7 +44,7 @@ async function pathExists(p: string): Promise<boolean> {
 
 async function isDirectory(p: string): Promise<boolean> {
   try {
-    return (await lstat(p)).isDirectory();
+    return (await stat(p)).isDirectory();
   } catch {
     return false;
   }
@@ -51,7 +52,7 @@ async function isDirectory(p: string): Promise<boolean> {
 
 async function isRegularFile(p: string): Promise<boolean> {
   try {
-    return (await lstat(p)).isFile();
+    return (await stat(p)).isFile();
   } catch {
     return false;
   }
@@ -90,15 +91,8 @@ async function discoverRulesDir(
 ): Promise<Skill[]> {
   if (shouldSkipMarketplacePath(dir, options.includeMarketplaces)) return [];
 
-  let entries: Array<{ isFile(): boolean; name: string }>;
-  try {
-    entries = await readdir(dir, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-
-  const ruleFiles = entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+  const ruleFiles = (await readDirFollowingLinks(dir))
+    .filter((entry) => entry.kind === 'file' && entry.name.endsWith('.md'))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return Promise.all(
@@ -143,17 +137,13 @@ async function descendantWindsurfRulesDirs(
   options: DiscoverSkillsOptions = {}
 ): Promise<string[]> {
   const rulesDirs: string[] = [];
+  const visitedRealDirs = new Set<string>();
 
   async function walk(dir: string): Promise<void> {
-    let entries: Array<{ isDirectory(): boolean; name: string }>;
-    try {
-      entries = await readdir(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
+    if (!(await enterDirOnce(visitedRealDirs, dir))) return;
 
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
+    for (const entry of await readDirFollowingLinks(dir)) {
+      if (entry.kind !== 'dir') continue;
       if (SKIPPED_DESCENDANT_DIRS.has(entry.name)) continue;
 
       const fullPath = join(dir, entry.name);
@@ -206,15 +196,8 @@ async function nestedWorkspaceRuleProbeDirs(root: string, depth = 0): Promise<st
 
   const dirs = new Set<string>();
 
-  let rootEntries: Array<{ isDirectory(): boolean; name: string }>;
-  try {
-    rootEntries = await readdir(root, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-
-  for (const entry of rootEntries) {
-    if (!entry.isDirectory()) continue;
+  for (const entry of await readDirFollowingLinks(root)) {
+    if (entry.kind !== 'dir') continue;
     if (SKIPPED_DESCENDANT_DIRS.has(entry.name)) continue;
 
     const child = join(root, entry.name);

@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, join } from 'node:path';
+import { readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { discoverSharedAgentSkills } from './shared-agent-skills.js';
 import { computeTreeSha256 } from './tree-hash.js';
@@ -61,17 +62,9 @@ async function discoverMcpJson(mcpJsonPath: string, scope: Skill['scope']): Prom
 }
 
 async function discoverRulesDir(dir: string, scope: Skill['scope']): Promise<Skill[]> {
-  let entries: { isFile(): boolean; name: string }[];
-  try {
-    entries = (await readdir(dir, { withFileTypes: true })) as {
-      isFile(): boolean;
-      name: string;
-    }[];
-  } catch {
-    return [];
-  }
-
-  const mdcFiles = entries.filter((e) => e.isFile() && e.name.endsWith('.mdc'));
+  const mdcFiles = (await readDirFollowingLinks(dir)).filter(
+    (e) => e.kind === 'file' && e.name.endsWith('.mdc')
+  );
   return Promise.all(
     mdcFiles.map(async (e) => {
       const filePath = join(dir, e.name);

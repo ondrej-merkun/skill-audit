@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, join } from 'node:path';
+import { type DirEntry, readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { discoverSharedAgentSkills } from './shared-agent-skills.js';
 import { computeTreeSha256 } from './tree-hash.js';
@@ -102,16 +103,9 @@ function jetBrainsBaseDir(): string {
 }
 
 async function jetBrainsExtensionStorageDirs(): Promise<string[]> {
-  let entries: Array<{ isDirectory(): boolean; name: string }>;
   const base = jetBrainsBaseDir();
-  try {
-    entries = await readdir(base, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-
-  return entries
-    .filter((entry) => entry.isDirectory())
+  return (await readDirFollowingLinks(base))
+    .filter((entry) => entry.kind === 'dir')
     .map((entry) => join(base, entry.name, 'globalStorage', CLINE_EXTENSION_ID));
 }
 
@@ -150,21 +144,13 @@ async function discoverMcpSettings(settingsPath: string): Promise<Skill[]> {
     }));
 }
 
-async function readSortedDir(
-  dir: string
-): Promise<Array<{ isDirectory(): boolean; isFile(): boolean; name: string }>> {
-  try {
-    return (await readdir(dir, { withFileTypes: true })).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
-  } catch {
-    return [];
-  }
+async function readSortedDir(dir: string): Promise<DirEntry[]> {
+  return (await readDirFollowingLinks(dir)).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 async function discoverRuleFiles(dir: string, scope: Skill['scope']): Promise<Skill[]> {
   const entries = (await readSortedDir(dir)).filter(
-    (entry) => entry.isFile() && (entry.name.endsWith('.md') || entry.name.endsWith('.txt'))
+    (entry) => entry.kind === 'file' && (entry.name.endsWith('.md') || entry.name.endsWith('.txt'))
   );
 
   return Promise.all(
@@ -206,7 +192,7 @@ async function discoverLegacyRulesFile(filePath: string): Promise<Skill[]> {
 }
 
 async function discoverSkillsDir(dir: string, scope: Skill['scope']): Promise<Skill[]> {
-  const entries = (await readSortedDir(dir)).filter((entry) => entry.isDirectory());
+  const entries = (await readSortedDir(dir)).filter((entry) => entry.kind === 'dir');
   const skills: Skill[] = [];
 
   for (const entry of entries) {
@@ -230,7 +216,7 @@ async function discoverSkillsDir(dir: string, scope: Skill['scope']): Promise<Sk
 
 async function discoverWorkflowFiles(dir: string, scope: Skill['scope']): Promise<Skill[]> {
   const entries = (await readSortedDir(dir)).filter(
-    (entry) => entry.isFile() && entry.name.endsWith('.md')
+    (entry) => entry.kind === 'file' && entry.name.endsWith('.md')
   );
 
   return Promise.all(
