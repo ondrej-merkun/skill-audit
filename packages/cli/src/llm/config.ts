@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { isRegularFile } from '../fs-walk.js';
 
 export type LocalLlmProvider = 'openai-compatible';
 
@@ -92,8 +93,11 @@ function parseRegistry(value: unknown): LocalLlmRegistry {
 }
 
 export async function loadLlmRegistry(): Promise<LocalLlmRegistry> {
+  const path = getLlmConfigPath();
+  if (!(await isRegularFile(path))) return { version: 1, models: [] };
+
   try {
-    return parseRegistry(JSON.parse(await readFile(getLlmConfigPath(), 'utf-8')));
+    return parseRegistry(JSON.parse(await readFile(path, 'utf-8')));
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
       return { version: 1, models: [] };

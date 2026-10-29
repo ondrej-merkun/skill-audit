@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -93,6 +94,18 @@ describe('local LLM config', () => {
 
     await expect(loadLlmRegistry()).rejects.toThrow('Could not parse local LLM config');
   });
+
+  // A read of a FIFO with no writer never returns. Windows has no mkfifo command.
+  it.skipIf(process.platform === 'win32')(
+    'treats a FIFO at the config path like a missing file',
+    async () => {
+      await mkdir(join(tempConfigDir, 'skill-audit'), { recursive: true });
+      execFileSync('mkfifo', [getLlmConfigPath()]);
+
+      await expect(loadLlmRegistry()).resolves.toEqual({ version: 1, models: [] });
+    },
+    2_000
+  );
 
   it('rejects credential-bearing URLs without echoing the secret', async () => {
     await expect(
