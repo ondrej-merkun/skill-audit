@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Finding, Skill } from '../types.js';
 
@@ -9,7 +9,8 @@ const SECURITY_EDUCATION_SKILL_PATTERN =
 
 function readIfExists(path: string): string {
   try {
-    if (!existsSync(path)) return '';
+    // A FIFO or device is skipped like a missing file: its read may never end.
+    if (!statSync(path).isFile()) return '';
     return readFileSync(path, 'utf-8').slice(0, 8_000);
   } catch {
     return '';
