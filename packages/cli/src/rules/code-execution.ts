@@ -8,6 +8,11 @@ const subprocessWithShellPattern =
   /\bsubprocess\.(?:call|run|Popen|check_output|check_call)\s*\([\s\S]{0,500}?\bshell\s*=\s*True\b/;
 const subprocessStringCommandPattern =
   /\bsubprocess\.(?:call|run|Popen|check_output|check_call)\s*\(\s*(?:[rbufRBUF]*['"]|[rbufRBUF]*f['"])/;
+// An odd number of backslashes makes a backtick literal text, not a command substitution. So the
+// opening backtick must follow an even number of backslashes. The body reads each escaped
+// character as a pair, so the closing backtick is unescaped too, and a nested escaped backtick
+// stays in the body.
+const shellBacktickSubstitutionPattern = /(?<!\\)(?:\\\\)*`(?:[^`\\\n]|\\.){5,}`/;
 
 export const CODEEXEC_PY_EVAL: Rule = {
   id: 'CODEEXEC-PY-EVAL',
@@ -84,7 +89,7 @@ export const CODEEXEC_SHELL_BACKTICK: Rule = {
   category: 'code-execution',
   severity: 'high',
   appliesTo: ['*.sh', '*.bash'],
-  patterns: [/`[^`\n]{5,}`/],
+  patterns: [shellBacktickSubstitutionPattern],
   prepareContent: maskDocumentationTextInCode,
   message: 'Shell backtick command substitution — executes arbitrary commands.',
   fix: 'Replace backtick substitution with $(...) and validate all inputs.',

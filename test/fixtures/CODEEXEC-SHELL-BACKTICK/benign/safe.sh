@@ -5,3 +5,7 @@ echo "$RESULT"
 
 # Documentation comments often mention `git status` or `npm run build`.
 printf '%s\n' 'Literal markdown command `pnpm test` is inert in single quotes.'
+
+# A backslash before a backtick prints the backtick, in or out of double quotes.
+echo "OK: added \`Host $HOSTNAME\` to the SSH config of the dev host."
+echo Run \`ssh $HOSTNAME\` from the dev host.
