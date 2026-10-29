@@ -1,10 +1,10 @@
 import type { ProgressReporter } from '../progress.js';
 import type { LlmReviewResult, ScannedSkill } from '../types.js';
-import { loadLlmRegistry } from './config.js';
 import type { LocalLlmConfig } from './config.js';
-import { LLM_REVIEW_PROMPT_VERSION, buildLlmReviewPayload } from './prompt.js';
-import { reviewWithOpenAiCompatibleModel } from './review.js';
+import { loadLlmRegistry } from './config.js';
+import { buildLlmReviewPayload, LLM_REVIEW_PROMPT_VERSION } from './prompt.js';
 import type { LlmReviewFetch } from './review.js';
+import { reviewWithOpenAiCompatibleModel } from './review.js';
 
 export { LLM_REVIEW_PROMPT_VERSION };
 

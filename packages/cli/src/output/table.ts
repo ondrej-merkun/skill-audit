@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
-import type { ScanResult, ScannedSkill } from '../types.js';
+import type { ScannedSkill, ScanResult } from '../types.js';
 import { skillAgentLabel } from './agents.js';
 import { installStateLabel } from './install-state.js';
 import { formatLlmReviewInline } from './llm.js';

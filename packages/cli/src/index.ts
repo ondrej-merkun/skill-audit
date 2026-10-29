@@ -1,14 +1,14 @@
 import { Command, Option } from 'commander';
 import { formatSupportedAgentIds } from './agent-names.js';
-import { runExplain } from './commands/explain.js';
 import type { ExplainOptions } from './commands/explain.js';
+import { runExplain } from './commands/explain.js';
 import { runIgnore } from './commands/ignore.js';
-import { runList } from './commands/list.js';
 import type { ListOptions } from './commands/list.js';
-import { runLlmAdd, runLlmCheck, runLlmList } from './commands/llm.js';
+import { runList } from './commands/list.js';
 import type { LlmAddOptions, LlmCheckOptions, LlmListOptions } from './commands/llm.js';
-import { runScan } from './commands/scan.js';
+import { runLlmAdd, runLlmCheck, runLlmList } from './commands/llm.js';
 import type { ScanOptions } from './commands/scan.js';
+import { runScan } from './commands/scan.js';
 import { VERSION } from './version.js';
 
 const program = new Command();

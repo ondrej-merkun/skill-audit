@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, dirname, join, relative } from 'node:path';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';

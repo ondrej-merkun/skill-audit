@@ -5,8 +5,8 @@ import { formatEnrichmentOutcome } from '../progress.js';
 import type {
   AgentInfo,
   EnrichmentSourceOutcome,
-  ScanResult,
   ScannedSkill,
+  ScanResult,
   Severity,
 } from '../types.js';
 import { installStateLabel } from './install-state.js';

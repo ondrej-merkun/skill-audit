@@ -1,5 +1,5 @@
 import type { Dirent } from 'node:fs';
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { Skill } from '../types.js';
 
