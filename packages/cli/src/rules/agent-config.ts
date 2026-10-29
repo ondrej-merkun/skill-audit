@@ -60,7 +60,7 @@ const GEMINI_SETTINGS_FILENAME = 'settings.json';
  * The path selects the dialect: a Gemini settings file can hold comments.
  */
 export function extractAgentConfigCommands(content: string, path: string): string {
-  const json = isGeminiSettings(path) ? blankJsonComments(content) : content;
+  const json = agentConfigJson(content, path);
   const parsed = parseJson(json);
   if (parsed === undefined) return '';
 
@@ -89,6 +89,11 @@ export function decodeJsonStrings(content: string): string {
     stringLiteral: (value) => `"${value.replaceAll('"', "'")}"`,
     structure: (text) => text,
   });
+}
+
+/** Returns the JSON text that the agent parses: Gemini settings lose their comments first. */
+export function agentConfigJson(content: string, path: string): string {
+  return isGeminiSettings(path) ? blankJsonComments(content) : content;
 }
 
 /**

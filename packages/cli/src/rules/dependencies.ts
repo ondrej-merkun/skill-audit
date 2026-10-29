@@ -1,6 +1,6 @@
 import { basename } from 'node:path';
 import type { Rule } from '../types.js';
-import { decodeJsonStrings } from './agent-config.js';
+import { agentConfigJson, decodeJsonStrings } from './agent-config.js';
 
 // Patterns are split to avoid triggering static-analysis hooks on this detector file.
 
@@ -350,8 +350,11 @@ function keepMcpStartupFieldBlocks(content: string): string {
 function prepareMcpConfigRemoteExecContent(content: string, filePath: string): string {
   const name = basename(filePath);
   if (mcpConfigRemoteExecBasenames.has(name) || isGeminiCommandToml(filePath, name)) {
-    // Decoded JSON escapes such as `https:\/\/` cannot hide a download. JSONC keeps its raw text.
-    const decoded = name.endsWith('.json') ? decodeJsonStrings(content) : '';
+    // Decoded JSON escapes such as `https:\/\/` cannot hide a download. Gemini settings lose
+    // their comments first, as in Gemini CLI. Other JSONC keeps its raw text.
+    const decoded = name.endsWith('.json')
+      ? decodeJsonStrings(agentConfigJson(content, filePath))
+      : '';
     return keepMcpStartupFieldBlocks(decoded === '' ? content : decoded);
   }
 

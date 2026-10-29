@@ -243,8 +243,9 @@ do not hide a pattern. Gemini CLI removes `//` and `/* */` comments from
 `.gemini/settings.json` before it parses the file, so the engine replaces those
 comments with spaces first. Trailing commas stay invalid, as in Gemini CLI.
 `MCP-CONFIG-REMOTE-EXEC` also runs on the full JSON of
-these files after string escapes are decoded; a file that is not strict JSON,
-such as JSONC, keeps its raw text for that rule. Invalid JSON yields no command
+these files after string escapes are decoded, and Gemini settings lose their
+comments first here too. Any other file that is not strict JSON, such as JSONC,
+keeps its raw text for that rule. Invalid JSON yields no command
 values and does not stop the scan.
 
 A hook that runs a script by path does not hold the payload itself. For Claude

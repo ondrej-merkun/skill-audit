@@ -55,4 +55,12 @@ describe(RULE_ID, () => {
     expect(findings[0]?.ruleId).toBe(RULE_ID);
     expect(basename(findings[0]?.file ?? '')).toBe('mcp.json');
   });
+
+  it('detects remote execution with escaped URLs in Gemini settings that contain comments', async () => {
+    const settingsPath = join(FIXTURE_DIR, 'malicious', '.gemini', 'settings.json');
+    const findings = await runRules(settingsPath, [requireRule()]);
+
+    // The rule reports the `"command"` line, as for strict JSON. Blanked comments keep that line.
+    expect(findings.map((finding) => finding.line)).toEqual([6]);
+  });
 });
