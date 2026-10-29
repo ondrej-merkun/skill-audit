@@ -29,10 +29,27 @@ jobs:
           # see https://github.com/actions/setup-node/issues/1445
           registry-url: https://registry.npmjs.org
 
-      - name: Use npm with trusted publishing support
+      # Use the npm bundled with Node. Installing npm here would run an unpinned
+      # download while the job holds id-token: write.
+      - name: Check npm supports trusted publishing
+        env:
+          # https://docs.npmjs.com/trusted-publishers
+          MIN_NPM_VERSION: 11.5.1
         run: |
-          npm install -g npm@^11.5.1
-          npm --version
+          NPM_VERSION="$(npm --version)"
+          echo "npm $NPM_VERSION"
+          node -e '
+            const [actual, minimum] = process.argv.slice(1);
+            const actualParts = actual.split(".").map(Number);
+            const minimumParts = minimum.split(".").map(Number);
+
+            // The first part that differs decides which version is older.
+            const index = actualParts.findIndex((part, i) => part !== minimumParts[i]);
+            if (index !== -1 && actualParts[index] < minimumParts[index]) {
+              console.error(`npm ${actual} is too old: trusted publishing needs npm ${minimum} or later.`);
+              process.exit(1);
+            }
+          ' "$NPM_VERSION" "$MIN_NPM_VERSION"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
