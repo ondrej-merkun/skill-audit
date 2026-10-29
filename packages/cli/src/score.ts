@@ -27,6 +27,16 @@ const PIPE_TO_SHELL_RULES = new Set([
   'CODEEXEC-SHELL-BACKTICK',
 ]);
 
+/**
+ * Credential-store access rules (used in the prompt-injection compound check).
+ * Each one detects a direct read of stored secrets (CWE-522); only the store differs.
+ */
+const CREDENTIAL_STORE_RULES = new Set([
+  'FS-CREDSTORE',
+  'FS-BROWSER-CREDENTIALSTORE',
+  'FS-KEYCHAIN-ACCESS',
+]);
+
 function countUniqueRulesBySeverity(findings: Finding[], severity: Severity): number {
   const ids = new Set<string>();
   for (const f of findings) {
@@ -46,9 +56,8 @@ function verdictFromScore(score: number): Verdict {
  * Empty array means no override applies.
  */
 function getMandatoryFailIds(findings: Finding[]): string[] {
-  const ruleIds = new Set(
-    findings.filter((f) => f.ignoredForVerdict !== true).map((f) => f.ruleId)
-  );
+  const verdictFindings = findings.filter((f) => f.ignoredForVerdict !== true);
+  const ruleIds = new Set(verdictFindings.map((f) => f.ruleId));
   const triggered = new Set<string>();
 
   for (const id of MANDATORY_FAIL_STANDALONE) {
@@ -72,6 +81,22 @@ function getMandatoryFailIds(findings: Finding[]): string[] {
       if (id.startsWith('NET-')) {
         triggered.add('FS-CREDSTORE');
         triggered.add(id);
+        break;
+      }
+    }
+  }
+
+  // Critical PI-* combined with any credential-store rule: an injected instruction
+  // that reads stored secrets. Severity is effective severity, so allowlist-demoted
+  // PI-* findings (info) never qualify.
+  const criticalInjection = verdictFindings.find(
+    (f) => f.ruleId.startsWith('PI-') && f.severity === 'critical'
+  );
+  if (criticalInjection !== undefined) {
+    for (const storeId of CREDENTIAL_STORE_RULES) {
+      if (ruleIds.has(storeId)) {
+        triggered.add(criticalInjection.ruleId);
+        triggered.add(storeId);
         break;
       }
     }

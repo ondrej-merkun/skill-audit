@@ -18,6 +18,15 @@ function finding(ruleId: string, severity: Finding['severity']): Finding {
   };
 }
 
+/** Mirrors the engine's demotion of findings in unreferenced supporting docs. */
+function inertDocsFinding(ruleId: string): Finding {
+  return {
+    ...finding(ruleId, 'info'),
+    ignoredForVerdict: true,
+    fileRole: 'inert-supporting-docs',
+  };
+}
+
 describe('scoreFindings', () => {
   it('should return score 100 and PASS for zero findings', () => {
     const result = scoreFindings([]);
@@ -178,6 +187,32 @@ describe('mandatory-fail overrides', () => {
     expect(result.mandatoryFail).toContain('NET-OUTBOUND-NONLOCAL');
   });
 
+  it.each(['FS-CREDSTORE', 'FS-BROWSER-CREDENTIALSTORE', 'FS-KEYCHAIN-ACCESS'])(
+    'should force FAIL for critical PI-OVERRIDE + %s even though score is REVIEW',
+    (credentialStoreId) => {
+      const result = scoreFindings([
+        finding('PI-OVERRIDE', 'critical'),
+        finding(credentialStoreId, 'critical'),
+      ]);
+      expect(result.score).toBe(50);
+      expect(result.verdict).toBe('FAIL');
+      expect(result.mandatoryFail).toContain('PI-OVERRIDE');
+      expect(result.mandatoryFail).toContain(credentialStoreId);
+    }
+  );
+
+  it.each([
+    ['PI-OVERRIDE', [inertDocsFinding('PI-OVERRIDE'), finding('FS-CREDSTORE', 'critical')]],
+    ['FS-CREDSTORE', [finding('PI-OVERRIDE', 'critical'), inertDocsFinding('FS-CREDSTORE')]],
+  ])(
+    'should NOT force FAIL for PI + credential-store when %s is in inert supporting docs',
+    (_inertRuleId, findings) => {
+      const result = scoreFindings(findings);
+      expect(result.verdict).toBe('REVIEW');
+      expect(result.mandatoryFail).toEqual([]);
+    }
+  );
+
   it('should NOT force FAIL for FS-CREDSTORE alone (no NET-* present)', () => {
     const result = scoreFindings([finding('FS-CREDSTORE', 'high')]);
     // FS-CREDSTORE alone: score = 100 - 10 = 90 → PASS
@@ -251,6 +286,17 @@ describe('allowlist matching', () => {
     expect(result.critical).toBe(1);
     expect(result.verdict).toBe('FAIL');
     expect(result.mandatoryFail).toContain('NET-EXFIL-ENV');
+  });
+
+  it('should not force FAIL for PI + credential-store when allowlisting demotes the PI finding', () => {
+    const result = scoreFindings(
+      [finding('PI-OVERRIDE', 'critical'), finding('FS-CREDSTORE', 'critical')],
+      ALLOWLISTED_SHA,
+    );
+    expect(result.allowlisted).toBe(true);
+    expect(result.critical).toBe(1);
+    expect(result.verdict).toBe('REVIEW');
+    expect(result.mandatoryFail).toEqual([]);
   });
 
   it('should not allowlist placeholder zero hashes', () => {
