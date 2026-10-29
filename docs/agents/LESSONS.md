@@ -329,6 +329,16 @@ without a commit message explaining why it no longer applies.
   million characters and a padded file hid its servers again. Use a character
   loop, as the loader does.
 
+- **L2.15 — A view that cuts part of a JSON config must stay valid JSON.** _A
+  follow-up to P0 #7 found `~/.gemini/settings.json` reporting each MCP server
+  twice: on the server entry and on the settings file. The settings views return
+  an empty view for invalid JSON, so blanking the servers to spaces would also
+  silence the hook checks. `JSON.parse` drops a duplicate server name, so that
+  definition has no entry of its own._
+  Empty the reported subtree in place (keep `{`, `}`, and the line breaks), and
+  scan the whole file when the parsed entries do not cover every definition in
+  the text.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**
