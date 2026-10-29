@@ -40,6 +40,13 @@ jobs:
           echo "npm $NPM_VERSION"
           node -e '
             const [actual, minimum] = process.argv.slice(1);
+
+            // Fail closed: a prerelease or unexpected output cannot be compared safely.
+            if (!/^\d+\.\d+\.\d+$/.test(actual)) {
+              console.error(`Cannot read npm version "${actual}": expected a plain x.y.z version.`);
+              process.exit(1);
+            }
+
             const actualParts = actual.split(".").map(Number);
             const minimumParts = minimum.split(".").map(Number);
 
