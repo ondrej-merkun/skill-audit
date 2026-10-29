@@ -597,7 +597,11 @@ description: Scan installed agent skills for prompt injection, exfiltration,
   and malicious code. Use when the user asks to audit, check, review, or
   verify their installed skills or plugins across Claude Code, Cursor,
   Cline, Codex, Gemini, or Copilot.
-allowed-tools: [Bash]
+allowed-tools:
+  - Bash(npx --yes @ondrej-merkun/skill-audit@<version>)
+  - Bash(npx --yes @ondrej-merkun/skill-audit@<version> scan *)
+  - Bash(npx --yes @ondrej-merkun/skill-audit@<version> list *)
+  - Bash(npx --yes @ondrej-merkun/skill-audit@<version> explain *)
 ---
 
 # skill-audit
@@ -605,7 +609,7 @@ allowed-tools: [Bash]
 When invoked, run:
 
 ```bash
-npx @ondrej-merkun/skill-audit@latest scan --json
+npx --yes @ondrej-merkun/skill-audit@<version> scan --json
 ```
 
 Parse the JSON output and summarize:
@@ -615,7 +619,7 @@ Parse the JSON output and summarize:
 
 If the user asks to audit a specific skill, run:
 ```bash
-npx @ondrej-merkun/skill-audit@latest explain <skill-name> --json
+npx --yes @ondrej-merkun/skill-audit@<version> explain <skill-name> --json
 ```
 
 Do not recommend rm/delete commands without explicit user confirmation.
@@ -623,7 +627,7 @@ Always show the skill-audit summary table verbatim in a code block before
 your interpretation.
 ```
 
-This skill file ships inside the repo at `packages/skill/SKILL.md` and is copy-pasted into skills.sh + agentskill.sh registries on launch. Because it just invokes `npx`, it's inherently kept up to date.
+This skill file ships inside the repo at `packages/skill/SKILL.md` and is copy-pasted into skills.sh + agentskill.sh registries on launch. `<version>` is the exact version in `packages/cli/package.json`, so the skill runs only a reviewed release instead of whatever npm publishes next. The `allowed-tools` rules pre-approve only these pinned commands, not every shell command; `ignore` and `llm add` change local state and keep the normal permission prompt. `test/version-pins.test.ts` fails when a pin drifts from the package version.
 
 ## 9. Risk assessment
 
