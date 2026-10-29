@@ -11,3 +11,5 @@ class ClientTests(unittest.TestCase):
     def test_reaches_staging(self):
         client = Client(auth_token="e2e-9fQ2xLk8ZpR4tW7yN1mB6vC3hJ5sD0aE")  # autoreview: allow-secret
         self.assertTrue(client.ping())
+        replica = Client(auth_token="e2e-qmzvkrjwpnhtxsbcfydlaguoreivznkp")  # autoreview: allow-secret
+        self.assertTrue(replica.ping())
