@@ -211,14 +211,14 @@ When a skill appears at both user scope and project scope, list both rows in the
 
 ## 4. Local static analysis layer
 
-### Rule taxonomy (49 rules, shipping at MVP)
+### Rule taxonomy (50 rules, shipping at MVP)
 
 Full rule catalog in Semgrep-portable YAML. Category summary:
 
 | Category | Rule IDs | Count | Severity distribution |
 |---|---|---|---|
 | Code execution | `CODEEXEC-PY-EVAL`, `CODEEXEC-PY-OSSYS`, `CODEEXEC-JS-EVAL-FUNCTION`, `CODEEXEC-JS-CHILDPROCESS-SHELL`, `CODEEXEC-DESERIALIZE`, `CODEEXEC-SHELL-BACKTICK` | 6 | 4 Critical, 2 High |
-| Network exfiltration | `NET-EXFIL-ENV`, `NET-CLOUD-METADATA-CREDENTIALS`, `NET-OUTBOUND-NONLOCAL`, `NET-WEBHOOK-KNOWN`, `NET-RAW-SOCKET`, `NET-DNS-UNUSUAL-TLD`, `NET-API-ENDPOINT-OVERRIDE` | 7 | 4 Critical, 1 High, 2 Medium |
+| Network exfiltration | `NET-EXFIL-ENV`, `NET-CLOUD-METADATA-CREDENTIALS`, `NET-OUTBOUND-NONLOCAL`, `NET-WEBHOOK-KNOWN`, `NET-RAW-SOCKET`, `NET-DNS-UNUSUAL-TLD`, `NET-API-ENDPOINT-OVERRIDE`, `NET-HOOK-HTTP-EXTERNAL` | 8 | 4 Critical, 2 High, 2 Medium |
 | Filesystem | `FS-CREDSTORE`, `FS-BROWSER-CREDENTIALSTORE`, `FS-KEYCHAIN-ACCESS`, `FS-DOTENV-READ`, `FS-BOUNDARY-ESCAPE`, `FS-DESTRUCTIVE-HOME-DELETE` | 6 | 4 Critical, 2 High |
 | Prompt injection | `PI-OVERRIDE`, `PI-JAILBREAK`, `PI-HIDDEN-UNICODE`, `PI-HIDDEN-HTML-COMMENT`, `PI-WHITE-ON-WHITE`, `PI-METADATA-MISMATCH`, `PI-EXFIL-TRIGGER-CLAUSE`, `PI-PRIV-ESCALATE-INSTRUCTION` | 8 | 4 Critical, 3 High, 1 Medium |
 | Git/history | `GIT-CRED-READ`, `GIT-HISTORY-SCAN` | 2 | 1 High, 1 Medium |
