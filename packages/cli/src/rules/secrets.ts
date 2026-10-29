@@ -45,9 +45,14 @@ const exampleHeadingPattern =
 
 // One alphanumeric segment of a generic value that marks the value as made up: test
 // vocabulary, x filler, or counting digits ('synthetic-secret-for-testing',
-// 'browser-token-0123456789'). A random key almost never has such a whole segment.
+// 'browser-token-0123456789').
 const syntheticValueSegmentPattern =
   /^(?:tests?|testing|e2e|synthetic|example|dummy|fake|placeholder|changeme|x{3,}|0?1234567890?)$/i;
+
+// The other segments of a made-up value must read as words or short numbers. Random key
+// material mixes case and digits, so a real key behind a test-word segment
+// ('sk_test_51Mz9Qr...', 'e2e-9fQ2xLk8...') still fires.
+const plainValueSegmentPattern = /^(?:[a-z]+|[A-Z]+|\d{1,4})$/;
 
 function maskLine(line: string): string {
   return ' '.repeat(line.length);
@@ -63,8 +68,7 @@ function hasPlaceholderSecret(line: string): boolean {
 
 /**
  * True when every generic assignment on the line holds a made-up value. A line that also
- * holds a provider-format key stays: only the placeholder list above clears a key with a
- * live shape, so a real key in a test file still fires.
+ * holds a provider-format key stays, so this check never clears a key with a live shape.
  */
 function hasOnlySyntheticGenericValues(line: string): boolean {
   if (providerKeyPatterns.some((pattern) => pattern.test(line))) return false;
@@ -74,7 +78,15 @@ function hasOnlySyntheticGenericValues(line: string): boolean {
 }
 
 function isSyntheticValue(value: string): boolean {
-  return value.split(/[^A-Za-z0-9]+/).some((segment) => syntheticValueSegmentPattern.test(segment));
+  const segments = value.split(/[^A-Za-z0-9]+/).filter((segment) => segment !== '');
+  const isSyntheticSegment = (segment: string) => syntheticValueSegmentPattern.test(segment);
+
+  return (
+    segments.some(isSyntheticSegment) &&
+    segments.every(
+      (segment) => isSyntheticSegment(segment) || plainValueSegmentPattern.test(segment)
+    )
+  );
 }
 
 function hasNearbyExampleHeading(lines: string[], index: number): boolean {
