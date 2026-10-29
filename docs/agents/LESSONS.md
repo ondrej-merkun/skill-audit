@@ -441,6 +441,15 @@ without a commit message explaining why it no longer applies.
   Only suppress fenced content for rules where fenced examples are truly inert;
   command snippets in skill instructions may still be intended to run.
 
+- **L7.6 — Test each pattern, not only each rule.** _The engine preflight
+  silently skipped the `SKILL-CURL-BASH-IN-MD` pipe-to-shell pattern and the
+  `SKILL-FETCH-AND-EXEC` urllib pattern, because each had a quantified group
+  that contained a quantifier. Their rule fixtures still passed, because a
+  sibling `eval "$(curl ...)"` or `requests` pattern fired on the same file._
+  Give each pattern its own malicious fixture line and assert every line that
+  must fire. Keep every shipped pattern accepted by `hasNestedQuantifier`;
+  `test/rules-engine.test.ts` guards this.
+
 ---
 
 ## How to add a new lesson

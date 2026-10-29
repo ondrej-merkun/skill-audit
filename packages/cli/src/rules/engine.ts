@@ -77,7 +77,7 @@ function isSafeRegexInput(pattern: RegExp, content: string): boolean {
   return safe;
 }
 
-function hasNestedQuantifier(source: string): boolean {
+export function hasNestedQuantifier(source: string): boolean {
   return /\((?:[^()\\]|\\.)*[+*](?:[^()\\]|\\.)*\)[+*{]/.test(source);
 }
 

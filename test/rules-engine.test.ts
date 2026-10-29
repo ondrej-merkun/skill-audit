@@ -3,11 +3,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+  hasNestedQuantifier,
   matchesGlob,
   runPatternWithSafetyPreflight,
   runRules,
   runRulesForSkill,
 } from '../packages/cli/src/rules/engine.js';
+import { ALL_RULES } from '../packages/cli/src/rules/index.js';
 import { PI_OVERRIDE } from '../packages/cli/src/rules/prompt-injection.js';
 import { scoreFindings } from '../packages/cli/src/score.js';
 import type { Rule, Skill } from '../packages/cli/src/types.js';
@@ -63,6 +65,17 @@ describe('runPatternWithSafetyPreflight', () => {
     const matches = await runPatternWithSafetyPreflight(catastrophic, adversarial);
     expect(matches).toEqual([]);
   }, 5000);
+
+  it('accepts every pattern of every shipped rule', () => {
+    // The preflight skips rejected patterns silently, so a rejected pattern is dead detection.
+    const rejectedPatterns = ALL_RULES.flatMap((rule) =>
+      rule.patterns
+        .filter((pattern) => hasNestedQuantifier(pattern.source))
+        .map((pattern) => `${rule.id}: ${pattern.source}`)
+    );
+
+    expect(rejectedPatterns).toEqual([]);
+  });
 });
 
 describe('runRules', () => {

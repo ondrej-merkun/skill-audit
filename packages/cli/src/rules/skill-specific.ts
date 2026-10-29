@@ -22,10 +22,15 @@ const SCRIPT_AND_CODE_FILES = ['*.sh', '*.bash', '*.js', '*.ts', '*.mjs', '*.cjs
 // Pipe-to-shell: curl/wget/fetch <url> | bash  —  per spec §4
 // Split via RegExp constructor to avoid triggering write-hook on this source.
 // ---------------------------------------------------------------------------
+
+// Flags such as -s, -fsSL, -o-, and -qO- use a flat character class, because the
+// engine preflight skips any quantified group that contains a quantifier. The
+// bound keeps matching linear on long runs of command words.
+const MAX_DOWNLOAD_FLAG_CHARS = 80;
 const curlPipeBashPattern = new RegExp(
   [
-    '(curl|wget|fetch)\\s+(-[A-Za-z]+\\s+)*(https?://\\S+)\\s*',
-    '(\\||&&\\s*(bash|sh|zsh|python|node))',
+    `\\b(curl|wget|fetch)\\s[-A-Za-z \\t]{0,${MAX_DOWNLOAD_FLAG_CHARS}}(https?://\\S+)\\s*`,
+    '(\\||&&)\\s*(sudo\\s+)?(bash|sh|zsh|python3?|node)\\b',
   ].join('')
 );
 const sourceProcessSubstitutionPattern = /source\s*<\(\s*(curl|wget)\s+\S+\s*\)/;
@@ -50,7 +55,8 @@ export const SKILL_CURL_BASH_IN_MD: Rule = {
 const fetchThenEvalPattern = /fetch\s*\([^)]+\)\s*\.then\s*\([^)]*\beval\s*\(/;
 const requestsExecPattern =
   /\bexec\s*\(\s*(?:__import__\s*\(\s*['"]requests['"]\s*\)|requests)\s*\.\s*(?:get|post)\s*\([^)]+\)\s*\.\s*text/;
-const urllibExecPattern = /\bexec\s*\(\s*urllib(?:\.[a-zA-Z]+)*\./;
+// Any urllib call inside exec(), such as exec(urllib.request.urlopen(url).read()).
+const urllibExecPattern = /\bexec\s*\(\s*urllib\./;
 const awaitFetchEvalPattern =
   /eval\s*\(\s*await\s+(?:resp|response|res|r|data)\s*\.\s*text\s*\(\s*\)/;
 
