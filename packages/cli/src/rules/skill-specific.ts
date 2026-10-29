@@ -23,14 +23,29 @@ const SCRIPT_AND_CODE_FILES = ['*.sh', '*.bash', '*.js', '*.ts', '*.mjs', '*.cjs
 // Split via RegExp constructor to avoid triggering write-hook on this source.
 // ---------------------------------------------------------------------------
 
-// Flags such as -s, -fsSL, -o-, and -qO- use a flat character class, because the
-// engine preflight skips any quantified group that contains a quantifier. The
-// bound keeps matching linear on long runs of command words.
-const MAX_DOWNLOAD_FLAG_CHARS = 80;
+// Argument slots use bounded character classes, because the engine preflight skips
+// any quantified group that contains a quantifier. The bounds keep matching linear
+// on long runs of command text.
+const MAX_DOWNLOAD_ARGS_CHARS = 80;
+const MAX_SUDO_FLAGS_CHARS = 20;
+const MAX_INTERPRETER_DIR_CHARS = 40;
 const curlPipeBashPattern = new RegExp(
   [
-    `\\b(curl|wget|fetch)\\s[-A-Za-z \\t]{0,${MAX_DOWNLOAD_FLAG_CHARS}}(https?://\\S+)\\s*`,
-    '(\\||&&)\\s*(sudo\\s+)?(bash|sh|zsh|python3?|node)\\b',
+    // Download command, then its URL. Arguments before the URL can hold quotes and
+    // values, such as --retry 3, but not a pipe, chain, or new line.
+    `\\b(curl|wget|fetch)\\s[^|&;\\n]{0,${MAX_DOWNLOAD_ARGS_CHARS}}`,
+    // A quoted URL runs to its closing quote, so a | inside the quotes is not a pipe.
+    // An unquoted URL ends at the first |.
+    `(?:(?<quote>["'])https?://[^\\s"']+\\k<quote>|(?<!["'])https?://[^\\s"'|]+)`,
+    // Optional flags after the URL, such as -fsSL or -qO-.
+    `(\\s[-A-Za-z \\t]{0,${MAX_DOWNLOAD_ARGS_CHARS}})?`,
+    // Pipe or chain into an interpreter, with optional sudo flags and directory,
+    // such as | sudo -E bash or | /bin/bash.
+    `(\\||&&)\\s*(sudo\\s[-A-Za-z \\t]{0,${MAX_SUDO_FLAGS_CHARS}})?`,
+    `(/[\\w./-]{0,${MAX_INTERPRETER_DIR_CHARS}}/)?`,
+    // python -c/-m and node -e/-p do not match: they run an inline program and read
+    // stdin as data, as in curl ... | python3 -m json.tool.
+    '(bash|sh|zsh|python3?(?!\\s+-[cm]\\b)|node(?!\\s+-[ep]\\b))\\b',
   ].join('')
 );
 const sourceProcessSubstitutionPattern = /source\s*<\(\s*(curl|wget)\s+\S+\s*\)/;
