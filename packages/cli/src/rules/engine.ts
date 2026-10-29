@@ -2,6 +2,11 @@ import { type Dirent, readdirSync, readFileSync, realpathSync, statSync } from '
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { enterDirOnceSync, entryKindSync } from '../fs-walk.js';
 import type { Finding, Rule, Skill } from '../types.js';
+import {
+  AGENT_CONFIG_COMMANDS_SCAN_NAME,
+  AGENT_CONFIG_FILENAMES,
+  extractAgentConfigCommands,
+} from './agent-config.js';
 import { pathLooksDocumentationOnly } from './code-context.js';
 
 /** Node's read error for a file longer than the V8 string limit (536,870,888 chars). */
@@ -14,6 +19,15 @@ type RunRulesOptions = {
   scanAllSupportingFiles?: boolean;
   /** Paths from collectScanTargetPaths; a directory walk does not enter them. */
   scanTargetPaths?: ReadonlySet<string>;
+  scope?: Skill['scope'];
+};
+
+// One set of rules matched against one view of a file.
+type MatchPass = {
+  rules: Rule[];
+  preparePath: string;
+  // Rewrites the file content into the text this pass matches. Offsets must stay aligned.
+  view?: (content: string) => string;
 };
 
 type ReachabilityIndex = {
@@ -472,53 +486,14 @@ export async function runRules(
     const scanPath = preparePathFor(filePath, dirAliases);
     const preparePath =
       options.filenameOverride === undefined ? scanPath : join(dirname(scanPath), name);
-    const applicableRules = rules.filter((rule) =>
-      rule.appliesTo.some((glob) => matchesGlob(name, glob))
-    );
-    if (applicableRules.length === 0) continue;
+    const passes = matchPasses(rules, name, preparePath, options.scope);
+    if (passes.length === 0) continue;
 
     const content = readScanContent(filePath);
     if (content === undefined) continue;
 
-    const lineStarts = lineStartOffsets(content);
-    const preparedContent = new Map<PrepareContent, string>();
-    for (const rule of applicableRules) {
-      // Track seen lines per rule to avoid duplicate findings from overlapping patterns
-      const seenLines = new Set<number>();
-
-      let matchContent = content;
-      if (rule.prepareContent !== undefined) {
-        const cached = preparedContent.get(rule.prepareContent);
-        if (cached === undefined) {
-          matchContent = rule.prepareContent(content, preparePath);
-          preparedContent.set(rule.prepareContent, matchContent);
-        } else {
-          matchContent = cached;
-        }
-      }
-      for (const pattern of rule.patterns) {
-        const matches = await runPatternWithSafetyPreflight(pattern, matchContent);
-        for (const { index, text } of matches) {
-          const { line, column } = lineCol(lineStarts, index);
-          if (seenLines.has(line)) continue;
-          seenLines.add(line);
-
-          const finding: Finding = {
-            ruleId: rule.id,
-            severity: rule.severity,
-            category: rule.category,
-            file: filePath,
-            line,
-            column,
-            snippet: extractSnippet(content, lineStarts, line) || text.trim().slice(0, 120),
-            message: rule.message,
-            fix: rule.fix,
-            cwe: rule.cwe,
-          };
-          findings.push(findingForRole(finding, fileRole));
-        }
-      }
-    }
+    const fileFindings = await matchRules(filePath, content, passes);
+    findings.push(...fileFindings.map((finding) => findingForRole(finding, fileRole)));
   }
 
   return findings;
@@ -529,12 +504,132 @@ export async function runRulesForSkill(
   rules: Rule[],
   options: Pick<RunRulesOptions, 'scanAllSupportingFiles' | 'scanTargetPaths'> = {}
 ): Promise<Finding[]> {
-  return runRules(skill.path, rules, {
+  const runOptions: RunRulesOptions = {
+    scope: skill.scope,
     ...(skill.metadata?.ruleScanFilename !== undefined
       ? { filenameOverride: skill.metadata.ruleScanFilename }
       : {}),
     ...options,
-  });
+  };
+
+  const scanContent = skill.metadata?.ruleScanContent;
+  if (scanContent !== undefined) {
+    return runRulesOnContent(skill.path, scanContent, rules, runOptions);
+  }
+
+  return runRules(skill.path, rules, runOptions);
+}
+
+/** Scans text that discovery extracted for a skill, such as one MCP server's definition. */
+async function runRulesOnContent(
+  filePath: string,
+  content: string,
+  rules: Rule[],
+  options: RunRulesOptions
+): Promise<Finding[]> {
+  const name = options.filenameOverride ?? basename(filePath);
+  const preparePath = join(dirname(filePath), name);
+  return matchRules(filePath, content, matchPasses(rules, name, preparePath, options.scope));
+}
+
+/**
+ * Every file gets one pass with the rules for its name. Agent config files get a
+ * second pass: their decoded command values run through the shell-script rules,
+ * because agents run hook and MCP server commands in a shell.
+ */
+function matchPasses(
+  rules: Rule[],
+  name: string,
+  preparePath: string,
+  scope: Skill['scope'] | undefined
+): MatchPass[] {
+  const passes: MatchPass[] = [{ rules: rulesForScanName(rules, name, scope), preparePath }];
+
+  if (AGENT_CONFIG_FILENAMES.has(name)) {
+    passes.push({
+      rules: rulesForScanName(rules, AGENT_CONFIG_COMMANDS_SCAN_NAME, scope),
+      preparePath: join(dirname(preparePath), AGENT_CONFIG_COMMANDS_SCAN_NAME),
+      view: extractAgentConfigCommands,
+    });
+  }
+
+  return passes.filter((pass) => pass.rules.length > 0);
+}
+
+// An unknown scope (a direct runRules call) keeps scope-limited rules active.
+function rulesForScanName(
+  rules: Rule[],
+  scanName: string,
+  scope: Skill['scope'] | undefined
+): Rule[] {
+  return rules.filter(
+    (rule) =>
+      rule.appliesTo.some((glob) => matchesGlob(scanName, glob)) &&
+      (scope === undefined ||
+        rule.appliesToScopes === undefined ||
+        rule.appliesToScopes.includes(scope))
+  );
+}
+
+/** Reports each match at its line and column in the original content. */
+async function matchRules(
+  filePath: string,
+  content: string,
+  passes: MatchPass[]
+): Promise<Finding[]> {
+  const findings: Finding[] = [];
+  const lineStarts = lineStartOffsets(content);
+
+  for (const pass of passes) {
+    const passContent = pass.view === undefined ? content : pass.view(content);
+    const preparedContent = new Map<PrepareContent, string>();
+
+    for (const rule of pass.rules) {
+      // Track seen lines per rule to avoid duplicate findings from overlapping patterns
+      const seenLines = new Set<number>();
+      const matchContent = prepareForRule(rule, passContent, pass.preparePath, preparedContent);
+
+      for (const pattern of rule.patterns) {
+        const matches = await runPatternWithSafetyPreflight(pattern, matchContent);
+        for (const { index, text } of matches) {
+          const { line, column } = lineCol(lineStarts, index);
+          if (seenLines.has(line)) continue;
+          seenLines.add(line);
+
+          findings.push({
+            ruleId: rule.id,
+            severity: rule.severity,
+            category: rule.category,
+            file: filePath,
+            line,
+            column,
+            snippet: extractSnippet(content, lineStarts, line) || text.trim().slice(0, 120),
+            message: rule.message,
+            fix: rule.fix,
+            cwe: rule.cwe,
+          });
+        }
+      }
+    }
+  }
+
+  return findings;
+}
+
+function prepareForRule(
+  rule: Rule,
+  content: string,
+  preparePath: string,
+  cache: Map<PrepareContent, string>
+): string {
+  if (rule.prepareContent === undefined) return content;
+
+  const cached = cache.get(rule.prepareContent);
+  if (cached !== undefined) return cached;
+
+  const prepared = rule.prepareContent(content, preparePath);
+  cache.set(rule.prepareContent, prepared);
+  return prepared;
 }
 
 /**

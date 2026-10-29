@@ -46,6 +46,8 @@ export type Skill = {
   trusted?: boolean;
   metadata?: Record<string, unknown> & {
     ruleScanFilename?: string;
+    // Rules scan this text instead of the file at `path`, e.g. one MCP server's definition.
+    ruleScanContent?: string;
     sourcePluginName?: string;
   };
 };
@@ -55,6 +57,7 @@ export type Rule = {
   category: string;
   severity: Severity;
   appliesTo: string[]; // glob patterns for which files this rule matches
+  appliesToScopes?: Array<Skill['scope']>; // unset = every scope
   patterns: RegExp[];
   prepareContent?: (content: string, filePath: string) => string;
   message: string;
