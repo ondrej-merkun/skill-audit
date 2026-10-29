@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, join } from 'node:path';
-import { readDirFollowingLinks } from '../fs-walk.js';
+import { isRegularFile, readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { discoverAgentConfigFiles } from './agent-config.js';
 import { discoverSharedAgentSkills } from './shared-agent-skills.js';
@@ -36,6 +36,8 @@ async function pathExists(p: string): Promise<boolean> {
 type McpServersShape = Record<string, unknown>;
 
 async function discoverMcpJson(mcpJsonPath: string, scope: Skill['scope']): Promise<Skill[]> {
+  if (!(await isRegularFile(mcpJsonPath))) return [];
+
   let raw: string;
   try {
     raw = await readFile(mcpJsonPath, 'utf8');
@@ -84,7 +86,7 @@ async function discoverRulesDir(dir: string, scope: Skill['scope']): Promise<Ski
 }
 
 async function discoverLegacyCursorRules(filePath: string): Promise<Skill[]> {
-  if (!(await pathExists(filePath))) return [];
+  if (!(await isRegularFile(filePath))) return [];
   return [
     {
       id: makeId(filePath),

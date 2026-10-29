@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import { enterDirOnce, readDirFollowingLinks } from '../fs-walk.js';
+import { enterDirOnce, isRegularFile, readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { discoverAgentConfigFiles, mcpServerScanMetadata } from './agent-config.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
@@ -239,6 +239,8 @@ async function discoverAgentMarkdownFiles(
 }
 
 async function discoverMcpJson(settingsPath: string, scope: Skill['scope']): Promise<Skill[]> {
+  if (!(await isRegularFile(settingsPath))) return [];
+
   let raw: string;
   try {
     raw = await readFile(settingsPath, 'utf8');

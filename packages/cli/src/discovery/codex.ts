@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, dirname, join, relative } from 'node:path';
-import { enterDirOnce, readDirFollowingLinks } from '../fs-walk.js';
+import { enterDirOnce, isRegularFile, readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { discoverAgentConfigFiles } from './agent-config.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
@@ -124,7 +124,7 @@ async function discoverAgentFiles(codexHome: string): Promise<Skill[]> {
 
   for (const filename of filenames) {
     const filePath = join(codexHome, filename);
-    if (!(await pathExists(filePath))) continue;
+    if (!(await isRegularFile(filePath))) continue;
     skills.push(await skillFromFile(filePath, filename, 'agents-md', 'user'));
   }
 
@@ -283,9 +283,12 @@ function parseEnabledPluginCaches(toml: string): EnabledPluginCache[] {
 }
 
 async function readPluginManifestName(pluginDir: string): Promise<string | null> {
+  const manifestPath = join(pluginDir, 'plugin.json');
+  if (!(await isRegularFile(manifestPath))) return null;
+
   let raw: string;
   try {
-    raw = await readFile(join(pluginDir, 'plugin.json'), 'utf8');
+    raw = await readFile(manifestPath, 'utf8');
   } catch {
     return null;
   }
@@ -305,6 +308,8 @@ function sourcePluginMetadata(pluginName: string | null): Skill['metadata'] | un
 }
 
 async function discoverMcpToml(configPath: string, scope: Skill['scope']): Promise<Skill[]> {
+  if (!(await isRegularFile(configPath))) return [];
+
   let raw: string;
   try {
     raw = await readFile(configPath, 'utf8');
@@ -330,6 +335,8 @@ async function discoverEnabledPluginCaches(
   scope: Skill['scope'],
   options: DiscoverSkillsOptions = {}
 ): Promise<Skill[]> {
+  if (!(await isRegularFile(configPath))) return [];
+
   let raw: string;
   try {
     raw = await readFile(configPath, 'utf8');
@@ -353,7 +360,7 @@ async function discoverEnabledPluginCaches(
 }
 
 async function discoverUntrustedProjectConfig(configPath: string): Promise<Skill[]> {
-  if (!(await pathExists(configPath))) return [];
+  if (!(await isRegularFile(configPath))) return [];
   return [await skillFromFile(configPath, '.codex/config.toml', 'mcp-toml', 'project', false)];
 }
 

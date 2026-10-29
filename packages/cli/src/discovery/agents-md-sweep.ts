@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { isRegularFile } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
 import { computeTreeSha256 } from './tree-hash.js';
@@ -25,15 +25,6 @@ function getCwd(): string {
 
 function makeId(input: string): string {
   return createHash('sha256').update(`${AGENT_ID}:${input}`).digest('hex').slice(0, 16);
-}
-
-async function pathExists(p: string): Promise<boolean> {
-  try {
-    await stat(p);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 // Returns the chain of directories from dir up to the filesystem root, inclusive.
@@ -67,7 +58,7 @@ const agentsMdSweepDiscovery: AgentDiscovery = {
         const filePath = join(dir, filename);
         if (seen.has(filePath)) continue;
         if (shouldSkipMarketplacePath(filePath, options.includeMarketplaces)) continue;
-        if (!(await pathExists(filePath))) continue;
+        if (!(await isRegularFile(filePath))) continue;
         seen.add(filePath);
 
         skills.push(

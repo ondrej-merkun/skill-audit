@@ -2,7 +2,7 @@ import { type Dirent, realpathSync, statSync } from 'node:fs';
 import { readdir, realpath, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
-// Directory-walk helpers that follow symlinks. Agents load symlinked skills
+// Directory-walk and file-kind helpers that follow symlinks. Agents load symlinked skills
 // (`npx skills` and skillshare link ~/.claude/skills/<name> into a shared
 // store), so every walker must treat a link exactly like its target.
 // ponytail: a link to a large tree that is not an ancestor of the walk root
@@ -61,6 +61,21 @@ export async function enterDirOnce(visitedRealDirs: Set<string>, dir: string): P
 export function enterDirOnceSync(visitedRealDirs: Set<string>, dir: string): boolean {
   try {
     return markVisited(visitedRealDirs, realpathSync(dir));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * True when `path` is a regular file or a symlink to one. Check this before a
+ * read of a path that readDirFollowingLinks did not return: a read of a FIFO
+ * with no writer never returns, and a device can stream without end. A FIFO,
+ * socket, or device is skipped like a missing file.
+ * ponytail: a file swapped for a FIFO between this check and the read is out of scope.
+ */
+export async function isRegularFile(path: string): Promise<boolean> {
+  try {
+    return (await stat(path)).isFile();
   } catch {
     return false;
   }

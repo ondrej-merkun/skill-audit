@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, dirname, join, relative } from 'node:path';
-import { enterDirOnce, readDirFollowingLinks } from '../fs-walk.js';
+import { enterDirOnce, isRegularFile, readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import {
   discoverAgentConfigFiles,
@@ -201,9 +201,12 @@ function isPluginRootComponent(componentDir: string, manifestRoots: Set<string>)
 }
 
 async function readPluginManifestName(pluginDir: string): Promise<string | null> {
+  const manifestPath = join(pluginDir, 'plugin.json');
+  if (!(await isRegularFile(manifestPath))) return null;
+
   let raw: string;
   try {
-    raw = await readFile(join(pluginDir, 'plugin.json'), 'utf-8');
+    raw = await readFile(manifestPath, 'utf-8');
   } catch {
     return null;
   }
@@ -254,6 +257,8 @@ type ClaudeJson = {
 };
 
 async function discoverMcpFromClaudeJson(jsonPath: string): Promise<Skill[]> {
+  if (!(await isRegularFile(jsonPath))) return [];
+
   let raw: string;
   try {
     raw = await readFile(jsonPath, 'utf8');
@@ -305,6 +310,8 @@ async function discoverMcpFromClaudeJson(jsonPath: string): Promise<Skill[]> {
 }
 
 async function discoverMcpJson(mcpJsonPath: string, scope: Skill['scope']): Promise<Skill[]> {
+  if (!(await isRegularFile(mcpJsonPath))) return [];
+
   let raw: string;
   try {
     raw = await readFile(mcpJsonPath, 'utf8');

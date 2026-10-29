@@ -116,6 +116,8 @@ async function clineExtensionStorageDirs(): Promise<string[]> {
 type McpServersShape = Record<string, unknown>;
 
 async function discoverMcpSettings(settingsPath: string): Promise<Skill[]> {
+  if (!(await isFile(settingsPath))) return [];
+
   let raw: string;
   try {
     raw = await readFile(settingsPath, 'utf8');
