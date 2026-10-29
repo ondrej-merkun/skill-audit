@@ -283,7 +283,10 @@ function registerElement(
   return document.register(element);
 }
 
-function executeHtmlReportScript(html: string): FakeDocument {
+function executeHtmlReportScript(
+  html: string,
+  clipboard: { writeText: (text: string) => unknown } = { writeText: vi.fn() }
+): FakeDocument {
   const document = new FakeDocument();
 
   for (const id of [
@@ -329,7 +332,6 @@ function executeHtmlReportScript(html: string): FakeDocument {
   const script = html.match(/<script\b[^>]*>([\s\S]*?)<\/script\b[^>]*>/i)?.[1];
   if (script === undefined) throw new Error('HTML report script not found');
 
-  const clipboard = { writeText: vi.fn() };
   const context = createContext({
     document,
     navigator: { clipboard },
@@ -1995,6 +1997,33 @@ describe('renderHtml', () => {
     expect(cursorRow.style.display).toBe('none');
     expect(claudeFilter.classList.contains('active')).toBe(true);
     expect(claudeFilter.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('keeps untrusted skill text inert in the report script and copies it back unchanged', async () => {
+    const { renderHtml } = await import('../packages/cli/src/output/html.js');
+    const payload = '</script><script>window.__pwned=1</script><!--\u2028\u2029';
+    const skill = makeSkill({
+      name: `hostile-skill${payload}`,
+      path: `/tmp/hostile-skill${payload}`,
+      findings: [{ ...makeFinding('high'), snippet: payload }],
+    });
+    const result = makeScanResult({ skills: [skill] });
+
+    const html = renderHtml(result);
+    const scriptBlock = html.slice(html.indexOf('<script>'));
+
+    // Browsers end script data at the first "</script", and "<!--" can hide the real end tag.
+    expect(scriptBlock.match(/<\/script|<!--/gi)).toEqual(['</script']);
+    // Raw U+2028/U+2029 end string literals in pre-ES2019 parsers.
+    expect(scriptBlock).not.toMatch(/[\u2028\u2029]/);
+
+    const copied: string[] = [];
+    const document = executeHtmlReportScript(html, { writeText: (text) => copied.push(text) });
+    getRow(document, 'claude-code').click();
+    getElementById(document, 'btn-copy-json').click();
+
+    expect(getElementById(document, 'panel-title').textContent).toBe(skill.name);
+    expect(JSON.parse(copied[0] ?? '')).toEqual(result);
   });
 });
 

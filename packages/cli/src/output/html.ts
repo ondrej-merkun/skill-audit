@@ -17,6 +17,22 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
+// Characters that must not appear raw inside an inline <script> element.
+const SCRIPT_UNSAFE_CHARS = /[<\u2028\u2029]/g;
+
+/**
+ * Serialize a value as a JavaScript literal for an inline <script> element.
+ * Escaping "<" stops "</script" and "<!--" in untrusted text (skill names, paths, snippets)
+ * from ending or altering the element. Raw U+2028/U+2029 end string literals in pre-ES2019
+ * parsers. Each replacement is a valid string escape, so the script reads the original values.
+ */
+function serializeForScript(value: unknown): string {
+  return JSON.stringify(value).replace(
+    SCRIPT_UNSAFE_CHARS,
+    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`
+  );
+}
+
 function verdictColor(verdict: string): string {
   if (verdict === 'FAIL') return '#dc2626';
   if (verdict === 'REVIEW') return '#d97706';
@@ -205,9 +221,10 @@ export function renderHtml(result: ScanResult): string {
   const showEnrichment = sorted.some(hasEnrichmentDetails);
   const showLlmReview = sorted.some((skill) => skill.llmReviews !== undefined);
 
-  // Embed scan data as JSON for client-side consumption (all strings are server-generated)
-  const jsonData = JSON.stringify({ result: { ...result, skills: publicSorted } });
-  const redactedJson = JSON.stringify({
+  // Embed scan data for the client script. Skill names, paths, and snippets come from untrusted
+  // skill files, so serializeForScript keeps them from closing the <script> element.
+  const jsonData = serializeForScript({ result: { ...result, skills: publicSorted } });
+  const redactedJson = serializeForScript({
     result: { ...result, skills: redactPaths(publicSorted) },
   });
 
@@ -328,13 +345,13 @@ td{padding:10px 12px;vertical-align:middle}
 `;
 
   // JS uses DOM methods (createElement/textContent) to avoid innerHTML with untrusted strings.
-  // The embedded JSON (jsonData/redactedJson) is server-generated from typed ScanResult values
-  // and is read-only on the client side — not used to build DOM.
+  // The embedded data holds untrusted skill text. The client writes it to the DOM only through
+  // textContent and exports it only through JSON.stringify.
   const js = `
 (function(){
 var DATA = ${jsonData};
 var REDACTED = ${redactedJson};
-var AGENT_NAMES = ${JSON.stringify(agentNames)};
+var AGENT_NAMES = ${serializeForScript(agentNames)};
 var skills = DATA.result.skills;
 var activeAgent = null;
 
