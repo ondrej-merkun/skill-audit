@@ -275,7 +275,7 @@ unzip\s+-P\s+["']?\S+["']?\s+\S+\.zip
 7z\s+x\s+-p\S+\s+\S+
 ```
 
-**`FS-CREDSTORE` — Critical.** Path-literal regex over code + markdown. Each `~/` prefix also matches `$HOME/` and `${HOME}/`:
+**`FS-CREDSTORE` — Critical.** Path-literal regex over code + markdown. Each `~/` prefix also matches `$HOME/` and `${HOME}/`, also with the quote closed before the slash (`"$HOME"/`):
 ```regex
 ~/\.ssh/(id_[rd]sa|id_ecdsa|id_ed25519|authorized_keys)
 ~/\.aws/(credentials|config)
