@@ -16,7 +16,7 @@ new lesson, append a bullet there in the SAME commit as the fix
 | Language | TypeScript strict mode |
 | Runtime | Node.js 22+ |
 | Package manager | pnpm (workspaces) |
-| Bundler | tsdown (one ESM file, `dist/index.js`, for the bin) |
+| Bundler | tsdown (one ESM file, `dist/index.js`, for the bin; the build needs Node.js 22.18+ on 22.x, 24.11+ on 24.x, or 26+) |
 | CLI framework | commander |
 | Terminal colors | chalk v5 (ESM) |
 | Terminal tables | cli-table3 |

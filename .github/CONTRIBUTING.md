@@ -4,7 +4,8 @@ Thanks for helping improve `skill-audit`.
 
 ## Development
 
-Use Node.js 22.12 or newer and pnpm.
+Use pnpm and one of these Node.js versions: 22.18 or newer on 22.x, 24.11 or
+newer on 24.x, or 26 or newer. The build tool, tsdown, needs them.
 
 ```bash
 pnpm install
