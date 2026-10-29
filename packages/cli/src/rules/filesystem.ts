@@ -6,13 +6,25 @@ import {
 
 // Patterns using RegExp constructor to avoid triggering static-analysis hooks on this detector file.
 
+// The home dir as docs write it (`~/`) and as shell scripts write it (`$HOME/`, `${HOME}/`).
+// ponytail: home dir APIs such as os.homedir() or Path.home() are not matched.
+const homeDirPrefix = '(?:~|\\$HOME|\\$\\{HOME\\})\\/';
+
 // FS-CREDSTORE: path-literal access to known credential stores — per spec §4
-const sshKeyPattern = /~\/\.ssh\/(id_[rd]sa|id_ecdsa|id_ed25519|authorized_keys)/;
-const awsCredPattern = /~\/\.aws\/(credentials|config)/;
-const gitConfigCredPattern = /~\/\.config\/(gh\/hosts\.yml|git\/credentials)/;
-const dotfileCredsPattern = /~\/\.(netrc|npmrc|pypirc|git-credentials)/;
-const dockerKubePattern = /~\/\.(docker\/config\.json|kube\/config)/;
-const libKeychainPattern = /~\/Library\/Keychains\//;
+const sshKeyPattern = new RegExp(
+  String.raw`${homeDirPrefix}\.ssh\/(id_[rd]sa|id_ecdsa|id_ed25519|authorized_keys)`
+);
+const awsCredPattern = new RegExp(String.raw`${homeDirPrefix}\.aws\/(credentials|config)`);
+const gitConfigCredPattern = new RegExp(
+  String.raw`${homeDirPrefix}\.config\/(gh\/hosts\.yml|git\/credentials)`
+);
+const dotfileCredsPattern = new RegExp(
+  String.raw`${homeDirPrefix}\.(netrc|npmrc|pypirc|git-credentials)`
+);
+const dockerKubePattern = new RegExp(
+  String.raw`${homeDirPrefix}\.(docker\/config\.json|kube\/config)`
+);
+const libKeychainPattern = new RegExp(String.raw`${homeDirPrefix}Library\/Keychains\/`);
 // Split to avoid triggering scanners on this detector file itself.
 const etcPasswdPattern = new RegExp(['\\/', 'etc\\/(passwd|shadow)'].join(''));
 
@@ -37,13 +49,12 @@ export const FS_CREDSTORE: Rule = {
 };
 
 // FS-BROWSER-CREDENTIALSTORE: exact browser credential/cookie store paths.
-const browserStoreHomePrefix = '(?:~|\\$HOME|\\$\\{HOME\\})\\/';
 const browserStoreTerminator = '(?![A-Za-z0-9._/-]| [A-Za-z0-9._-])';
 const chromiumConfigRoot =
   '(?:Library\\/Application Support\\/(?:Google\\/Chrome|Chromium)|\\.config\\/(?:google-chrome|chromium))';
 const chromiumBrowserStorePattern = new RegExp(
   [
-    browserStoreHomePrefix,
+    homeDirPrefix,
     chromiumConfigRoot,
     '\\/',
     '(?:(?:Default|Profile [0-9]+|Guest Profile)\\/(?:Login Data|(?:Network\\/)?Cookies)|Local State)',
@@ -52,7 +63,7 @@ const chromiumBrowserStorePattern = new RegExp(
 );
 const firefoxBrowserStorePattern = new RegExp(
   [
-    browserStoreHomePrefix,
+    homeDirPrefix,
     '(?:Library\\/Application Support\\/Firefox\\/Profiles|\\.mozilla\\/firefox)',
     '\\/[^\\/\\s]+\\/(?:key4\\.db|logins\\.json|cookies\\.sqlite)',
     browserStoreTerminator,
@@ -60,7 +71,7 @@ const firefoxBrowserStorePattern = new RegExp(
 );
 const safariBrowserStorePattern = new RegExp(
   [
-    browserStoreHomePrefix,
+    homeDirPrefix,
     'Library\\/(?:Cookies\\/Cookies\\.binarycookies|Containers\\/com\\.apple\\.Safari\\/Data\\/Library\\/(?:Cookies\\/Cookies\\.binarycookies|Safari\\/LocalStorage)|Safari\\/LocalStorage)',
     browserStoreTerminator,
   ].join('')
