@@ -16,7 +16,7 @@ import {
 import { skillAgentIds, skillAgentNames, skillAgentPaths } from '../output/agents.js';
 import { renderJson } from '../output/json.js';
 import { createProgressReporter, formatEnrichmentOutcome } from '../progress.js';
-import { runRulesForSkill } from '../rules/engine.js';
+import { collectScanTargetPaths, runRulesForSkill } from '../rules/engine.js';
 import { ALL_RULES } from '../rules/index.js';
 import { withSecurityEducationContextFinding } from '../rules/security-education.js';
 import { scoreFindings } from '../score.js';
@@ -282,7 +282,9 @@ export async function runExplain(
   try {
     findings = withSecurityEducationContextFinding(
       target,
-      await runRulesForSkill(target, ALL_RULES)
+      await runRulesForSkill(target, ALL_RULES, {
+        scanTargetPaths: collectScanTargetPaths(skills),
+      })
     );
     progress.updateScan(1, 1, target.name);
   } catch (err) {

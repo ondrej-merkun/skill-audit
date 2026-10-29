@@ -13,6 +13,7 @@ vi.mock('../packages/cli/src/discovery/index.js', () => ({
 }));
 
 vi.mock('../packages/cli/src/rules/engine.js', () => ({
+  collectScanTargetPaths: vi.fn(),
   runRules: vi.fn(),
   runRulesForSkill: vi.fn(),
 }));

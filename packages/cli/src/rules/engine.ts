@@ -1,5 +1,5 @@
-import { type Dirent, readdirSync, readFileSync, statSync } from 'node:fs';
-import { basename, dirname, extname, join, relative, sep } from 'node:path';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path';
 import type { Finding, Rule, Skill } from '../types.js';
 
 /** Node's read error for a file longer than the V8 string limit (536,870,888 chars). */
@@ -10,6 +10,8 @@ type PrepareContent = NonNullable<Rule['prepareContent']>;
 type RunRulesOptions = {
   filenameOverride?: string;
   scanAllSupportingFiles?: boolean;
+  /** Paths from collectScanTargetPaths; a directory walk does not enter them. */
+  scanTargetPaths?: ReadonlySet<string>;
 };
 
 type ReachabilityIndex = {
@@ -132,7 +134,7 @@ export function matchesGlob(filename: string, glob: string): boolean {
   return filename.startsWith(prefix) && filename.endsWith(suffix);
 }
 
-const NESTED_SCAN_ROOT_MARKERS = new Set([
+const OPERATIVE_ENTRYPOINT_NAMES = new Set([
   'SKILL.md',
   'AGENTS.md',
   'AGENTS.override.md',
@@ -143,10 +145,6 @@ const NESTED_SCAN_ROOT_MARKERS = new Set([
   '.windsurfrules',
   'plugin.json',
   'gemini-extension.json',
-]);
-
-const OPERATIVE_ENTRYPOINT_NAMES = new Set([
-  ...NESTED_SCAN_ROOT_MARKERS,
   'README.md',
   'COMMAND.md',
   'config.toml',
@@ -168,30 +166,6 @@ const SUPPORTING_MARKDOWN_DIRS = new Set([
   'test',
   'tests',
 ]);
-
-function isPromptBearingCommandOrAgentDir(dirName: string, entries: Dirent[]) {
-  if (dirName !== 'commands' && dirName !== 'agents') return false;
-  return entries.some(
-    (entry) =>
-      entry.isFile() &&
-      (entry.name.endsWith('.md') || entry.name.endsWith('.mdc') || entry.name.endsWith('.toml'))
-  );
-}
-
-function isNestedScanRoot(dir: string): boolean {
-  let entries: Dirent[];
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return false;
-  }
-
-  if (entries.some((entry) => entry.isFile() && NESTED_SCAN_ROOT_MARKERS.has(entry.name))) {
-    return true;
-  }
-
-  return isPromptBearingCommandOrAgentDir(basename(dir), entries);
-}
 
 function normalizeRelativePath(path: string): string {
   return path.split(sep).join('/');
@@ -332,14 +306,19 @@ function findingForRole(finding: Finding, role: SupportingFileRole): Finding {
   };
 }
 
-/** Recursively collects file paths under a scan target without entering child scan roots. */
-function walkDir(dir: string): string[] {
+/**
+ * Recursively collects file paths under a scan target. A child file or directory that the
+ * same scan reports as its own skill is skipped, so its findings are not counted twice.
+ * Every other child belongs to this target, whatever marker files it contains.
+ */
+function walkDir(dir: string, scanTargetPaths: ReadonlySet<string>): string[] {
   const results: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
+    if (scanTargetPaths.has(resolve(full))) continue;
+
     if (entry.isDirectory()) {
-      if (isNestedScanRoot(full)) continue;
-      results.push(...walkDir(full));
+      results.push(...walkDir(full, scanTargetPaths));
     } else {
       results.push(full);
     }
@@ -380,7 +359,7 @@ export async function runRules(
   try {
     const st = statSync(skillPath);
     isDirectory = st.isDirectory();
-    files = isDirectory ? walkDir(skillPath) : [skillPath];
+    files = isDirectory ? walkDir(skillPath, options.scanTargetPaths ?? new Set()) : [skillPath];
   } catch {
     return [];
   }
@@ -446,14 +425,22 @@ export async function runRules(
 export async function runRulesForSkill(
   skill: Skill,
   rules: Rule[],
-  options: Pick<RunRulesOptions, 'scanAllSupportingFiles'> = {}
+  options: Pick<RunRulesOptions, 'scanAllSupportingFiles' | 'scanTargetPaths'> = {}
 ): Promise<Finding[]> {
   return runRules(skill.path, rules, {
     ...(skill.metadata?.ruleScanFilename !== undefined
       ? { filenameOverride: skill.metadata.ruleScanFilename }
       : {}),
-    ...(options.scanAllSupportingFiles !== undefined
-      ? { scanAllSupportingFiles: options.scanAllSupportingFiles }
-      : {}),
+    ...options,
   });
+}
+
+/**
+ * Returns the normalized paths that discovered skills occupy: each scan path plus the
+ * identical copies that discovery deduped into it, because the scan of the kept path
+ * already covers their content.
+ */
+export function collectScanTargetPaths(skills: readonly Skill[]): ReadonlySet<string> {
+  const paths = skills.flatMap((skill) => [skill.path, ...(skill.alsoInstalledAt ?? [])]);
+  return new Set(paths.map((path) => resolve(path)));
 }
