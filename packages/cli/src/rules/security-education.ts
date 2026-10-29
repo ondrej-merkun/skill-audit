@@ -27,6 +27,10 @@ function stringifyMetadata(skill: Skill): string {
 
 function readSkillContext(skill: Skill): string {
   const metadata = stringifyMetadata(skill);
+
+  // The metadata already holds the scanned text. The file at `path` is shared with other entries.
+  if (skill.metadata?.ruleScanContent !== undefined) return [skill.name, metadata].join('\n');
+
   const manifestText = skill.manifestPath === null ? '' : readIfExists(skill.manifestPath);
 
   let pathText = '';

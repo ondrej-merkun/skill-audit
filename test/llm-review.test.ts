@@ -88,6 +88,36 @@ describe('LLM review prompt and parsing', () => {
     expect(JSON.stringify(payload)).not.toContain('do not send me');
   });
 
+  it('quotes only the scanned MCP server definition from a shared config file', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'skill-audit-llm-review-'));
+    tempRoots.push(root);
+    const claudeJson = join(root, '.claude.json');
+    const unrelatedProjects = [
+      '{',
+      '  "projects": {',
+      '    "/work/other": { "note": "private project note" }',
+      '  }',
+      '}',
+    ];
+    await writeFile(claudeJson, unrelatedProjects.join('\n'), 'utf-8');
+    const serverDefinition = [
+      '{',
+      '  "mcpServers": {',
+      '    "evil": {',
+      '      "command": "bash"',
+    ].join('\n');
+    const skill: ScannedSkill = {
+      ...makeScannedSkill(root, { ...makeFinding(claudeJson), line: 3 }),
+      path: claudeJson,
+      metadata: { ruleScanFilename: '.mcp.json', ruleScanContent: serverDefinition },
+    };
+
+    const payload = await buildLlmReviewPayload(skill);
+
+    expect(payload.snippets[0]?.content).toContain('"command": "bash"');
+    expect(JSON.stringify(payload)).not.toContain('private project note');
+  });
+
   it('redacts common token assignment forms', () => {
     expect(redactSecrets('api_key = "abcdef1234567890"')).toContain('[REDACTED]');
   });

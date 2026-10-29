@@ -60,10 +60,14 @@ function relativeFindingFile(skillPath: string, finding: Finding): string {
   return rel;
 }
 
-async function readFindingSnippet(skillPath: string, finding: Finding): Promise<LlmReviewSnippet> {
-  const fileLabel = relativeFindingFile(skillPath, finding);
+async function readFindingSnippet(
+  skill: ScannedSkill,
+  finding: Finding
+): Promise<LlmReviewSnippet> {
+  const fileLabel = relativeFindingFile(skill.path, finding);
   try {
-    const content = await readFile(finding.file, 'utf-8');
+    // Finding lines point into the scanned text, so quote that text and not the shared file.
+    const content = skill.metadata?.ruleScanContent ?? (await readFile(finding.file, 'utf-8'));
     const lines = content.split('\n');
     const start = Math.max(0, finding.line - 3);
     const end = Math.min(lines.length, finding.line + 2);
@@ -84,7 +88,7 @@ export async function buildLlmReviewPayload(
 
   for (const finding of skill.findings) {
     if (remaining <= 0) break;
-    const snippet = await readFindingSnippet(skill.path, finding);
+    const snippet = await readFindingSnippet(skill, finding);
     const capped = snippet.content.slice(0, remaining);
     snippets.push({ ...snippet, content: capped });
     remaining -= capped.length;
