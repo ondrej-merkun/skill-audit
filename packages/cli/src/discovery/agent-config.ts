@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, join, posix, relative, resolve, sep } from 'node:path';
 import { agentConfigCommandValues } from '../rules/agent-config.js';
 import type { Skill } from '../types.js';
@@ -9,10 +9,11 @@ import { computeTreeSha256 } from './tree-hash.js';
 // server, and rules never read or quote the rest of a shared file such as ~/.claude.json.
 const MCP_SERVER_SCAN_FILENAME = '.mcp.json';
 
-// A hook command names a script as one shell word, such as "${CLAUDE_PLUGIN_ROOT}"/run.sh.
-// Quotes only group parts of that word, so they are removed before the split.
+// A hook command names a script as one shell word, such as "${CLAUDE_PLUGIN_ROOT}"/run.sh or
+// "$CLAUDE_PROJECT_DIR/set up.sh". Quoted parts keep their spaces; the quotes are removed after
+// the split.
+const SHELL_WORD = /(?:"[^"]*"|'[^']*'|[^\s;|&()<>`"'])+/g;
 const SHELL_QUOTES = /["']/g;
-const SHELL_WORD = /[^\s;|&()<>`]+/g;
 
 type AgentConfigFiles = {
   agentId: string;
@@ -89,15 +90,22 @@ async function discoverHookScripts(
 /** Finds the files below the root that hook commands in the config files name. */
 async function hookScriptPaths(configPaths: string[], root: HookScriptRoot): Promise<string[]> {
   const placeholder = new RegExp(`^\\$\\{?${root.placeholder}\\}?(?=[\\\\/])`);
+  const realRoot = await realPathOrUndefined(root.dir);
+  if (realRoot === undefined) return [];
   const scripts = new Set<string>();
 
   for (const command of await commandValues(configPaths)) {
-    for (const word of command.replace(SHELL_QUOTES, '').match(SHELL_WORD) ?? []) {
+    for (const quotedWord of command.match(SHELL_WORD) ?? []) {
+      const word = quotedWord.replace(SHELL_QUOTES, '');
       const rootRelative = word.replace(placeholder, '.');
       if (rootRelative === word && !root.isWorkingDir) continue;
 
       const path = resolve(root.dir, rootRelative);
-      if (isBelow(root.dir, path) && !configPaths.includes(path) && (await isFile(path))) {
+      if (!isBelow(root.dir, path) || configPaths.includes(path)) continue;
+
+      // A symlink can point outside the root, so the real path must stay below it too.
+      const realPath = await realPathOrUndefined(path);
+      if (realPath !== undefined && isBelow(realRoot, realPath) && (await isFile(path))) {
         scripts.add(path);
       }
     }
@@ -149,5 +157,13 @@ async function isFile(path: string): Promise<boolean> {
     return (await stat(path)).isFile();
   } catch {
     return false;
+  }
+}
+
+async function realPathOrUndefined(path: string): Promise<string | undefined> {
+  try {
+    return await realpath(path);
+  } catch {
+    return undefined;
   }
 }
