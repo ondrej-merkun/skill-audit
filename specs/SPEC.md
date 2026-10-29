@@ -125,7 +125,7 @@ interface Skill {
     | 'gemini-extension-json'
     | 'gemini-command-toml'
     | 'gemini-agent-md'
-    | 'agent-config';                // hook or settings file that runs commands
+    | 'agent-config';                // hook or settings file that runs commands, or a hook script
   scope: 'user' | 'project' | 'managed';
   treeSha256: string;                // for allowlist matching
   installState?: 'installed' | 'marketplace';
@@ -165,7 +165,9 @@ full path list is in `specs/DISCOVERY.md`):
 | **Windsurf** | `~/.codeium/windsurf/hooks.json`, `~/.codeium/hooks.json` | `.devin/hooks.json`, legacy `.windsurf/hooks.json` |
 
 Home files have `scope: "user"`; working-directory files have
-`scope: "project"`. Missing files are skipped. Each MCP server from
+`scope: "project"`. Missing files are skipped. Claude Code also reports the
+scripts that project and plugin hooks name, so a payload moved into a hook
+script is still scanned. Each MCP server from
 `~/.claude.json`, `.mcp.json`, a Claude Code plugin `.mcp.json`, or
 `~/.gemini/settings.json` is scanned with only its own definition, so findings
 stay on that server and never quote other parts of a shared config file.

@@ -26,13 +26,19 @@ move it here in the same task; do not leave implemented behavior documented as
 - MCP servers in `~/.claude.json`, including the nested
   `projects.<absolute-path>.mcpServers` shape
 - `~/.claude/settings.json` (hooks and command-valued settings)
-- Installed plugin `hooks/hooks.json` and plugin `.mcp.json` servers
+- Installed plugin `hooks/hooks.json` and plugin `.mcp.json` servers, only at
+  a plugin root. In a plugin with `.claude-plugin/plugin.json`, a copy deeper
+  in the payload (such as a template for another agent) never loads and is
+  skipped.
+- Plugin scripts that a plugin hook names through `${CLAUDE_PLUGIN_ROOT}`
 
 **Project-local (cwd + parents until repo root):**
 - `.claude/skills/`
 - `.claude/commands/`
 - `.claude/agents/`
 - `.claude/settings.json`, `.claude/settings.local.json`
+- Project scripts that these hooks name through `$CLAUDE_PROJECT_DIR` or by a
+  path relative to the project root
 - `.mcp.json`
 - `.claude-plugin/plugin.json`
 - `.claude-plugin/marketplace.json`
@@ -41,6 +47,15 @@ Each MCP server entry is scanned with only its own definition, rendered as a
 one-server `.mcp.json` document. Findings stay on that server, line numbers
 count from the start of that document, and rules never read or quote other
 parts of a shared file such as `~/.claude.json`.
+
+A hook script is a separate `agent-config` target with the scope of its
+settings or hooks file. It is reported only when the script exists below the
+project root or the plugin root, also after symlinks are resolved. Discovery
+follows literal paths in a command word; quoted words keep their spaces.
+Paths that the shell builds at run time are not followed. Scripts that user
+settings name are the user's
+own and are not followed. Hook scripts of the other agents are not followed
+yet.
 
 **Manifest formats:** `SKILL.md` (YAML front matter + markdown body),
 `plugin.json`, `.mcp.json`.
@@ -151,7 +166,9 @@ Report each as a `Skill` with `agentId: "cross-agent"` and
 - `~/.gemini/extensions/**/gemini-extension.json`
 - `~/.gemini/commands/**/*.toml`
 - `~/.gemini/agents/**/*.md`
-- `~/.gemini/settings.json` (hooks, plus one entry per `mcpServers` server)
+- `~/.gemini/settings.json` (hooks, plus one entry per `mcpServers` server).
+  The settings file target also holds its servers, so a risky server is
+  reported on its own entry and on the settings file.
 
 **Project-local:**
 - `.gemini/extensions/`
