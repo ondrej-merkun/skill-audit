@@ -555,7 +555,9 @@ describe('discoverAll', () => {
     expect(skills[0]?.alsoInstalledAt).not.toBe(skill1.alsoInstalledAt);
   });
 
-  it('is fail-silent when isInstalled() throws', async () => {
+  it('is fail-soft when isInstalled() throws, stderr gets message', async () => {
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
     registerPlugin({
       id: 'broken-check',
       displayName: 'Broken Check',
@@ -566,6 +568,10 @@ describe('discoverAll', () => {
     // Should not throw
     const skills = await discoverAll();
     expect(skills).toEqual([]);
+    expect(stderrSpy).toHaveBeenCalledWith(
+      expect.stringContaining('discovery plugin "broken-check" failed: no access'),
+    );
+    stderrSpy.mockRestore();
   });
 
   it('is fail-silent when discoverSkills() throws, stderr gets message', async () => {

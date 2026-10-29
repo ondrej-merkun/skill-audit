@@ -18,6 +18,7 @@ export type DiscoveryProgressEvent =
   | { type: 'checking-agent'; agentId: string; displayName: string }
   | { type: 'agent-status'; agentId: string; displayName: string; message: string }
   | { type: 'agent-skipped'; agentId: string; displayName: string }
+  | { type: 'agent-failed'; agentId: string; displayName: string; message: string }
   | { type: 'agent-done'; agentId: string; displayName: string; skillCount: number }
   | { type: 'complete'; skillCount: number; agentCount: number };
 
