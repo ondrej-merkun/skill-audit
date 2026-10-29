@@ -1,5 +1,5 @@
-import ora from 'ora';
 import type { Ora, Spinner } from 'ora';
+import ora from 'ora';
 import type { EnrichmentSource } from './enrich/index.js';
 import type { EnrichmentSourceOutcome } from './types.js';
 

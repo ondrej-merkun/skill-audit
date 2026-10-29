@@ -1,8 +1,8 @@
 import type { LlmReviewFinding, LlmReviewResult, Severity } from '../types.js';
 import { LLM_REVIEW_CATEGORIES } from './categories.js';
 import type { LocalLlmConfig } from './config.js';
-import { LLM_REVIEW_PROMPT_VERSION, buildLlmReviewMessages } from './prompt.js';
 import type { LlmReviewPayload } from './prompt.js';
+import { buildLlmReviewMessages, LLM_REVIEW_PROMPT_VERSION } from './prompt.js';
 
 export type LlmReviewFetch = (
   input: string,

@@ -1,4 +1,4 @@
-import { type Dirent, readFileSync, readdirSync, statSync } from 'node:fs';
+import { type Dirent, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, extname, join, relative, sep } from 'node:path';
 import type { Finding, Rule, Skill } from '../types.js';
 

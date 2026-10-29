@@ -1,15 +1,15 @@
 import { writeFile } from 'node:fs/promises';
 import { stripVTControlCharacters } from 'node:util';
-import { SUPPORTED_AGENT_IDS, formatSupportedAgentIds } from '../agent-names.js';
+import { formatSupportedAgentIds, SUPPORTED_AGENT_IDS } from '../agent-names.js';
 import { loadIgnoreList } from '../allowlist/ignore.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
+import type { EnrichmentSource } from '../enrich/index.js';
 import {
   ENRICHMENT_ENABLED,
   enrichAllWithOutcomes,
   skippedEnrichmentOutcomes,
   summarizeEnrichmentOutcomes,
 } from '../enrich/index.js';
-import type { EnrichmentSource } from '../enrich/index.js';
 import type { LocalLlmConfig } from '../llm/config.js';
 import type { LlmReviewFetch } from '../llm/review.js';
 import {
@@ -25,8 +25,8 @@ import { renderSummaryCompact } from '../output/summary.js';
 import { renderTableToString } from '../output/table.js';
 import { calculateCompromisedPercent } from '../percent.js';
 import {
-  type ProgressOutputKind,
   createProgressReporter,
+  type ProgressOutputKind,
   selectProgressMode,
 } from '../progress.js';
 import { runRulesForSkill } from '../rules/engine.js';
@@ -37,8 +37,8 @@ import type {
   AgentInfo,
   EnrichmentSourceOutcome,
   EnrichmentStatus,
-  ScanResult,
   ScannedSkill,
+  ScanResult,
   Skill,
   Verdict,
 } from '../types.js';

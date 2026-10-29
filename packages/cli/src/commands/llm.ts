@@ -2,14 +2,14 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 import {
   type AddLocalLlmInput,
-  type LocalLlmConfig,
   addLlmConfig,
+  type LocalLlmConfig,
   loadLlmRegistry,
 } from '../llm/config.js';
 import {
+  checkOpenAiCompatibleConnection,
   type FetchLike,
   type LlmHealthResult,
-  checkOpenAiCompatibleConnection,
 } from '../llm/openai-compatible.js';
 
 const NO_BORDERS = {

@@ -3,8 +3,8 @@ import type {
   Finding,
   LlmReviewFinding,
   LlmReviewResult,
-  ScanResult,
   ScannedSkill,
+  ScanResult,
 } from '../types.js';
 import { skillAgentPaths } from './agents.js';
 import { installStateLabel } from './install-state.js';

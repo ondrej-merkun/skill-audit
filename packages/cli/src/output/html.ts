@@ -1,6 +1,6 @@
 import { formatAgentName } from '../agent-names.js';
 import { formatCompromisedPercent } from '../percent.js';
-import type { ScanResult, ScannedSkill, Severity } from '../types.js';
+import type { ScannedSkill, ScanResult, Severity } from '../types.js';
 import { skillAgentIds, skillAgentNames } from './agents.js';
 import { installStateLabel } from './install-state.js';
 import { collectLlmComparisons, collectLlmConsensus, highestLlmSeverity } from './llm.js';
