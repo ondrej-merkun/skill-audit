@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, rm, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   clearPlugins,
   discoverAll,
@@ -704,6 +704,88 @@ describe('discoverAll', () => {
       await rm(tempHome, { recursive: true, force: true });
       await rm(tempCwd, { recursive: true, force: true });
     }
+  });
+});
+
+describe('shared .agents/skills discovery', () => {
+  const SHARED_SKILLS_DIR = join('.agents', 'skills');
+
+  // A home-directory marker that makes each agent's isInstalled() gate pass.
+  const AGENT_INSTALL_MARKERS = [
+    ['cline', '.cline'],
+    ['codex', '.codex'],
+    ['copilot', '.copilot'],
+    ['cursor', '.cursor'],
+    ['gemini', '.gemini'],
+    ['windsurf', join('.codeium', 'windsurf')],
+  ] as const;
+
+  let home: string;
+  let cwd: string;
+
+  async function writeSharedSkill(root: string, name: string): Promise<void> {
+    const skillDir = join(root, SHARED_SKILLS_DIR, name);
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(join(skillDir, 'SKILL.md'), `---\nname: ${name}\n---\nShared skill.\n`);
+  }
+
+  function sharedSkillRows(skills: Skill[]) {
+    return skills
+      .filter((skill) => skill.path.includes(SHARED_SKILLS_DIR))
+      .map(({ agentId, agentIds, name, scope }) => ({ agentId, agentIds, name, scope }));
+  }
+
+  beforeEach(async () => {
+    home = await mkdtemp(join(tmpdir(), 'skill-audit-shared-home-'));
+    cwd = await mkdtemp(join(tmpdir(), 'skill-audit-shared-cwd-'));
+    vi.stubEnv('HOME', home);
+    vi.stubEnv('SKILL_AUDIT_CWD', cwd);
+    vi.stubEnv('CODEX_HOME', join(home, '.codex'));
+    vi.stubEnv('CLINE_DIR', join(home, '.cline'));
+    vi.stubEnv('XDG_CONFIG_HOME', join(home, '.config'));
+
+    await writeSharedSkill(home, 'foo');
+    await writeSharedSkill(cwd, 'bar');
+    // A directory without SKILL.md is not a skill.
+    await mkdir(join(home, SHARED_SKILLS_DIR, 'notes'), { recursive: true });
+    await writeFile(join(home, SHARED_SKILLS_DIR, 'notes', 'README.md'), 'Notes.\n');
+
+    initDefaultPlugins();
+  });
+
+  afterEach(async () => {
+    vi.unstubAllEnvs();
+    await rm(home, { recursive: true, force: true });
+    await rm(cwd, { recursive: true, force: true });
+  });
+
+  it.each(AGENT_INSTALL_MARKERS)(
+    'should discover user and project shared skills when only %s is installed',
+    async (agentId, installMarker) => {
+      await mkdir(join(home, installMarker), { recursive: true });
+
+      const skills = await discoverAll();
+
+      // agentIds stays unset: no agent that is not installed claims the skill.
+      expect(sharedSkillRows(skills)).toEqual([
+        { agentId, agentIds: undefined, name: 'foo', scope: 'user' },
+        { agentId, agentIds: undefined, name: 'bar', scope: 'project' },
+      ]);
+    }
+  );
+
+  it('should collapse a shared skill into one row owned by every installed agent', async () => {
+    for (const [, installMarker] of AGENT_INSTALL_MARKERS) {
+      await mkdir(join(home, installMarker), { recursive: true });
+    }
+    const allAgentIds = AGENT_INSTALL_MARKERS.map(([agentId]) => agentId);
+
+    const skills = await discoverAll();
+
+    expect(sharedSkillRows(skills)).toEqual([
+      expect.objectContaining({ agentIds: allAgentIds, name: 'foo', scope: 'user' }),
+      expect.objectContaining({ agentIds: allAgentIds, name: 'bar', scope: 'project' }),
+    ]);
   });
 });
 
