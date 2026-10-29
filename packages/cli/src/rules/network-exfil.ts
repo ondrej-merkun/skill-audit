@@ -261,13 +261,13 @@ const TOKEN_PATH_CATCHER_HOSTS = [
 ].join('|');
 const tokenSubdomainCatcherPattern = new RegExp(
   [
-    `https?:\\/\\/(?!${CATCHER_SERVICE_SUBDOMAINS}\\.)[\\w.\${}-]+`,
+    `https?:\\/\\/(?!${CATCHER_SERVICE_SUBDOMAINS}\\.)[\\w.{}$-]+`,
     `\\.(?:${TOKEN_SUBDOMAIN_CATCHER_HOSTS})(?![\\w.-])`,
   ].join(''),
   'i'
 );
 const tokenPathCatcherPattern = new RegExp(
-  `https?:\\/\\/(?:${TOKEN_PATH_CATCHER_HOSTS})\\/(?:[\\w\${-]|["'\`]\\s*\\+)`,
+  `https?:\\/\\/(?:${TOKEN_PATH_CATCHER_HOSTS})\\/(?:[\\w{$-]|["'\`]\\s*\\+)`,
   'i'
 );
 const pastebinUploadPattern = /https?:\/\/pastebin\.com\/api\/api_post\.php/i;
