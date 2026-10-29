@@ -50,6 +50,9 @@ const CR_LINE_BREAK = /\r\n?/g;
 // `(?<=^|\n)` starts a line only after LF. A multiline `^` also starts one after U+2028,
 // which the shell does not treat as a line break.
 const SHELL_CONTINUATION = /(?<=^|\n)(?![ \t]*#)([^\n]*)\\\n/g;
+// A line that ends in a pipe or a list operator continues on the next line without a `\`.
+// A `#` before the operator starts a comment, and a comment ends at the line break.
+const OPERATOR_CONTINUATION = /(?<=^|\n)([^\n#]*(?:\|&?|&&)[ \t]*)\n/g;
 const TRAILING_SHELL_COMMENT = /(?<=^|\n)[ \t]*#[^\n]*$/;
 
 // A blanked comment keeps its whitespace, so line breaks inside it stay.
@@ -138,14 +141,14 @@ export function blankJsonComments(content: string): string {
   return blanked + content.slice(copiedUpTo);
 }
 
-
 /**
  * Lays out a decoded command value in the lines that the shell reads, so the `#`
  * comment mask hides only text that the shell does not run. CR and CRLF become LF.
- * A `\` continuation joins the next line, except at the end of a comment line. A
- * value that ends in a comment line gets a final LF, because the next value on the
- * same JSON line is a different command. The result is at most one character longer
- * than the value, so it still fits in the quoted JSON literal.
+ * A `\` continuation joins the next line, except at the end of a comment line, and so
+ * does a line that ends in `|`, `|&`, `||`, or `&&`. A value that ends in a comment
+ * line gets a final LF, because the next value on the same JSON line is a different
+ * command. The result is at most one character longer than the value, so it still
+ * fits in the quoted JSON literal.
  */
 function toShellLines(command: string): string {
   // ponytail: a decoded LF inside a double-quoted string also ends the line here, as
@@ -153,6 +156,7 @@ function toShellLines(command: string): string {
   return command
     .replace(CR_LINE_BREAK, '\n')
     .replace(SHELL_CONTINUATION, '$1  ')
+    .replace(OPERATOR_CONTINUATION, '$1 ')
     .replace(TRAILING_SHELL_COMMENT, '$&\n');
 }
 
