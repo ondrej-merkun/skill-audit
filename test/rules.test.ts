@@ -184,6 +184,11 @@ describe('SEC-HARDCODED-KEY in test files', () => {
           'client = Client(auth_token="e2e-9fQ2xLk8ZpR4tW7yN1mB6vC3hJ5sD0aE")  # autoreview: allow-secret',
         severity: 'critical',
       },
+      {
+        snippet:
+          'replica = Client(auth_token="e2e-qmzvkrjwpnhtxsbcfydlaguoreivznkp")  # autoreview: allow-secret',
+        severity: 'critical',
+      },
     ]);
   });
 });

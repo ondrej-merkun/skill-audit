@@ -51,8 +51,9 @@ const syntheticValueSegmentPattern =
 
 // The other segments of a made-up value must read as words or short numbers. Random key
 // material mixes case and digits, so a real key behind a test-word segment
-// ('sk_test_51Mz9Qr...', 'e2e-9fQ2xLk8...') still fires.
-const plainValueSegmentPattern = /^(?:[a-z]+|[A-Z]+|\d{1,4})$/;
+// ('sk_test_51Mz9Qr...', 'e2e-9fQ2xLk8...') still fires. A word has at most 16 letters; a
+// longer single-case run is random key material too.
+const plainValueSegmentPattern = /^(?:[a-z]{1,16}|[A-Z]{1,16}|\d{1,4})$/;
 
 function maskLine(line: string): string {
   return ' '.repeat(line.length);
