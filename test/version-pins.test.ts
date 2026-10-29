@@ -4,74 +4,81 @@
  * CLI release it ships with.
  */
 
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { execFile } from 'node:child_process';
+import { copyFile, cp, mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { describe, expect, it } from 'vitest';
+import {
+  CLI_PACKAGE_JSON,
+  extractPinnedVersions,
+  PINNED_LOCATIONS,
+  toLf,
+} from '../scripts/version-pins.mjs';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
-const CLI_PACKAGE_JSON = 'packages/cli/package.json';
+const SET_VERSION_SCRIPT = 'scripts/set-version.mjs';
+// Must differ from the current package version, so a pin that the script
+// misses fails the test.
+const NEW_VERSION = '9.9.9';
 
-// Matches the `default:` line inside the `version:` input block of action.yml.
-// The 2-space `version:` key exists only under `inputs:`.
-const ACTION_VERSION_DEFAULT = /^ {2}version:\n(?: {4}.*\n)*? {4}default: *'([^']*)'/gm;
-
-// Matches every `@ondrej-merkun/skill-audit` reference. Group 1 is the version
-// after the package name. A reference with no version yields an empty string,
-// so an unpinned command also fails the test.
-const CLI_PACKAGE_REFERENCE = /@ondrej-merkun\/skill-audit(?:@([\w.+-]+))?/g;
-
-// Add one row per file that pins the CLI version.
-const PINNED_LOCATIONS: PinnedLocation[] = [
-  {
-    file: 'action.yml',
-    extractPinnedVersions: (text) => matchedGroups(text, ACTION_VERSION_DEFAULT),
-  },
-  {
-    file: 'packages/skill/SKILL.md',
-    extractPinnedVersions: (text) => matchedGroups(text, CLI_PACKAGE_REFERENCE),
-  },
-  {
-    file: 'packages/skill/README.md',
-    extractPinnedVersions: (text) => matchedGroups(text, CLI_PACKAGE_REFERENCE),
-  },
-];
+const execFileAsync = promisify(execFile);
 
 describe('CLI version pins', () => {
-  it.each(PINNED_LOCATIONS)(
-    '$file pins the CLI package version',
-    async ({ file, extractPinnedVersions }) => {
-      const packageVersion = await readCliPackageVersion();
+  it.each(PINNED_LOCATIONS)('$file pins the CLI package version', async (location) => {
+    const packageVersion = await readCliPackageVersion(REPO_ROOT);
 
-      const pinnedVersions = extractPinnedVersions(await readRepoFile(file));
+    const pinnedVersions = await readPinnedVersions(REPO_ROOT, location);
 
-      expect([...new Set(pinnedVersions)]).toEqual([packageVersion]);
+    expect(pinnedVersions).toEqual([packageVersion]);
+  });
+
+  it('scripts/set-version.mjs sets the package version and every pin', async () => {
+    const copyRoot = await copyPinnedFiles();
+
+    try {
+      await execFileAsync(process.execPath, [join(copyRoot, SET_VERSION_SCRIPT), NEW_VERSION]);
+
+      expect(await readCliPackageVersion(copyRoot)).toBe(NEW_VERSION);
+      for (const location of PINNED_LOCATIONS) {
+        expect(await readPinnedVersions(copyRoot, location), location.file).toEqual([NEW_VERSION]);
+      }
+    } finally {
+      await rm(copyRoot, { recursive: true, force: true });
     }
-  );
+  });
 });
 
-async function readCliPackageVersion(): Promise<string> {
-  const pkg = JSON.parse(await readRepoFile(CLI_PACKAGE_JSON)) as { version: string };
+/**
+ * Copies the scripts, the CLI package.json, and every pinned file to a temp
+ * repository root. The script finds the root from its own path, so it then
+ * edits only the copy.
+ */
+async function copyPinnedFiles(): Promise<string> {
+  const copyRoot = await mkdtemp(join(tmpdir(), 'skill-audit-set-version-'));
+  await cp(join(REPO_ROOT, 'scripts'), join(copyRoot, 'scripts'), { recursive: true });
+
+  for (const file of [CLI_PACKAGE_JSON, ...PINNED_LOCATIONS.map(({ file }) => file)]) {
+    await mkdir(dirname(join(copyRoot, file)), { recursive: true });
+    await copyFile(join(REPO_ROOT, file), join(copyRoot, file));
+  }
+
+  return copyRoot;
+}
+
+async function readCliPackageVersion(root: string): Promise<string> {
+  const pkg = JSON.parse(await readFile(join(root, CLI_PACKAGE_JSON), 'utf-8')) as {
+    version: string;
+  };
   return pkg.version;
 }
 
-async function readRepoFile(file: string): Promise<string> {
-  const text = await readFile(join(REPO_ROOT, file), 'utf-8');
-  // CRLF checkouts (Git for Windows autocrlf) must not hide a correct pin.
-  return text.replace(/\r\n/g, '\n');
+/** Returns each distinct version that the file pins, in order of appearance. */
+async function readPinnedVersions(root: string, location: PinnedLocation): Promise<string[]> {
+  const text = toLf(await readFile(join(root, location.file), 'utf-8'));
+  return [...new Set(extractPinnedVersions(text, location.pattern))];
 }
 
-/**
- * Returns capture group 1 of every match of a global pattern, so the test sees
- * both missing and conflicting pins.
- */
-function matchedGroups(text: string, pattern: RegExp): string[] {
-  return [...text.matchAll(pattern)].map((match) => match[1] ?? '');
-}
-
-type PinnedLocation = {
-  /** Repository-relative path. */
-  file: string;
-  /** Returns every CLI version that the file pins. */
-  extractPinnedVersions: (text: string) => string[];
-};
+type PinnedLocation = (typeof PINNED_LOCATIONS)[number];
