@@ -4,7 +4,11 @@ import os from 'node:os';
 import { basename, dirname, join, relative } from 'node:path';
 import { enterDirOnce, readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
-import { discoverAgentConfigFiles, mcpServerScanMetadata } from './agent-config.js';
+import {
+  discoverAgentConfigFiles,
+  type HookScriptRoot,
+  mcpServerScanMetadata,
+} from './agent-config.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
 import { fallbackSkillNameFromDirectory } from './names.js';
 import { computeTreeSha256 } from './tree-hash.js';
@@ -123,6 +127,9 @@ async function discoverPluginTree(
   metadata?: Skill['metadata']
 ): Promise<Skill[]> {
   const files = await walkFiles(dir, options);
+  const manifestRoots = new Set(
+    files.filter(isPluginManifest).map((file) => dirname(dirname(file)))
+  );
   const skills: Skill[] = [];
 
   for (const file of files) {
@@ -137,24 +144,60 @@ async function discoverPluginTree(
       skills.push(withInstallState(await skillFromFile(file, 'SKILL.md', scope, metadata)));
     } else if (name.endsWith('.md') && segments.includes('agents')) {
       skills.push(withInstallState(await skillFromFile(file, 'agents-md', scope, metadata)));
-    } else if (name === 'hooks.json' && basename(dirname(file)) === 'hooks') {
-      // Name hook files after their plugin: every plugin uses hooks/hooks.json.
-      const pluginRoot = dirname(dirname(file));
-      const hooks = await discoverAgentConfigFiles({
-        agentId: AGENT_ID,
-        dir: dirname(file),
-        displayDir: `${fallbackSkillNameFromDirectory(pluginRoot)}/hooks`,
-        fileNames: [name],
-        scope,
-        ...(metadata === undefined ? {} : { metadata }),
-      });
-      skills.push(...hooks.map(withInstallState));
-    } else if (name === '.mcp.json') {
+    } else if (
+      name === 'hooks.json' &&
+      basename(dirname(file)) === 'hooks' &&
+      isPluginRootComponent(dirname(dirname(file)), manifestRoots)
+    ) {
+      skills.push(...(await discoverPluginHooks(file, scope, metadata)).map(withInstallState));
+    } else if (name === '.mcp.json' && isPluginRootComponent(dirname(file), manifestRoots)) {
       skills.push(...(await discoverMcpJson(file, scope)).map(withInstallState));
     }
   }
 
   return skills;
+}
+
+/** Emits a plugin's hooks/hooks.json and the plugin scripts that its hooks run. */
+async function discoverPluginHooks(
+  hooksFile: string,
+  scope: Skill['scope'],
+  metadata?: Skill['metadata']
+): Promise<Skill[]> {
+  // Name hook files after their plugin: every plugin uses hooks/hooks.json.
+  const pluginRoot = dirname(dirname(hooksFile));
+  const pluginName = fallbackSkillNameFromDirectory(pluginRoot);
+
+  return discoverAgentConfigFiles({
+    agentId: AGENT_ID,
+    dir: dirname(hooksFile),
+    displayDir: `${pluginName}/hooks`,
+    fileNames: [basename(hooksFile)],
+    scope,
+    ...(metadata === undefined ? {} : { metadata }),
+    scriptRoot: {
+      dir: pluginRoot,
+      displayDir: pluginName,
+      placeholder: 'CLAUDE_PLUGIN_ROOT',
+      isWorkingDir: false,
+    },
+  });
+}
+
+function isPluginManifest(file: string): boolean {
+  return basename(file) === 'plugin.json' && basename(dirname(file)) === '.claude-plugin';
+}
+
+/**
+ * Claude Code loads hooks/hooks.json and .mcp.json only at a plugin root. A copy deeper in a
+ * plugin that has a manifest, such as a template for another agent, never runs. A plugin
+ * without a manifest has no known root, so its files count.
+ */
+function isPluginRootComponent(componentDir: string, manifestRoots: Set<string>): boolean {
+  for (let dir = componentDir; ; dir = dirname(dir)) {
+    if (manifestRoots.has(dir)) return dir === componentDir;
+    if (dirname(dir) === dir) return true;
+  }
 }
 
 async function readPluginManifestName(pluginDir: string): Promise<string | null> {
@@ -294,9 +337,17 @@ async function discoverSettingsFiles(
   dir: string,
   displayDir: string,
   fileNames: string[],
-  scope: Skill['scope']
+  scope: Skill['scope'],
+  scriptRoot?: HookScriptRoot
 ): Promise<Skill[]> {
-  return discoverAgentConfigFiles({ agentId: AGENT_ID, dir, displayDir, fileNames, scope });
+  return discoverAgentConfigFiles({
+    agentId: AGENT_ID,
+    dir,
+    displayDir,
+    fileNames,
+    scope,
+    ...(scriptRoot === undefined ? {} : { scriptRoot }),
+  });
 }
 
 const claudeCodeDiscovery: AgentDiscovery = {
@@ -331,7 +382,8 @@ const claudeCodeDiscovery: AgentDiscovery = {
           projectClaudeDir,
           '.claude',
           ['settings.json', 'settings.local.json'],
-          'project'
+          'project',
+          { dir: cwd, displayDir: '', placeholder: 'CLAUDE_PROJECT_DIR', isWorkingDir: true }
         ))
       );
       skills.push(

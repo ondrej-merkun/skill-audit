@@ -280,6 +280,13 @@ without a commit message explaining why it no longer applies.
   Carry the entry's definition as `metadata.ruleScanContent` and keep every
   reader (rules, LLM snippets, context hints) on that text.
 
+- **L2.8 — A hook target must cover the script that the hook runs.** _The P0 #7
+  review moved a curl-to-shell payload from an inline hook into
+  `.claude/hooks/setup.sh` and into a plugin `scripts/run.sh`; both scored PASS
+  100. Most real plugin hooks on the dev machine run a script._
+  Follow the script paths that hook commands name (root placeholders and
+  project-relative paths) and scan those files as targets of their own.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**
