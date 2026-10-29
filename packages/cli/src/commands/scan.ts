@@ -231,10 +231,6 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     process.exit(2);
   }
 
-  // Collect targets from every discovered skill, not only the --skill match, so a parent
-  // skill gets the same findings with or without the filter.
-  const scanTargetPaths = collectScanTargetPaths(skills);
-
   if (options.skill !== undefined) {
     const target = findSkillByNameOrId(skills, options.skill);
     if (target === undefined) {
@@ -275,6 +271,11 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
       `[skill-audit] ignoring ${ignoredSkills.length} skill${ignoredSkills.length === 1 ? '' : 's'} (run with --all to include)\n`
     );
   }
+
+  // Only a skill that this run reports can take a nested path away from its parent, so
+  // --skill makes the selected skill cover all of its folder. Ignored skills still count,
+  // because the ignore list approves their content by hash.
+  const scanTargetPaths = collectScanTargetPaths(skills);
 
   progress.startScan(toScan.length);
 

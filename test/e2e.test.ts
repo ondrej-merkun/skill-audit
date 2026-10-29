@@ -527,7 +527,7 @@ describe('e2e: scan flags', () => {
     expect(result.skills[0]?.agents[0]?.id).toBe('cursor');
   });
 
-  it('does not duplicate nested child skill findings onto the parent in JSON', async () => {
+  it('reports a nested child skill finding once: on the child, or on the parent with --skill', async () => {
     const parent = join(skillsDir, 'parent');
     const child = join(parent, 'child');
     await mkdir(child, { recursive: true });
@@ -558,6 +558,16 @@ describe('e2e: scan flags', () => {
       skill.findings.map((finding) => `${finding.file}:${finding.rule_id}`)
     );
     expect(new Set(findingKeys).size).toBe(findingKeys.length);
+
+    // With --skill, the child is not scanned in this run, so the parent must cover its folder.
+    const parentOnly = await runCli(
+      ['scan', '--json', '--offline', '--agent', 'claude-code', '--skill', 'parent'],
+      env
+    );
+    const parentOnlySkills = (JSON.parse(parentOnly.stdout) as JsonOutput).skills;
+
+    expect(parentOnlySkills.map((s) => s.name)).toEqual(['parent']);
+    expect(parentOnlySkills[0]?.findings.some((f) => f.rule_id === 'PI-OVERRIDE')).toBe(true);
   });
 
   it('-o writes JSON output to a file without duplicating it to stdout', async () => {
