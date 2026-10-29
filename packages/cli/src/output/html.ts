@@ -345,8 +345,8 @@ td{padding:10px 12px;vertical-align:middle}
 `;
 
   // JS uses DOM methods (createElement/textContent) to avoid innerHTML with untrusted strings.
-  // The embedded data holds untrusted skill text. The client writes it to the DOM only through
-  // textContent and exports it only through JSON.stringify.
+  // The embedded data holds untrusted skill text. The client writes it to the DOM only as text
+  // (textContent, createTextNode) and exports it only as plain text (JSON or Markdown).
   const js = `
 (function(){
 var DATA = ${jsonData};
