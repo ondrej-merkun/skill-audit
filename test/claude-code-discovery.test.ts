@@ -222,6 +222,33 @@ describe('claude-code discovery plugin', () => {
     expect(skills.map((s) => s.path)).toEqual([installedDir]);
   });
 
+  it('excludes trashed synced plugins when the project dir is home under another name', async () => {
+    // Run from home through a symlink: the project walk reaches the trash through the alias.
+    const homeAlias = join(tempCwd, 'home-alias');
+    await symlink(tempHome, homeAlias);
+    process.env['SKILL_AUDIT_CWD'] = homeAlias;
+
+    const relativePluginsDir = join('.claude', 'plugins');
+    const installedSkill = join(relativePluginsDir, 'vendor', 'tool', 'skills', 'installed-review');
+    const trashedSkill = join(
+      relativePluginsDir,
+      ...TRASHED_PLUGIN_ROOT,
+      'skills',
+      'inactive-review'
+    );
+    for (const skill of [installedSkill, trashedSkill]) {
+      await mkdir(join(tempHome, skill), { recursive: true });
+      await writeFile(join(tempHome, skill, 'SKILL.md'), '# Review');
+    }
+
+    const skills = await claudeCodeDiscovery.discoverSkills();
+
+    expect(skills.map((s) => s.path)).toEqual([
+      join(tempHome, installedSkill),
+      join(homeAlias, installedSkill),
+    ]);
+  });
+
   it('discovers a plugins/.trash dir inside a plugin payload', async () => {
     // A plugin manifest can load skills from any dir in the plugin, such as ./plugins/.trash/.
     const pluginDir = join(tempHome, '.claude', 'plugins', 'cache', 'vendor', 'tool', '1.0.0');
