@@ -159,6 +159,8 @@ describe('runExplain', () => {
     } else {
       process.env['XDG_CONFIG_HOME'] = originalXdgConfigHome;
     }
+    // Vitest 4 restoreAllMocks only restores vi.spyOn spies, so reset module mocks too.
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 
