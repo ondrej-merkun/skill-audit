@@ -221,7 +221,7 @@ export function maskDocumentationTextInCode(content: string, filePath: string): 
   return content;
 }
 
-function pathLooksDocumentationOnly(filePath: string): boolean {
+export function pathLooksDocumentationOnly(filePath: string): boolean {
   const normalized = filePath.replaceAll('\\', '/');
   const segments = normalized.split('/');
   if (segments.some((segment) => DOCUMENTATION_PATH_SEGMENTS.has(segment.toLowerCase())))

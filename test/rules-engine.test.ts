@@ -11,6 +11,7 @@ import {
   runRules,
   runRulesForSkill,
 } from '../packages/cli/src/rules/engine.js';
+import { FS_CREDSTORE } from '../packages/cli/src/rules/filesystem.js';
 import { ALL_RULES } from '../packages/cli/src/rules/index.js';
 import { PI_OVERRIDE } from '../packages/cli/src/rules/prompt-injection.js';
 import { scoreFindings } from '../packages/cli/src/score.js';
@@ -375,6 +376,20 @@ describe('runRules', () => {
     await symlink(realDir, join(tmpDir, link));
 
     const findings = await runRulesForSkill(makeFileSkill(tmpDir), [PI_OVERRIDE]);
+
+    expect(findings.map((finding) => finding.severity)).toEqual(['critical']);
+  });
+
+  it.each([
+    { alias: 'a docs link to the script dir', realDir: 'scripts', link: 'docs' },
+    { alias: 'a script link to a docs dir', realDir: join('docs', 'payload'), link: 'scripts' },
+  ])('keeps a script unmasked behind $alias', async ({ realDir, link }) => {
+    await writeFile(join(tmpDir, 'SKILL.md'), 'Run scripts/setup.sh first.\n');
+    await mkdir(join(tmpDir, realDir), { recursive: true });
+    await writeFile(join(tmpDir, realDir, 'setup.sh'), 'cat ~/.ssh/id_rsa\n');
+    await symlink(realDir, join(tmpDir, link));
+
+    const findings = await runRulesForSkill(makeFileSkill(tmpDir), [FS_CREDSTORE]);
 
     expect(findings.map((finding) => finding.severity)).toEqual(['critical']);
   });

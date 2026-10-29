@@ -2,6 +2,7 @@ import { type Dirent, readdirSync, readFileSync, realpathSync, statSync } from '
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { enterDirOnceSync, entryKindSync } from '../fs-walk.js';
 import type { Finding, Rule, Skill } from '../types.js';
+import { pathLooksDocumentationOnly } from './code-context.js';
 
 /** Node's read error for a file longer than the V8 string limit (536,870,888 chars). */
 const STRING_TOO_LONG_ERROR_CODE = 'ERR_STRING_TOO_LONG';
@@ -224,7 +225,7 @@ function addReachablePath(index: ReachabilityIndex, rawPath: string): void {
 function buildReachabilityIndex(
   skillRoot: string,
   files: string[],
-  skippedDirs: string[]
+  dirAliases: DirAlias[]
 ): ReachabilityIndex | undefined {
   const skillMdPath = join(skillRoot, 'SKILL.md');
   if (!files.includes(skillMdPath)) return undefined;
@@ -238,7 +239,7 @@ function buildReachabilityIndex(
 
   const index: ReachabilityIndex = {
     root: skillRoot,
-    dirAliases: resolveDirAliases(skippedDirs),
+    dirAliases,
     referencedFiles: new Set(),
     referencedDirs: new Set(),
     allSupportingMarkdownReachable:
@@ -322,24 +323,47 @@ function classifySupportingFileRole(
  * and that path is operative. The walk enters each real dir once, so with
  * `docs -> payload` or `payload -> docs` it lists the file under only one of
  * its two paths. A file is demoted only when every known path is inert docs.
- * ponytail: one alias level only; a path through two aliases is not rebuilt.
  */
 function hasOperativeAliasPath(filePath: string, index: ReachabilityIndex): boolean {
-  if (index.dirAliases.length === 0) return false;
+  return aliasPathsOf(filePath, index.dirAliases).some(
+    (aliasPath) =>
+      isReachableFromSkillMd(aliasPath, index) || !isSupportingMarkdownPath(aliasPath, index)
+  );
+}
+
+/**
+ * The path that rules prepare a file under. A docs-like path masks every line of
+ * the file, so a file that a dir alias also reaches through a path that does not
+ * look like docs is prepared under that path. Otherwise `docs -> scripts` would
+ * hide a script that the agent runs.
+ */
+function preparePathFor(filePath: string, dirAliases: DirAlias[]): string {
+  if (!pathLooksDocumentationOnly(filePath)) return filePath;
+
+  const operativePath = aliasPathsOf(filePath, dirAliases).find(
+    (aliasPath) => !pathLooksDocumentationOnly(aliasPath)
+  );
+  return operativePath ?? filePath;
+}
+
+/**
+ * Rebuilds the other paths of a walked file through the dir aliases that the walk skipped.
+ * ponytail: one alias level only; a path through two aliases is not rebuilt.
+ */
+function aliasPathsOf(filePath: string, dirAliases: DirAlias[]): string[] {
+  if (dirAliases.length === 0) return [];
 
   let realFile: string;
   try {
     realFile = realpathSync(filePath);
   } catch {
-    return false;
+    return [];
   }
 
-  return index.dirAliases.some((alias) => {
+  return dirAliases.flatMap((alias) => {
     const pathInAlias = relative(alias.realDir, realFile);
-    if (pathInAlias.split(sep)[0] === '..' || isAbsolute(pathInAlias)) return false;
-
-    const aliasPath = join(alias.dir, pathInAlias);
-    return isReachableFromSkillMd(aliasPath, index) || !isSupportingMarkdownPath(aliasPath, index);
+    if (pathInAlias.split(sep)[0] === '..' || isAbsolute(pathInAlias)) return [];
+    return [join(alias.dir, pathInAlias)];
   });
 }
 
@@ -437,15 +461,17 @@ export async function runRules(
   } catch {
     return [];
   }
+  const dirAliases = resolveDirAliases(skippedDirs);
   const reachability = isDirectory
-    ? buildReachabilityIndex(skillPath, files, skippedDirs)
+    ? buildReachabilityIndex(skillPath, files, dirAliases)
     : undefined;
 
   for (const filePath of files) {
     const name = options.filenameOverride ?? basename(filePath);
     const fileRole = classifySupportingFileRole(filePath, name, reachability, options);
+    const scanPath = preparePathFor(filePath, dirAliases);
     const preparePath =
-      options.filenameOverride === undefined ? filePath : join(dirname(filePath), name);
+      options.filenameOverride === undefined ? scanPath : join(dirname(scanPath), name);
     const applicableRules = rules.filter((rule) =>
       rule.appliesTo.some((glob) => matchesGlob(name, glob))
     );
