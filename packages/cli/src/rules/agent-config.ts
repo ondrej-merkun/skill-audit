@@ -270,6 +270,9 @@ function keepStringValues(content: string, values: Set<string>): string {
   });
 }
 
+// ponytail: selects URLs by value, not by position. Every literal equal to a kept URL stays, so
+// an MCP server or a second hook with the same URL also reports its line, at the severity of the
+// flagged hook. A plain hook that shares its URL with an env-header hook reports critical, not high.
 function keepHttpHookUrls(content: string, keep: (hook: HttpHook) => boolean): string {
   const parsed = parseJson(content);
   if (parsed === undefined) return '';
