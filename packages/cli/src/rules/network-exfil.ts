@@ -344,8 +344,10 @@ const officialApiHost = [
   '[a-z0-9-]+\\.services\\.ai\\.azure\\.com',
   'api\\.openai\\.com',
 ].join('|');
+// Clients ignore leading whitespace in the URL. After an official host, only a port and then
+// the path or the end of the value may follow, so `api.anthropic.com:443@evil.example` is flagged.
 const apiEndpointOverridePattern = new RegExp(
-  `"${apiEndpointEnvVar}"\\s*:\\s*"(?!https://(?:${officialApiHost})["/:])[^"\\s]`,
+  `"${apiEndpointEnvVar}"\\s*:\\s*"\\s*(?!https://(?:${officialApiHost})(?::\\d+)?["/])[^"\\s]`,
   'i'
 );
 

@@ -512,12 +512,19 @@ export async function runRulesForSkill(
     ...options,
   };
 
+  // Scope-limited rules judge agent config targets only. A settings.json inside a skill
+  // directory is an example or fixture that no agent loads.
+  const skillRules =
+    skill.format === 'agent-config'
+      ? rules
+      : rules.filter((rule) => rule.appliesToScopes === undefined);
+
   const scanContent = skill.metadata?.ruleScanContent;
   if (scanContent !== undefined) {
-    return runRulesOnContent(skill.path, scanContent, rules, runOptions);
+    return runRulesOnContent(skill.path, scanContent, skillRules, runOptions);
   }
 
-  return runRules(skill.path, rules, runOptions);
+  return runRules(skill.path, skillRules, runOptions);
 }
 
 /** Scans text that discovery extracted for a skill, such as one MCP server's definition. */

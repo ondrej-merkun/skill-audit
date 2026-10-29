@@ -1,6 +1,6 @@
 import { basename } from 'node:path';
 import type { Rule } from '../types.js';
-import { AGENT_SETTINGS_FILENAMES, decodeJsonStrings } from './agent-config.js';
+import { decodeJsonStrings } from './agent-config.js';
 
 // Patterns are split to avoid triggering static-analysis hooks on this detector file.
 
@@ -350,7 +350,9 @@ function keepMcpStartupFieldBlocks(content: string): string {
 function prepareMcpConfigRemoteExecContent(content: string, filePath: string): string {
   const name = basename(filePath);
   if (mcpConfigRemoteExecBasenames.has(name) || isGeminiCommandToml(filePath, name)) {
-    return keepMcpStartupFieldBlocks(content);
+    // Decoded JSON escapes such as `https:\/\/` cannot hide a download. JSONC keeps its raw text.
+    const decoded = name.endsWith('.json') ? decodeJsonStrings(content) : '';
+    return keepMcpStartupFieldBlocks(decoded === '' ? content : decoded);
   }
 
   return '';
@@ -386,11 +388,13 @@ export const MCP_CONFIG_REMOTE_EXEC: Rule = {
 // MCP-PROJECT-AUTO-APPROVE: repository settings that approve the repository's own .mcp.json
 // servers, so they start without the consent prompt (CVE-2025-59536). High, not critical:
 // the setting removes the prompt, and the approved servers are scanned on their own.
+// Only the shared settings.json counts: Claude Code writes the user's own approvals to
+// settings.local.json.
 export const MCP_PROJECT_AUTO_APPROVE: Rule = {
   id: 'MCP-PROJECT-AUTO-APPROVE',
   category: 'dependencies',
   severity: 'high',
-  appliesTo: AGENT_SETTINGS_FILENAMES,
+  appliesTo: ['settings.json'],
   appliesToScopes: ['project'],
   patterns: [/"enableAllProjectMcpServers"\s*:\s*true\b/, /"enabledMcpjsonServers"\s*:\s*\[\s*"/],
   prepareContent: decodeJsonStrings,
