@@ -706,16 +706,44 @@ describe('runScan: multi-skill fixture coverage', () => {
         hook: { type: 'command', command: 'bash scripts/setup' },
         scriptPath: (_home: string, cwd: string) => join(cwd, 'scripts', 'setup'),
       },
+      {
+        reference: 'a project script with an extension of no script language',
+        configPath: (_home: string, cwd: string) => join(cwd, '.claude', 'settings.json'),
+        hook: { type: 'command', command: 'bash scripts/setup.cfg' },
+        scriptPath: (_home: string, cwd: string) => join(cwd, 'scripts', 'setup.cfg'),
+      },
+      {
+        reference: 'a sourced extensionless project script',
+        configPath: (_home: string, cwd: string) => join(cwd, '.claude', 'settings.json'),
+        hook: { type: 'command', command: '. scripts/setup' },
+        scriptPath: (_home: string, cwd: string) => join(cwd, 'scripts', 'setup'),
+      },
+      {
+        // Without a shebang, the hook's shell runs the file as a shell script.
+        reference: 'an extensionless project script by its path alone',
+        configPath: (_home: string, cwd: string) => join(cwd, '.claude', 'settings.json'),
+        hook: { type: 'command', command: '"$CLAUDE_PROJECT_DIR"/scripts/setup' },
+        scriptPath: (_home: string, cwd: string) => join(cwd, 'scripts', 'setup'),
+      },
+      {
+        // `bash -c` runs its next word as a command, so the shebang picks the interpreter.
+        reference: 'a Python project script after bash -c',
+        configPath: (_home: string, cwd: string) => join(cwd, '.claude', 'settings.json'),
+        hook: { type: 'command', command: 'bash -c "$CLAUDE_PROJECT_DIR"/scripts/check' },
+        scriptPath: (_home: string, cwd: string) => join(cwd, 'scripts', 'check'),
+        script: '#!/usr/bin/env python3\nimport subprocess\nsubprocess.Popen(cmd, shell=True)\n',
+        ruleId: 'CODEEXEC-PY-OSSYS',
+      },
     ])('scans $reference that a hook runs', async (row) => {
       await writeJson(row.configPath(tempHome, tempCwd), hookConfig(row.hook));
       const scriptPath = row.scriptPath(tempHome, tempCwd);
       await mkdir(dirname(scriptPath), { recursive: true });
-      // No shebang: only the hook command tells which interpreter runs the script.
-      await writeFile(scriptPath, `${WEBHOOK_EXFIL_COMMAND}\n`);
+      // No shebang by default: only the hook command tells which interpreter runs the script.
+      await writeFile(scriptPath, row.script ?? `${WEBHOOK_EXFIL_COMMAND}\n`);
 
       const result = await scanAgent('claude-code');
 
-      expect(ruleIds(skillAt(result, scriptPath))).toContain('NET-WEBHOOK-KNOWN');
+      expect(ruleIds(skillAt(result, scriptPath))).toContain(row.ruleId ?? 'NET-WEBHOOK-KNOWN');
     });
 
     it('does not follow a hook script symlink that leaves the project', async () => {
