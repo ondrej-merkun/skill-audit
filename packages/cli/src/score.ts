@@ -126,8 +126,8 @@ function getMandatoryFailIds(findings: Finding[]): string[] {
  * skills mention these on separate lines or in separate files, so those stay REVIEW.
  * Allowlist-demoted PI-* findings are info and never qualify.
  * ponytail: an attack split across lines or files stays REVIEW. PI-JAILBREAK has
- * no quote guard, so an unmasked teaching line that quotes a jailbreak together
- * with a credential path turns FAIL.
+ * no quote guard and also matches some descriptive text ("the runner can operate
+ * with no restrictions"), so such a line that names a credential path turns FAIL.
  */
 function sameLineInjectionStoreIds(verdictFindings: Finding[]): string[] {
   // A crafted skill can produce one finding per line, so each injection looks up
