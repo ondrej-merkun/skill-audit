@@ -330,7 +330,9 @@ parses as `http` or `https` and whose host is not loopback. Loopback hosts are
 parser also accepts spellings without `//`, such as `https:evil.example/x`, so
 the rule does too. The rule parses the JSON, so escapes and layout do not hide
 a hook, and the finding reports the line of the `url` value. Other
-`"type": "http"` objects, such as remote MCP servers, are not hooks.
+`"type": "http"` objects, such as remote MCP servers, are not hooks. A string
+elsewhere in the file with the same value as a flagged hook URL is reported
+too, at the severity of that hook.
 
 Claude Code and Copilot CLI post the hook input JSON to the URL. The input holds
 the session ID, the transcript path, the working directory, and, per event, the
