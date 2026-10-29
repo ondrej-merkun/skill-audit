@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path';
+import { enterDirOnceSync, entryKindSync } from '../fs-walk.js';
 import type { Finding, Rule, Skill } from '../types.js';
 
 /** Node's read error for a file longer than the V8 string limit (536,870,888 chars). */
@@ -310,16 +311,25 @@ function findingForRole(finding: Finding, role: SupportingFileRole): Finding {
  * Recursively collects file paths under a scan target. A child file or directory that the
  * same scan reports as its own skill is skipped, so its findings are not counted twice.
  * Every other child belongs to this target, whatever marker files it contains.
+ * Follows symlinks, so a skill cannot hide a script behind a link; each real
+ * directory is walked once, so link loops end.
  */
-function walkDir(dir: string, scanTargetPaths: ReadonlySet<string>): string[] {
+function walkDir(
+  dir: string,
+  scanTargetPaths: ReadonlySet<string>,
+  visitedRealDirs = new Set<string>()
+): string[] {
+  if (!enterDirOnceSync(visitedRealDirs, dir)) return [];
+
   const results: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
     if (scanTargetPaths.has(resolve(full))) continue;
 
-    if (entry.isDirectory()) {
-      results.push(...walkDir(full, scanTargetPaths));
-    } else {
+    const kind = entryKindSync(dir, entry);
+    if (kind === 'dir') {
+      results.push(...walkDir(full, scanTargetPaths, visitedRealDirs));
+    } else if (kind === 'file') {
       results.push(full);
     }
   }
