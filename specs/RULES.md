@@ -254,6 +254,16 @@ Code, discovery also reports the scripts that project settings and plugin
 `specs/DISCOVERY.md`). Those scripts go through the rules for their own file
 names.
 
+Rules pick files by name, so a script without a file extension, such as
+`scripts/setup`, gets a scan name from the program that runs it. For a hook
+script, the interpreter word before the script in the same command sets it:
+`bash`, `sh`, `dash`, `zsh`, and `ksh` select the `*.sh` rules, `python` and
+`python3` the `*.py` rules, and `node` the `*.js` rules. Otherwise the shebang
+line sets it with the same names, such as `#!/bin/sh` or
+`#!/usr/bin/env python3`. The shebang check applies to every file without an
+extension that the engine scans, also in skill directories. A file without an
+extension and without a known interpreter gets no script rules.
+
 Known gap: an HTTP hook (`"type": "http"`) sends hook input to its `url`. No
 rule checks that host yet.
 
