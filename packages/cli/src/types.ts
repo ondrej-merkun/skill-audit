@@ -61,6 +61,11 @@ export type Rule = {
   appliesToScopes?: Array<Skill['scope']>; // set = agent config targets of these scopes only
   patterns: RegExp[];
   prepareContent?: (content: string, filePath: string) => string;
+  // A narrower view of the content. Pattern matches in it report this higher severity.
+  escalation?: {
+    severity: Severity;
+    prepareContent: (content: string, filePath: string) => string;
+  };
   message: string;
   fix: string;
   cwe: string[];

@@ -1,7 +1,7 @@
 import { type Dirent, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { enterDirOnceSync, entryKindSync } from '../fs-walk.js';
-import type { Finding, Rule, Skill } from '../types.js';
+import type { Finding, Rule, Severity, Skill } from '../types.js';
 import {
   AGENT_CONFIG_COMMANDS_SCAN_NAME,
   AGENT_CONFIG_FILENAMES,
@@ -16,6 +16,8 @@ const STRING_TOO_LONG_ERROR_CODE = 'ERR_STRING_TOO_LONG';
 
 type RawMatch = { index: number; text: string };
 type PrepareContent = NonNullable<Rule['prepareContent']>;
+// One view of a file that a rule matches, and the severity of the findings in it.
+type SeverityView = { severity: Severity; prepareContent: PrepareContent | undefined };
 type RunRulesOptions = {
   filenameOverride?: string;
   scanAllSupportingFiles?: boolean;
@@ -638,27 +640,30 @@ async function matchRules(
     for (const rule of pass.rules) {
       const seenLines = seenLinesByRule.get(rule.id) ?? new Set<number>();
       seenLinesByRule.set(rule.id, seenLines);
-      const matchContent = prepareForRule(rule, passContent, pass.preparePath, preparedContent);
 
-      for (const pattern of rule.patterns) {
-        const matches = await runPatternWithSafetyPreflight(pattern, matchContent);
-        for (const { index, text } of matches) {
-          const { line, column } = lineCol(lineStarts, index);
-          if (seenLines.has(line)) continue;
-          seenLines.add(line);
+      for (const view of severityViews(rule)) {
+        const matchContent = prepareView(view, passContent, pass.preparePath, preparedContent);
 
-          findings.push({
-            ruleId: rule.id,
-            severity: rule.severity,
-            category: rule.category,
-            file: filePath,
-            line,
-            column,
-            snippet: extractSnippet(content, lineStarts, line) || text.trim().slice(0, 120),
-            message: rule.message,
-            fix: rule.fix,
-            cwe: rule.cwe,
-          });
+        for (const pattern of rule.patterns) {
+          const matches = await runPatternWithSafetyPreflight(pattern, matchContent);
+          for (const { index, text } of matches) {
+            const { line, column } = lineCol(lineStarts, index);
+            if (seenLines.has(line)) continue;
+            seenLines.add(line);
+
+            findings.push({
+              ruleId: rule.id,
+              severity: view.severity,
+              category: rule.category,
+              file: filePath,
+              line,
+              column,
+              snippet: extractSnippet(content, lineStarts, line) || text.trim().slice(0, 120),
+              message: rule.message,
+              fix: rule.fix,
+              cwe: rule.cwe,
+            });
+          }
         }
       }
     }
@@ -667,19 +672,28 @@ async function matchRules(
   return findings;
 }
 
-function prepareForRule(
-  rule: Rule,
+/**
+ * The views that a rule's patterns match, each with the severity that its matches report.
+ * The escalation view goes first, so a line that it matches keeps the higher severity.
+ */
+function severityViews(rule: Rule): SeverityView[] {
+  const baseView = { severity: rule.severity, prepareContent: rule.prepareContent };
+  return rule.escalation === undefined ? [baseView] : [rule.escalation, baseView];
+}
+
+function prepareView(
+  view: SeverityView,
   content: string,
   preparePath: string,
   cache: Map<PrepareContent, string>
 ): string {
-  if (rule.prepareContent === undefined) return content;
+  if (view.prepareContent === undefined) return content;
 
-  const cached = cache.get(rule.prepareContent);
+  const cached = cache.get(view.prepareContent);
   if (cached !== undefined) return cached;
 
-  const prepared = rule.prepareContent(content, preparePath);
-  cache.set(rule.prepareContent, prepared);
+  const prepared = view.prepareContent(content, preparePath);
+  cache.set(view.prepareContent, prepared);
   return prepared;
 }
 

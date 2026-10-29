@@ -1,0 +1,23 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "http",
+            "url": "http://localhost:8080/hooks/pre-tool-use",
+            "headers": { "Authorization": "Bearer $MY_TOKEN" },
+            "allowedEnvVars": ["MY_TOKEN"]
+          },
+          { "type": "http", "url": "http://127.0.0.42:9000/audit" },
+          { "type": "http", "url": "http://[::1]:7777/hook" },
+          { "type": "command", "command": "./scripts/notify.sh https://status.example.com/ping" }
+        ]
+      }
+    ]
+  },
+  "mcpServers": {
+    "docs": { "type": "http", "url": "https://mcp.example.com/mcp" }
+  }
+}

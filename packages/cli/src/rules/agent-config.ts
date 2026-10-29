@@ -1,7 +1,7 @@
 /**
  * Content views for agent hook, settings, and MCP config JSON.
  *
- * Both views keep every character offset of the original file, so a finding
+ * Every view keeps every character offset of the original file, so a finding
  * reports the real line of the JSON value that matched. Invalid JSON yields an
  * empty view: the agent cannot load that file either.
  */
@@ -66,6 +66,13 @@ const NON_WHITESPACE = /\S/g;
 const GEMINI_CONFIG_DIR = '.gemini';
 const GEMINI_SETTINGS_FILENAME = 'settings.json';
 
+// Loopback hosts as the WHATWG URL parser writes them. 127.0.0.0/8 is the IPv4 loopback block.
+const IPV4_LOOPBACK_HOST = /^127\.\d+\.\d+\.\d+$/;
+const IPV6_LOOPBACK_HOST = '[::1]';
+
+// HTTP hooks expand `$NAME` and `${NAME}` in header values, only for names in allowedEnvVars.
+const HEADER_ENV_REFERENCE = /\$\{?([A-Za-z_]\w*)/g;
+
 /**
  * Keeps only the command values of an agent config file, decoded from JSON
  * escapes and placed at their original offsets in the lines that the shell reads,
@@ -86,6 +93,22 @@ export function extractAgentConfigCommands(content: string, path: string): strin
 export function extractAgentConfigCommandsOnOneLine(content: string, path: string): string {
   return keepCommandValues(content, path, (command) =>
     blankCommentOnlyLines(command).replace(LINE_BREAK, ' ')
+  );
+}
+
+/**
+ * Keeps only the `url` values of HTTP hooks that post the hook input to a host other
+ * than this machine, decoded and at their original offsets. Everything else becomes spaces.
+ */
+export function extractExternalHttpHookUrls(content: string): string {
+  return keepHttpHookUrls(content, isExternalHttpHook);
+}
+
+/** Like extractExternalHttpHookUrls, but only for hooks whose headers send environment variables. */
+export function extractEnvHeaderHttpHookUrls(content: string): string {
+  return keepHttpHookUrls(
+    content,
+    (hook) => isExternalHttpHook(hook) && sendsEnvironmentVariables(hook)
   );
 }
 
@@ -239,6 +262,76 @@ function rewriteJsonTokens(content: string, rewrite: JsonTokenRewrite): string {
   });
 }
 
+/** Keeps the string literals with these decoded values. Everything else becomes spaces. */
+function keepStringValues(content: string, values: Set<string>): string {
+  return rewriteJsonTokens(content, {
+    stringLiteral: (value) => (values.has(value) ? value : ''),
+    structure: (text) => ' '.repeat(text.length),
+  });
+}
+
+function keepHttpHookUrls(content: string, keep: (hook: HttpHook) => boolean): string {
+  const parsed = parseJson(content);
+  if (parsed === undefined) return '';
+
+  const urls = httpHooks(parsed)
+    .filter(keep)
+    .map((hook) => hook.url);
+  return keepStringValues(content, new Set(urls));
+}
+
+/**
+ * Lists the HTTP hook handlers below the top-level `hooks` key. Another object with
+ * `"type": "http"` in the file, such as a remote MCP server, is not a hook.
+ */
+function httpHooks(config: unknown): HttpHook[] {
+  return isRecord(config) ? findHttpHooks(config.hooks) : [];
+}
+
+// Claude Code nests handlers in matcher groups and Copilot lists them per event, so the
+// whole subtree is searched.
+function findHttpHooks(value: unknown): HttpHook[] {
+  if (Array.isArray(value)) return value.flatMap(findHttpHooks);
+  if (!isRecord(value)) return [];
+
+  const { type, url, headers, allowedEnvVars } = value;
+  if (type === 'http' && typeof url === 'string') return [{ url, headers, allowedEnvVars }];
+  return Object.values(value).flatMap(findHttpHooks);
+}
+
+/** True for an http(s) hook URL whose host is not this machine. Agents parse it as a WHATWG URL too. */
+function isExternalHttpHook(hook: HttpHook): boolean {
+  let url: URL;
+  try {
+    url = new URL(hook.url);
+  } catch {
+    // The agent cannot send the hook input to a URL that does not parse.
+    return false;
+  }
+
+  const isHttp = url.protocol === 'http:' || url.protocol === 'https:';
+  return isHttp && !isLoopbackHost(url.hostname);
+}
+
+// The parser lowercases host names and normalizes IP literals, so `127.1` becomes `127.0.0.1`.
+function isLoopbackHost(hostname: string): boolean {
+  return (
+    hostname === 'localhost' || hostname === IPV6_LOOPBACK_HOST || IPV4_LOOPBACK_HOST.test(hostname)
+  );
+}
+
+/** True when a header value expands an environment variable that the hook allows. */
+function sendsEnvironmentVariables(hook: HttpHook): boolean {
+  if (!Array.isArray(hook.allowedEnvVars) || !isRecord(hook.headers)) return false;
+
+  const allowedNames = new Set<unknown>(hook.allowedEnvVars);
+  return Object.values(hook.headers).some(
+    (value) =>
+      typeof value === 'string' &&
+      [...value.matchAll(HEADER_ENV_REFERENCE)].some((match) => allowedNames.has(match[1]))
+  );
+}
+
 // Array items inherit their parent key, so every `args` item counts as a command value.
 function collectCommandValues(value: unknown, key = ''): string[] {
   if (typeof value === 'string') return COMMAND_VALUE_KEYS.has(key) ? [value] : [];
@@ -288,3 +381,10 @@ function parseJson(content: string): unknown {
     return undefined;
   }
 }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+// A hook handler that posts the hook input JSON to `url` (Claude Code and Copilot CLI).
+type HttpHook = { url: string; headers: unknown; allowedEnvVars: unknown };

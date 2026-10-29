@@ -620,6 +620,14 @@ without a commit message explaining why it no longer applies.
   quote state: a line that starts inside a quoted string is text, also when it
   starts with `#`, as in `curl -d "prefix\n#$(env)"`.
 
+- **L7.10 — Decide whether a host is local with a URL parser, not a prefix
+  lookahead.** _While adding NET-HOOK-HTTP-EXTERNAL, a probe showed that
+  `NET-OUTBOUND-NONLOCAL` does not flag `curl https://localhost.evil.example/x`
+  or `https://127.0.0.1.nip.io/x`: its `(?!localhost|127\.0\.0\.1|::1)` only
+  checks how the host starts._
+  Parse the URL with `new URL` and compare the normalized hostname exactly. Put a
+  lookalike host such as `localhost.evil.example` in the malicious fixture.
+
 ---
 
 ## How to add a new lesson
