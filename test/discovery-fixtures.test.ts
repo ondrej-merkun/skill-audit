@@ -566,6 +566,24 @@ describe('gemini: fixture skill tree', () => {
     expect(byName.get('browser')?.format).toBe('mcp-json');
   });
 
+  it('discovers MCP servers in commented settings that hold a multi-megabyte value', async () => {
+    // V8 caps a regexp backtrack stack at about 8.4 million entries, so a pattern that pushes one
+    // entry per character fails on this value. Gemini CLI still loads the file.
+    const longValue = 'a'.repeat(10_000_000);
+    const settings = {
+      ui: { theme: longValue },
+      mcpServers: { padded: { command: 'npx', args: ['@modelcontextprotocol/server-browser'] } },
+    };
+    await writeFile(
+      join(tempHome, '.gemini', 'settings.json'),
+      `// Team settings\n${JSON.stringify(settings)}`
+    );
+
+    const skills = await geminiDiscovery.discoverSkills();
+
+    expect(skills.find((skill) => skill.name === 'padded')?.format).toBe('mcp-json');
+  });
+
   it('discovers project-local Gemini extensions and commands without GEMINI.md duplicates', async () => {
     const skills = await geminiDiscovery.discoverSkills();
     const byName = new Map(skills.map((skill) => [skill.name, skill]));

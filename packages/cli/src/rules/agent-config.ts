@@ -46,9 +46,7 @@ const COMMAND_VALUE_KEYS = new Set([
 const JSON_TOKEN = /"(?:[^"\\\n]|\\.)*"|[^"\r\n]+/g;
 const LINE_BREAK = /[\r\n]/g;
 
-// A string literal, a line comment, or a block comment. An unclosed string or block comment runs
-// to the end of the file, as in Gemini CLI's strip-json-comments, so the scan stays linear.
-const JSONC_TOKEN = /"(?:[^"\\]|\\[\s\S]?)*"?|\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$)/g;
+// A blanked comment keeps its whitespace, so line breaks inside it stay.
 const NON_WHITESPACE = /\S/g;
 
 // Gemini CLI reads settings.json with JSON.parse(stripJsonComments(content)). Its other JSON
@@ -97,11 +95,35 @@ export function decodeJsonStrings(content: string): string {
  * Replaces the `//` and `/* *\/` comments outside JSON strings with spaces, as Gemini CLI does
  * before it parses settings.json. Line breaks stay, so offsets and line numbers do not move.
  * Trailing commas stay too: Gemini CLI rejects them.
+ *
+ * A character loop, like Gemini CLI's strip-json-comments: a regular expression that steps
+ * through a string literal one character at a time overflows V8's backtrack stack on a
+ * multi-megabyte value, and Gemini CLI loads such a file.
  */
 export function blankJsonComments(content: string): string {
-  return content.replace(JSONC_TOKEN, (token) =>
-    token.startsWith('"') ? token : token.replace(NON_WHITESPACE, ' ')
-  );
+  let blanked = '';
+  let copiedUpTo = 0;
+  let index = 0;
+
+  while (index < content.length) {
+    if (content[index] === '"') {
+      index = jsonStringEnd(content, index);
+      continue;
+    }
+
+    const commentEnd = jsonCommentEnd(content, index);
+    if (commentEnd === undefined) {
+      index += 1;
+      continue;
+    }
+
+    const comment = content.slice(index, commentEnd);
+    blanked += content.slice(copiedUpTo, index) + comment.replace(NON_WHITESPACE, ' ');
+    copiedUpTo = commentEnd;
+    index = commentEnd;
+  }
+
+  return blanked + content.slice(copiedUpTo);
 }
 
 type JsonTokenRewrite = {
@@ -129,6 +151,30 @@ function collectCommandValues(value: unknown, key = ''): string[] {
     );
   }
   return [];
+}
+
+// Returns the offset after the string literal that starts at `start`. An unclosed string runs to
+// the end of the file, as in strip-json-comments.
+function jsonStringEnd(content: string, start: number): number {
+  for (let index = start + 1; index < content.length; index += 1) {
+    if (content[index] === '\\') index += 1;
+    else if (content[index] === '"') return index + 1;
+  }
+  return content.length;
+}
+
+// Returns the offset after the comment that starts at `start`, or undefined when no comment
+// starts there. A line comment keeps its line break. An unclosed block comment runs to the end.
+function jsonCommentEnd(content: string, start: number): number | undefined {
+  if (content.startsWith('//', start)) {
+    const lineBreak = content.indexOf('\n', start);
+    return lineBreak === -1 ? content.length : lineBreak;
+  }
+  if (content.startsWith('/*', start)) {
+    const close = content.indexOf('*/', start + 2);
+    return close === -1 ? content.length : close + 2;
+  }
+  return undefined;
 }
 
 function isGeminiSettings(path: string): boolean {
