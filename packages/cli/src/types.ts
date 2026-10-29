@@ -42,9 +42,9 @@ export type Skill = {
     | 'gemini-agent-md'
     | 'agent-config';
   scope: 'user' | 'project' | 'managed';
-  // Set when dedupe merged installations of different scopes. Scope-limited rules run when
-  // any of these scopes matches; outputs show `scope` only.
-  scopes?: Array<Skill['scope']>;
+  // Set when dedupe merged installations that differ in scope, format, or scan name. Rule
+  // selection reads them; the JSON and list outputs do not show them.
+  installations?: SkillInstallation[];
   installState?: 'installed' | 'marketplace';
   treeSha256: string;
   trusted?: boolean;
@@ -54,6 +54,17 @@ export type Skill = {
     ruleScanContent?: string;
     sourcePluginName?: string;
   };
+};
+
+/**
+ * What rule selection reads from one installation of a skill. It holds no path, because the
+ * HTML report embeds skills and redacts only the known path fields.
+ */
+export type SkillInstallation = {
+  format: Skill['format'];
+  scope: Skill['scope'];
+  // The name that rules match for a single-file target, such as `settings.local.json`.
+  scanName: string;
 };
 
 export type Rule = {
