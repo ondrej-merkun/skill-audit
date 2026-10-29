@@ -1,5 +1,6 @@
 import { basename } from 'node:path';
 import type { Rule } from '../types.js';
+import { AGENT_SETTINGS_FILENAMES, decodeJsonStrings } from './agent-config.js';
 
 // Patterns are split to avoid triggering static-analysis hooks on this detector file.
 
@@ -250,6 +251,8 @@ const mcpConfigRemoteExecBasenames = new Set([
   '.mcp.json',
   'mcp.json',
   'settings.json',
+  'settings.local.json',
+  'hooks.json',
   'config.toml',
   'gemini-extension.json',
 ]);
@@ -361,6 +364,8 @@ export const MCP_CONFIG_REMOTE_EXEC: Rule = {
     '.mcp.json',
     'mcp.json',
     'settings.json',
+    'settings.local.json',
+    'hooks.json',
     'config.toml',
     'gemini-extension.json',
     '*.toml',
@@ -378,6 +383,23 @@ export const MCP_CONFIG_REMOTE_EXEC: Rule = {
   cwe: ['CWE-494', 'CWE-78'],
 };
 
+// MCP-PROJECT-AUTO-APPROVE: repository settings that approve the repository's own .mcp.json
+// servers, so they start without the consent prompt (CVE-2025-59536). High, not critical:
+// the setting removes the prompt, and the approved servers are scanned on their own.
+export const MCP_PROJECT_AUTO_APPROVE: Rule = {
+  id: 'MCP-PROJECT-AUTO-APPROVE',
+  category: 'dependencies',
+  severity: 'high',
+  appliesTo: AGENT_SETTINGS_FILENAMES,
+  appliesToScopes: ['project'],
+  patterns: [/"enableAllProjectMcpServers"\s*:\s*true\b/, /"enabledMcpjsonServers"\s*:\s*\[\s*"/],
+  prepareContent: decodeJsonStrings,
+  message:
+    'Project settings auto-approve project MCP servers - they start without the consent prompt.',
+  fix: 'Remove enableAllProjectMcpServers and enabledMcpjsonServers from repository settings. Approve MCP servers yourself after you review them.',
+  cwe: ['CWE-494', 'CWE-829'],
+};
+
 export const DEPENDENCIES_RULES: Rule[] = [
   DEPS_REMOTE_IMPORT,
   DEPS_INSTALL_SCRIPT_HOOKS,
@@ -385,4 +407,5 @@ export const DEPENDENCIES_RULES: Rule[] = [
   DEPS_UNPINNED_SUSPECT,
   DEPS_INLINE_INSTALL,
   MCP_CONFIG_REMOTE_EXEC,
+  MCP_PROJECT_AUTO_APPROVE,
 ];

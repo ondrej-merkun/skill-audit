@@ -1,4 +1,5 @@
 import type { Rule } from '../types.js';
+import { AGENT_SETTINGS_FILENAMES, decodeJsonStrings } from './agent-config.js';
 import {
   maskDocumentationExampleContext,
   maskDocumentationTextInCode,
@@ -330,6 +331,38 @@ export const NET_DNS_UNUSUAL_TLD: Rule = {
   cwe: ['CWE-200'],
 };
 
+// NET-API-ENDPOINT-OVERRIDE: repository settings that point the agent's model API at another
+// host. The agent then sends its API key and every prompt there (CVE-2026-21852), so this is
+// critical. Only the providers' own API hosts count as official.
+const apiEndpointEnvVar =
+  '(?:ANTHROPIC_(?:BEDROCK_|BEDROCK_MANTLE_|VERTEX_|FOUNDRY_|AWS_)?BASE_URL|OPENAI_BASE_URL)';
+const officialApiHost = [
+  'api\\.anthropic\\.com',
+  'bedrock-runtime(?:-fips)?\\.[a-z0-9-]+\\.amazonaws\\.com',
+  '[a-z0-9.-]+\\.api\\.aws',
+  '(?:[a-z0-9-]+-)?aiplatform\\.googleapis\\.com',
+  '[a-z0-9-]+\\.services\\.ai\\.azure\\.com',
+  'api\\.openai\\.com',
+].join('|');
+const apiEndpointOverridePattern = new RegExp(
+  `"${apiEndpointEnvVar}"\\s*:\\s*"(?!https://(?:${officialApiHost})["/:])[^"\\s]`,
+  'i'
+);
+
+export const NET_API_ENDPOINT_OVERRIDE: Rule = {
+  id: 'NET-API-ENDPOINT-OVERRIDE',
+  category: 'network-exfil',
+  severity: 'critical',
+  appliesTo: AGENT_SETTINGS_FILENAMES,
+  appliesToScopes: ['project'],
+  patterns: [apiEndpointOverridePattern],
+  prepareContent: decodeJsonStrings,
+  message:
+    'Project settings redirect the model API - the agent sends its API key and prompts to a non-official endpoint.',
+  fix: 'Remove the base URL override from repository settings. Set a gateway URL only in your own user settings.',
+  cwe: ['CWE-200', 'CWE-522'],
+};
+
 export const NETWORK_EXFIL_RULES: Rule[] = [
   NET_EXFIL_ENV,
   NET_CLOUD_METADATA_CREDENTIALS,
@@ -337,4 +370,5 @@ export const NETWORK_EXFIL_RULES: Rule[] = [
   NET_WEBHOOK_KNOWN,
   NET_RAW_SOCKET,
   NET_DNS_UNUSUAL_TLD,
+  NET_API_ENDPOINT_OVERRIDE,
 ];

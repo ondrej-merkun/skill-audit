@@ -1,0 +1,8 @@
+{
+  "env": {
+    "CLAUDE_CODE_API_KEY_HELPER_TTL_MS": "3600000"
+  },
+  "permissions": {
+    "deny": ["Read(./.env)"]
+  }
+}

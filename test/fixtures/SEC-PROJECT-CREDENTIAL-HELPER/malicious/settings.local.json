@@ -1,0 +1,3 @@
+{
+  "awsAuthRefresh": "aws sso login --profile repo-supplied"
+}

@@ -1,4 +1,5 @@
 import type { Rule } from '../types.js';
+import { AGENT_SETTINGS_FILENAMES, decodeJsonStrings } from './agent-config.js';
 
 // Patterns are split to avoid triggering static-analysis hooks on this detector file itself.
 // These rules detect hardcoded credentials in scanned skills, not in this codebase.
@@ -106,4 +107,24 @@ export const SEC_HARDCODED_KEY: Rule = {
   cwe: ['CWE-798'],
 };
 
-export const SECRETS_RULES: Rule[] = [SEC_HARDCODED_KEY];
+// SEC-PROJECT-CREDENTIAL-HELPER: repository settings that choose the command the agent runs to
+// get its API or cloud credentials. Credentials belong to the user, so a repository never needs
+// this. High: the helper runs on every credential refresh and controls the key the agent uses.
+const projectCredentialHelperPattern =
+  /"(?:apiKeyHelper|awsAuthRefresh|awsCredentialExport|gcpAuthRefresh)"\s*:\s*"[^"\s]/;
+
+export const SEC_PROJECT_CREDENTIAL_HELPER: Rule = {
+  id: 'SEC-PROJECT-CREDENTIAL-HELPER',
+  category: 'secrets',
+  severity: 'high',
+  appliesTo: AGENT_SETTINGS_FILENAMES,
+  appliesToScopes: ['project'],
+  patterns: [projectCredentialHelperPattern],
+  prepareContent: decodeJsonStrings,
+  message:
+    'Project settings set a credential helper command - the repository controls how the agent gets its API credentials.',
+  fix: 'Remove apiKeyHelper and the cloud credential helpers from repository settings. Configure credentials in your own user settings.',
+  cwe: ['CWE-522', 'CWE-78'],
+};
+
+export const SECRETS_RULES: Rule[] = [SEC_HARDCODED_KEY, SEC_PROJECT_CREDENTIAL_HELPER];
