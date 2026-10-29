@@ -9,6 +9,7 @@ import {
   extractAgentConfigCommandsOnOneLine,
 } from './agent-config.js';
 import { pathLooksDocumentationOnly } from './code-context.js';
+import { shebangScanName } from './script-scan-name.js';
 
 /** Node's read error for a file longer than the V8 string limit (536,870,888 chars). */
 const STRING_TOO_LONG_ERROR_CODE = 'ERR_STRING_TOO_LONG';
@@ -484,11 +485,14 @@ export async function runRules(
     : undefined;
 
   for (const filePath of files) {
-    const name = options.filenameOverride ?? basename(filePath);
+    // A scan name from discovery wins, because a hook's interpreter ignores the shebang.
+    // Otherwise a script without an extension is scanned under its shebang interpreter's name.
+    const scanNameOverride = options.filenameOverride ?? shebangScanName(filePath);
+    const name = scanNameOverride ?? basename(filePath);
     const fileRole = classifySupportingFileRole(filePath, name, reachability, options);
     const scanPath = preparePathFor(filePath, dirAliases);
     const preparePath =
-      options.filenameOverride === undefined ? scanPath : join(dirname(scanPath), name);
+      scanNameOverride === undefined ? scanPath : join(dirname(scanPath), scanNameOverride);
     const passes = matchPasses(rules, name, preparePath, options.scope);
     if (passes.length === 0) continue;
 
