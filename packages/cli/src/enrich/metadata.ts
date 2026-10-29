@@ -1,6 +1,6 @@
-import type { Dirent } from 'node:fs';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { readDirFollowingLinks } from '../fs-walk.js';
 import type { Skill } from '../types.js';
 
 const MAX_MANIFEST_FILES = 40;
@@ -85,20 +85,15 @@ async function findManifestFiles(root: string, fileName: string): Promise<string
     const current = pending.shift();
     if (current === undefined) break;
 
-    let entries: Dirent[];
-    try {
-      entries = await readdir(current.path, { withFileTypes: true });
-    } catch {
-      continue;
-    }
+    const entries = await readDirFollowingLinks(current.path);
 
     for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
       const entryPath = join(current.path, entry.name);
-      if (entry.isFile() && entry.name === fileName) {
+      if (entry.kind === 'file' && entry.name === fileName) {
         files.push(entryPath);
         if (files.length >= MAX_MANIFEST_FILES) break;
       } else if (
-        entry.isDirectory() &&
+        entry.kind === 'dir' &&
         current.depth < MAX_MANIFEST_DEPTH &&
         !SKIPPED_DIRS.has(entry.name)
       ) {
