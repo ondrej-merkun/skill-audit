@@ -22,7 +22,7 @@ Justification, in order of weight:
 
 ### Build and tooling
 - **Package manager:** `pnpm` (faster, cleaner lockfile).
-- **Bundler:** `tsup` — zero-config, outputs CJS+ESM+`.d.ts` in one command.
+- **Bundler:** `tsdown`. It outputs one ESM file for the `skill-audit` bin. The package has no library entry point.
 - **CLI framework:** `commander` for argument parsing (familiar, battle-tested, tiny). Prefer over `yargs`.
 - **TUI stack:**
   - `chalk` v5 (ESM) for colors

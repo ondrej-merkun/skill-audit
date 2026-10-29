@@ -16,7 +16,7 @@ new lesson, append a bullet there in the SAME commit as the fix
 | Language | TypeScript strict mode |
 | Runtime | Node.js 22+ |
 | Package manager | pnpm (workspaces) |
-| Bundler | tsup (dev build outputs CJS + ESM; release build adds .d.ts) |
+| Bundler | tsdown (one ESM file, `dist/index.js`, for the bin) |
 | CLI framework | commander |
 | Terminal colors | chalk v5 (ESM) |
 | Terminal tables | cli-table3 |
@@ -25,20 +25,10 @@ new lesson, append a bullet there in the SAME commit as the fix
 | Test runner | vitest |
 | Linter/formatter | biome |
 
-Conditional `exports` in `package.json` must list `"types"` FIRST,
-then `"import"`, then `"require"`. Node's resolution picks the first
-matching condition — putting `"types"` last silently disables it and
-tsup emits a build warning. Example:
-
-```json
-"exports": {
-  ".": {
-    "types": "./dist/index.d.ts",
-    "import": "./dist/index.js",
-    "require": "./dist/index.cjs"
-  }
-}
-```
+The npm package ships only the `skill-audit` bin. `src/index.ts` parses
+the command line when it loads, so the package has no library API. Do
+not add `main`, `module`, `types`, or `exports` to
+`packages/cli/package.json`.
 
 Do **not** add: ink, react, yargs, jest, eslint, prettier, axios
 (use native fetch), lodash (use native), or any native-module
@@ -78,8 +68,7 @@ Canonical commands (the Ralph loop runs these to verify):
 
 ```bash
 pnpm install          # install deps
-pnpm build            # tsup build — must produce dist/ with no errors
-pnpm build:release    # release build — includes declaration files for npm
+pnpm build            # tsdown build — must produce dist/ with no errors
 pnpm test             # vitest run — all tests must pass
 pnpm lint             # biome check — may warn, must not error
 pnpm typecheck        # tsc --noEmit — must pass

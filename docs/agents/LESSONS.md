@@ -163,8 +163,8 @@ without a commit message explaining why it no longer applies.
   briefly ran `pnpm build:release` beside the clean build-warning check; both
   commands clean and rewrite `dist/`, so a passing result could have been
   timing-dependent._
-  Run `pnpm build`, `pnpm build:release`, and build-warning checks as separate
-  sequential verification steps.
+  Run `pnpm build` and the build-warning check as separate sequential
+  verification steps.
 
 - **L1.26 — Capture raw local LLM content before parser fixes.** _The local
   `llama` review reported `invalid-response` even when the model returned a
