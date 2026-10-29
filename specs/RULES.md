@@ -189,7 +189,8 @@ unzip\s+-P\s+["']?\S+["']?\s+\S+\.zip
 
 ### FS-CREDSTORE (Critical)
 Path-literal regex over both code and markdown. Each `~/` prefix also matches
-`$HOME/` and `${HOME}/`:
+`$HOME/` and `${HOME}/`, also with the quote closed before the slash
+(`"$HOME"/`):
 ```regex
 ~/\.ssh/(id_[rd]sa|id_ecdsa|id_ed25519|authorized_keys)
 ~/\.aws/(credentials|config)

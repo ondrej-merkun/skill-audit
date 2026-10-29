@@ -6,9 +6,10 @@ import {
 
 // Patterns using RegExp constructor to avoid triggering static-analysis hooks on this detector file.
 
-// The home dir as docs write it (`~/`) and as shell scripts write it (`$HOME/`, `${HOME}/`).
+// The home dir as docs write it (`~/`) and as shell scripts write it (`$HOME/`, `${HOME}/`,
+// and `"$HOME"/` with the quote closed before the slash).
 // ponytail: home dir APIs such as os.homedir() or Path.home() are not matched.
-const homeDirPrefix = '(?:~|\\$HOME|\\$\\{HOME\\})\\/';
+const homeDirPrefix = '(?:~|\\$HOME|\\$\\{HOME\\})"?\\/';
 
 // FS-CREDSTORE: path-literal access to known credential stores — per spec §4
 const sshKeyPattern = new RegExp(

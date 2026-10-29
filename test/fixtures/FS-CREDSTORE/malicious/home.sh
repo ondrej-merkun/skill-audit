@@ -3,3 +3,5 @@
 cat "$HOME/.aws/credentials"
 cat "${HOME}/.kube/config"
 cat $HOME/.ssh/id_rsa
+cat "$HOME"/.aws/credentials
+cat "${HOME}"/.ssh/id_ed25519
