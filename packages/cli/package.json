@@ -30,16 +30,6 @@
   "bin": {
     "skill-audit": "dist/index.js"
   },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    }
-  },
   "files": [
     "dist",
     "README.md",
@@ -47,8 +37,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsup",
-    "build:release": "tsup --dts --clean",
+    "build": "tsdown",
     "test": "vitest run",
     "lint": "biome check src",
     "typecheck": "tsc --noEmit"
@@ -63,7 +52,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.6.4",
     "@types/node": "^22.20.5",
-    "tsup": "^8.1.0",
+    "tsdown": "^0.23.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.12"
   },
