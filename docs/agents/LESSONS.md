@@ -247,18 +247,27 @@ without a commit message explaining why it no longer applies.
   Walk directories with the `src/fs-walk.ts` helpers, which follow links and
   stop at loops. Test each new walker with a symlinked skill dir.
 
-- **L2.8 — A followed link can point at a file the user cannot read.** _The
-  symlink fix first let one link to a mode-000 file make `computeTreeSha256`
-  throw, so the Claude Code plugin failed and the scan printed "No skills
-  found" with exit 0._
-  Code that reads files reached through links must skip an unreadable file,
-  not throw out of discovery.
+- **L2.8 — A followed link can point at a file or dir the user cannot read.**
+  _The symlink fix first let one link to a mode-000 file make
+  `computeTreeSha256` throw, so the Claude Code plugin failed and the scan
+  printed "No skills found" with exit 0. Later, a link to an unreadable dir
+  made the rule engine drop every finding of the skill._
+  Code that reads files or dirs reached through links must skip the
+  unreadable one alone, not throw out of discovery or the scan.
 
 - **L2.9 — A link to an ancestor is a loop that first walks the whole parent
   tree.** _Review of the symlink fix: `vendor -> /` in one skill made `list`
   and `scan` walk the whole filesystem._
   Enter the walk root first with `enterDirOnce`, which marks the root's
   ancestors as entered, so the link ends like any other loop.
+
+- **L2.10 — The walked path of a linked file is an alias, not its role.**
+  _Review of the symlink fix: with `docs -> payload`, the engine walked
+  `payload/inject.md` as `docs/inject.md` and demoted a critical prompt
+  injection to inert info. A guard that only checked the walked path still
+  missed the reverse link, `payload -> docs`._
+  Record each dir that the walk skips as already entered, and demote a file
+  only when every path to it, through those skipped dirs too, is inert docs.
 
 ## 3. Identity & author metadata — never guess
 

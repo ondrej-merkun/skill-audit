@@ -1,5 +1,5 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path';
+import { type Dirent, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { enterDirOnceSync, entryKindSync } from '../fs-walk.js';
 import type { Finding, Rule, Skill } from '../types.js';
 
@@ -17,10 +17,14 @@ type RunRulesOptions = {
 
 type ReachabilityIndex = {
   root: string;
+  dirAliases: DirAlias[];
   referencedFiles: Set<string>;
   referencedDirs: Set<string>;
   allSupportingMarkdownReachable: boolean;
 };
+
+/** A second path (`dir`) to a real dir that the walk entered through another path. */
+type DirAlias = { dir: string; realDir: string };
 
 type SupportingFileRole = 'operative' | 'inert-supporting-docs';
 
@@ -217,7 +221,11 @@ function addReachablePath(index: ReachabilityIndex, rawPath: string): void {
   index.referencedFiles.add(ref);
 }
 
-function buildReachabilityIndex(skillRoot: string, files: string[]): ReachabilityIndex | undefined {
+function buildReachabilityIndex(
+  skillRoot: string,
+  files: string[],
+  skippedDirs: string[]
+): ReachabilityIndex | undefined {
   const skillMdPath = join(skillRoot, 'SKILL.md');
   if (!files.includes(skillMdPath)) return undefined;
 
@@ -230,6 +238,7 @@ function buildReachabilityIndex(skillRoot: string, files: string[]): Reachabilit
 
   const index: ReachabilityIndex = {
     root: skillRoot,
+    dirAliases: resolveDirAliases(skippedDirs),
     referencedFiles: new Set(),
     referencedDirs: new Set(),
     allSupportingMarkdownReachable:
@@ -255,6 +264,17 @@ function buildReachabilityIndex(skillRoot: string, files: string[]): Reachabilit
   }
 
   return index;
+}
+
+/** Resolves each dir that the walk skipped as already entered to its real path. */
+function resolveDirAliases(skippedDirs: string[]): DirAlias[] {
+  return skippedDirs.flatMap((dir) => {
+    try {
+      return [{ dir, realDir: realpathSync(dir) }];
+    } catch {
+      return [];
+    }
+  });
 }
 
 function isMarkdownPromptFile(scanName: string): boolean {
@@ -289,11 +309,38 @@ function classifySupportingFileRole(
     OPERATIVE_ENTRYPOINT_NAMES.has(basename(filePath)) ||
     index.allSupportingMarkdownReachable ||
     isReachableFromSkillMd(filePath, index) ||
-    !isSupportingMarkdownPath(filePath, index)
+    !isSupportingMarkdownPath(filePath, index) ||
+    hasOperativeAliasPath(filePath, index)
   ) {
     return 'operative';
   }
   return 'inert-supporting-docs';
+}
+
+/**
+ * True when a dir alias that the walk skipped gives the file a second path,
+ * and that path is operative. The walk enters each real dir once, so with
+ * `docs -> payload` or `payload -> docs` it lists the file under only one of
+ * its two paths. A file is demoted only when every known path is inert docs.
+ * ponytail: one alias level only; a path through two aliases is not rebuilt.
+ */
+function hasOperativeAliasPath(filePath: string, index: ReachabilityIndex): boolean {
+  if (index.dirAliases.length === 0) return false;
+
+  let realFile: string;
+  try {
+    realFile = realpathSync(filePath);
+  } catch {
+    return false;
+  }
+
+  return index.dirAliases.some((alias) => {
+    const pathInAlias = relative(alias.realDir, realFile);
+    if (pathInAlias.split(sep)[0] === '..' || isAbsolute(pathInAlias)) return false;
+
+    const aliasPath = join(alias.dir, pathInAlias);
+    return isReachableFromSkillMd(aliasPath, index) || !isSupportingMarkdownPath(aliasPath, index);
+  });
 }
 
 function findingForRole(finding: Finding, role: SupportingFileRole): Finding {
@@ -312,23 +359,37 @@ function findingForRole(finding: Finding, role: SupportingFileRole): Finding {
  * same scan reports as its own skill is skipped, so its findings are not counted twice.
  * Every other child belongs to this target, whatever marker files it contains.
  * Follows symlinks, so a skill cannot hide a script behind a link; each real
- * directory is walked once, so link loops end.
+ * directory is walked once, so link loops end. A dir that is not walked because
+ * the walk already entered its real path goes to `skippedDirs`.
  */
 function walkDir(
   dir: string,
   scanTargetPaths: ReadonlySet<string>,
+  skippedDirs: string[],
   visitedRealDirs = new Set<string>()
 ): string[] {
-  if (!enterDirOnceSync(visitedRealDirs, dir)) return [];
+  if (!enterDirOnceSync(visitedRealDirs, dir)) {
+    skippedDirs.push(dir);
+    return [];
+  }
+
+  // An unreadable subtree (for example a link to a root-owned dir) is skipped
+  // alone, so it cannot erase the findings of the rest of the skill.
+  let entries: Dirent[];
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
 
   const results: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+  for (const entry of entries) {
     const full = join(dir, entry.name);
     if (scanTargetPaths.has(resolve(full))) continue;
 
     const kind = entryKindSync(dir, entry);
     if (kind === 'dir') {
-      results.push(...walkDir(full, scanTargetPaths, visitedRealDirs));
+      results.push(...walkDir(full, scanTargetPaths, skippedDirs, visitedRealDirs));
     } else if (kind === 'file') {
       results.push(full);
     }
@@ -366,14 +427,19 @@ export async function runRules(
 
   let files: string[];
   let isDirectory: boolean;
+  const skippedDirs: string[] = [];
   try {
     const st = statSync(skillPath);
     isDirectory = st.isDirectory();
-    files = isDirectory ? walkDir(skillPath, options.scanTargetPaths ?? new Set()) : [skillPath];
+    files = isDirectory
+      ? walkDir(skillPath, options.scanTargetPaths ?? new Set(), skippedDirs)
+      : [skillPath];
   } catch {
     return [];
   }
-  const reachability = isDirectory ? buildReachabilityIndex(skillPath, files) : undefined;
+  const reachability = isDirectory
+    ? buildReachabilityIndex(skillPath, files, skippedDirs)
+    : undefined;
 
   for (const filePath of files) {
     const name = options.filenameOverride ?? basename(filePath);
