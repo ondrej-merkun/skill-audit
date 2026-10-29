@@ -11,12 +11,12 @@
     "verify": "node scripts/verify-fast.mjs"
   },
   "devDependencies": {
-    "@types/node": "^20.14.0",
+    "@types/node": "^22.20.5",
     "typescript": "^6.0.3",
     "vitest": "^4.1.12"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "pnpm": {
     "overrides": {
