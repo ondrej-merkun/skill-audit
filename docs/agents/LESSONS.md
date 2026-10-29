@@ -307,6 +307,15 @@ without a commit message explaining why it no longer applies.
   A sync read of a FIFO blocks the event loop, so a Vitest timeout cannot stop
   it. Test a possible hang through the built CLI with a kill timeout.
 
+- **L2.13: Skip an agent-owned dir by its exact path, not by path segments.**
+  _The first fix for scanned Claude Code plugin trash copied the
+  `plugins/marketplaces` segment match. A plugin manifest can load skills or
+  hooks from any dir in the plugin, such as `./plugins/.trash/`, so that match
+  would hide a loaded payload from the scan._
+  Skip only the exact dir that the agent owns, such as
+  `~/.claude/plugins/.trash`, and test that a dir with the same name inside a
+  plugin is still discovered.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**
