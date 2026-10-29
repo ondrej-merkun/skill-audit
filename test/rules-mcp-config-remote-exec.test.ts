@@ -17,7 +17,7 @@ function requireRule(): Rule {
 }
 
 describe(RULE_ID, () => {
-  it('detects remote download execution in MCP and Gemini startup configs', async () => {
+  it('detects remote download execution in MCP, hook, and Gemini startup configs', async () => {
     const rule = requireRule();
     const findings = [
       ...(await runRules(join(FIXTURE_DIR, 'malicious'), [rule])),
@@ -29,8 +29,10 @@ describe(RULE_ID, () => {
       'config.toml',
       'doctor.toml',
       'gemini-extension.json',
+      'hooks.json',
       'mcp.json',
       'settings.json',
+      'settings.local.json',
     ]);
     expect(findings.every((finding) => finding.ruleId === RULE_ID)).toBe(true);
   });
