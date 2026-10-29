@@ -329,15 +329,20 @@ without a commit message explaining why it no longer applies.
   million characters and a padded file hid its servers again. Use a character
   loop, as the loader does.
 
-- **L2.15 — A view that cuts part of a JSON config must stay valid JSON.** _A
-  follow-up to P0 #7 found `~/.gemini/settings.json` reporting each MCP server
-  twice: on the server entry and on the settings file. The settings views return
-  an empty view for invalid JSON, so blanking the servers to spaces would also
-  silence the hook checks. `JSON.parse` drops a duplicate server name, so that
-  definition has no entry of its own._
-  Empty the reported subtree in place (keep `{`, `}`, and the line breaks), and
-  scan the whole file when the parsed entries do not cover every definition in
-  the text.
+- **L2.15 — A view that cuts part of a JSON config must keep valid JSON and the
+  file's layout.** _A follow-up to P0 #7 found `~/.gemini/settings.json`
+  reporting each MCP server twice: on the server entry and on the settings
+  file. The settings views return an empty view for invalid JSON, so blanking
+  the servers to spaces would also silence the hook checks. `JSON.parse` drops a
+  duplicate server name, so that definition has no entry of its own. The review
+  then found that the server entries re-serialized each definition with one
+  value per line. MCP-CONFIG-REMOTE-EXEC reads 24 lines after `"args"`, so a
+  payload at the end of a long one-line `args` array dropped from FAIL to
+  REVIEW once the settings file stopped holding the servers._
+  Empty the reported subtree in place (keep `{`, `}`, and the line breaks). Give
+  each entry its definition text as the file writes it, not a re-serialized
+  copy. Scan the whole file when the parsed entries do not cover every
+  definition in the text.
 
 ## 3. Identity & author metadata — never guess
 

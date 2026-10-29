@@ -79,16 +79,28 @@ export function mcpServerScanMetadata(
   };
 }
 
+/** Rule scan metadata for a settings file whose MCP servers are reported on their own entries. */
+export type McpServerSplitScanMetadata = {
+  // One entry per server name.
+  servers: Map<string, NonNullable<Skill['metadata']>>;
+  // The rest of the settings file.
+  settings: NonNullable<Skill['metadata']>;
+};
+
 /**
- * Leaves the MCP servers out of the rule scan of a settings file, for an agent that reports
- * each server on its own entry, so a risky server is reported once. Returns undefined, and the
- * whole file is scanned, when JSON.parse cannot read the file or drops a server definition
- * (a second `mcpServers` key or a duplicate server name), because that definition has no entry
- * of its own.
+ * Splits the rule scan of a settings file into one text per MCP server and one text for the
+ * rest of the file, so a risky server is reported once, on its own entry. Returns undefined,
+ * and the caller scans the whole file, when JSON.parse cannot read the file or drops a server
+ * definition (a second `mcpServers` key or a duplicate server name), because that definition
+ * has no entry of its own.
+ *
+ * ponytail: hook findings and server findings of one file land on different entries, so they no
+ * longer combine into a compound such as FS-CREDSTORE + NET-*. Claude Code keeps its hooks and
+ * servers in different files and has the same limit.
  */
-export function settingsScanMetadataWithoutMcpServers(
+export function splitMcpServerScanMetadata(
   content: string
-): NonNullable<Skill['metadata']> | undefined {
+): McpServerSplitScanMetadata | undefined {
   let settings: unknown;
   try {
     settings = JSON.parse(content);
@@ -99,17 +111,15 @@ export function settingsScanMetadataWithoutMcpServers(
   const parsedServers = isRecord(settings) ? settings[MCP_SERVERS_KEY] : undefined;
   if (!isRecord(parsedServers)) return undefined;
 
-  const members = rootMemberObjects(content, MCP_SERVERS_KEY);
-  const servers = members.length === 1 ? members[0] : undefined;
-  if (servers === undefined || servers.memberCount !== Object.keys(parsedServers).length) {
+  const serverObjects = rootMemberObjects(content, MCP_SERVERS_KEY);
+  const servers = serverObjects.length === 1 ? serverObjects[0] : undefined;
+  if (servers === undefined || servers.members.length !== Object.keys(parsedServers).length) {
     return undefined;
   }
 
-  // An empty object keeps the JSON valid for the settings views, and the kept line breaks keep
-  // every other finding on its real line.
-  const emptied = content.slice(servers.start + 1, servers.end - 1).replace(NOT_LINE_BREAK, ' ');
   return {
-    ruleScanContent: content.slice(0, servers.start + 1) + emptied + content.slice(servers.end - 1),
+    servers: serverTextScanMetadata(content, servers),
+    settings: { ruleScanContent: withEmptiedObject(content, servers) },
   };
 }
 
@@ -189,16 +199,52 @@ async function agentConfigSkill(
   };
 }
 
-type JsonObjectSpan = { start: number; end: number; memberCount: number };
+/**
+ * Gives each server its definition as the file writes it, in a one-server document. The
+ * raw-text rules read lines and windows of lines, so a re-serialized definition can move a
+ * payload out of their reach, e.g. past the window that follows a long "args" array.
+ */
+function serverTextScanMetadata(
+  content: string,
+  servers: JsonObjectSpan
+): Map<string, NonNullable<Skill['metadata']>> {
+  const metadata = new Map<string, NonNullable<Skill['metadata']>>();
+
+  for (const [index, member] of servers.members.entries()) {
+    // Up to the next member name, the text is this member, a comma, and whitespace.
+    const nextStart = servers.members[index + 1]?.start ?? servers.end - 1;
+    const text = content.slice(member.start, nextStart).trimEnd();
+    const memberText = text.endsWith(',') ? text.slice(0, -1).trimEnd() : text;
+
+    metadata.set(member.name, {
+      ruleScanFilename: MCP_SERVER_SCAN_FILENAME,
+      ruleScanContent: `{ "${MCP_SERVERS_KEY}": { ${memberText} } }`,
+    });
+  }
+
+  return metadata;
+}
+
+// The kept braces keep the JSON valid for the settings views, and the kept line breaks keep
+// every other finding on its real line.
+function withEmptiedObject(content: string, object: JsonObjectSpan): string {
+  const emptied = content.slice(object.start + 1, object.end - 1).replace(NOT_LINE_BREAK, ' ');
+  return content.slice(0, object.start + 1) + emptied + content.slice(object.end - 1);
+}
+
+type JsonMember = { name: string; start: number };
+type JsonObjectSpan = { start: number; end: number; members: JsonMember[] };
 
 /**
  * Finds each root member named `key` in valid JSON text, in file order. An object value gets
- * its offsets and its member count, duplicate names included. Any other value is undefined.
+ * its offsets and the name and offset of each of its members, duplicate names included. Any
+ * other value is undefined.
  */
 function rootMemberObjects(content: string, key: string): Array<JsonObjectSpan | undefined> {
-  const members: Array<JsonObjectSpan | undefined> = [];
+  const objects: Array<JsonObjectSpan | undefined> = [];
   let depth = 0;
   let previousToken = '';
+  let previousIndex = 0;
   let afterKeyColon = false;
   let openObject: Omit<JsonObjectSpan, 'end'> | undefined;
 
@@ -210,26 +256,27 @@ function rootMemberObjects(content: string, key: string): Array<JsonObjectSpan |
     if (token === ':') {
       // In valid JSON the token before a colon is the member name.
       if (depth === 1 && JSON.parse(previousToken) === key) {
-        members.push(undefined);
+        objects.push(undefined);
         afterKeyColon = true;
       } else if (depth === 2 && openObject !== undefined) {
-        openObject.memberCount += 1;
+        openObject.members.push({ name: JSON.parse(previousToken), start: previousIndex });
       }
     } else if (token === '{' || token === '[') {
-      if (isMemberValueStart && token === '{') openObject = { start: match.index, memberCount: 0 };
+      if (isMemberValueStart && token === '{') openObject = { start: match.index, members: [] };
       depth += 1;
     } else if (token === '}' || token === ']') {
       depth -= 1;
       if (depth === 1 && openObject !== undefined) {
-        members[members.length - 1] = { ...openObject, end: match.index + 1 };
+        objects[objects.length - 1] = { ...openObject, end: match.index + 1 };
         openObject = undefined;
       }
     }
 
     previousToken = token;
+    previousIndex = match.index;
   }
 
-  return members;
+  return objects;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

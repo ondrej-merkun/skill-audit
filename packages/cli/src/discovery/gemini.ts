@@ -7,8 +7,9 @@ import { blankJsonComments } from '../rules/agent-config.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import {
   discoverAgentConfigFiles,
+  type McpServerSplitScanMetadata,
   mcpServerScanMetadata,
-  settingsScanMetadataWithoutMcpServers,
+  splitMcpServerScanMetadata,
 } from './agent-config.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
 import { discoverSharedAgentSkills } from './shared-agent-skills.js';
@@ -243,16 +244,12 @@ async function discoverAgentMarkdownFiles(
   );
 }
 
-async function discoverMcpJson(settingsPath: string, scope: Skill['scope']): Promise<Skill[]> {
-  if (!(await isRegularFile(settingsPath))) return [];
-
-  let raw: string;
-  try {
-    raw = await readFile(settingsPath, 'utf8');
-  } catch {
-    return [];
-  }
-
+function discoverMcpJson(
+  settingsPath: string,
+  raw: string,
+  scope: Skill['scope'],
+  serverMetadata: McpServerSplitScanMetadata['servers'] | undefined
+): Skill[] {
   // Gemini CLI strips comments before it parses settings.json. A file that still does not parse
   // stops Gemini CLI from starting, so it starts no server.
   let parsed: unknown;
@@ -277,7 +274,7 @@ async function discoverMcpJson(settingsPath: string, scope: Skill['scope']): Pro
       format: 'mcp-json' as const,
       scope,
       treeSha256: '',
-      metadata: mcpServerScanMetadata(name, definition),
+      metadata: serverMetadata?.get(name) ?? mcpServerScanMetadata(name, definition),
     }));
 }
 
@@ -298,14 +295,22 @@ async function discoverSettingsFile(
   });
 }
 
-// discoverMcpJson reports each user server on its own entry, so the settings file scan
-// leaves them out.
-async function userSettingsScanMetadata(settingsPath: string): Promise<Skill['metadata']> {
-  try {
-    return settingsScanMetadataWithoutMcpServers(await readFile(settingsPath, 'utf8'));
-  } catch {
-    return undefined;
-  }
+// ~/.gemini/settings.json holds hooks and MCP servers. Each server is reported on its own entry,
+// so the settings file entry scans the rest of the file. One read feeds both, so the servers
+// that the settings scan leaves out are the servers that have entries.
+async function discoverUserSettings(userBase: string): Promise<Skill[]> {
+  const settingsPath = join(userBase, 'settings.json');
+  // A FIFO at this path would block the read forever, so only a regular file is read.
+  const raw = (await isRegularFile(settingsPath))
+    ? await readFile(settingsPath, 'utf8').catch(() => undefined)
+    : undefined;
+  if (raw === undefined) return discoverSettingsFile(userBase, '~/.gemini', 'user');
+
+  const split = splitMcpServerScanMetadata(raw);
+  return [
+    ...discoverMcpJson(settingsPath, raw, 'user', split?.servers),
+    ...(await discoverSettingsFile(userBase, '~/.gemini', 'user', split?.settings)),
+  ];
 }
 
 const geminiDiscovery: AgentDiscovery = {
@@ -328,12 +333,7 @@ const geminiDiscovery: AgentDiscovery = {
     );
     skills.push(...(await discoverCommandTomlFiles(join(userBase, 'commands'), 'user', options)));
     skills.push(...(await discoverAgentMarkdownFiles(join(userBase, 'agents'), 'user', options)));
-    const userSettingsPath = join(userBase, 'settings.json');
-    const userSettingsMetadata = await userSettingsScanMetadata(userSettingsPath);
-    skills.push(...(await discoverMcpJson(userSettingsPath, 'user')));
-    skills.push(
-      ...(await discoverSettingsFile(userBase, '~/.gemini', 'user', userSettingsMetadata))
-    );
+    skills.push(...(await discoverUserSettings(userBase)));
 
     skills.push(
       ...(await discoverExtensionManifests(join(projectBase, 'extensions'), 'project', options))
