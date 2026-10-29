@@ -514,7 +514,7 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 - `0` — all PASS
 - `1` — any REVIEW or FAIL (configurable: `--fail-on=fail`, `--fail-on=review`, `--fail-on=any`)
 - `2` — tool error
-- `3` — scan incomplete
+- `3` — scan incomplete: a discovery plugin or a skill scan failed (exit `1` still wins)
 
 **Interactivity.** Zero prompts at MVP. No "Press y to continue". No auth flow. Running the binary with no args performs a full scan. The single most-important UX rule: **a first-time user can type the install command, hit enter, and be reading the result in under 5 seconds.**
 
