@@ -4,7 +4,7 @@ This file quotes the regex patterns from `SPEC.md` §4 verbatim. Ralph
 implements rules against this file so it doesn't have to re-read the
 whole spec on every rule iteration.
 
-The full catalog is 49 rules across 9 categories. Only the highest-
+The full catalog is 50 rules across 9 categories. Only the highest-
 signal patterns are reproduced here in full; others are summarized.
 When in doubt, read `SPEC.md` §4.
 
@@ -190,10 +190,11 @@ Read `SPEC.md` §4 for these — they follow the same shape as above.
 JS eval/Function(), child_process with shell:true, pickle/yaml.load,
 backtick command substitution.
 
-**Network (5 more):** cloud credential metadata endpoints, outbound non-local
+**Network (6 more):** cloud credential metadata endpoints, outbound non-local
 IP literal, raw socket creation, DNS lookups to unusual TLDs (`.xyz`, `.tk`,
-`.top`, IP-literal), and project settings that override the model API endpoint
-(`NET-API-ENDPOINT-OVERRIDE`, below).
+`.top`, IP-literal), project settings that override the model API endpoint
+(`NET-API-ENDPOINT-OVERRIDE`, below), and project HTTP hooks that post session
+data to an external host (`NET-HOOK-HTTP-EXTERNAL`, below).
 
 **Filesystem (5 more):** browser credential/cookie stores, macOS keychain
 access, reads of `.env` files, relative paths escaping `cwd` (`../../..`),
@@ -270,8 +271,8 @@ In skill directories, a file without an extension whose own name selects no
 rule, such as `scripts/setup`, gets its scan name from its shebang line. A name
 that selects rules, such as `Pipfile` or `.cursorrules`, keeps them.
 
-Known gap: an HTTP hook (`"type": "http"`) sends hook input to its `url`. No
-rule checks that host yet.
+An HTTP hook (`"type": "http"`) runs no command. It posts the hook input to its
+`url`. In project files, `NET-HOOK-HTTP-EXTERNAL` (below) checks that host.
 
 Known gap: a script that hooks run with two interpreters gets the rules of the
 first one only. An interpreter option that takes a separate value, such as
@@ -281,11 +282,12 @@ script rules.
 
 ## Agent settings rules (project scope only)
 
-A repository can ship `.claude/settings.json` or `.claude/settings.local.json`
-that the agent loads when the user opens the project (CVE-2025-59536,
-CVE-2026-21852). These rules apply only to `agent-config` targets discovered
-with `scope: "project"`. A settings file inside a skill directory is an example
-that no agent loads, so these rules skip it. They match the JSON after string
+A repository can ship `.claude/settings.json`, `.claude/settings.local.json`,
+or hook files such as `.github/hooks/*.json` that the agent loads when the user
+opens the project (CVE-2025-59536, CVE-2026-21852). These rules apply only to
+`agent-config` targets discovered with `scope: "project"`. A settings file
+inside a skill directory is an example that no agent loads, so these rules skip
+it. They match the JSON after string
 escapes are decoded; a quote inside a decoded value becomes `'`, so quoted text
 cannot look like a key. Leading whitespace in a value does not hide it. User-scope
 settings are the user's own choices and are not checked by these rules.
@@ -318,6 +320,31 @@ servers. The servers themselves are scanned as separate targets.
 ```
 High: the helper runs on each credential refresh and chooses the credential
 the agent uses. Its command also goes through the command rules above.
+
+### NET-HOOK-HTTP-EXTERNAL (High, Critical with environment variables in headers)
+An HTTP hook (`"type": "http"`) below the top-level `hooks` key of a project
+`settings.json`, `settings.local.json`, or `hooks.json`, with an `http://` or
+`https://` `url` whose host is not loopback. Loopback hosts are `localhost`,
+`127.0.0.0/8`, and `[::1]` after WHATWG URL parsing, so `http://127.1` is
+loopback and `http://localhost.evil.example` is not. The rule parses the JSON,
+so escapes and layout do not hide a hook, and the finding reports the line of
+the `url` value. Other `"type": "http"` objects, such as remote MCP servers,
+are not hooks.
+
+Claude Code and Copilot CLI post the hook input JSON to the URL. The input holds
+the session ID, the transcript path, the working directory, and, per event, the
+prompt or the tool name, tool input, and tool output. High: the repository
+author receives the session data of each user who opens the project.
+
+Critical when a header value expands an environment variable (`$NAME` or
+`${NAME}`) that the hook lists in `allowedEnvVars`. Both agents expand only the
+listed names into headers, so the hook also sends the user's tokens or keys,
+such as `GITHUB_TOKEN` or `ANTHROPIC_API_KEY`.
+
+Codex, Cursor, Gemini CLI, Windsurf, and Cline document no HTTP hook type. The
+rule matches by file name, so an HTTP hook in their project `hooks.json` or
+`settings.json` is also reported, although that agent does not run it. Hooks in
+skill or subagent frontmatter are not checked.
 
 ## Allowlist behavior
 
