@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
-import { readdir, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { join } from 'node:path';
+import { enterDirOnce, readDirFollowingLinks } from '../fs-walk.js';
 import type { Skill } from '../types.js';
 import { withInstallState } from './marketplace.js';
 import { fallbackSkillNameFromDirectory } from './names.js';
@@ -60,24 +60,24 @@ async function discoverSkillDirs(
  * Codex and Cursor load nested skills and Gemini CLI loads a root SKILL.md.
  * The walk has no depth limit and does not skip hidden directories: the rule
  * engine scans each SKILL.md directory as its own root, so a directory that
- * discovery skips is never scanned.
+ * discovery skips is never scanned. Symlinked skill dirs are followed, because
+ * skill installers link each shared skill into a store.
  */
 async function findSkillDirs(root: string): Promise<string[]> {
   const skillDirs: string[] = [];
+  const visitedRealDirs = new Set<string>();
 
   async function visit(dir: string): Promise<void> {
-    let entries: Array<{ isDirectory(): boolean; name: string }>;
-    try {
-      entries = await readdir(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
+    if (!(await enterDirOnce(visitedRealDirs, dir))) return;
 
-    const hasManifest = entries.some((entry) => entry.name === SKILL_MANIFEST);
-    if (hasManifest && (await isFile(join(dir, SKILL_MANIFEST)))) skillDirs.push(dir);
+    const entries = await readDirFollowingLinks(dir);
+    const hasManifest = entries.some(
+      (entry) => entry.name === SKILL_MANIFEST && entry.kind === 'file'
+    );
+    if (hasManifest) skillDirs.push(dir);
 
     for (const entry of entries) {
-      if (entry.isDirectory()) await visit(join(dir, entry.name));
+      if (entry.kind === 'dir') await visit(join(dir, entry.name));
     }
   }
 
@@ -100,12 +100,4 @@ function getHomeDir(): string {
 // SKILL_AUDIT_CWD lets tests inject a project directory without process.chdir().
 function getCwd(): string {
   return process.env.SKILL_AUDIT_CWD ?? process.cwd();
-}
-
-async function isFile(p: string): Promise<boolean> {
-  try {
-    return (await stat(p)).isFile();
-  } catch {
-    return false;
-  }
 }
