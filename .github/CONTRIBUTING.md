@@ -34,6 +34,8 @@ behavior; it records project-specific pitfalls from previous work.
 - For generated HTML reports, test at least one click/keyboard interaction.
 - For README screenshots, SVGs, badges, or action examples, render or verify
   the changed target rather than only checking that the file exists.
+- Pin each `uses:` in `.github/workflows/` and `action.yml` to a full commit
+  SHA with a trailing `# vX.Y.Z` comment. Dependabot keeps both current.
 - Run the verification commands above before requesting review.
 
 No contributor license agreement is required. Contributions are accepted under
