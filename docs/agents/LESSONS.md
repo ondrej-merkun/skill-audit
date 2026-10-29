@@ -344,6 +344,14 @@ without a commit message explaining why it no longer applies.
   copy. Scan the whole file when the parsed entries do not cover every
   definition in the text.
 
+- **L2.16 — Dedupe must keep each installation attribute that a rule reads.**
+  _Review of P0 #63: identical user and project `settings.json` files merged
+  into one skill with only the first path's scope. When the user path sorted
+  first, the project-only rules did not run, and an `ANTHROPIC_BASE_URL`
+  override scored PASS 100._
+  Keep the attribute for every merged installation (as `scopes` does), and test
+  both path sort orders.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**

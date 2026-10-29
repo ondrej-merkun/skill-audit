@@ -23,7 +23,8 @@ type RunRulesOptions = {
   scanAllSupportingFiles?: boolean;
   /** Paths from collectScanTargetPaths; a directory walk does not enter them. */
   scanTargetPaths?: ReadonlySet<string>;
-  scope?: Skill['scope'];
+  /** Scopes of every installation of the target. A scope-limited rule needs one match. */
+  scopes?: ReadonlyArray<Skill['scope']>;
 };
 
 // One set of rules matched against one view of a file.
@@ -508,7 +509,7 @@ export async function runRulesForSkill(
   options: Pick<RunRulesOptions, 'scanAllSupportingFiles' | 'scanTargetPaths'> = {}
 ): Promise<Finding[]> {
   const runOptions: RunRulesOptions = {
-    scope: skill.scope,
+    scopes: skill.scopes ?? [skill.scope],
     ...(skill.metadata?.ruleScanFilename !== undefined
       ? { filenameOverride: skill.metadata.ruleScanFilename }
       : {}),
@@ -539,7 +540,7 @@ async function runRulesOnContent(
 ): Promise<Finding[]> {
   const name = options.filenameOverride ?? basename(filePath);
   const preparePath = join(dirname(filePath), name);
-  return matchRules(filePath, content, matchPasses(rules, name, preparePath, options.scope));
+  return matchRules(filePath, content, matchPasses(rules, name, preparePath, options.scopes));
 }
 
 /**
@@ -557,7 +558,7 @@ function scanNameAndPasses(
   const override = options.filenameOverride;
   const name = override ?? basename(filePath);
   const preparePath = override === undefined ? scanPath : join(dirname(scanPath), override);
-  const passes = matchPasses(rules, name, preparePath, options.scope);
+  const passes = matchPasses(rules, name, preparePath, options.scopes);
   if (passes.length > 0 || override !== undefined) return { name, passes };
 
   const shebangName = shebangScanName(filePath);
@@ -567,7 +568,7 @@ function scanNameAndPasses(
   const shebangPreparePath = join(dirname(scanPath), shebangName);
   return {
     name: shebangName,
-    passes: matchPasses(rules, shebangName, shebangPreparePath, options.scope),
+    passes: matchPasses(rules, shebangName, shebangPreparePath, options.scopes),
   };
 }
 
@@ -580,12 +581,12 @@ function matchPasses(
   rules: Rule[],
   name: string,
   preparePath: string,
-  scope: Skill['scope'] | undefined
+  scopes: ReadonlyArray<Skill['scope']> | undefined
 ): MatchPass[] {
-  const passes: MatchPass[] = [{ rules: rulesForScanName(rules, name, scope), preparePath }];
+  const passes: MatchPass[] = [{ rules: rulesForScanName(rules, name, scopes), preparePath }];
 
   if (AGENT_CONFIG_FILENAMES.has(name)) {
-    const commandRules = rulesForScanName(rules, AGENT_CONFIG_COMMANDS_SCAN_NAME, scope);
+    const commandRules = rulesForScanName(rules, AGENT_CONFIG_COMMANDS_SCAN_NAME, scopes);
     const commandsPath = join(dirname(preparePath), AGENT_CONFIG_COMMANDS_SCAN_NAME);
     // Two layouts of the same commands: the shell's lines, so a `#` comment line hides only
     // itself, and one line per command, so a pattern can span a pipeline or quoted body that
@@ -607,18 +608,18 @@ function matchPasses(
   return passes.filter((pass) => pass.rules.length > 0);
 }
 
-// An unknown scope (a direct runRules call) keeps scope-limited rules active.
+// Unknown scopes (a direct runRules call) keep scope-limited rules active.
 function rulesForScanName(
   rules: Rule[],
   scanName: string,
-  scope: Skill['scope'] | undefined
+  scopes: ReadonlyArray<Skill['scope']> | undefined
 ): Rule[] {
   return rules.filter(
     (rule) =>
       rule.appliesTo.some((glob) => matchesGlob(scanName, glob)) &&
-      (scope === undefined ||
+      (scopes === undefined ||
         rule.appliesToScopes === undefined ||
-        rule.appliesToScopes.includes(scope))
+        rule.appliesToScopes.some((scope) => scopes.includes(scope)))
   );
 }
 
