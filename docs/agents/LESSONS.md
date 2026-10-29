@@ -323,7 +323,11 @@ without a commit message explaining why it no longer applies.
   MCP server and the decode pass skipped every hook. Gemini CLI reads that file
   with `strip-json-comments`, so the file was valid for Gemini._
   Before you parse an agent config file, read the agent's own loader. Accept
-  comments or trailing commas only where that loader accepts them.
+  comments or trailing commas only where that loader accepts them. Match its
+  limits too: the first comment reader was a regex that stepped through a string
+  one character at a time, so V8's backtrack stack overflowed at about 8.4
+  million characters and a padded file hid its servers again. Use a character
+  loop, as the loader does.
 
 ## 3. Identity & author metadata — never guess
 
