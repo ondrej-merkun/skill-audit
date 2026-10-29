@@ -268,6 +268,9 @@ without a commit message explaining why it no longer applies.
   missed the reverse link, `payload -> docs`._
   Record each dir that the walk skips as already entered, and demote a file
   only when every path to it, through those skipped dirs too, is inert docs.
+  The same holds for every path-based decision: Codex review then found that
+  content masking (`docs -> scripts` masked a script) and the tree hash (two
+  copies that differ only by an alias deduped into one) still used one path.
 
 ## 3. Identity & author metadata — never guess
 
