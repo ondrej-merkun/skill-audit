@@ -537,6 +537,13 @@ without a commit message explaining why it no longer applies.
   `trustLockfile: true`. For a throwaway local run, set
   `pnpm_config_minimum_release_age=0` in the environment only.
 
+- **L6.16 — A `v*` tag trigger does not make a prerelease publishable.** _The
+  one-command version bump almost accepted `x.y.z-rc.1`, because `release.yml`
+  runs on any `v*` tag. npm 11 refuses `npm publish` of a prerelease version
+  without `--tag`, and the release job runs `npm publish --access public`._
+  Before release tooling accepts a version form, check that the publish step
+  can ship it, not only that the workflow trigger matches it.
+
 ## 7. Rule fixtures
 
 - **L7.1 — Malicious secret fixtures must not use provider placeholder keys.** _Task
