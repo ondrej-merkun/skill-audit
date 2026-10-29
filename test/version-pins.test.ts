@@ -43,7 +43,9 @@ async function readCliPackageVersion(): Promise<string> {
 }
 
 async function readRepoFile(file: string): Promise<string> {
-  return readFile(join(REPO_ROOT, file), 'utf-8');
+  const text = await readFile(join(REPO_ROOT, file), 'utf-8');
+  // CRLF checkouts (Git for Windows autocrlf) must not hide a correct pin.
+  return text.replace(/\r\n/g, '\n');
 }
 
 /**
