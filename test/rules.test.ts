@@ -167,8 +167,9 @@ describe('remote code execution attack lines', () => {
 });
 
 describe('SEC-HARDCODED-KEY in test files', () => {
-  // A synthetic value on the line must not hide a provider key that has a live shape.
-  it('reports a live-shape provider key next to a synthetic value as critical', async () => {
+  // Synthetic-value masking must not hide a provider key on the same line, or random key
+  // material behind a test-word segment such as 'e2e-'.
+  it('reports live-shape keys next to synthetic look-alikes as critical', async () => {
     const testsDir = join(FIXTURES_DIR, SEC_HARDCODED_KEY.id, 'malicious', 'tests');
     const findings = await runRules(testsDir, [SEC_HARDCODED_KEY]);
 
@@ -176,6 +177,11 @@ describe('SEC-HARDCODED-KEY in test files', () => {
       {
         snippet:
           'client = Client(token="synthetic-token-that-is-long-enough-for-testing", key_id="AKIAZ7Q3M9X2V5T8R4W6")',
+        severity: 'critical',
+      },
+      {
+        snippet:
+          'client = Client(auth_token="e2e-9fQ2xLk8ZpR4tW7yN1mB6vC3hJ5sD0aE")  # autoreview: allow-secret',
         severity: 'critical',
       },
     ]);

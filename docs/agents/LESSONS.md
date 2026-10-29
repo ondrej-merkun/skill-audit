@@ -658,7 +658,9 @@ without a commit message explaining why it no longer applies.
   key that someone commits in a test file. `prepareContent` gets the absolute
   path, so a `test/` or `fixtures/` dir above the skill root also matches._
   Recognize made-up values by whole value segments (test words, x filler,
-  counting digits). Never let them clear a line that also holds a
+  counting digits), and require every other segment to be a plain word or a
+  short number. One test word alone also matches real keys such as
+  `sk_test_...`. Never let made-up values clear a line that also holds a
   provider-format key.
 
 ---
