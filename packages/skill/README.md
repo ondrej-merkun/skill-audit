@@ -26,7 +26,7 @@ After installing, ask Claude Code:
 > "Check my skills for anything suspicious"
 > "Run skill-audit on my Cursor rules"
 
-Claude will run `npx @ondrej-merkun/skill-audit@0.2.1 scan --json`, parse the
+Claude will run `npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --json`, parse the
 output, and summarize compromised skills with one-line remediations.
 
 To audit a specific skill:
@@ -35,7 +35,7 @@ To audit a specific skill:
 
 ## What it does
 
-Invokes `npx @ondrej-merkun/skill-audit@0.2.1` (no install required — runs via npx) and
+Invokes `npx @ondrej-merkun/skill-audit@0.2.1` (no install required; npx runs it) and
 interprets the structured JSON output. Claude will:
 
 1. Report total skills scanned and how many are compromised
