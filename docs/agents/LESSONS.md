@@ -663,6 +663,16 @@ without a commit message explaining why it no longer applies.
   `sk_test_...`. Never let made-up values clear a line that also holds a
   provider-format key.
 
+- **L7.13 — Mask documentation by structure, and keep skill titles out of it.** _The
+  FS-CREDSTORE follow-up found that any markdown line with a common word such as
+  "example" or "documentation" was masked, so the malicious
+  `override-instructions-skill` hid `~/.ssh/id_rsa` from the rule. The first fix
+  masked sections under headings with the same words, and the skill title
+  `# documentation-assistant` then made the whole SKILL.md a docs section._
+  Mask a line only in example structure (an example or reference heading, an
+  `Example:` label, a fenced comment), and give the malicious fixture a title
+  that contains a documentation word.
+
 ---
 
 ## How to add a new lesson

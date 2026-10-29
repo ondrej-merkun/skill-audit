@@ -16,6 +16,18 @@ const DOCUMENTATION_BASENAME_PATTERN =
 const DOCUMENTATION_LINE_CONTEXT_PATTERN =
   /\b(?:docs?|documentation|reference|example|sample|test(?:s|ing)?|fixture|asset|image|opengraph|threat[- ]?model|pattern|risk|fix|table|benign|false positive|payload|informational|mock|demo)\b/i;
 const COMMENT_LINE_PATTERN = /^\s*(?:#|\/\/|\/\*|\*|<!--)/;
+// Words that name example or reference material. Other documentation words such as test,
+// fix, or docs also name operative sections and skills (`## Testing`, `# docs-helper`).
+const EXAMPLE_MATERIAL_WORDS =
+  '(?:examples?|samples?|references?|threat[- ]?models?|false positives?)';
+const EXAMPLE_HEADING_PATTERN = new RegExp(String.raw`\b${EXAMPLE_MATERIAL_WORDS}\b`, 'i');
+// A short label that opens a line, such as `Example:`, `**Sample payload:**`, or `> Reference:`.
+const EXAMPLE_LABEL_PATTERN = new RegExp(
+  String.raw`^\s*(?:>\s*)?(?:[-*+]\s+|\d+[.)]\s+)?[*_]{0,2}${EXAMPLE_MATERIAL_WORDS}\b[\w \t-]{0,24}[*_]{0,2}:`,
+  'i'
+);
+const MARKDOWN_FENCE_PATTERN = /^\s*(?:```|~~~)/;
+const MARKDOWN_HEADING_PATTERN = /^\s{0,3}(#{1,6})\s/;
 const MARKDOWN_BASENAME_PATTERN =
   /^(?:SKILL|AGENTS|CLAUDE|GEMINI|CONVENTIONS|README|CHANGELOG)\.md$/i;
 const SECURITY_EDUCATION_HEADING_PATTERN =
@@ -234,20 +246,51 @@ export function pathLooksDocumentationOnly(filePath: string): boolean {
  * This is intentionally line-based so active runtime code in normal skill files still matches.
  */
 export function maskDocumentationExampleContext(content: string, filePath: string): string {
-  const pathIsDocumentationOnly = pathLooksDocumentationOnly(filePath);
-  const isMarkdown = /\.(?:md|mdc)$/i.test(filePath);
+  if (pathLooksDocumentationOnly(filePath)) {
+    return content.split('\n').map(maskLine).join('\n');
+  }
+  if (/\.(?:md|mdc)$/i.test(filePath)) return maskMarkdownDocumentationLines(content);
+
+  return content
+    .split('\n')
+    .map((line) =>
+      COMMENT_LINE_PATTERN.test(line) && DOCUMENTATION_LINE_CONTEXT_PATTERN.test(line)
+        ? maskLine(line)
+        : line
+    )
+    .join('\n');
+}
+
+/**
+ * A documentation word marks a markdown line as documentation only inside example
+ * structure: a section under a heading that names example or reference material, a line
+ * that opens with a label such as `Example:`, or a comment line in fenced code. In a plain
+ * instruction such as "For example, print ~/.aws/credentials", the word hides nothing.
+ * ponytail: a skill title such as `# Example Generator` also opens an example section.
+ */
+function maskMarkdownDocumentationLines(content: string): string {
+  let inFence = false;
+  let exampleSectionLevel = 0;
 
   return content
     .split('\n')
     .map((line) => {
-      if (pathIsDocumentationOnly) return maskLine(line);
-      if (COMMENT_LINE_PATTERN.test(line) && DOCUMENTATION_LINE_CONTEXT_PATTERN.test(line)) {
-        return maskLine(line);
+      if (MARKDOWN_FENCE_PATTERN.test(line)) inFence = !inFence;
+
+      // A deeper heading stays inside the example section that it is part of.
+      const heading = inFence ? null : MARKDOWN_HEADING_PATTERN.exec(line);
+      const headingLevel = heading?.[1]?.length ?? 0;
+      if (heading && (exampleSectionLevel === 0 || headingLevel <= exampleSectionLevel)) {
+        exampleSectionLevel = EXAMPLE_HEADING_PATTERN.test(line) ? headingLevel : 0;
       }
-      if (isMarkdown && DOCUMENTATION_LINE_CONTEXT_PATTERN.test(line)) {
-        return maskLine(line);
-      }
-      return line;
+
+      // Structure alone masks nothing: a line without a documentation word stays visible.
+      if (!DOCUMENTATION_LINE_CONTEXT_PATTERN.test(line)) return line;
+      const isExample =
+        exampleSectionLevel > 0 ||
+        EXAMPLE_LABEL_PATTERN.test(line) ||
+        (inFence && COMMENT_LINE_PATTERN.test(line));
+      return isExample ? maskLine(line) : line;
     })
     .join('\n');
 }
