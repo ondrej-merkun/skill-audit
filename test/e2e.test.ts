@@ -819,6 +819,7 @@ describe.skipIf(process.platform === 'win32')('e2e: FIFO at a read path', () => 
     { fifo: '.cursorrules' },
     { fifo: '.github/copilot-instructions.md' },
     { fifo: '~/.cline/data/settings/cline_mcp_settings.json' },
+    { fifo: '~/.config/skill-audit/ignore.yaml' },
     // A finding makes the security-education check read the skill manifest, and also
     // README.md when SKILL.md is empty.
     {
