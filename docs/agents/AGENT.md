@@ -14,7 +14,7 @@ new lesson, append a bullet there in the SAME commit as the fix
 | Concern | Choice |
 |---|---|
 | Language | TypeScript strict mode |
-| Runtime | Node.js 20+ |
+| Runtime | Node.js 22+ |
 | Package manager | pnpm (workspaces) |
 | Bundler | tsup (dev build outputs CJS + ESM; release build adds .d.ts) |
 | CLI framework | commander |

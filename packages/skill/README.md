@@ -47,7 +47,7 @@ confirmation.
 
 ## Requirements
 
-- Node.js 18+ (for `npx`)
+- Node.js 22+ (for `npx`)
 - Internet access for `npx @ondrej-merkun/skill-audit@latest` on first run (cached
   afterward by npm)
 

@@ -36,7 +36,7 @@ body:
     id: node
     attributes:
       label: Node.js version
-      placeholder: "20.14.0"
+      placeholder: "22.23.4"
   - type: dropdown
     id: operating-system
     attributes:

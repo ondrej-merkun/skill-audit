@@ -30,7 +30,7 @@ against the actual GitHub repository before editing those docs, or ask.
 
 ## Tech stack
 
-TypeScript (strict) on Node 20+, pnpm workspaces, tsup (dev CJS+ESM,
+TypeScript (strict) on Node 22+, pnpm workspaces, tsup (dev CJS+ESM,
 release CJS+ESM+dts),
 commander, chalk v5, cli-table3, ora, listr2, vitest, biome.
 
