@@ -485,17 +485,11 @@ export async function runRules(
     : undefined;
 
   for (const filePath of files) {
-    // A scan name from discovery wins, because a hook's interpreter ignores the shebang.
-    // Otherwise a script without an extension is scanned under its shebang interpreter's name.
-    const scanNameOverride = options.filenameOverride ?? shebangScanName(filePath);
-    const name = scanNameOverride ?? basename(filePath);
-    const fileRole = classifySupportingFileRole(filePath, name, reachability, options);
     const scanPath = preparePathFor(filePath, dirAliases);
-    const preparePath =
-      scanNameOverride === undefined ? scanPath : join(dirname(scanPath), scanNameOverride);
-    const passes = matchPasses(rules, name, preparePath, options.scope);
+    const { name, passes } = scanNameAndPasses(filePath, scanPath, rules, options);
     if (passes.length === 0) continue;
 
+    const fileRole = classifySupportingFileRole(filePath, name, reachability, options);
     const content = readScanContent(filePath);
     if (content === undefined) continue;
 
@@ -544,6 +538,35 @@ async function runRulesOnContent(
   const name = options.filenameOverride ?? basename(filePath);
   const preparePath = join(dirname(filePath), name);
   return matchRules(filePath, content, matchPasses(rules, name, preparePath, options.scope));
+}
+
+/**
+ * Picks the name that selects the rules for a file, and the passes for that name. A scan
+ * name from discovery wins. A file without an extension whose own name selects no rule, such
+ * as `scripts/setup`, is scanned under the name of its shebang interpreter. A name that
+ * selects rules keeps them, so a `#!` line cannot hide a Pipfile or a `.cursorrules` file.
+ */
+function scanNameAndPasses(
+  filePath: string,
+  scanPath: string,
+  rules: Rule[],
+  options: RunRulesOptions
+): { name: string; passes: MatchPass[] } {
+  const override = options.filenameOverride;
+  const name = override ?? basename(filePath);
+  const preparePath = override === undefined ? scanPath : join(dirname(scanPath), override);
+  const passes = matchPasses(rules, name, preparePath, options.scope);
+  if (passes.length > 0 || override !== undefined) return { name, passes };
+
+  const shebangName = shebangScanName(filePath);
+  if (shebangName === undefined) return { name, passes };
+
+  // The shebang name also prepares the content, so shell comment masking applies.
+  const shebangPreparePath = join(dirname(scanPath), shebangName);
+  return {
+    name: shebangName,
+    passes: matchPasses(rules, shebangName, shebangPreparePath, options.scope),
+  };
 }
 
 /**
