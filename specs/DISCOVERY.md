@@ -3,6 +3,7 @@
 Ralph consults this when implementing discovery plugins. These paths
 were verified against official docs as of April 2026 per `SPEC.md` §3.
 Cline paths were refreshed against official docs in May 2026.
+Shared `.agents/skills` paths were verified against official docs in October 2026.
 
 ## Implemented discovery set (keep this accurate)
 
@@ -142,6 +143,20 @@ Report each as a `Skill` with `agentId: "cross-agent"` and
 - Parent `.windsurf/rules/*.md` directories up to the git root
 - Legacy `.windsurfrules`
 - `AGENTS.md` is handled by the cross-agent sweep.
+
+### 8. Shared Agent Skills directory
+
+OpenAI Codex, Cursor, GitHub Copilot, Gemini CLI, Windsurf, and Cline read the
+cross-agent `.agents/skills` directory. Claude Code does not.
+
+**User-global:** `~/.agents/skills/*/SKILL.md`
+
+**Project-local:** `.agents/skills/*/SKILL.md` in the current directory
+
+One shared walker emits these skills once for each of those agents that is
+installed. `discoverAll()` then collapses the identical rows into one skill
+that keeps every owning agent. Not scanned yet: Codex parent directories up to
+the repo root and `/etc/codex/skills`, and Cursor nested project directories.
 
 
 ## Disambiguation rules
