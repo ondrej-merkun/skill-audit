@@ -3,6 +3,7 @@ import { readFile, realpath } from 'node:fs/promises';
 import { isAbsolute, join, posix, relative, resolve, sep } from 'node:path';
 import { isRegularFile } from '../fs-walk.js';
 import { agentConfigCommandValues, jsonStringEnd } from '../rules/agent-config.js';
+import { interpreterScanName } from '../rules/script-scan-name.js';
 import type { Skill } from '../types.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
@@ -12,8 +13,9 @@ const MCP_SERVER_SCAN_FILENAME = '.mcp.json';
 
 // A hook command names a script as one shell word, such as "${CLAUDE_PLUGIN_ROOT}"/run.sh or
 // "$CLAUDE_PROJECT_DIR/set up.sh". Quoted parts keep their spaces; the quotes are removed after
-// the split.
-const SHELL_WORD = /(?:"[^"]*"|'[^']*'|[^\s;|&()<>`"'])+/g;
+// the split. A control operator or a line break is a token of its own: it ends one command.
+const SHELL_TOKEN = /(?:"[^"]*"|'[^']*'|[^\s;|&()<>`"'])+|[;|&()`\n]/g;
+const COMMAND_SEPARATORS = new Set([';', '|', '&', '(', ')', '`', '\n']);
 const SHELL_QUOTES = /["']/g;
 
 const MCP_SERVERS_KEY = 'mcpServers';
@@ -46,6 +48,8 @@ export type HookScriptRoot = {
   // Hooks run in `dir`, so bare relative paths resolve there too.
   isWorkingDir: boolean;
 };
+
+type CommandWord = { word: string; previousWord: string | undefined };
 
 /** Emits each agent hook or settings file that exists, and the scripts its hooks run. */
 export async function discoverAgentConfigFiles(files: AgentConfigFiles): Promise<Skill[]> {
@@ -129,26 +133,37 @@ async function discoverHookScripts(
   root: HookScriptRoot
 ): Promise<Skill[]> {
   const skills: Skill[] = [];
+  const scripts = await hookScripts(configPaths, root);
 
-  for (const path of await hookScriptPaths(configPaths, root)) {
+  for (const path of [...scripts.keys()].sort()) {
     const name = posix.join(root.displayDir, relative(root.dir, path).split(sep).join('/'));
-    // No metadata: a scan filename override belongs to the config file, not to its scripts.
-    skills.push(await agentConfigSkill(files, path, name));
+    // The config file's metadata does not apply to its scripts. A script without an
+    // extension gets the scan name of the interpreter that the hook command names.
+    const ruleScanFilename = scripts.get(path);
+    const metadata = ruleScanFilename === undefined ? undefined : { ruleScanFilename };
+    skills.push(await agentConfigSkill(files, path, name, metadata));
   }
 
   return skills;
 }
 
-/** Finds the files below the root that hook commands in the config files name. */
-async function hookScriptPaths(configPaths: string[], root: HookScriptRoot): Promise<string[]> {
+/**
+ * Finds the files below the root that hook commands in the config files name. Each maps to
+ * its scan name from the interpreter before it, such as `setup.sh` for `bash scripts/setup`.
+ */
+async function hookScripts(
+  configPaths: string[],
+  root: HookScriptRoot
+): Promise<Map<string, string | undefined>> {
   const placeholder = new RegExp(`^\\$\\{?${root.placeholder}\\}?(?=[\\\\/])`);
   const realRoot = await realPathOrUndefined(root.dir);
-  if (realRoot === undefined) return [];
-  const scripts = new Set<string>();
+  const scripts = new Map<string, string | undefined>();
+  if (realRoot === undefined) return scripts;
 
+  // ponytail: each command value is split alone, so `"command": "bash"` does not pair with a
+  // script in `args`. That script gets its shebang name from the engine instead.
   for (const command of await commandValues(configPaths)) {
-    for (const quotedWord of command.match(SHELL_WORD) ?? []) {
-      const word = quotedWord.replace(SHELL_QUOTES, '');
+    for (const { word, previousWord } of commandWords(command)) {
       const rootRelative = word.replace(placeholder, '.');
       if (rootRelative === word && !root.isWorkingDir) continue;
 
@@ -158,12 +173,35 @@ async function hookScriptPaths(configPaths: string[], root: HookScriptRoot): Pro
       // A symlink can point outside the root, so the real path must stay below it too.
       const realPath = await realPathOrUndefined(path);
       if (realPath !== undefined && isBelow(realRoot, realPath) && (await isRegularFile(path))) {
-        scripts.add(path);
+        // A script that several hooks run keeps the first interpreter that a hook names.
+        scripts.set(path, scripts.get(path) ?? interpreterScanName(path, previousWord));
       }
     }
   }
 
-  return [...scripts].sort();
+  return scripts;
+}
+
+/**
+ * Splits a command into unquoted words. Each word comes with the last word before it in the
+ * same command that is not an option, so `bash -e scripts/setup` pairs the script with `bash`.
+ */
+function commandWords(command: string): CommandWord[] {
+  const words: CommandWord[] = [];
+  let previousWord: string | undefined;
+
+  for (const token of command.match(SHELL_TOKEN) ?? []) {
+    if (COMMAND_SEPARATORS.has(token)) {
+      previousWord = undefined;
+      continue;
+    }
+
+    const word = token.replace(SHELL_QUOTES, '');
+    words.push({ word, previousWord });
+    if (!word.startsWith('-')) previousWord = word;
+  }
+
+  return words;
 }
 
 async function commandValues(configPaths: string[]): Promise<string[]> {

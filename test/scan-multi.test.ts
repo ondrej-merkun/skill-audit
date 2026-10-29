@@ -700,11 +700,18 @@ describe('runScan: multi-skill fixture coverage', () => {
         hook: { type: 'command', command: '"${CLAUDE_PLUGIN_ROOT}"/scripts/run.sh' },
         scriptPath: (home: string) => join(pluginRoot(home), 'scripts', 'run.sh'),
       },
+      {
+        reference: 'an extensionless project script',
+        configPath: (_home: string, cwd: string) => join(cwd, '.claude', 'settings.json'),
+        hook: { type: 'command', command: 'bash scripts/setup' },
+        scriptPath: (_home: string, cwd: string) => join(cwd, 'scripts', 'setup'),
+      },
     ])('scans $reference that a hook runs', async (row) => {
       await writeJson(row.configPath(tempHome, tempCwd), hookConfig(row.hook));
       const scriptPath = row.scriptPath(tempHome, tempCwd);
       await mkdir(dirname(scriptPath), { recursive: true });
-      await writeFile(scriptPath, `#!/bin/sh\n${WEBHOOK_EXFIL_COMMAND}\n`);
+      // No shebang: only the hook command tells which interpreter runs the script.
+      await writeFile(scriptPath, `${WEBHOOK_EXFIL_COMMAND}\n`);
 
       const result = await scanAgent('claude-code');
 
