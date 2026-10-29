@@ -86,17 +86,21 @@ describe('claude-code discovery plugin', () => {
     expect(linked?.treeSha256).toBe(copy?.treeSha256);
   });
 
-  it('discovers a symlinked skill once despite link loops, dangling and unreadable links', async () => {
+  it('discovers a symlinked skill once despite loop, ancestor, dangling and unreadable links', async () => {
     const skillsDir = join(tempHome, '.claude', 'skills');
     const storeDir = join(tempHome, 'store', 'linked');
     const lockedFile = join(tempHome, 'store', 'locked.txt');
+    const unrelatedDir = join(tempHome, 'project', 'unrelated');
     await mkdir(skillsDir, { recursive: true });
     await mkdir(storeDir, { recursive: true });
+    await mkdir(unrelatedDir, { recursive: true });
     await writeFile(join(storeDir, 'SKILL.md'), '# Skill');
+    await writeFile(join(unrelatedDir, 'SKILL.md'), '# Not installed');
     await writeFile(lockedFile, 'secret');
     await chmod(lockedFile, 0o000);
     await symlink(storeDir, join(skillsDir, 'linked'));
     await symlink('.', join(storeDir, 'loop'));
+    await symlink(tempHome, join(storeDir, 'home'));
     await symlink(lockedFile, join(storeDir, 'locked.txt'));
     await symlink('.', join(skillsDir, 'parent-loop'));
     await symlink('self', join(skillsDir, 'self'));

@@ -254,6 +254,12 @@ without a commit message explaining why it no longer applies.
   Code that reads files reached through links must skip an unreadable file,
   not throw out of discovery.
 
+- **L2.9 — A link to an ancestor is a loop that first walks the whole parent
+  tree.** _Review of the symlink fix: `vendor -> /` in one skill made `list`
+  and `scan` walk the whole filesystem._
+  Enter the walk root first with `enterDirOnce`, which marks the root's
+  ancestors as entered, so the link ends like any other loop.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**
