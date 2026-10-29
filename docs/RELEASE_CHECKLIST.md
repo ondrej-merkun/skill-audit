@@ -11,6 +11,8 @@ tag is not the first place a problem appears.
 - Confirm package metadata in
   [`packages/cli/package.json`](../packages/cli/package.json) still points to
   `git+https://github.com/ondrej-merkun/skill-audit.git`.
+- Set the `version` input default in [`action.yml`](../action.yml) to the new
+  package version. `test/version-pins.test.ts` fails when the two differ.
 - Confirm npm trusted publishing is configured as described in
   [`docs/PUBLISHING.md`](PUBLISHING.md).
 - Confirm public docs changed in the release have working local links and image
