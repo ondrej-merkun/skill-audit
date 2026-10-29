@@ -160,7 +160,7 @@ function collectCommandValues(value: unknown, key = ''): string[] {
 
 // Returns the offset after the string literal that starts at `start`. An unclosed string runs to
 // the end of the file, as in strip-json-comments.
-function jsonStringEnd(content: string, start: number): number {
+export function jsonStringEnd(content: string, start: number): number {
   for (let index = start + 1; index < content.length; index += 1) {
     if (content[index] === '\\') index += 1;
     else if (content[index] === '"') return index + 1;

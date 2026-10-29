@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, realpath } from 'node:fs/promises';
 import { isAbsolute, join, posix, relative, resolve, sep } from 'node:path';
 import { isRegularFile } from '../fs-walk.js';
-import { agentConfigCommandValues } from '../rules/agent-config.js';
+import { agentConfigCommandValues, jsonStringEnd } from '../rules/agent-config.js';
 import type { Skill } from '../types.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
@@ -18,11 +18,9 @@ const SHELL_QUOTES = /["']/g;
 
 const MCP_SERVERS_KEY = 'mcpServers';
 
-// String literals and the punctuation that opens, closes, or names a JSON value. No other
-// character in valid JSON changes the nesting, so a structure scan can skip the rest. The
-// string branch is unrolled: `(?:[^"\\]|\\.)*` keeps one V8 backtrack entry per character and
-// overflows on a multi-megabyte value, which a padded settings file can hold.
-const JSON_STRUCTURE_TOKEN = /"[^"\\]*(?:\\.[^"\\]*)*"|[{}[\]:]/g;
+// The punctuation that opens, closes, or names a JSON value. With string literals, no other
+// character in valid JSON changes the nesting, so a structure scan can skip the rest.
+const JSON_STRUCTURE_CHARS = new Set(['{', '}', '[', ']', ':']);
 const NOT_LINE_BREAK = /[^\r\n]/g;
 
 type AgentConfigFiles = {
@@ -250,8 +248,7 @@ function rootMemberObjects(content: string, key: string): Array<JsonObjectSpan |
   let afterKeyColon = false;
   let openObject: Omit<JsonObjectSpan, 'end'> | undefined;
 
-  for (const match of content.matchAll(JSON_STRUCTURE_TOKEN)) {
-    const token = match[0];
+  for (const { token, index } of jsonStructureTokens(content)) {
     const isMemberValueStart = afterKeyColon;
     afterKeyColon = false;
 
@@ -264,21 +261,43 @@ function rootMemberObjects(content: string, key: string): Array<JsonObjectSpan |
         openObject.members.push({ name: JSON.parse(previousToken), start: previousIndex });
       }
     } else if (token === '{' || token === '[') {
-      if (isMemberValueStart && token === '{') openObject = { start: match.index, members: [] };
+      if (isMemberValueStart && token === '{') openObject = { start: index, members: [] };
       depth += 1;
     } else if (token === '}' || token === ']') {
       depth -= 1;
       if (depth === 1 && openObject !== undefined) {
-        objects[objects.length - 1] = { ...openObject, end: match.index + 1 };
+        objects[objects.length - 1] = { ...openObject, end: index + 1 };
         openObject = undefined;
       }
     }
 
     previousToken = token;
-    previousIndex = match.index;
+    previousIndex = index;
   }
 
   return objects;
+}
+
+/**
+ * Yields the string literals and structural punctuation of a JSON text with their offsets.
+ * A character loop: a regular expression with a quantified group keeps one V8 backtrack entry
+ * per character or per escape sequence, and overflows on a multi-megabyte string value, which
+ * a padded settings file can hold.
+ */
+function* jsonStructureTokens(content: string): Generator<{ token: string; index: number }> {
+  let index = 0;
+  while (index < content.length) {
+    const char = content[index] ?? '';
+    if (char === '"') {
+      const end = jsonStringEnd(content, index);
+      yield { token: content.slice(index, end), index };
+      index = end;
+      continue;
+    }
+
+    if (JSON_STRUCTURE_CHARS.has(char)) yield { token: char, index };
+    index += 1;
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
