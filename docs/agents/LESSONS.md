@@ -300,6 +300,17 @@ without a commit message explaining why it no longer applies.
   Embed data in an inline `<script>` only through `serializeForScript` in
   `src/output/html.ts`, and put markup text through `escapeHtml`.
 
+- **L4.7 — Time a slow rule through `runRules` with the real file path.** _A
+  real-home scan hung on a minified bundle. A probe on the raw text took 16 ms,
+  but `prepareContent` masked the file to spaces from its path, and
+  SKILL-MEMORY-WRITE took 121 s on that 121K-char whitespace line. The cause was
+  two adjacent quantifiers over the same spaces. FS-DESTRUCTIVE-HOME-DELETE had
+  a `\s*` after a multiline `^` that crossed newlines, so each line start
+  rescanned a masked file. `hasNestedQuantifier` detects neither shape._
+  Profile the prepared content that the engine actually matches. Do not put two
+  quantifiers that can match the same characters next to each other, and do not
+  let a quantifier after a line anchor cross newlines.
+
 ## 5. Orphans, cleanup, and the one-task-per-loop rule
 
 - **L5.1 — Delete direct predecessors in the same commit.** _Task 1.7
