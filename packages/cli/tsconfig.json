@@ -16,9 +16,7 @@
     "rootDir": "./src",
     "declaration": true,
     "declarationMap": true,
-    "types": ["node"],
-    // tsup 8 injects the deprecated `baseUrl` into its declaration build.
-    "ignoreDeprecations": "6.0"
+    "types": ["node"]
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

@@ -16,7 +16,7 @@
   },
   "include": [
     "vitest.config.ts",
-    "packages/*/tsup.config.ts",
+    "packages/*/tsdown.config.ts",
     "test/**/*.ts"
   ],
   "exclude": ["node_modules", "packages/*/dist"]

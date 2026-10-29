@@ -4,7 +4,6 @@
   "type": "module",
   "scripts": {
     "build": "pnpm --dir packages/cli build",
-    "build:release": "pnpm --dir packages/cli build:release",
     "test": "vitest run",
     "lint": "pnpm --dir packages/cli lint",
     "typecheck": "tsc --noEmit -p tsconfig.json && pnpm --dir packages/cli typecheck",
@@ -16,11 +15,6 @@
     "vitest": "^4.1.12"
   },
   "engines": {
-    "node": ">=22.12"
-  },
-  "pnpm": {
-    "overrides": {
-      "tsup>esbuild": "^0.28.2"
-    }
+    "node": "^22.18.0 || ^24.11.0 || >=26.0.0"
   }
 }
