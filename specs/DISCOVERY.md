@@ -194,8 +194,15 @@ the repo root and `/etc/codex/skills`, and Cursor nested project directories.
    symlinked skill is discovered and scanned like a real one, under its
    link path, and hashes like a real copy, so rule 2 collapses it with
    its target. Each walk enters a real directory once, so a symlink
-   loop (`a -> ..`) ends. A second link to an already walked directory
-   in the same walk is skipped. Dangling links are skipped silently.
+   loop (`a -> a`) ends. A link to an ancestor of the walk root (`/`,
+   `~`, `..`) counts as a loop and is not walked. A second link to an
+   already walked directory in the same walk is skipped. Dangling links
+   and unreadable linked directories are skipped silently, and the rest
+   of the skill is still scanned. The rule engine demotes a file to inert
+   supporting docs only when every known path to it is an unreferenced
+   docs path: the walked path and each path through a skipped second
+   link (with `docs -> payload` or `payload -> docs`, the file is also
+   at `payload/`, so it stays operative).
 
 ## Path expansion
 
