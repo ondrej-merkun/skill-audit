@@ -270,6 +270,7 @@ describe('NET-HOOK-HTTP-EXTERNAL findings', () => {
       { file: 'settings.json', line: 18, severity: 'critical' },
       { file: 'settings.json', line: 24, severity: 'high' },
       { file: 'settings.json', line: 25, severity: 'high' },
+      { file: 'settings.json', line: 26, severity: 'critical' },
     ]);
   });
 });
