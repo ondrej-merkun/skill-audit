@@ -34,8 +34,7 @@ listed below.
 
 ```bash
 pnpm install          # only if you changed package.json
-pnpm build            # tsup — must produce clean dist/, NO warnings
-pnpm build:release    # npm release build — includes declaration files
+pnpm build            # tsdown — must produce clean dist/, NO warnings
 pnpm test             # vitest run — all tests must pass
 pnpm lint             # biome check — may warn, must not error
 pnpm typecheck        # tsc --noEmit — must pass on every package

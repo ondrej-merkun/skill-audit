@@ -30,8 +30,7 @@ against the actual GitHub repository before editing those docs, or ask.
 
 ## Tech stack
 
-TypeScript (strict) on Node 22+, pnpm workspaces, tsup (dev CJS+ESM,
-release CJS+ESM+dts),
+TypeScript (strict) on Node 22+, pnpm workspaces, tsdown (one ESM bin file),
 commander, chalk v5, cli-table3, ora, listr2, vitest, biome.
 
 Do NOT add: ink, react, yargs, jest, eslint, prettier, axios (use native
@@ -42,8 +41,7 @@ needed, note it in `.ralph/fix_plan.md` under "Dependencies added".
 
 ```bash
 pnpm install          # install deps
-pnpm build            # tsup — must produce clean dist/
-pnpm build:release    # tsup release build — includes declaration files
+pnpm build            # tsdown — must produce clean dist/
 pnpm test             # vitest run — all tests must pass
 pnpm lint             # biome check — may warn, must not error
 pnpm typecheck        # tsc --noEmit — must pass
