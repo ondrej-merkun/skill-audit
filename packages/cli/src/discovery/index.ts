@@ -166,7 +166,8 @@ export function initDefaultPlugins(): void {
 /**
  * Run all registered discovery plugins and collect every skill they find.
  * Plugins that are not installed are silently skipped.
- * Plugins that throw are caught and logged to stderr — discovery is fail-silent.
+ * A plugin that throws is reported on stderr and as an 'agent-failed' progress
+ * event, and the other plugins still run. Callers decide what a failure means.
  */
 export type DiscoverAllOptions = {
   agent?: string;
@@ -189,6 +190,17 @@ export async function discoverAll(options: DiscoverAllOptions = {}): Promise<Ski
     });
   };
 
+  const reportAgentFailure = (plugin: AgentDiscovery, err: unknown): void => {
+    const message = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`[skill-audit] discovery plugin "${plugin.id}" failed: ${message}\n`);
+    options.onProgress?.({
+      type: 'agent-failed',
+      agentId: plugin.id,
+      displayName: plugin.displayName,
+      message,
+    });
+  };
+
   for (const plugin of plugins) {
     options.onProgress?.({
       type: 'checking-agent',
@@ -201,8 +213,9 @@ export async function discoverAll(options: DiscoverAllOptions = {}): Promise<Ski
       installed = await plugin.isInstalled({
         onProgress: (message) => reportAgentStatus(plugin, message),
       });
-    } catch {
-      // If we can't determine installation, skip the plugin
+    } catch (err) {
+      // An unknown install state means this agent's skills are unknown, not absent.
+      reportAgentFailure(plugin, err);
       continue;
     }
 
@@ -234,9 +247,8 @@ export async function discoverAll(options: DiscoverAllOptions = {}): Promise<Ski
         skillCount: visibleSkills.length,
       });
     } catch (err) {
-      // Fail-silent: one broken plugin must not abort the entire scan
-      const msg = err instanceof Error ? err.message : String(err);
-      process.stderr.write(`[skill-audit] discovery plugin "${plugin.id}" failed: ${msg}\n`);
+      // Fail-soft: one broken plugin must not abort the entire scan
+      reportAgentFailure(plugin, err);
     }
   }
 
