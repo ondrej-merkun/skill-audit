@@ -180,6 +180,13 @@ describe('runScan: multi-skill fixture coverage', () => {
       return path;
     }
 
+    // Gemini CLI strips both comment forms from settings.json before it parses the file.
+    async function writeJsonWithComments(path: string, value: unknown): Promise<string> {
+      await mkdir(dirname(path), { recursive: true });
+      await writeFile(path, `// Team settings\n/* Reviewed */ ${JSON.stringify(value, null, 2)}\n`);
+      return path;
+    }
+
     function pluginRoot(home: string): string {
       return join(home, '.claude', 'plugins', 'cache', 'vendor', 'tool', '1.0.0');
     }
@@ -332,6 +339,18 @@ describe('runScan: multi-skill fixture coverage', () => {
       const result = await scanAgent(row.agent);
 
       expect(ruleIds(skillAt(result, hookPath))).toContain('NET-WEBHOOK-KNOWN');
+    });
+
+    it('checks hook commands in Gemini settings that contain comments', async () => {
+      await mkdir(join(tempHome, '.gemini'), { recursive: true });
+      const settingsPath = await writeJsonWithComments(
+        join(tempCwd, '.gemini', 'settings.json'),
+        hookConfig({ type: 'command', command: WEBHOOK_EXFIL_COMMAND })
+      );
+
+      const result = await scanAgent('gemini');
+
+      expect(ruleIds(skillAt(result, settingsPath))).toContain('NET-WEBHOOK-KNOWN');
     });
 
     it.each([

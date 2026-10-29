@@ -6,6 +6,8 @@
  * empty view: the agent cannot load that file either.
  */
 
+import { basename, dirname } from 'node:path';
+
 /** Config files whose JSON values the agent runs as commands. */
 export const AGENT_CONFIG_FILENAMES = new Set([
   'settings.json',
@@ -44,16 +46,28 @@ const COMMAND_VALUE_KEYS = new Set([
 const JSON_TOKEN = /"(?:[^"\\\n]|\\.)*"|[^"\r\n]+/g;
 const LINE_BREAK = /[\r\n]/g;
 
+// A string literal, a line comment, or a block comment. An unclosed string or block comment runs
+// to the end of the file, as in Gemini CLI's strip-json-comments, so the scan stays linear.
+const JSONC_TOKEN = /"(?:[^"\\]|\\[\s\S]?)*"?|\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$)/g;
+const NON_WHITESPACE = /\S/g;
+
+// Gemini CLI reads settings.json with JSON.parse(stripJsonComments(content)). Its other JSON
+// files and the config files of the other agents are plain JSON.
+const GEMINI_CONFIG_DIR = '.gemini';
+const GEMINI_SETTINGS_FILENAME = 'settings.json';
+
 /**
  * Keeps only the command values of an agent config file, decoded from JSON
  * escapes and placed at their original offsets. Everything else becomes spaces.
+ * The path selects the dialect: a Gemini settings file can hold comments.
  */
-export function extractAgentConfigCommands(content: string): string {
-  const parsed = parseJson(content);
+export function extractAgentConfigCommands(content: string, path: string): string {
+  const json = isGeminiSettings(path) ? blankJsonComments(content) : content;
+  const parsed = parseJson(json);
   if (parsed === undefined) return '';
 
   const commands = new Set(collectCommandValues(parsed));
-  return rewriteJsonTokens(content, {
+  return rewriteJsonTokens(json, {
     stringLiteral: (value) => (commands.has(value) ? value : ''),
     structure: (text) => ' '.repeat(text.length),
   });
@@ -77,6 +91,17 @@ export function decodeJsonStrings(content: string): string {
     stringLiteral: (value) => `"${value.replaceAll('"', "'")}"`,
     structure: (text) => text,
   });
+}
+
+/**
+ * Replaces the `//` and `/* *\/` comments outside JSON strings with spaces, as Gemini CLI does
+ * before it parses settings.json. Line breaks stay, so offsets and line numbers do not move.
+ * Trailing commas stay too: Gemini CLI rejects them.
+ */
+export function blankJsonComments(content: string): string {
+  return content.replace(JSONC_TOKEN, (token) =>
+    token.startsWith('"') ? token : token.replace(NON_WHITESPACE, ' ')
+  );
 }
 
 type JsonTokenRewrite = {
@@ -104,6 +129,12 @@ function collectCommandValues(value: unknown, key = ''): string[] {
     );
   }
   return [];
+}
+
+function isGeminiSettings(path: string): boolean {
+  return (
+    basename(path) === GEMINI_SETTINGS_FILENAME && basename(dirname(path)) === GEMINI_CONFIG_DIR
+  );
 }
 
 function parseJson(content: string): unknown {
