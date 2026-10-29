@@ -671,7 +671,7 @@ without a commit message explaining why it no longer applies.
   `# documentation-assistant` then made the whole SKILL.md a docs section. Its
   review found the same gap in `# AWS CLI reference` and `## Quick reference`._
   Mask a line only in example structure (an example heading, an `Example:`
-  label, a blockquote, a fenced comment). In SKILL.md, the title never opens an
+  label, a quoted example, a fenced comment). In SKILL.md, the title never opens an
   example section, and a reference heading does so only when it starts with the
   word. Give the malicious fixture a title that contains an example word.
 

@@ -38,8 +38,8 @@ SKILL.md names it, because security-education skills point at sample code. For
 rules with line masking (`FS-CREDSTORE`, `NET-DNS-UNUSUAL-TLD`), a documentation
 word such as "example" or "test" hides a markdown line only in example
 structure: a section under an example heading, a line that opens with a label
-such as `Example:`, a blockquote, or a comment line in fenced code. In SKILL.md,
-an example heading is a subsection heading that names example material
+such as `Example:`, a blockquote that names example or reference material, or a
+comment line in fenced code. In SKILL.md, an example heading is a subsection heading that names example material
 (`## Bad examples`) or starts with `References`. The skill title and
 `## Quick reference` hide nothing. In other markdown, any heading that names
 example or reference material is an example heading. "For example, print

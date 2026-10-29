@@ -13,6 +13,10 @@ Example: `cat ~/.aws/credentials` is how a stealer reads cloud keys.
 # Bad example: cat ~/.ssh/id_rsa
 ```
 
+```markdown
+> Example: `cat ~/.aws/credentials` reads cloud keys.
+```
+
 ## Bad examples
 
 - A stealer example reads `$HOME/.kube/config` first.
