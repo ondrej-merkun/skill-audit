@@ -353,15 +353,26 @@ function hasOperativeAliasPath(filePath: string, index: ReachabilityIndex): bool
  * The path that rules prepare a file under. A docs-like path masks every line of
  * the file, so a file that a dir alias also reaches through a path that does not
  * look like docs is prepared under that path. Otherwise `docs -> scripts` would
- * hide a script that the agent runs.
+ * hide a script that the agent runs. A docs file that SKILL.md references, by
+ * path or as part of all its docs, is operative too, so it is prepared like a
+ * file of the same name at the skill root.
  */
-function preparePathFor(filePath: string, dirAliases: DirAlias[]): string {
+function preparePathFor(
+  filePath: string,
+  dirAliases: DirAlias[],
+  index: ReachabilityIndex | undefined
+): string {
   if (!pathLooksDocumentationOnly(filePath)) return filePath;
 
-  const operativePath = aliasPathsOf(filePath, dirAliases).find(
-    (aliasPath) => !pathLooksDocumentationOnly(aliasPath)
-  );
-  return operativePath ?? filePath;
+  const aliasPaths = aliasPathsOf(filePath, dirAliases);
+  const operativePath = aliasPaths.find((aliasPath) => !pathLooksDocumentationOnly(aliasPath));
+  if (operativePath !== undefined) return operativePath;
+
+  const isReferenced =
+    index !== undefined &&
+    (index.allSupportingMarkdownReachable ||
+      [filePath, ...aliasPaths].some((path) => isReachableFromSkillMd(path, index)));
+  return isReferenced ? join(index.root, basename(filePath)) : filePath;
 }
 
 /**
@@ -487,7 +498,7 @@ export async function runRules(
     : undefined;
 
   for (const filePath of files) {
-    const scanPath = preparePathFor(filePath, dirAliases);
+    const scanPath = preparePathFor(filePath, dirAliases, reachability);
     const { name, passes } = scanNameAndPasses(filePath, scanPath, rules, options);
     if (passes.length === 0) continue;
 
