@@ -232,6 +232,10 @@ when testing the current development branch. The action runs `skill-audit`,
 writes JSON results to `skill-audit-results.json`, and uploads that file as an
 artifact by default.
 
+Each action revision runs the CLI version from the same revision, so the action
+ref also pins the CLI. To run a different npm version, set the `version` input,
+for example `version: latest`.
+
 ```yaml
 name: Skill audit
 
