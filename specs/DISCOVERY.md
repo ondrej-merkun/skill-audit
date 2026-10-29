@@ -20,7 +20,9 @@ move it here in the same task; do not leave implemented behavior documented as
 
 **User-global:**
 - `~/.claude/skills/*/SKILL.md`
-- `~/.claude/plugins/`
+- `~/.claude/plugins/`, except `~/.claude/plugins/.trash/`. Claude Code moves
+  the synced plugins that it removes there and never loads them again, so
+  discovery always skips that subtree, also with `--include-marketplaces`.
 - `~/.claude/commands/*.md`
 - `~/.claude/agents/*.md`
 - MCP servers in `~/.claude.json`, including the nested
