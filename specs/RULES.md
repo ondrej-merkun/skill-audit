@@ -239,17 +239,30 @@ original offsets: `command`, `args`, `bash`, `powershell`, `exec`, `url`,
 `apiKeyHelper`, `awsAuthRefresh`, `awsCredentialExport`, `gcpAuthRefresh`, and
 `otelHeadersHelper`. Every rule that applies to `*.sh` then runs on those
 values, so findings keep the real line and JSON escapes such as `\"` or `\/`
-do not hide a pattern. `MCP-CONFIG-REMOTE-EXEC` also runs on the raw JSON of
-these files. Invalid JSON yields no command values and does not stop the scan.
+do not hide a pattern. `MCP-CONFIG-REMOTE-EXEC` also runs on the full JSON of
+these files after string escapes are decoded; a file that is not strict JSON,
+such as JSONC, keeps its raw text for that rule. Invalid JSON yields no command
+values and does not stop the scan.
+
+A hook that runs a script by path does not hold the payload itself. For Claude
+Code, discovery also reports the scripts that project settings and plugin
+`hooks/hooks.json` hooks name, as separate `agent-config` targets (see
+`specs/DISCOVERY.md`). Those scripts go through the rules for their own file
+names.
+
+Known gap: an HTTP hook (`"type": "http"`) sends hook input to its `url`. No
+rule checks that host yet.
 
 ## Agent settings rules (project scope only)
 
 A repository can ship `.claude/settings.json` or `.claude/settings.local.json`
 that the agent loads when the user opens the project (CVE-2025-59536,
-CVE-2026-21852). These rules apply to `settings.json` and `settings.local.json`
-files discovered with `scope: "project"`. They match the JSON after string
-escapes are decoded. User-scope settings are the user's own choices and are not
-checked by these rules.
+CVE-2026-21852). These rules apply only to `agent-config` targets discovered
+with `scope: "project"`. A settings file inside a skill directory is an example
+that no agent loads, so these rules skip it. They match the JSON after string
+escapes are decoded; a quote inside a decoded value becomes `'`, so quoted text
+cannot look like a key. Leading whitespace in a value does not hide it. User-scope
+settings are the user's own choices and are not checked by these rules.
 
 ### NET-API-ENDPOINT-OVERRIDE (Critical)
 An `env` key `ANTHROPIC_BASE_URL`, `ANTHROPIC_BEDROCK_BASE_URL`,
@@ -258,20 +271,24 @@ An `env` key `ANTHROPIC_BASE_URL`, `ANTHROPIC_BEDROCK_BASE_URL`,
 with a value that is not `https://` plus an official provider API host:
 `api.anthropic.com`, `bedrock-runtime[-fips].<region>.amazonaws.com`,
 `*.api.aws`, `[<region>-]aiplatform.googleapis.com`,
-`<resource>.services.ai.azure.com`, or `api.openai.com`. Critical: the agent
-sends its API key and every prompt to that host.
+`<resource>.services.ai.azure.com`, or `api.openai.com`. After the host, only
+an optional port and then `/` or the end of the value may follow, so a userinfo
+prefix such as `api.anthropic.com:443@evil.example` is flagged. Critical: the
+agent sends its API key and every prompt to that host.
 
 ### MCP-PROJECT-AUTO-APPROVE (High)
 ```regex
 "enableAllProjectMcpServers"\s*:\s*true\b
 "enabledMcpjsonServers"\s*:\s*\[\s*"
 ```
-High: the setting removes the consent prompt for the repository's MCP servers.
-The servers themselves are scanned as separate targets.
+Applies to `settings.json` only. Claude Code writes the user's own MCP
+approvals to `settings.local.json`, so the same keys there are a consent
+record. High: the setting removes the consent prompt for the repository's MCP
+servers. The servers themselves are scanned as separate targets.
 
 ### SEC-PROJECT-CREDENTIAL-HELPER (High)
 ```regex
-"(?:apiKeyHelper|awsAuthRefresh|awsCredentialExport|gcpAuthRefresh)"\s*:\s*"[^"\s]
+"(?:apiKeyHelper|awsAuthRefresh|awsCredentialExport|gcpAuthRefresh)"\s*:\s*"\s*[^"\s]
 ```
 High: the helper runs on each credential refresh and chooses the credential
 the agent uses. Its command also goes through the command rules above.
