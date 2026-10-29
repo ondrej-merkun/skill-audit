@@ -4,6 +4,14 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import claudeCodeDiscovery from '../packages/cli/src/discovery/claude-code.js';
 
+// Claude Code moves the synced plugins that it removes to plugins/.trash/<epoch-ms>-<pid>-<rand>/
+// <plugin-uuid> and never loads them again. The values are synthetic.
+const TRASHED_PLUGIN_ROOT = [
+  '.trash',
+  '1700000000000-12345-abcDEF',
+  '00000000-0000-4000-8000-000000000001',
+];
+
 describe('claude-code discovery plugin', () => {
   let tempHome: string;
   let tempCwd: string;
@@ -169,13 +177,22 @@ describe('claude-code discovery plugin', () => {
   });
 
   it.each([
-    { inventory: 'plugin marketplace inventory', root: ['marketplaces', 'vendor', 'tool'] },
     {
-      // Claude Code moves the synced plugins that it removes to plugins/.trash and never loads them.
-      inventory: 'trashed synced plugins',
-      root: ['.trash', '1792147211609-46062-ioUNtF', '51df6eb1-9f1b-49d5-8bd3-98d19af7f212'],
+      inventory: 'plugin marketplace inventory by default',
+      root: ['marketplaces', 'vendor', 'tool'],
+      includeMarketplaces: false,
     },
-  ])('excludes $inventory from default discovery', async ({ root }) => {
+    {
+      inventory: 'trashed synced plugins by default',
+      root: TRASHED_PLUGIN_ROOT,
+      includeMarketplaces: false,
+    },
+    {
+      inventory: 'trashed synced plugins with --include-marketplaces',
+      root: TRASHED_PLUGIN_ROOT,
+      includeMarketplaces: true,
+    },
+  ])('excludes $inventory', async ({ root, includeMarketplaces }) => {
     const pluginsDir = join(tempHome, '.claude', 'plugins');
     const installedDir = join(pluginsDir, 'vendor', 'installed-tool', 'skills', 'installed-review');
     const inactiveFiles = {
@@ -200,7 +217,7 @@ describe('claude-code discovery plugin', () => {
       await writeFile(path, content);
     }
 
-    const skills = await claudeCodeDiscovery.discoverSkills();
+    const skills = await claudeCodeDiscovery.discoverSkills({ includeMarketplaces });
 
     expect(skills.map((s) => s.path)).toEqual([installedDir]);
   });
