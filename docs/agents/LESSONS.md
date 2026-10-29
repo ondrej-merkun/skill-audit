@@ -296,6 +296,15 @@ without a commit message explaining why it no longer applies.
   Follow the script paths that hook commands name (root placeholders and
   project-relative paths) and scan those files as targets of their own.
 
+- **L2.12 — A path that no directory listing returned can be a FIFO.** _A FIFO
+  at `.mcp.json`, `~/.claude.json`, `AGENTS.md`, `~/.gemini/settings.json`, and
+  14 other read paths hung the scan forever. The walkers drop special files, but
+  the readers of fixed paths called `readFile` or only checked that the path
+  exists._
+  Call `isRegularFile` from `src/fs-walk.ts` before you read or emit such a path.
+  A sync read of a FIFO blocks the event loop, so a Vitest timeout cannot stop
+  it. Test a possible hang through the built CLI with a kill timeout.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**

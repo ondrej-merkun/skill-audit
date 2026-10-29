@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, join } from 'node:path';
-import { readDirFollowingLinks } from '../fs-walk.js';
+import { isRegularFile, readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { discoverAgentConfigFiles } from './agent-config.js';
 import { discoverSharedAgentSkills } from './shared-agent-skills.js';
@@ -38,7 +38,7 @@ async function discoverSkillsDir(dir: string, scope: Skill['scope']): Promise<Sk
   for (const entry of skillDirs) {
     const skillDir = join(dir, entry.name);
     const manifestPath = join(skillDir, 'SKILL.md');
-    if (!(await pathExists(manifestPath))) continue;
+    if (!(await isRegularFile(manifestPath))) continue;
     results.push({
       id: makeId(skillDir),
       agentId: AGENT_ID,
@@ -59,7 +59,7 @@ async function discoverSingleFile(
   name: string,
   scope: Skill['scope']
 ): Promise<Skill[]> {
-  if (!(await pathExists(filePath))) return [];
+  if (!(await isRegularFile(filePath))) return [];
   return [
     {
       id: makeId(filePath),
