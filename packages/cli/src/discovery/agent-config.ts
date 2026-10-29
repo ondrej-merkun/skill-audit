@@ -16,6 +16,13 @@ const MCP_SERVER_SCAN_FILENAME = '.mcp.json';
 const SHELL_WORD = /(?:"[^"]*"|'[^']*'|[^\s;|&()<>`"'])+/g;
 const SHELL_QUOTES = /["']/g;
 
+const MCP_SERVERS_KEY = 'mcpServers';
+
+// String literals and the punctuation that opens, closes, or names a JSON value. No other
+// character in valid JSON changes the nesting, so a structure scan can skip the rest.
+const JSON_STRUCTURE_TOKEN = /"(?:[^"\\]|\\.)*"|[{}[\]:]/g;
+const NOT_LINE_BREAK = /[^\r\n]/g;
+
 type AgentConfigFiles = {
   agentId: string;
   dir: string;
@@ -69,6 +76,40 @@ export function mcpServerScanMetadata(
   return {
     ruleScanFilename: MCP_SERVER_SCAN_FILENAME,
     ruleScanContent: JSON.stringify({ mcpServers: { [name]: definition } }, null, 2),
+  };
+}
+
+/**
+ * Leaves the MCP servers out of the rule scan of a settings file, for an agent that reports
+ * each server on its own entry, so a risky server is reported once. Returns undefined, and the
+ * whole file is scanned, when JSON.parse cannot read the file or drops a server definition
+ * (a second `mcpServers` key or a duplicate server name), because that definition has no entry
+ * of its own.
+ */
+export function settingsScanMetadataWithoutMcpServers(
+  content: string
+): NonNullable<Skill['metadata']> | undefined {
+  let settings: unknown;
+  try {
+    settings = JSON.parse(content);
+  } catch {
+    return undefined;
+  }
+
+  const parsedServers = isRecord(settings) ? settings[MCP_SERVERS_KEY] : undefined;
+  if (!isRecord(parsedServers)) return undefined;
+
+  const members = rootMemberObjects(content, MCP_SERVERS_KEY);
+  const servers = members.length === 1 ? members[0] : undefined;
+  if (servers === undefined || servers.memberCount !== Object.keys(parsedServers).length) {
+    return undefined;
+  }
+
+  // An empty object keeps the JSON valid for the settings views, and the kept line breaks keep
+  // every other finding on its real line.
+  const emptied = content.slice(servers.start + 1, servers.end - 1).replace(NOT_LINE_BREAK, ' ');
+  return {
+    ruleScanContent: content.slice(0, servers.start + 1) + emptied + content.slice(servers.end - 1),
   };
 }
 
@@ -146,6 +187,53 @@ async function agentConfigSkill(
     treeSha256: await computeTreeSha256(path),
     ...(metadata === undefined ? {} : { metadata }),
   };
+}
+
+type JsonObjectSpan = { start: number; end: number; memberCount: number };
+
+/**
+ * Finds each root member named `key` in valid JSON text, in file order. An object value gets
+ * its offsets and its member count, duplicate names included. Any other value is undefined.
+ */
+function rootMemberObjects(content: string, key: string): Array<JsonObjectSpan | undefined> {
+  const members: Array<JsonObjectSpan | undefined> = [];
+  let depth = 0;
+  let previousToken = '';
+  let afterKeyColon = false;
+  let openObject: Omit<JsonObjectSpan, 'end'> | undefined;
+
+  for (const match of content.matchAll(JSON_STRUCTURE_TOKEN)) {
+    const token = match[0];
+    const isMemberValueStart = afterKeyColon;
+    afterKeyColon = false;
+
+    if (token === ':') {
+      // In valid JSON the token before a colon is the member name.
+      if (depth === 1 && JSON.parse(previousToken) === key) {
+        members.push(undefined);
+        afterKeyColon = true;
+      } else if (depth === 2 && openObject !== undefined) {
+        openObject.memberCount += 1;
+      }
+    } else if (token === '{' || token === '[') {
+      if (isMemberValueStart && token === '{') openObject = { start: match.index, memberCount: 0 };
+      depth += 1;
+    } else if (token === '}' || token === ']') {
+      depth -= 1;
+      if (depth === 1 && openObject !== undefined) {
+        members[members.length - 1] = { ...openObject, end: match.index + 1 };
+        openObject = undefined;
+      }
+    }
+
+    previousToken = token;
+  }
+
+  return members;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isBelow(dir: string, path: string): boolean {

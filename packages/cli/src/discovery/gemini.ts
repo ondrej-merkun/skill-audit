@@ -5,7 +5,11 @@ import { basename, dirname, join } from 'node:path';
 import { enterDirOnce, isRegularFile, readDirFollowingLinks } from '../fs-walk.js';
 import { blankJsonComments } from '../rules/agent-config.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
-import { discoverAgentConfigFiles, mcpServerScanMetadata } from './agent-config.js';
+import {
+  discoverAgentConfigFiles,
+  mcpServerScanMetadata,
+  settingsScanMetadataWithoutMcpServers,
+} from './agent-config.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
 import { discoverSharedAgentSkills } from './shared-agent-skills.js';
 import { computeTreeSha256 } from './tree-hash.js';
@@ -281,7 +285,8 @@ async function discoverMcpJson(settingsPath: string, scope: Skill['scope']): Pro
 async function discoverSettingsFile(
   dir: string,
   displayDir: string,
-  scope: Skill['scope']
+  scope: Skill['scope'],
+  metadata?: Skill['metadata']
 ): Promise<Skill[]> {
   return discoverAgentConfigFiles({
     agentId: AGENT_ID,
@@ -289,7 +294,18 @@ async function discoverSettingsFile(
     displayDir,
     fileNames: ['settings.json'],
     scope,
+    ...(metadata === undefined ? {} : { metadata }),
   });
+}
+
+// discoverMcpJson reports each user server on its own entry, so the settings file scan
+// leaves them out.
+async function userSettingsScanMetadata(settingsPath: string): Promise<Skill['metadata']> {
+  try {
+    return settingsScanMetadataWithoutMcpServers(await readFile(settingsPath, 'utf8'));
+  } catch {
+    return undefined;
+  }
 }
 
 const geminiDiscovery: AgentDiscovery = {
@@ -312,8 +328,12 @@ const geminiDiscovery: AgentDiscovery = {
     );
     skills.push(...(await discoverCommandTomlFiles(join(userBase, 'commands'), 'user', options)));
     skills.push(...(await discoverAgentMarkdownFiles(join(userBase, 'agents'), 'user', options)));
-    skills.push(...(await discoverMcpJson(join(userBase, 'settings.json'), 'user')));
-    skills.push(...(await discoverSettingsFile(userBase, '~/.gemini', 'user')));
+    const userSettingsPath = join(userBase, 'settings.json');
+    const userSettingsMetadata = await userSettingsScanMetadata(userSettingsPath);
+    skills.push(...(await discoverMcpJson(userSettingsPath, 'user')));
+    skills.push(
+      ...(await discoverSettingsFile(userBase, '~/.gemini', 'user', userSettingsMetadata))
+    );
 
     skills.push(
       ...(await discoverExtensionManifests(join(projectBase, 'extensions'), 'project', options))
