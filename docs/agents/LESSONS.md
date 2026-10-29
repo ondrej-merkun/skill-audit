@@ -291,6 +291,15 @@ without a commit message explaining why it no longer applies.
   When replacing hard isolation/timeouts with heuristics, update names, tests,
   and docs in the same change so security guarantees stay explicit.
 
+- **L4.6 — Scanned skill text is attacker-controlled in every report.** _The
+  HTML report embedded scan data in an inline `<script>` with plain
+  `JSON.stringify`, under a comment that called the data server-generated. A
+  finding snippet with `</script><script>...` ended the element and ran in the
+  report._
+  Treat skill names, paths, and snippets as hostile input in every output.
+  Embed data in an inline `<script>` only through `serializeForScript` in
+  `src/output/html.ts`, and put markup text through `escapeHtml`.
+
 ## 5. Orphans, cleanup, and the one-task-per-loop rule
 
 - **L5.1 — Delete direct predecessors in the same commit.** _Task 1.7
