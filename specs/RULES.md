@@ -239,7 +239,10 @@ original offsets: `command`, `args`, `bash`, `powershell`, `exec`, `url`,
 `apiKeyHelper`, `awsAuthRefresh`, `awsCredentialExport`, `gcpAuthRefresh`, and
 `otelHeadersHelper`. Every rule that applies to `*.sh` then runs on those
 values, so findings keep the real line and JSON escapes such as `\"` or `\/`
-do not hide a pattern. `MCP-CONFIG-REMOTE-EXEC` also runs on the full JSON of
+do not hide a pattern. Gemini CLI removes `//` and `/* */` comments from
+`.gemini/settings.json` before it parses the file, so the engine replaces those
+comments with spaces first. Trailing commas stay invalid, as in Gemini CLI.
+`MCP-CONFIG-REMOTE-EXEC` also runs on the full JSON of
 these files after string escapes are decoded; a file that is not strict JSON,
 such as JSONC, keeps its raw text for that rule. Invalid JSON yields no command
 values and does not stop the scan.

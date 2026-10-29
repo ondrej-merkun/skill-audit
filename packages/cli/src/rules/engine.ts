@@ -558,7 +558,7 @@ function matchPasses(
     passes.push({
       rules: rulesForScanName(rules, AGENT_CONFIG_COMMANDS_SCAN_NAME, scope),
       preparePath: join(dirname(preparePath), AGENT_CONFIG_COMMANDS_SCAN_NAME),
-      view: extractAgentConfigCommands,
+      view: (content) => extractAgentConfigCommands(content, preparePath),
     });
   }
 
