@@ -19,8 +19,10 @@ const SHELL_QUOTES = /["']/g;
 const MCP_SERVERS_KEY = 'mcpServers';
 
 // String literals and the punctuation that opens, closes, or names a JSON value. No other
-// character in valid JSON changes the nesting, so a structure scan can skip the rest.
-const JSON_STRUCTURE_TOKEN = /"(?:[^"\\]|\\.)*"|[{}[\]:]/g;
+// character in valid JSON changes the nesting, so a structure scan can skip the rest. The
+// string branch is unrolled: `(?:[^"\\]|\\.)*` keeps one V8 backtrack entry per character and
+// overflows on a multi-megabyte value, which a padded settings file can hold.
+const JSON_STRUCTURE_TOKEN = /"[^"\\]*(?:\\.[^"\\]*)*"|[{}[\]:]/g;
 const NOT_LINE_BREAK = /[^\r\n]/g;
 
 type AgentConfigFiles = {

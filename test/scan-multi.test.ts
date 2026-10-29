@@ -304,6 +304,12 @@ describe('runScan: multi-skill fixture coverage', () => {
         rows: { remoteExec: ['evil'], pipeToShell: ['evil'] },
       },
       {
+        // Gemini CLI strips comments before it parses settings.json.
+        layout: 'a comment line',
+        servers: `// local servers\n    ${PIPE_TO_SHELL_SERVER}`,
+        rows: { remoteExec: ['evil'], pipeToShell: ['evil'] },
+      },
+      {
         // The raw-text pass reads a window of lines after "args". With one value per line, the
         // payload of this 31-value array falls outside that window.
         layout: 'a long args array on one line',
@@ -349,7 +355,8 @@ describe('runScan: multi-skill fixture coverage', () => {
         pipeToShell: rowsWith('SKILL-CURL-BASH-IN-MD'),
       }).toEqual(row.rows);
       // The settings file still checks its hook, at the hook's real line.
-      expect(hookFinding?.line).toBe(5);
+      const hookLine = settings.split('\n').findIndex((line) => line.includes('"hooks"')) + 1;
+      expect(hookFinding?.line).toBe(hookLine);
     });
 
     it.each([
