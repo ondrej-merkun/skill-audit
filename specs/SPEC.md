@@ -28,7 +28,6 @@ Justification, in order of weight:
   - `chalk` v5 (ESM) for colors
   - `cli-table3` for the scan table
   - `ora` for spinners
-  - `listr2` for the multi-step scan pipeline
   - **Do not** reach for `ink` (React) at MVP — adds 200kb of deps and complicates output modes.
 - **Regex engine:** Node's native `RegExp` with a safety preflight that caps scanned content size and rejects unsafe nested-quantifier patterns before matching.
 - **Semgrep integration:** shell-out to `semgrep --config ./rules --json` *only if* `semgrep` binary is on PATH. Gracefully skip AST rules otherwise and emit a note. This keeps zero-install pure regex as the default.
