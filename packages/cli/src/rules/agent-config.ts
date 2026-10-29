@@ -45,6 +45,12 @@ const COMMAND_VALUE_KEYS = new Set([
 // string literals and runs of structural characters. Line breaks stay untouched.
 const JSON_TOKEN = /"(?:[^"\\\n]|\\.)*"|[^"\r\n]+/g;
 const LINE_BREAK = /[\r\n]/g;
+// The shell comment mask and the shell rule patterns end a line only at LF.
+const CR_LINE_BREAK = /\r\n?/g;
+// `(?<=^|\n)` starts a line only after LF. A multiline `^` also starts one after U+2028,
+// which the shell does not treat as a line break.
+const SHELL_CONTINUATION = /(?<=^|\n)(?![ \t]*#)([^\n]*)\\\n/g;
+const TRAILING_SHELL_COMMENT = /(?<=^|\n)[ \t]*#[^\n]*$/;
 
 // A blanked comment keeps its whitespace, so line breaks inside it stay.
 const NON_WHITESPACE = /\S/g;
@@ -66,7 +72,7 @@ export function extractAgentConfigCommands(content: string, path: string): strin
 
   const commands = new Set(collectCommandValues(parsed));
   return rewriteJsonTokens(json, {
-    stringLiteral: (value) => (commands.has(value) ? value : ''),
+    stringLiteral: (value) => (commands.has(value) ? toShellLines(value) : ''),
     structure: (text) => ' '.repeat(text.length),
   });
 }
@@ -80,13 +86,14 @@ export function agentConfigCommandValues(content: string): string[] {
 /**
  * Decodes the escapes in every JSON string literal in place, so patterns see
  * `"ANTHROPIC_BASE_URL": "https://..."` even when the file writes `https:\/\/`.
- * Decoded quotes become `'`, so quoted text inside a value cannot look like a key.
+ * Decoded quotes become `'` and decoded line breaks become spaces, so quoted
+ * text inside a value cannot look like a key.
  */
 export function decodeJsonStrings(content: string): string {
   if (parseJson(content) === undefined) return '';
 
   return rewriteJsonTokens(content, {
-    stringLiteral: (value) => `"${value.replaceAll('"', "'")}"`,
+    stringLiteral: (value) => `"${value.replaceAll('"', "'").replace(LINE_BREAK, ' ')}"`,
     structure: (text) => text,
   });
 }
@@ -131,6 +138,24 @@ export function blankJsonComments(content: string): string {
   return blanked + content.slice(copiedUpTo);
 }
 
+
+/**
+ * Lays out a decoded command value in the lines that the shell reads, so the `#`
+ * comment mask hides only text that the shell does not run. CR and CRLF become LF.
+ * A `\` continuation joins the next line, except at the end of a comment line. A
+ * value that ends in a comment line gets a final LF, because the next value on the
+ * same JSON line is a different command. The result is at most one character longer
+ * than the value, so it still fits in the quoted JSON literal.
+ */
+function toShellLines(command: string): string {
+  // ponytail: a decoded LF inside a double-quoted string also ends the line here, as
+  // in a script, so a printed multi-line curl hint can match NET-OUTBOUND-NONLOCAL.
+  return command
+    .replace(CR_LINE_BREAK, '\n')
+    .replace(SHELL_CONTINUATION, '$1  ')
+    .replace(TRAILING_SHELL_COMMENT, '$&\n');
+}
+
 type JsonTokenRewrite = {
   stringLiteral: (value: string) => string;
   structure: (text: string) => string;
@@ -140,9 +165,10 @@ function rewriteJsonTokens(content: string, rewrite: JsonTokenRewrite): string {
   return content.replace(JSON_TOKEN, (token) => {
     if (!token.startsWith('"')) return rewrite.structure(token);
 
-    // Decoding never lengthens a literal, so padding keeps every later offset in place.
+    // A rewritten literal never outgrows its token, so padding keeps every later offset in place.
+    // The literal is on one line of the original text, so a match inside it reports that line.
     const value = JSON.parse(token) as string;
-    return rewrite.stringLiteral(value).replace(LINE_BREAK, ' ').padEnd(token.length);
+    return rewrite.stringLiteral(value).padEnd(token.length);
   });
 }
 
