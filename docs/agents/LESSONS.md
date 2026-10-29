@@ -318,6 +318,13 @@ without a commit message explaining why it no longer applies.
   `~/.claude/plugins/.trash`, and compare real paths. Test that a dir with the
   same name inside a plugin is still discovered.
 
+- **L2.14 — Parse a config file the way its agent parses it.** _One `//` line
+  in `~/.gemini/settings.json` made `JSON.parse` fail, so discovery hid every
+  MCP server and the decode pass skipped every hook. Gemini CLI reads that file
+  with `strip-json-comments`, so the file was valid for Gemini._
+  Before you parse an agent config file, read the agent's own loader. Accept
+  comments or trailing commas only where that loader accepts them.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**

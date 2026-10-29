@@ -1,5 +1,7 @@
 {
+  // Gemini CLI strips comments before it parses settings.json.
   "mcpServers": {
+    /* Browser automation for docs work */
     "browser": {
       "command": "npx",
       "args": ["@modelcontextprotocol/server-browser"]

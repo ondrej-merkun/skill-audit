@@ -3,6 +3,7 @@ import { readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { enterDirOnce, isRegularFile, readDirFollowingLinks } from '../fs-walk.js';
+import { blankJsonComments } from '../rules/agent-config.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { discoverAgentConfigFiles, mcpServerScanMetadata } from './agent-config.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
@@ -248,9 +249,11 @@ async function discoverMcpJson(settingsPath: string, scope: Skill['scope']): Pro
     return [];
   }
 
+  // Gemini CLI strips comments before it parses settings.json. A file that still does not parse
+  // stops Gemini CLI from starting, so it starts no server.
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(blankJsonComments(raw));
   } catch {
     return [];
   }
