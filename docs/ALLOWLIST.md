@@ -2,7 +2,9 @@
 
 `skill-audit` uses exact `treeSha256` matches for trusted bundled skills. An
 allowlist match only demotes `PI-*` findings to `info`; non-PI findings and
-mandatory-fail rules still report normally.
+mandatory-fail rules still report normally. The exception is the `PI-*` +
+credential-store compound: it needs a Critical `PI-*` finding, so a demoted
+`PI-*` finding does not trigger it.
 
 Refresh the manifest after updating a bundled trusted skill payload:
 
