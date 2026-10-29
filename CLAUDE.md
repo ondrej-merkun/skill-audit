@@ -77,8 +77,10 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
   adjust the fixture, add an allowlist entry, or lower severity — don't
   silently narrow the regex until failure stops.
 - **Regex patterns use Node's native `RegExp` behind the safety preflight**
-  (see `src/rules/engine.ts`). Content length and nested-quantifier caps keep
-  catastrophic inputs out of the hot path without per-pattern workers. Do not
+  (see `src/rules/engine.ts`). The nested-quantifier check keeps catastrophic
+  patterns out of the hot path without per-pattern workers. Each pattern runs
+  over the full file content. There is no size cap, because a cap lets padding
+  hide a finding. A file too large to read fails the skill scan. Do not
   call `.exec()` / `.test()` directly on user-sourced content outside that
   wrapper.
 - **Discovery plugins run against temp dirs in tests**, not the real home

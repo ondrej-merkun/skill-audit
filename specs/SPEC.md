@@ -30,7 +30,7 @@ Justification, in order of weight:
   - `ora` for spinners
   - `listr2` for the multi-step scan pipeline
   - **Do not** reach for `ink` (React) at MVP — adds 200kb of deps and complicates output modes.
-- **Regex engine:** Node's native `RegExp` with a safety preflight that caps scanned content size and rejects unsafe nested-quantifier patterns before matching.
+- **Regex engine:** Node's native `RegExp` with a safety preflight that rejects unsafe nested-quantifier patterns before matching. Each pattern runs over the full file content, with no size cap, so padding cannot hide a finding. A file too large to read as one string fails the skill scan, so the scan reports incomplete, not PASS.
 - **Semgrep integration:** shell-out to `semgrep --config ./rules --json` *only if* `semgrep` binary is on PATH. Gracefully skip AST rules otherwise and emit a note. This keeps zero-install pure regex as the default.
 - **Testing:** `vitest` for unit + snapshot. Keep ~30 rule tests with example malicious/benign fixtures.
 - **Lint/format:** `biome` (faster than eslint+prettier, single config).
