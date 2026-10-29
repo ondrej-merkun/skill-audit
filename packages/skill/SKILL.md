@@ -7,17 +7,20 @@ description: Scan installed agent skills, plugins, and cross-agent instruction
   instructions.
 allowed-tools:
   - Bash(npx --yes @ondrej-merkun/skill-audit@0.2.1)
-  - Bash(npx --yes @ondrej-merkun/skill-audit@0.2.1 scan *)
+  - Bash(npx --yes @ondrej-merkun/skill-audit@0.2.1 scan)
+  - Bash(npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --json)
+  - Bash(npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --summary)
   - Bash(npx --yes @ondrej-merkun/skill-audit@0.2.1 list *)
   - Bash(npx --yes @ondrej-merkun/skill-audit@0.2.1 explain *)
 ---
 
 # skill-audit
 
-Run the commands exactly as written. This skill pre-approves only the pinned
-default scan, `scan`, `list`, and `explain` commands. Other commands keep the
-normal permission prompt, including `ignore` and `llm add`, which change local
-state.
+Run the commands exactly as written. This skill pre-approves only these pinned
+commands: the bare default scan, `scan`, `scan --json`, `scan --summary`, and
+`list` or `explain` with any options. Every other command keeps the normal
+permission prompt. This includes scans with other options, such as `--agent`,
+`--output`, or `--html`, and `ignore` and `llm add`, which change local state.
 
 Use the published CLI unless the user explicitly asks to test a local checkout:
 
@@ -50,9 +53,9 @@ before interpreting it. For automation or CI-style requests, use `--json` and
 summarize the parsed JSON instead.
 
 Do not recommend `rm`, `delete`, uninstall, or file-editing commands without
-explicit user confirmation. Prefer `skill-audit explain <skill>` first, and
-use `skill-audit ignore <skill>` only after the user has reviewed the exact
-installed tree and wants to suppress a false positive.
+explicit user confirmation. Prefer the `explain` command below first, and use
+the `ignore` command only after the user has reviewed the exact installed tree
+and wants to suppress a false positive.
 
 ## Commands
 
