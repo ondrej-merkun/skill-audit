@@ -51,8 +51,9 @@ const CR_LINE_BREAK = /\r\n?/g;
 // which the shell does not treat as a line break.
 const SHELL_CONTINUATION = /(?<=^|\n)(?![ \t]*#)([^\n]*)\\\n/g;
 // A line that ends in a pipe or a list operator continues on the next line without a `\`.
-// A `#` before the operator starts a comment, and a comment ends at the line break.
-const OPERATOR_CONTINUATION = /(?<=^|\n)([^\n#]*(?:\|&?|&&)[ \t]*)\n/g;
+// While that stage is pending, the shell also skips blank and comment-only lines. A `#`
+// before the operator starts a comment, and a comment ends at the line break.
+const OPERATOR_CONTINUATION = /(?<=^|\n)([^\n#]*(?:\|&?|&&)[ \t]*)\n(?:[ \t]*(?:#[^\n]*)?\n)*/g;
 const TRAILING_SHELL_COMMENT = /(?<=^|\n)[ \t]*#[^\n]*$/;
 // A shell word starts at the beginning of the value or after a blank or a metacharacter.
 const WORD_START_BEFORE = /^$|[\s;&|()]/;
@@ -154,9 +155,11 @@ export function blankJsonComments(content: string): string {
  * fits in the quoted JSON literal.
  */
 function toShellLines(command: string): string {
+  // Lines that a pending pipeline skips become spaces: the shell ignores them, and offsets
+  // stay aligned.
   return joinQuotedLineBreaks(command.replace(CR_LINE_BREAK, '\n'))
     .replace(SHELL_CONTINUATION, '$1  ')
-    .replace(OPERATOR_CONTINUATION, '$1 ')
+    .replace(OPERATOR_CONTINUATION, (lines, stage: string) => stage.padEnd(lines.length))
     .replace(TRAILING_SHELL_COMMENT, '$&\n');
 }
 
