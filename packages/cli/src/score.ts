@@ -114,27 +114,46 @@ function getMandatoryFailIds(findings: Finding[]): string[] {
     }
   }
 
-  // High PI-* combined with a credential-store read on the same line: the jailbreak
-  // or escalation instruction names the secret itself. Admin and security-teaching
-  // skills mention these on separate lines or in separate files, so those stay REVIEW.
-  // Allowlist-demoted PI-* findings are info and never qualify.
-  // ponytail: an attack split across lines or files stays REVIEW. PI-JAILBREAK has
-  // no quote guard, so an unmasked teaching line that quotes a jailbreak together
-  // with a credential path turns FAIL.
+  // High PI-* combined with a credential-store read on the same line.
+  for (const id of sameLineInjectionStoreIds(verdictFindings)) triggered.add(id);
+
+  return [...triggered];
+}
+
+/**
+ * Returns the High PI-* and credential-store rule ids that share a line: the jailbreak
+ * or escalation instruction names the secret itself. Admin and security-teaching
+ * skills mention these on separate lines or in separate files, so those stay REVIEW.
+ * Allowlist-demoted PI-* findings are info and never qualify.
+ * ponytail: an attack split across lines or files stays REVIEW. PI-JAILBREAK has
+ * no quote guard, so an unmasked teaching line that quotes a jailbreak together
+ * with a credential path turns FAIL.
+ */
+function sameLineInjectionStoreIds(verdictFindings: Finding[]): string[] {
+  // A crafted skill can produce one finding per line, so each injection looks up
+  // its own line by key instead of searching all findings.
+  const findingKeys = new Set(verdictFindings.map((f) => lineRuleKey(f.file, f.line, f.ruleId)));
+  const ids = new Set<string>();
+
   for (const injection of verdictFindings) {
     const pairedStoreIds = SAME_LINE_INJECTION_STORE_RULES.get(injection.ruleId);
     if (pairedStoreIds === undefined || injection.severity === 'info') continue;
 
-    const store = verdictFindings.find(
-      (f) => pairedStoreIds.has(f.ruleId) && f.file === injection.file && f.line === injection.line
-    );
-    if (store !== undefined) {
-      triggered.add(injection.ruleId);
-      triggered.add(store.ruleId);
+    for (const storeId of pairedStoreIds) {
+      if (findingKeys.has(lineRuleKey(injection.file, injection.line, storeId))) {
+        ids.add(injection.ruleId);
+        ids.add(storeId);
+        break;
+      }
     }
   }
 
-  return [...triggered];
+  return [...ids];
+}
+
+/** Paths and rule ids never contain NUL, so the separator keeps keys unique. */
+function lineRuleKey(file: string, line: number, ruleId: string): string {
+  return `${file}\0${line}\0${ruleId}`;
 }
 
 /** Compute a SkillSummary from a list of findings using the spec §4 scoring formula. */

@@ -253,6 +253,24 @@ describe('mandatory-fail overrides', () => {
     }
   );
 
+  it('should score a jailbreak finding on every line within the time budget', () => {
+    // A crafted SKILL.md can repeat a jailbreak line many times. A same-line search
+    // over all findings per injection takes seconds here; a keyed lookup takes a few ms.
+    const CRAFTED_LINE_COUNT = 20_000;
+    const SCORE_BUDGET_MS = 500;
+    const findings = Array.from({ length: CRAFTED_LINE_COUNT }, (_, index) => ({
+      ...finding('PI-JAILBREAK', 'high'),
+      line: index + 1,
+    }));
+
+    const startedAt = performance.now();
+    const result = scoreFindings(findings);
+    const elapsedMs = performance.now() - startedAt;
+
+    expect(result.verdict).toBe('PASS');
+    expect(elapsedMs).toBeLessThan(SCORE_BUDGET_MS);
+  });
+
   it.each([
     ['PI-OVERRIDE', [inertDocsFinding('PI-OVERRIDE'), finding('FS-CREDSTORE', 'critical')]],
     ['FS-CREDSTORE', [finding('PI-OVERRIDE', 'critical'), inertDocsFinding('FS-CREDSTORE')]],
