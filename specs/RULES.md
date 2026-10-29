@@ -285,7 +285,8 @@ script rules.
 A repository can ship `.claude/settings.json`, `.claude/settings.local.json`,
 or hook files such as `.github/hooks/*.json` that the agent loads when the user
 opens the project (CVE-2025-59536, CVE-2026-21852). These rules apply only to
-`agent-config` targets discovered with `scope: "project"`. A settings file
+`agent-config` targets discovered with `scope: "project"`. When dedupe merges a project file with an
+identical user file, the merged target still gets these rules. A settings file
 inside a skill directory is an example that no agent loads, so these rules skip
 it. They match the JSON after string
 escapes are decoded; a quote inside a decoded value becomes `'`, so quoted text
