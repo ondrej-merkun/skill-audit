@@ -30,6 +30,7 @@ function cloneSkill(skill: Skill): Skill {
       ? { agentPaths: skill.agentPaths.map((path) => ({ ...path })) }
       : {}),
     ...(skill.alsoInstalledAt !== undefined ? { alsoInstalledAt: [...skill.alsoInstalledAt] } : {}),
+    ...(skill.scopes !== undefined ? { scopes: [...skill.scopes] } : {}),
   };
 }
 
@@ -86,6 +87,13 @@ function collectAgentPaths(skills: Skill[]): Array<{ agentId: string; path: stri
     .map(([agentId, paths]) => ({ agentId, path: selectPrimaryPath(paths) }));
 }
 
+// The primary installation's scope alone would hide a project copy of a user file
+// from the project-only rules, so the merged skill keeps every scope.
+function collectScopes(skills: Skill[]): Array<Skill['scope']> {
+  const scopes = new Set(skills.flatMap((skill) => skill.scopes ?? [skill.scope]));
+  return [...scopes].sort();
+}
+
 export function dedupeDiscoveredSkills(skills: Skill[]): Skill[] {
   const output: Skill[] = [];
   const byTreeHash = new Map<string, DedupeGroup>();
@@ -126,12 +134,14 @@ export function dedupeDiscoveredSkills(skills: Skill[]): Skill[] {
       alsoInstalledAt: _alsoInstalledAt,
       agentIds: _agentIds,
       agentPaths: _agentPaths,
+      scopes: _scopes,
       ...primaryWithoutAliases
     } = selectedPrimary;
 
     const alsoInstalledAt = [...group.paths].filter((path) => path !== primaryPath).sort();
     const agentPaths = collectAgentPaths(group.skills);
     const agentIds = agentPaths.map((entry) => entry.agentId);
+    const scopes = collectScopes(group.skills);
     output[group.outputIndex] = {
       ...primaryWithoutAliases,
       path: primaryPath,
@@ -139,6 +149,7 @@ export function dedupeDiscoveredSkills(skills: Skill[]): Skill[] {
       ...(agentIds.length > 1 ? { agentIds } : {}),
       ...(agentPaths.length > 1 ? { agentPaths } : {}),
       ...(alsoInstalledAt.length > 0 ? { alsoInstalledAt } : {}),
+      ...(scopes.length > 1 ? { scopes } : {}),
     };
   }
 

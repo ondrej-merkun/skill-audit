@@ -42,6 +42,9 @@ export type Skill = {
     | 'gemini-agent-md'
     | 'agent-config';
   scope: 'user' | 'project' | 'managed';
+  // Set when dedupe merged installations of different scopes. Scope-limited rules run when
+  // any of these scopes matches; outputs show `scope` only.
+  scopes?: Array<Skill['scope']>;
   installState?: 'installed' | 'marketplace';
   treeSha256: string;
   trusted?: boolean;
