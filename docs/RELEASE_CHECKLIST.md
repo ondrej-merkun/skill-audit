@@ -94,7 +94,8 @@ repository URLs as proof.
 Before pushing the release tag, verify:
 
 - [`release.yml`](../.github/workflows/release.yml) grants `id-token: write`.
-- The release job installs npm with trusted-publishing support.
+- The release job uses the npm bundled with Node, does not install npm, and
+  fails when npm is older than 11.5.1, the trusted-publishing minimum.
 - The publish step runs from `packages/cli`.
 - The publish step does not require a long-lived `NPM_TOKEN`.
 - `@ondrej-merkun/skill-audit` has a trusted publisher for GitHub Actions
