@@ -81,17 +81,40 @@ export function hasNestedQuantifier(source: string): boolean {
   return /\((?:[^()\\]|\\.)*[+*](?:[^()\\]|\\.)*\)[+*{]/.test(source);
 }
 
-/** Returns 1-based line and 1-based column for a byte offset in content. */
-function lineCol(content: string, index: number): { line: number; column: number } {
-  const before = content.slice(0, index);
-  const lines = before.split('\n');
-  return { line: lines.length, column: (lines.at(-1)?.length ?? 0) + 1 };
+/**
+ * Returns the offset where each line starts. Built once per file so that each
+ * match maps to its line in O(log n), not in a full-content split per match.
+ */
+function lineStartOffsets(content: string): number[] {
+  const starts = [0];
+  let newline = content.indexOf('\n');
+  while (newline !== -1) {
+    starts.push(newline + 1);
+    newline = content.indexOf('\n', newline + 1);
+  }
+  return starts;
 }
 
-/** Extracts the source line containing the match, trimmed to 120 chars. */
-function extractSnippet(content: string, index: number): string {
-  const { line } = lineCol(content, index);
-  return (content.split('\n')[line - 1] ?? '').trim().slice(0, 120);
+/** Returns 1-based line and 1-based column for a character offset in content. */
+function lineCol(lineStarts: number[], index: number): { line: number; column: number } {
+  // Binary search for the last line that starts at or before index.
+  let low = 0;
+  let high = lineStarts.length - 1;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    if (lineStarts[mid] <= index) low = mid;
+    else high = mid - 1;
+  }
+
+  return { line: low + 1, column: index - lineStarts[low] + 1 };
+}
+
+/** Extracts the source line with the given 1-based number, trimmed to 120 chars. */
+function extractSnippet(content: string, lineStarts: number[], line: number): string {
+  const lineStart = lineStarts[line - 1];
+  const nextLineStart = lineStarts[line];
+  const lineEnd = nextLineStart === undefined ? content.length : nextLineStart - 1;
+  return content.slice(lineStart, lineEnd).trim().slice(0, 120);
 }
 
 /**
@@ -362,6 +385,7 @@ export async function runRules(
       continue;
     }
 
+    const lineStarts = lineStartOffsets(content);
     const preparedContent = new Map<PrepareContent, string>();
     for (const rule of applicableRules) {
       // Track seen lines per rule to avoid duplicate findings from overlapping patterns
@@ -380,7 +404,7 @@ export async function runRules(
       for (const pattern of rule.patterns) {
         const matches = await runPatternWithSafetyPreflight(pattern, matchContent);
         for (const { index, text } of matches) {
-          const { line, column } = lineCol(content, index);
+          const { line, column } = lineCol(lineStarts, index);
           if (seenLines.has(line)) continue;
           seenLines.add(line);
 
@@ -391,7 +415,7 @@ export async function runRules(
             file: filePath,
             line,
             column,
-            snippet: extractSnippet(content, index) || text.trim().slice(0, 120),
+            snippet: extractSnippet(content, lineStarts, line) || text.trim().slice(0, 120),
             message: rule.message,
             fix: rule.fix,
             cwe: rule.cwe,
