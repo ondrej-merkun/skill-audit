@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, rm, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   clearPlugins,
@@ -723,10 +723,13 @@ describe('shared .agents/skills discovery', () => {
   let home: string;
   let cwd: string;
 
-  async function writeSharedSkill(root: string, name: string): Promise<void> {
-    const skillDir = join(root, SHARED_SKILLS_DIR, name);
+  async function writeSharedSkill(root: string, relativeSkillDir: string): Promise<void> {
+    const skillDir = join(root, SHARED_SKILLS_DIR, relativeSkillDir);
     await mkdir(skillDir, { recursive: true });
-    await writeFile(join(skillDir, 'SKILL.md'), `---\nname: ${name}\n---\nShared skill.\n`);
+    await writeFile(
+      join(skillDir, 'SKILL.md'),
+      `---\nname: ${basename(skillDir)}\n---\nShared skill.\n`
+    );
   }
 
   function sharedSkillRows(skills: Skill[]) {
@@ -745,6 +748,10 @@ describe('shared .agents/skills discovery', () => {
     vi.stubEnv('XDG_CONFIG_HOME', join(home, '.config'));
 
     await writeSharedSkill(home, 'foo');
+    // Codex and Cursor load skills nested under a grouping directory.
+    await writeSharedSkill(home, join('team', 'baz'));
+    // Gemini CLI loads a SKILL.md at the root of the skills directory.
+    await writeSharedSkill(cwd, '');
     await writeSharedSkill(cwd, 'bar');
     // A directory without SKILL.md is not a skill.
     await mkdir(join(home, SHARED_SKILLS_DIR, 'notes'), { recursive: true });
@@ -769,6 +776,8 @@ describe('shared .agents/skills discovery', () => {
       // agentIds stays unset: no agent that is not installed claims the skill.
       expect(sharedSkillRows(skills)).toEqual([
         { agentId, agentIds: undefined, name: 'foo', scope: 'user' },
+        { agentId, agentIds: undefined, name: 'baz', scope: 'user' },
+        { agentId, agentIds: undefined, name: 'skills', scope: 'project' },
         { agentId, agentIds: undefined, name: 'bar', scope: 'project' },
       ]);
     }
@@ -784,6 +793,8 @@ describe('shared .agents/skills discovery', () => {
 
     expect(sharedSkillRows(skills)).toEqual([
       expect.objectContaining({ agentIds: allAgentIds, name: 'foo', scope: 'user' }),
+      expect.objectContaining({ agentIds: allAgentIds, name: 'baz', scope: 'user' }),
+      expect.objectContaining({ agentIds: allAgentIds, name: 'skills', scope: 'project' }),
       expect.objectContaining({ agentIds: allAgentIds, name: 'bar', scope: 'project' }),
     ]);
   });

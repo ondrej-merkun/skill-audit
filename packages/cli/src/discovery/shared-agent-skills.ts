@@ -14,8 +14,8 @@ const SKILL_MANIFEST = 'SKILL.md';
 const SKILL_ID_HEX_LENGTH = 16;
 
 /**
- * Discover `~/.agents/skills/<name>/SKILL.md` (user scope) and
- * `<cwd>/.agents/skills/<name>/SKILL.md` (project scope) on behalf of one agent.
+ * Discover every SKILL.md directory under `~/.agents/skills` (user scope) and
+ * `<cwd>/.agents/skills` (project scope) on behalf of one agent.
  * Each calling agent emits its own rows; discoverAll() collapses identical
  * content into one skill and keeps every owning agent.
  */
@@ -34,31 +34,17 @@ async function discoverSkillDirs(
   skillsDir: string,
   scope: Skill['scope']
 ): Promise<Skill[]> {
-  let entries: Array<{ isDirectory(): boolean; name: string }>;
-  try {
-    entries = await readdir(skillsDir, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-
-  const skillDirNames = entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort((a, b) => a.localeCompare(b));
+  const skillDirs = await findSkillDirs(skillsDir);
   const skills: Skill[] = [];
 
-  for (const dirName of skillDirNames) {
-    const skillDir = join(skillsDir, dirName);
-    const manifestPath = join(skillDir, SKILL_MANIFEST);
-    if (!(await isFile(manifestPath))) continue;
-
+  for (const skillDir of skillDirs) {
     skills.push(
       withInstallState({
         id: makeId(agentId, skillDir),
         agentId,
         name: fallbackSkillNameFromDirectory(skillDir),
         path: skillDir,
-        manifestPath,
+        manifestPath: join(skillDir, SKILL_MANIFEST),
         format: 'SKILL.md',
         scope,
         treeSha256: await computeTreeSha256(skillDir),
@@ -67,6 +53,36 @@ async function discoverSkillDirs(
   }
 
   return skills;
+}
+
+/**
+ * Lists every directory under root, root included, that holds a SKILL.md.
+ * Codex and Cursor load nested skills and Gemini CLI loads a root SKILL.md.
+ * The walk has no depth limit and does not skip hidden directories: the rule
+ * engine scans each SKILL.md directory as its own root, so a directory that
+ * discovery skips is never scanned.
+ */
+async function findSkillDirs(root: string): Promise<string[]> {
+  const skillDirs: string[] = [];
+
+  async function visit(dir: string): Promise<void> {
+    let entries: Array<{ isDirectory(): boolean; name: string }>;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    const hasManifest = entries.some((entry) => entry.name === SKILL_MANIFEST);
+    if (hasManifest && (await isFile(join(dir, SKILL_MANIFEST)))) skillDirs.push(dir);
+
+    for (const entry of entries) {
+      if (entry.isDirectory()) await visit(join(dir, entry.name));
+    }
+  }
+
+  await visit(root);
+  return skillDirs.sort((a, b) => a.localeCompare(b));
 }
 
 // Same id scheme as the agent plugins: stable hash of agent id and path.
