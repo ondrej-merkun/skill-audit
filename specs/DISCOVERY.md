@@ -202,7 +202,11 @@ the repo root and `/etc/codex/skills`, and Cursor nested project directories.
    supporting docs only when every known path to it is an unreferenced
    docs path: the walked path and each path through a skipped second
    link (with `docs -> payload` or `payload -> docs`, the file is also
-   at `payload/`, so it stays operative).
+   at `payload/`, so it stays operative). For the same reason, rules
+   prepare a file under a known path that does not look like docs, so
+   `docs -> scripts` cannot mask `scripts/setup.sh`. Each skipped second
+   link also goes into `treeSha256`, so two copies that differ only by
+   such a link do not collapse under rule 2.
 
 ## Path expansion
 
