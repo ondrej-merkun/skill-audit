@@ -483,7 +483,11 @@ without a commit message explaining why it no longer applies.
   esbuild 0.27.7._
   Keep `overrides`, `allowBuilds`, and other pnpm settings in
   `pnpm-workspace.yaml`. Keep `packageManager` pinned, so CI installs one exact
-  pnpm version.
+  pnpm version. pnpm 12 also checks existing lockfile entries against the 1-day
+  `minimumReleaseAge`, so CI fails for up to one day after a bump to a fresh
+  release. Wait and re-run CI. Do not set `minimumReleaseAge: 0` or
+  `trustLockfile: true`. For a throwaway local run, set
+  `pnpm_config_minimum_release_age=0` in the environment only.
 
 ## 7. Rule fixtures
 
