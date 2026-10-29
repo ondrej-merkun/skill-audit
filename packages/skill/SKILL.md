@@ -5,15 +5,24 @@ description: Scan installed agent skills, plugins, and cross-agent instruction
   Use when the user asks to audit, check, review, inventory, or verify skills
   for Claude Code, Codex, Cursor, Copilot, Gemini, or AGENTS.md-style project
   instructions.
-allowed-tools: [Bash]
+allowed-tools:
+  - Bash(npx --yes @ondrej-merkun/skill-audit@0.2.1)
+  - Bash(npx --yes @ondrej-merkun/skill-audit@0.2.1 scan *)
+  - Bash(npx --yes @ondrej-merkun/skill-audit@0.2.1 list *)
+  - Bash(npx --yes @ondrej-merkun/skill-audit@0.2.1 explain *)
 ---
 
 # skill-audit
 
+Run the commands exactly as written. This skill pre-approves only the pinned
+default scan, `scan`, `list`, and `explain` commands. Other commands keep the
+normal permission prompt, including `ignore` and `llm add`, which change local
+state.
+
 Use the published CLI unless the user explicitly asks to test a local checkout:
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@latest
+npx --yes @ondrej-merkun/skill-audit@0.2.1
 ```
 
 The bare command is the default scan and is equivalent to `skill-audit scan`.
@@ -25,7 +34,7 @@ rule scanning local, and does not execute skill code.
 For a normal audit, run the human-readable scan first:
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@latest scan
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan
 ```
 
 Then summarize:
@@ -57,8 +66,8 @@ Global options:
 ### Default Scan
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@latest
-npx --yes @ondrej-merkun/skill-audit@latest scan
+npx --yes @ondrej-merkun/skill-audit@0.2.1
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan
 ```
 
 Scans discovered skills with deterministic local rules and prints the table
@@ -68,7 +77,7 @@ output. Exit codes: `0` PASS, `1` threshold failure, `2` usage/runtime error,
 ### `scan`
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@latest scan [options]
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan [options]
 ```
 
 Options:
@@ -93,12 +102,12 @@ Supported `--agent` ids are `claude-code`, `codex`, `cross-agent`, `cursor`,
 Output combinations:
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@latest scan --json
-npx --yes @ondrej-merkun/skill-audit@latest scan --summary
-npx --yes @ondrej-merkun/skill-audit@latest scan --json --output skill-audit-results.json
-npx --yes @ondrej-merkun/skill-audit@latest scan --summary --output skill-audit-summary.txt
-npx --yes @ondrej-merkun/skill-audit@latest scan --output skill-audit-report.txt
-npx --yes @ondrej-merkun/skill-audit@latest scan --html skill-audit-report.html
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --json
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --summary
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --json --output skill-audit-results.json
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --summary --output skill-audit-summary.txt
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --output skill-audit-report.txt
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --html skill-audit-report.html
 ```
 
 Do not combine `--html` and `--output`; that is a usage error.
@@ -106,22 +115,22 @@ Do not combine `--html` and `--output`; that is a usage error.
 Scope examples:
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@latest scan --agent claude-code
-npx --yes @ondrej-merkun/skill-audit@latest scan --agent codex --json
-npx --yes @ondrej-merkun/skill-audit@latest scan --skill obfuscated-eval-skill
-npx --yes @ondrej-merkun/skill-audit@latest scan --include-marketplaces
-npx --yes @ondrej-merkun/skill-audit@latest scan --json --fail-on REVIEW
-npx --yes @ondrej-merkun/skill-audit@latest scan --strict
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --agent claude-code
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --agent codex --json
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --skill obfuscated-eval-skill
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --include-marketplaces
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --json --fail-on REVIEW
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --strict
 ```
 
 Local LLM review examples:
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@latest scan --llm local
-npx --yes @ondrej-merkun/skill-audit@latest scan --skill obfuscated-eval-skill --llm local
-npx --yes @ondrej-merkun/skill-audit@latest scan --llm local --llm qwen
-npx --yes @ondrej-merkun/skill-audit@latest scan --llm local,qwen --summary
-npx --yes @ondrej-merkun/skill-audit@latest scan --llm all --html skill-audit-report.html
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --llm local
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --skill obfuscated-eval-skill --llm local
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --llm local --llm qwen
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --llm local,qwen --summary
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --llm all --html skill-audit-report.html
 ```
 
 LLM review is a second opinion. It does not replace deterministic findings or
@@ -131,7 +140,7 @@ responses must be reported as LLM review status, not treated as scanner PASS.
 ### `list`
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@latest list [options]
+npx --yes @ondrej-merkun/skill-audit@0.2.1 list [options]
 ```
 
 Lists discovered skills without scanning their contents.
@@ -147,16 +156,16 @@ Options:
 Examples:
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@latest list
-npx --yes @ondrej-merkun/skill-audit@latest list --agent codex
-npx --yes @ondrej-merkun/skill-audit@latest list --include-marketplaces
-npx --yes @ondrej-merkun/skill-audit@latest list --json
+npx --yes @ondrej-merkun/skill-audit@0.2.1 list
+npx --yes @ondrej-merkun/skill-audit@0.2.1 list --agent codex
+npx --yes @ondrej-merkun/skill-audit@0.2.1 list --include-marketplaces
+npx --yes @ondrej-merkun/skill-audit@0.2.1 list --json
 ```
 
 ### `explain`
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@latest explain <skill-name-or-id> [options]
+npx --yes @ondrej-merkun/skill-audit@0.2.1 explain <skill-name-or-id> [options]
 ```
 
 Shows the full detail view for one skill, including findings and remediation.
@@ -173,15 +182,15 @@ Options:
 Examples:
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@latest explain obfuscated-eval-skill
-npx --yes @ondrej-merkun/skill-audit@latest explain obfuscated-eval-skill --llm local
-npx --yes @ondrej-merkun/skill-audit@latest explain obfuscated-eval-skill --json
+npx --yes @ondrej-merkun/skill-audit@0.2.1 explain obfuscated-eval-skill
+npx --yes @ondrej-merkun/skill-audit@0.2.1 explain obfuscated-eval-skill --llm local
+npx --yes @ondrej-merkun/skill-audit@0.2.1 explain obfuscated-eval-skill --json
 ```
 
 ### `ignore`
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@latest ignore <skill-name-or-id>
+npx --yes @ondrej-merkun/skill-audit@0.2.1 ignore <skill-name-or-id>
 ```
 
 Adds the selected skill's current `treeSha256` to the local ignore list so
@@ -191,7 +200,7 @@ skill tree gets a different hash and must be reviewed again.
 ### `llm add`
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@latest llm add <name> --base-url <url> --model <id> [options]
+npx --yes @ondrej-merkun/skill-audit@0.2.1 llm add <name> --base-url <url> --model <id> [options]
 ```
 
 Stores a named local OpenAI-compatible review model. The base URL must be a
@@ -218,7 +227,7 @@ Optional options:
 Example:
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@latest llm add local --base-url http://127.0.0.1:11434/v1 --model llama3.1
+npx --yes @ondrej-merkun/skill-audit@0.2.1 llm add local --base-url http://127.0.0.1:11434/v1 --model llama3.1
 ```
 
 Configs are written to `$XDG_CONFIG_HOME/skill-audit/llms.json`, or
@@ -227,7 +236,7 @@ Configs are written to `$XDG_CONFIG_HOME/skill-audit/llms.json`, or
 ### `llm list`
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@latest llm list [--json]
+npx --yes @ondrej-merkun/skill-audit@0.2.1 llm list [--json]
 ```
 
 Lists configured local review models and whether each is enabled.
@@ -235,7 +244,7 @@ Lists configured local review models and whether each is enabled.
 ### `llm check`
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@latest llm check <name> [--json]
+npx --yes @ondrej-merkun/skill-audit@0.2.1 llm check <name> [--json]
 ```
 
 Health-checks one configured model by sending a minimal local
