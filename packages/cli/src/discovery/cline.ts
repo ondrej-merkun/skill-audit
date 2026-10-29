@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, join } from 'node:path';
-import { type DirEntry, readDirFollowingLinks } from '../fs-walk.js';
+import { type DirEntry, isRegularFile, readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { discoverSharedAgentSkills } from './shared-agent-skills.js';
 import { computeTreeSha256 } from './tree-hash.js';
@@ -31,14 +31,6 @@ async function pathExists(p: string): Promise<boolean> {
   try {
     await stat(p);
     return true;
-  } catch {
-    return false;
-  }
-}
-
-async function isFile(p: string): Promise<boolean> {
-  try {
-    return (await stat(p)).isFile();
   } catch {
     return false;
   }
@@ -116,7 +108,7 @@ async function clineExtensionStorageDirs(): Promise<string[]> {
 type McpServersShape = Record<string, unknown>;
 
 async function discoverMcpSettings(settingsPath: string): Promise<Skill[]> {
-  if (!(await isFile(settingsPath))) return [];
+  if (!(await isRegularFile(settingsPath))) return [];
 
   let raw: string;
   try {
@@ -177,7 +169,7 @@ async function discoverRuleFiles(dir: string, scope: Skill['scope']): Promise<Sk
 }
 
 async function discoverLegacyRulesFile(filePath: string): Promise<Skill[]> {
-  if (!(await isFile(filePath))) return [];
+  if (!(await isRegularFile(filePath))) return [];
   return [
     {
       id: makeId(filePath),
@@ -200,7 +192,7 @@ async function discoverSkillsDir(dir: string, scope: Skill['scope']): Promise<Sk
   for (const entry of entries) {
     const skillDir = join(dir, entry.name);
     const manifestPath = join(skillDir, 'SKILL.md');
-    if (!(await isFile(manifestPath))) continue;
+    if (!(await isRegularFile(manifestPath))) continue;
     skills.push({
       id: makeId(skillDir),
       agentId: AGENT_ID,

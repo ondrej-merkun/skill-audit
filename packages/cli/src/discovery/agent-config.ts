@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
-import { readFile, realpath, stat } from 'node:fs/promises';
+import { readFile, realpath } from 'node:fs/promises';
 import { isAbsolute, join, posix, relative, resolve, sep } from 'node:path';
+import { isRegularFile } from '../fs-walk.js';
 import { agentConfigCommandValues } from '../rules/agent-config.js';
 import type { Skill } from '../types.js';
 import { computeTreeSha256 } from './tree-hash.js';
@@ -46,7 +47,7 @@ export async function discoverAgentConfigFiles(files: AgentConfigFiles): Promise
 
   for (const fileName of files.fileNames) {
     const path = join(files.dir, fileName);
-    if (!(await isFile(path))) continue;
+    if (!(await isRegularFile(path))) continue;
 
     configPaths.push(path);
     const name = posix.join(files.displayDir, fileName);
@@ -105,7 +106,7 @@ async function hookScriptPaths(configPaths: string[], root: HookScriptRoot): Pro
 
       // A symlink can point outside the root, so the real path must stay below it too.
       const realPath = await realPathOrUndefined(path);
-      if (realPath !== undefined && isBelow(realRoot, realPath) && (await isFile(path))) {
+      if (realPath !== undefined && isBelow(realRoot, realPath) && (await isRegularFile(path))) {
         scripts.add(path);
       }
     }
@@ -150,14 +151,6 @@ async function agentConfigSkill(
 function isBelow(dir: string, path: string): boolean {
   const rel = relative(dir, path);
   return rel !== '' && rel.split(sep)[0] !== '..' && !isAbsolute(rel);
-}
-
-async function isFile(path: string): Promise<boolean> {
-  try {
-    return (await stat(path)).isFile();
-  } catch {
-    return false;
-  }
 }
 
 async function realPathOrUndefined(path: string): Promise<string | undefined> {
