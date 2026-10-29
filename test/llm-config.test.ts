@@ -87,10 +87,24 @@ describe('local LLM config', () => {
     ).rejects.toThrow('already exists');
   });
 
-  it('reports malformed JSON without falling back to an empty registry', async () => {
-    const path = getLlmConfigPath();
-    await mkdir(join(tempConfigDir, 'skill-audit'), { recursive: true });
-    await writeFile(path, '{not-json', 'utf-8');
+  it.each([
+    {
+      broken: 'malformed JSON',
+      setUp: async () => {
+        await mkdir(join(tempConfigDir, 'skill-audit'), { recursive: true });
+        await writeFile(getLlmConfigPath(), '{not-json', 'utf-8');
+      },
+    },
+    {
+      broken: 'a directory at the config path',
+      setUp: () => mkdir(getLlmConfigPath(), { recursive: true }),
+    },
+    {
+      broken: 'a file at the config directory path',
+      setUp: () => writeFile(join(tempConfigDir, 'skill-audit'), '', 'utf-8'),
+    },
+  ])('reports $broken without falling back to an empty registry', async ({ setUp }) => {
+    await setUp();
 
     await expect(loadLlmRegistry()).rejects.toThrow('Could not parse local LLM config');
   });

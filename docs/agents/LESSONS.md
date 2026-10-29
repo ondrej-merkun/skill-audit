@@ -302,6 +302,8 @@ without a commit message explaining why it no longer applies.
   the readers of fixed paths called `readFile` or only checked that the path
   exists._
   Call `isRegularFile` from `src/fs-walk.ts` before you read or emit such a path.
+  It also hides a directory and stat errors, so a loader that must fail loudly
+  on a broken path (`src/llm/config.ts`) skips only a FIFO, socket, or device.
   A sync read of a FIFO blocks the event loop, so a Vitest timeout cannot stop
   it. Test a possible hang through the built CLI with a kill timeout.
 
