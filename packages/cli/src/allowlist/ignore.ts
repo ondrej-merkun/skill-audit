@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { isRegularFile } from '../fs-walk.js';
 
 function getConfigDir(): string {
   return process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config');
@@ -11,8 +12,11 @@ function getIgnoreListPath(): string {
 }
 
 async function readIgnoreListContent(): Promise<string | null> {
+  const path = getIgnoreListPath();
+  if (!(await isRegularFile(path))) return null;
+
   try {
-    return await readFile(getIgnoreListPath(), 'utf-8');
+    return await readFile(path, 'utf-8');
   } catch {
     return null;
   }
