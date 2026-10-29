@@ -169,8 +169,11 @@ Report each as a `Skill` with `agentId: "cross-agent"` and
 - `~/.gemini/commands/**/*.toml`
 - `~/.gemini/agents/**/*.md`
 - `~/.gemini/settings.json` (hooks, plus one entry per `mcpServers` server).
-  The settings file target also holds its servers, so a risky server is
-  reported on its own entry and on the settings file.
+  The settings file target scans the file without its servers, so a risky
+  server is reported once, on its own entry. Findings in the rest of the file
+  keep their real lines. When `JSON.parse` drops a server definition (a
+  duplicate server name or a second `mcpServers` key), that definition has no
+  entry of its own, so the settings file target scans the whole file.
 
 **Project-local:**
 - `.gemini/extensions/`
