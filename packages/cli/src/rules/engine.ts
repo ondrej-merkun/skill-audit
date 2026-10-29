@@ -1,7 +1,7 @@
 import { type Dirent, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { enterDirOnceSync, entryKindSync } from '../fs-walk.js';
-import type { Finding, Rule, Severity, Skill } from '../types.js';
+import type { Finding, Rule, Severity, Skill, SkillInstallation } from '../types.js';
 import {
   AGENT_CONFIG_COMMANDS_SCAN_NAME,
   AGENT_CONFIG_FILENAMES,
@@ -9,6 +9,7 @@ import {
   extractAgentConfigCommandsOnOneLine,
 } from './agent-config.js';
 import { pathLooksDocumentationOnly } from './code-context.js';
+import { ruleInstallation } from './installation.js';
 import { shebangScanName } from './script-scan-name.js';
 
 /** Node's read error for a file longer than the V8 string limit (536,870,888 chars). */
@@ -23,8 +24,6 @@ type RunRulesOptions = {
   scanAllSupportingFiles?: boolean;
   /** Paths from collectScanTargetPaths; a directory walk does not enter them. */
   scanTargetPaths?: ReadonlySet<string>;
-  /** Scopes of every installation of the target. A scope-limited rule needs one match. */
-  scopes?: ReadonlyArray<Skill['scope']>;
 };
 
 // One set of rules matched against one view of a file.
@@ -509,19 +508,19 @@ export async function runRulesForSkill(
   options: Pick<RunRulesOptions, 'scanAllSupportingFiles' | 'scanTargetPaths'> = {}
 ): Promise<Finding[]> {
   const runOptions: RunRulesOptions = {
-    scopes: (skill.installations ?? [skill]).map((installation) => installation.scope),
     ...(skill.metadata?.ruleScanFilename !== undefined
       ? { filenameOverride: skill.metadata.ruleScanFilename }
       : {}),
     ...options,
   };
 
-  // Scope-limited rules judge agent config targets only. A settings.json inside a skill
-  // directory is an example or fixture that no agent loads.
-  const skillRules =
-    skill.format === 'agent-config'
-      ? rules
-      : rules.filter((rule) => rule.appliesToScopes === undefined);
+  // A merged skill gets a scope-limited rule when one of its installations gets it on its own.
+  const installations = skill.installations ?? [ruleInstallation(skill)];
+  const skillRules = rules.filter(
+    (rule) =>
+      rule.appliesToScopes === undefined ||
+      installations.some((installation) => installationGetsScopedRule(installation, rule))
+  );
 
   const scanContent = skill.metadata?.ruleScanContent;
   if (scanContent !== undefined) {
@@ -529,6 +528,18 @@ export async function runRulesForSkill(
   }
 
   return runRules(skill.path, skillRules, runOptions);
+}
+
+// A scope-limited rule judges agent config files of its scopes, under a name it applies to. A
+// settings.json inside a skill directory is an example or fixture that no agent loads.
+// ponytail: only the file's own name counts, so a scope-limited rule for the agent config
+// command pass would never run. No such rule exists.
+function installationGetsScopedRule(installation: SkillInstallation, rule: Rule): boolean {
+  return (
+    installation.format === 'agent-config' &&
+    rule.appliesToScopes?.includes(installation.scope) === true &&
+    rule.appliesTo.some((glob) => matchesGlob(installation.scanName, glob))
+  );
 }
 
 /** Scans text that discovery extracted for a skill, such as one MCP server's definition. */
@@ -540,7 +551,7 @@ async function runRulesOnContent(
 ): Promise<Finding[]> {
   const name = options.filenameOverride ?? basename(filePath);
   const preparePath = join(dirname(filePath), name);
-  return matchRules(filePath, content, matchPasses(rules, name, preparePath, options.scopes));
+  return matchRules(filePath, content, matchPasses(rules, name, preparePath));
 }
 
 /**
@@ -558,7 +569,7 @@ function scanNameAndPasses(
   const override = options.filenameOverride;
   const name = override ?? basename(filePath);
   const preparePath = override === undefined ? scanPath : join(dirname(scanPath), override);
-  const passes = matchPasses(rules, name, preparePath, options.scopes);
+  const passes = matchPasses(rules, name, preparePath);
   if (passes.length > 0 || override !== undefined) return { name, passes };
 
   const shebangName = shebangScanName(filePath);
@@ -568,7 +579,7 @@ function scanNameAndPasses(
   const shebangPreparePath = join(dirname(scanPath), shebangName);
   return {
     name: shebangName,
-    passes: matchPasses(rules, shebangName, shebangPreparePath, options.scopes),
+    passes: matchPasses(rules, shebangName, shebangPreparePath),
   };
 }
 
@@ -577,16 +588,11 @@ function scanNameAndPasses(
  * second pass: their decoded command values run through the shell-script rules,
  * because agents run hook and MCP server commands in a shell.
  */
-function matchPasses(
-  rules: Rule[],
-  name: string,
-  preparePath: string,
-  scopes: ReadonlyArray<Skill['scope']> | undefined
-): MatchPass[] {
-  const passes: MatchPass[] = [{ rules: rulesForScanName(rules, name, scopes), preparePath }];
+function matchPasses(rules: Rule[], name: string, preparePath: string): MatchPass[] {
+  const passes: MatchPass[] = [{ rules: rulesForScanName(rules, name), preparePath }];
 
   if (AGENT_CONFIG_FILENAMES.has(name)) {
-    const commandRules = rulesForScanName(rules, AGENT_CONFIG_COMMANDS_SCAN_NAME, scopes);
+    const commandRules = rulesForScanName(rules, AGENT_CONFIG_COMMANDS_SCAN_NAME);
     const commandsPath = join(dirname(preparePath), AGENT_CONFIG_COMMANDS_SCAN_NAME);
     // Two layouts of the same commands: the shell's lines, so a `#` comment line hides only
     // itself, and one line per command, so a pattern can span a pipeline or quoted body that
@@ -608,19 +614,10 @@ function matchPasses(
   return passes.filter((pass) => pass.rules.length > 0);
 }
 
-// Unknown scopes (a direct runRules call) keep scope-limited rules active.
-function rulesForScanName(
-  rules: Rule[],
-  scanName: string,
-  scopes: ReadonlyArray<Skill['scope']> | undefined
-): Rule[] {
-  return rules.filter(
-    (rule) =>
-      rule.appliesTo.some((glob) => matchesGlob(scanName, glob)) &&
-      (scopes === undefined ||
-        rule.appliesToScopes === undefined ||
-        rule.appliesToScopes.some((scope) => scopes.includes(scope)))
-  );
+// Scope does not count here: runRulesForSkill selects scope-limited rules, and a direct
+// runRules call keeps them active.
+function rulesForScanName(rules: Rule[], scanName: string): Rule[] {
+  return rules.filter((rule) => rule.appliesTo.some((glob) => matchesGlob(scanName, glob)));
 }
 
 /** Reports each match at its line and column in the original content. */
