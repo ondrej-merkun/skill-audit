@@ -675,7 +675,7 @@ without a commit message explaining why it no longer applies.
   example section, and a reference heading does so only when it starts with the
   word. Give the malicious fixture a title that contains an example word.
 
-- **L7.14 — An escape is literal only for the first parse.** _The fix for the
+- **L7.14: An escape is literal only for the first parse.** _The fix for the
   escaped-backtick false positive in `CODEEXEC-SHELL-BACKTICK` first dropped
   ``eval "R=\`whoami\`"``, `sh -c`, and `trap` lines that main reported. These
   commands parse their argument again, and bash runs the substitution._
