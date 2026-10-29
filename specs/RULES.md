@@ -60,6 +60,12 @@ Any of these triggers FAIL regardless of score:
 - Compound trigger: any Critical `PI-*` finding + any credential-store rule
   (`FS-CREDSTORE`, `FS-BROWSER-CREDENTIALSTORE`, `FS-KEYCHAIN-ACCESS`) in the
   same skill. The `PI-*` finding must still be Critical after allowlist demotion.
+- Compound trigger: a `PI-JAILBREAK` or `PI-PRIV-ESCALATE-INSTRUCTION` finding
+  + a credential-store finding on the same line of the same file.
+  `PI-PRIV-ESCALATE-INSTRUCTION` pairs only with `FS-BROWSER-CREDENTIALSTORE` or
+  `FS-KEYCHAIN-ACCESS`, because root admin work reads `FS-CREDSTORE` paths. The
+  `PI-*` finding must not be demoted by the allowlist. See SPEC section 4 for
+  the reason for the same-line gate.
 
 ## Critical patterns (implement these exactly)
 
@@ -360,5 +366,5 @@ sha256_tree}` entries. On exact tree-hash match:
 - Set `allowlisted: true` on the skill in output.
 
 The allowlist does NOT bypass mandatory-fail rules — those still FAIL.
-Exception: the `PI-*` + credential-store compound needs a Critical `PI-*`
-finding, so demoted `PI-*` findings do not trigger it.
+Exception: the `PI-*` + credential-store compounds need a `PI-*` finding that
+the allowlist did not demote, so demoted `PI-*` findings do not trigger them.

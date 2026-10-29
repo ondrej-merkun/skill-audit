@@ -113,9 +113,11 @@ score = max(0, 100 - (25*Critical + 10*High + 3*Medium + 1*Low))
 These triggers force a mandatory FAIL regardless of score:
 `NET-EXFIL-ENV`, `NET-WEBHOOK-KNOWN`, `SKILL-PASSWORD-ZIP`,
 `PI-EXFIL-TRIGGER-CLAUSE`, `OBFS-EVAL-ATOB`, `DEPS-REMOTE-IMPORT` +
-pipe-to-shell, `FS-CREDSTORE` + any `NET-*`, and a Critical `PI-*` finding +
+pipe-to-shell, `FS-CREDSTORE` + any `NET-*`, a Critical `PI-*` finding +
 a credential-store rule (`FS-CREDSTORE`, `FS-BROWSER-CREDENTIALSTORE`, or
-`FS-KEYCHAIN-ACCESS`).
+`FS-KEYCHAIN-ACCESS`), and `PI-JAILBREAK` or `PI-PRIV-ESCALATE-INSTRUCTION` +
+a credential-store finding on the same line. `PI-PRIV-ESCALATE-INSTRUCTION`
+pairs only with `FS-BROWSER-CREDENTIALSTORE` or `FS-KEYCHAIN-ACCESS`.
 
 ## Rules
 
