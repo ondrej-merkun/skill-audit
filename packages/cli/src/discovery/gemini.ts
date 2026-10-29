@@ -306,7 +306,8 @@ async function discoverUserSettings(userBase: string): Promise<Skill[]> {
     : undefined;
   if (raw === undefined) return discoverSettingsFile(userBase, '~/.gemini', 'user');
 
-  const split = splitMcpServerScanMetadata(raw);
+  // Split the comment-free text, as Gemini CLI parses it. Blanking keeps every offset in place.
+  const split = splitMcpServerScanMetadata(blankJsonComments(raw));
   return [
     ...discoverMcpJson(settingsPath, raw, 'user', split?.servers),
     ...(await discoverSettingsFile(userBase, '~/.gemini', 'user', split?.settings)),
