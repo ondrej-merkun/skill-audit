@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, utimes, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, symlink, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -750,6 +750,11 @@ describe('shared .agents/skills discovery', () => {
     await writeSharedSkill(home, 'foo');
     // Codex and Cursor load skills nested under a grouping directory.
     await writeSharedSkill(home, join('team', 'baz'));
+    // `npx skills` and skillshare install a shared skill as a link into a store.
+    const storedSkillDir = join(home, 'skill-store', 'linked');
+    await mkdir(storedSkillDir, { recursive: true });
+    await writeFile(join(storedSkillDir, 'SKILL.md'), '---\nname: linked\n---\nLinked skill.\n');
+    await symlink(storedSkillDir, join(home, SHARED_SKILLS_DIR, 'linked'));
     // Gemini CLI loads a SKILL.md at the root of the skills directory.
     await writeSharedSkill(cwd, '');
     await writeSharedSkill(cwd, 'bar');
@@ -776,6 +781,7 @@ describe('shared .agents/skills discovery', () => {
       // agentIds stays unset: no agent that is not installed claims the skill.
       expect(sharedSkillRows(skills)).toEqual([
         { agentId, agentIds: undefined, name: 'foo', scope: 'user' },
+        { agentId, agentIds: undefined, name: 'linked', scope: 'user' },
         { agentId, agentIds: undefined, name: 'baz', scope: 'user' },
         { agentId, agentIds: undefined, name: 'skills', scope: 'project' },
         { agentId, agentIds: undefined, name: 'bar', scope: 'project' },
@@ -793,6 +799,7 @@ describe('shared .agents/skills discovery', () => {
 
     expect(sharedSkillRows(skills)).toEqual([
       expect.objectContaining({ agentIds: allAgentIds, name: 'foo', scope: 'user' }),
+      expect.objectContaining({ agentIds: allAgentIds, name: 'linked', scope: 'user' }),
       expect.objectContaining({ agentIds: allAgentIds, name: 'baz', scope: 'user' }),
       expect.objectContaining({ agentIds: allAgentIds, name: 'skills', scope: 'project' }),
       expect.objectContaining({ agentIds: allAgentIds, name: 'bar', scope: 'project' }),
