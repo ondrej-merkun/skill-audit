@@ -202,6 +202,58 @@ describe('mandatory-fail overrides', () => {
   );
 
   it.each([
+    ['PI-JAILBREAK', 'FS-CREDSTORE'],
+    ['PI-JAILBREAK', 'FS-BROWSER-CREDENTIALSTORE'],
+    ['PI-PRIV-ESCALATE-INSTRUCTION', 'FS-BROWSER-CREDENTIALSTORE'],
+  ])('should force FAIL for high %s + %s on the same line', (injectionId, credentialStoreId) => {
+    const result = scoreFindings([
+      finding(injectionId, 'high'),
+      finding(credentialStoreId, 'critical'),
+    ]);
+    expect(result.score).toBe(65);
+    expect(result.verdict).toBe('FAIL');
+    expect(result.mandatoryFail).toEqual([injectionId, credentialStoreId]);
+  });
+
+  it.each([
+    [
+      'the jailbreak and the credential path are on different lines',
+      [finding('PI-JAILBREAK', 'high'), { ...finding('FS-CREDSTORE', 'critical'), line: 3 }],
+      'REVIEW',
+    ],
+    [
+      'the escalation and the keychain read are in different files',
+      [
+        finding('PI-PRIV-ESCALATE-INSTRUCTION', 'high'),
+        { ...finding('FS-KEYCHAIN-ACCESS', 'critical'), file: 'scripts/sync.sh' },
+      ],
+      'REVIEW',
+    ],
+    [
+      'the escalation names an FS-CREDSTORE path that admin work reads',
+      [finding('PI-PRIV-ESCALATE-INSTRUCTION', 'high'), finding('FS-CREDSTORE', 'critical')],
+      'REVIEW',
+    ],
+    [
+      'the jailbreak is in inert supporting docs',
+      [inertDocsFinding('PI-JAILBREAK'), finding('FS-CREDSTORE', 'critical')],
+      'REVIEW',
+    ],
+    [
+      'the credential path is in inert supporting docs',
+      [finding('PI-JAILBREAK', 'high'), inertDocsFinding('FS-CREDSTORE')],
+      'PASS',
+    ],
+  ])(
+    'should NOT force FAIL for high PI + credential-store when %s',
+    (_case, findings, expectedVerdict) => {
+      const result = scoreFindings(findings);
+      expect(result.verdict).toBe(expectedVerdict);
+      expect(result.mandatoryFail).toEqual([]);
+    }
+  );
+
+  it.each([
     ['PI-OVERRIDE', [inertDocsFinding('PI-OVERRIDE'), finding('FS-CREDSTORE', 'critical')]],
     ['FS-CREDSTORE', [finding('PI-OVERRIDE', 'critical'), inertDocsFinding('FS-CREDSTORE')]],
   ])(
@@ -288,16 +340,22 @@ describe('allowlist matching', () => {
     expect(result.mandatoryFail).toContain('NET-EXFIL-ENV');
   });
 
-  it('should not force FAIL for PI + credential-store when allowlisting demotes the PI finding', () => {
-    const result = scoreFindings(
-      [finding('PI-OVERRIDE', 'critical'), finding('FS-CREDSTORE', 'critical')],
-      ALLOWLISTED_SHA,
-    );
-    expect(result.allowlisted).toBe(true);
-    expect(result.critical).toBe(1);
-    expect(result.verdict).toBe('REVIEW');
-    expect(result.mandatoryFail).toEqual([]);
-  });
+  it.each([
+    ['PI-OVERRIDE', 'critical'],
+    ['PI-JAILBREAK', 'high'],
+  ] as const)(
+    'should not force FAIL for %s + credential-store when allowlisting demotes the PI finding',
+    (injectionId, severity) => {
+      const result = scoreFindings(
+        [finding(injectionId, severity), finding('FS-CREDSTORE', 'critical')],
+        ALLOWLISTED_SHA,
+      );
+      expect(result.allowlisted).toBe(true);
+      expect(result.critical).toBe(1);
+      expect(result.verdict).toBe('REVIEW');
+      expect(result.mandatoryFail).toEqual([]);
+    }
+  );
 
   it('should not allowlist placeholder zero hashes', () => {
     const result = scoreFindings([finding('PI-OVERRIDE', 'critical')], PLACEHOLDER_SHA);

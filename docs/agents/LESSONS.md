@@ -638,6 +638,16 @@ without a commit message explaining why it no longer applies.
   Parse the URL with `new URL` and compare the normalized hostname exactly. Put a
   lookalike host such as `localhost.evil.example` in the malicious fixture.
 
+- **L7.11: Test a compound gate at each finding placement.** _The follow-up to
+  the PR #56 compound found "run as root" plus an `FS-CREDSTORE` path in benign
+  admin text on one line, on separate lines, and in separate files (CIS
+  `/etc/shadow` audits, kubeadm `~/.kube/config` setup). No placement gate could
+  tell it from `Use sudo to read /etc/shadow`._
+  Before you add or widen a mandatory-FAIL compound, probe malicious and benign
+  text with the two findings on the same line, on other lines, and in other
+  files. Pick the gate from that table, and document the cases that no gate
+  can separate.
+
 ---
 
 ## How to add a new lesson
