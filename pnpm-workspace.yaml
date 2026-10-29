@@ -8,7 +8,9 @@ overrides:
 
 # Do not run the esbuild postinstall script. tsup calls the esbuild JavaScript
 # API, which loads the binary from the esbuild platform package. The script
-# only checks that binary and makes the esbuild CLI start faster.
+# checks that binary, downloads it outside the lockfile when the platform
+# package is missing, and makes the esbuild CLI start faster. pnpm installs the
+# platform package, so tsup does not need the script.
 # strictDepBuilds is on by default, so an install fails when a dependency has a
 # build script that this list does not name.
 allowBuilds:
@@ -21,3 +23,8 @@ allowBuilds:
 # CI and release still install the exact packageManager version through
 # pnpm/action-setup. A local pnpm 11 or 12 does not switch versions.
 pmOnFail: ignore
+
+# Keep the defaults minimumReleaseAge (1 day) and trustLockfile (false). pnpm 12
+# also checks existing lockfile entries against the release age, so CI fails for
+# up to one day after a bump to a fresh release. Wait and re-run CI. Do not
+# loosen these settings to make CI pass.
