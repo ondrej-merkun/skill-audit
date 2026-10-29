@@ -780,6 +780,59 @@ describe('runScan flag wiring', () => {
     });
   });
 
+  it.each([
+    {
+      scenario: 'isInstalled() throws beside a healthy agent',
+      failingStep: 'isInstalled',
+      healthySkills: [makeSkill()],
+    },
+    {
+      scenario: 'discoverSkills() throws beside a healthy agent',
+      failingStep: 'discoverSkills',
+      healthySkills: [makeSkill()],
+    },
+    {
+      scenario: 'discoverSkills() throws and no skills remain',
+      failingStep: 'discoverSkills',
+      healthySkills: [],
+    },
+  ])('exits 3 and names the failed agent when $scenario', async ({
+    failingStep,
+    healthySkills,
+  }) => {
+    // Use the real registry so the test covers how a plugin failure reaches the exit code.
+    const realDiscovery = await vi.importActual<
+      typeof import('../packages/cli/src/discovery/index.js')
+    >('../packages/cli/src/discovery/index.js');
+    realDiscovery.registerPlugin({
+      id: 'cursor',
+      displayName: 'Cursor',
+      isInstalled: async () => {
+        if (failingStep === 'isInstalled') throw new Error('EACCES: permission denied');
+        return true;
+      },
+      discoverSkills: async () => {
+        throw new Error('EACCES: permission denied');
+      },
+    });
+    realDiscovery.registerPlugin({
+      id: 'claude-code',
+      displayName: 'Claude Code',
+      isInstalled: async () => true,
+      discoverSkills: async () => healthySkills,
+    });
+    vi.mocked(discoverAll).mockImplementation(realDiscovery.discoverAll);
+
+    try {
+      await runScan({ json: true, offline: true });
+    } finally {
+      realDiscovery.clearPlugins();
+    }
+
+    expect(stripAnsi(stderrChunks.join(''))).toContain('discovery plugin "cursor" failed');
+    expect(process.exitCode).toBe(3);
+  });
+
   it('--agent with no discovered skills exits 0 with a clear message', async () => {
     vi.mocked(discoverAll).mockResolvedValue([]);
     const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as never);

@@ -45,6 +45,8 @@ import type {
 import { VERSION } from '../version.js';
 import { findSkillByNameOrId } from './skill-match.js';
 
+const INCOMPLETE_SCAN_EXIT_CODE = 3;
+
 export function computeExitCode(
   verdict: Verdict,
   options: { failOn?: string; strict?: boolean },
@@ -55,7 +57,7 @@ export function computeExitCode(
   const triggersExit1 = threshold === 'REVIEW' ? verdict !== 'PASS' : verdict === 'FAIL';
   if (triggersExit1) return 1;
   // incomplete scan with no failures → signal partial results
-  if (incomplete) return 3;
+  if (incomplete) return INCOMPLETE_SCAN_EXIT_CODE;
   return 0;
 }
 
@@ -218,12 +220,17 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     }),
   });
 
+  // A failed discovery plugin hides an unknown number of skills.
+  let discoveryFailureCount = 0;
   let skills: Skill[];
   try {
     skills = await discoverAll({
       ...(options.agent !== undefined ? { agent: options.agent } : {}),
       ...(options.includeMarketplaces ? { includeMarketplaces: true } : {}),
-      onProgress: progress.onDiscoveryProgress,
+      onProgress: (event) => {
+        if (event.type === 'agent-failed') discoveryFailureCount++;
+        progress.onDiscoveryProgress(event);
+      },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -258,6 +265,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
         ? 'No skills found. Install some agent skills and try again.\n'
         : `No skills found for agent "${options.agent}". Install or enable skills for that agent and try again.\n`
     );
+    if (discoveryFailureCount > 0) process.exitCode = INCOMPLETE_SCAN_EXIT_CODE;
     return;
   }
 
@@ -281,7 +289,8 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
 
   const scannedSkills: ScannedSkill[] = [];
   const agentMap = new Map<string, number>();
-  let incompleteCount = 0;
+  // Failed discovery plugins and failed skill scans both make the result incomplete.
+  let incompleteCount = discoveryFailureCount;
   let completedScans = 0;
 
   // Ignored skills appear in output with no findings and ignored: true
