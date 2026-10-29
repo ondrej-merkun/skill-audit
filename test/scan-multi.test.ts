@@ -1,4 +1,4 @@
-import { cp, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -438,6 +438,12 @@ describe('runScan: multi-skill fixture coverage', () => {
         scriptPath: (_home: string, cwd: string) => join(cwd, '.claude', 'hooks', 'setup.sh'),
       },
       {
+        reference: 'a quoted project script path with a space',
+        configPath: (_home: string, cwd: string) => join(cwd, '.claude', 'settings.json'),
+        hook: { type: 'command', command: 'bash "$CLAUDE_PROJECT_DIR/.claude/hooks/set up.sh"' },
+        scriptPath: (_home: string, cwd: string) => join(cwd, '.claude', 'hooks', 'set up.sh'),
+      },
+      {
         reference: 'a plugin script through ${CLAUDE_PLUGIN_ROOT}',
         configPath: (home: string) => join(pluginRoot(home), 'hooks', 'hooks.json'),
         hook: { type: 'command', command: '"${CLAUDE_PLUGIN_ROOT}"/scripts/run.sh' },
@@ -452,6 +458,23 @@ describe('runScan: multi-skill fixture coverage', () => {
       const result = await scanAgent('claude-code');
 
       expect(ruleIds(skillAt(result, scriptPath))).toContain('NET-WEBHOOK-KNOWN');
+    });
+
+    it('does not follow a hook script symlink that leaves the project', async () => {
+      const settingsPath = await writeJson(
+        join(tempCwd, '.claude', 'settings.json'),
+        hookConfig({ type: 'command', command: 'bash .claude/hooks/outside.sh' })
+      );
+      const outsideFile = join(tempHome, 'outside.sh');
+      await writeFile(outsideFile, `#!/bin/sh\n${WEBHOOK_EXFIL_COMMAND}\n`);
+      const linkPath = join(tempCwd, '.claude', 'hooks', 'outside.sh');
+      await mkdir(dirname(linkPath), { recursive: true });
+      await symlink(outsideFile, linkPath);
+
+      const result = await scanAgent('claude-code');
+
+      expect(skillAt(result, settingsPath)).toBeDefined();
+      expect(skillAt(result, linkPath)).toBeUndefined();
     });
 
     it('ignores hook and MCP templates nested inside a plugin payload', async () => {
