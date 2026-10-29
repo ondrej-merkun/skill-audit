@@ -2,7 +2,8 @@ import { type Dirent, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, extname, join, relative, sep } from 'node:path';
 import type { Finding, Rule, Skill } from '../types.js';
 
-const MAX_SCANNED_CONTENT_CHARS = 1_000_000;
+/** Node's read error for a file longer than the V8 string limit (536,870,888 chars). */
+const STRING_TOO_LONG_ERROR_CODE = 'ERR_STRING_TOO_LONG';
 
 type RawMatch = { index: number; text: string };
 type PrepareContent = NonNullable<Rule['prepareContent']>;
@@ -38,13 +39,15 @@ function globalPattern(pattern: RegExp): RegExp {
 
 /**
  * Runs a single regex pattern against content without spawning workers.
- * Returns empty array for inputs that fail the pre-flight safety caps.
+ * Returns empty array for patterns that fail the nested-quantifier preflight.
+ * Content of any length is matched in full. A size cap or fixed windows would
+ * let padding hide a finding or cut a long match in two.
  */
 export function runPatternWithSafetyPreflight(
   pattern: RegExp,
   content: string
 ): Promise<RawMatch[]> {
-  if (!isSafeRegexInput(pattern, content)) return Promise.resolve([]);
+  if (!isSafePattern(pattern)) return Promise.resolve([]);
 
   const re = globalPattern(pattern);
   const matches: RawMatch[] = [];
@@ -68,8 +71,7 @@ export function runPatternWithSafetyPreflight(
   return Promise.resolve(matches);
 }
 
-function isSafeRegexInput(pattern: RegExp, content: string): boolean {
-  if (content.length > MAX_SCANNED_CONTENT_CHARS) return false;
+function isSafePattern(pattern: RegExp): boolean {
   const cached = safePatternCache.get(pattern);
   if (cached !== undefined) return cached;
   const safe = !hasNestedQuantifier(pattern.source);
@@ -346,6 +348,22 @@ function walkDir(dir: string): string[] {
 }
 
 /**
+ * Reads a file for scanning. Returns undefined for a file that cannot be read.
+ * Throws for a file above the V8 string limit: that file is unscanned, not
+ * clean, so the skill scan must fail and report incomplete instead of PASS.
+ */
+function readScanContent(filePath: string): string | undefined {
+  try {
+    return readFileSync(filePath, 'utf-8');
+  } catch (error) {
+    const isTooLong =
+      error instanceof Error && 'code' in error && error.code === STRING_TOO_LONG_ERROR_CODE;
+    if (isTooLong) throw new Error(`${filePath} is too large to scan`);
+    return undefined;
+  }
+}
+
+/**
  * Runs all applicable rules against every file in skillPath.
  * skillPath may be a directory or a single file.
  * Returns findings (one per rule per line — same rule firing on the same line = one finding).
@@ -378,12 +396,8 @@ export async function runRules(
     );
     if (applicableRules.length === 0) continue;
 
-    let content: string;
-    try {
-      content = readFileSync(filePath, 'utf-8');
-    } catch {
-      continue;
-    }
+    const content = readScanContent(filePath);
+    if (content === undefined) continue;
 
     const lineStarts = lineStartOffsets(content);
     const preparedContent = new Map<PrepareContent, string>();
