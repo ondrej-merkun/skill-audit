@@ -9,7 +9,8 @@ inputs:
   version:
     description: '@ondrej-merkun/skill-audit npm package version to run. The default is the CLI version that this action revision ships. Set "latest" to run the newest npm release.'
     required: false
-    # Pinned so that the action ref also identifies the CLI code that runs.
+    # Pinned so that the action ref also identifies the CLI package version that
+    # runs. The CLI runtime dependencies still resolve within their semver ranges.
     # Keep equal to packages/cli/package.json (test/version-pins.test.ts).
     default: '0.2.1'
   path:
