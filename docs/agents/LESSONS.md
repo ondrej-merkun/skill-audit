@@ -195,6 +195,15 @@ without a commit message explaining why it no longer applies.
   not only the tests that fail. Pair `vi.resetAllMocks()` with
   `vi.restoreAllMocks()` where module mocks must not leak.
 
+- **L1.30 — A build tool's `engines` range sets the contributor Node floor.**
+  _tsdown 0.23.3 needs Node `^22.18.0 || ^24.11.0 || >=26.0.0`. On Node 22.17
+  the build failed with `Failed to import module "unrun"`, and on Node 24.0 it
+  printed an `ExperimentalWarning` line that fails the build-warning check. CI
+  saw neither, because `node-version: 22` resolves to the newest 22.x._
+  When you add or upgrade a build or test tool, compare its `engines` with the
+  Node floor in `.github/CONTRIBUTING.md`, and build on the lowest allowed
+  version.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task
