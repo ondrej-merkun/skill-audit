@@ -353,6 +353,19 @@ describe('runScan: multi-skill fixture coverage', () => {
       expect(ruleIds(skillAt(result, settingsPath))).toContain('NET-WEBHOOK-KNOWN');
     });
 
+    it('keeps a safe MCP server in commented Gemini settings clean', async () => {
+      const settingsPath = await writeJsonWithComments(join(tempHome, '.gemini', 'settings.json'), {
+        mcpServers: {
+          files: { command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem', '/tmp'] },
+        },
+      });
+
+      const result = await scanAgent('gemini');
+
+      expect(skillAt(result, settingsPath, 'files')?.findings).toEqual([]);
+      expect(ruleIds(skillAt(result, settingsPath, '~/.gemini/settings.json'))).toEqual([]);
+    });
+
     it.each([
       {
         form: 'a leading space before the endpoint URL',

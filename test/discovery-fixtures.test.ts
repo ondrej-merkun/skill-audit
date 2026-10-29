@@ -552,7 +552,7 @@ describe('gemini: fixture skill tree', () => {
     );
   });
 
-  it('discovers user extensions, nested commands, agents, and MCP settings', async () => {
+  it('discovers user extensions, nested commands, agents, and MCP servers in commented settings', async () => {
     expect(await geminiDiscovery.isInstalled()).toBe(true);
 
     const skills = await geminiDiscovery.discoverSkills();
