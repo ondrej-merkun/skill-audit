@@ -11,15 +11,25 @@ tag is not the first place a problem appears.
 - Confirm package metadata in
   [`packages/cli/package.json`](../packages/cli/package.json) still points to
   `git+https://github.com/ondrej-merkun/skill-audit.git`.
-- Set the `version` input default in [`action.yml`](../action.yml) to the new
-  package version. `test/version-pins.test.ts` fails when the two differ.
-- Confirm npm trusted publishing is configured as described in
-  [`docs/PUBLISHING.md`](PUBLISHING.md).
-- Update every `@ondrej-merkun/skill-audit@<version>` pin in
+- Set the new version from the repository root:
+
+  ```bash
+  node scripts/set-version.mjs <x.y.z>
+  pnpm test test/version-pins.test.ts
+  ```
+
+  The script sets `version` in
+  [`packages/cli/package.json`](../packages/cli/package.json), the `version`
+  input default in [`action.yml`](../action.yml), and every
+  `@ondrej-merkun/skill-audit@<version>` pin in
   [`packages/skill/SKILL.md`](../packages/skill/SKILL.md), including the
   `allowed-tools` rules, and in
-  [`packages/skill/README.md`](../packages/skill/README.md) to the new package
-  version. `test/version-pins.test.ts` fails until they match.
+  [`packages/skill/README.md`](../packages/skill/README.md). It prints each
+  change. It accepts only a plain `x.y.z` version, because the release workflow
+  publishes without `--tag` and npm refuses a prerelease version that way. The
+  test fails when a pin differs from the package version.
+- Confirm npm trusted publishing is configured as described in
+  [`docs/PUBLISHING.md`](PUBLISHING.md).
 - Confirm public docs changed in the release have working local links and image
   paths.
 - Confirm changed README screenshots, SVGs, and badges render at their embedded
