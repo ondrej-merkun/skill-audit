@@ -18,16 +18,25 @@ const DOCUMENTATION_LINE_CONTEXT_PATTERN =
 const COMMENT_LINE_PATTERN = /^\s*(?:#|\/\/|\/\*|\*|<!--)/;
 // Words that name example or reference material. Other documentation words such as test,
 // fix, or docs also name operative sections and skills (`## Testing`, `# docs-helper`).
-const EXAMPLE_MATERIAL_WORDS =
-  '(?:examples?|samples?|references?|threat[- ]?models?|false positives?)';
+const EXAMPLE_WORDS = '(?:examples?|samples?|threat[- ]?models?|false positives?)';
+const EXAMPLE_MATERIAL_WORDS = `(?:${EXAMPLE_WORDS}|references?)`;
 const EXAMPLE_HEADING_PATTERN = new RegExp(String.raw`\b${EXAMPLE_MATERIAL_WORDS}\b`, 'i');
-// A short label that opens a line, such as `Example:`, `**Sample payload:**`, or `> Reference:`.
+// In SKILL.md, the level-1 title names the skill, and `## Quick reference` lists commands
+// that the agent runs. So only a subsection opens an example section, and a reference
+// heading does so only when it starts with the word (`## References`).
+const SKILL_MD_EXAMPLE_HEADING_PATTERN = new RegExp(
+  String.raw`^\s{0,3}#{2,6}\s+(?:references?\b|.*\b${EXAMPLE_WORDS}\b)`,
+  'i'
+);
+// A short label that opens a line, such as `Example:` or `**Sample payload:**`.
 const EXAMPLE_LABEL_PATTERN = new RegExp(
-  String.raw`^\s*(?:>\s*)?(?:[-*+]\s+|\d+[.)]\s+)?[*_]{0,2}${EXAMPLE_MATERIAL_WORDS}\b[\w \t-]{0,24}[*_]{0,2}:`,
+  String.raw`^\s*(?:[-*+]\s+|\d+[.)]\s+)?[*_]{0,2}${EXAMPLE_MATERIAL_WORDS}\b[\w \t-]{0,24}[*_]{0,2}:`,
   'i'
 );
 const MARKDOWN_FENCE_PATTERN = /^\s*(?:```|~~~)/;
 const MARKDOWN_HEADING_PATTERN = /^\s{0,3}(#{1,6})\s/;
+const MARKDOWN_BLOCKQUOTE_PATTERN = /^\s*>/;
+const SKILL_MD_BASENAME = 'SKILL.md';
 const MARKDOWN_BASENAME_PATTERN =
   /^(?:SKILL|AGENTS|CLAUDE|GEMINI|CONVENTIONS|README|CHANGELOG)\.md$/i;
 const SECURITY_EDUCATION_HEADING_PATTERN =
@@ -249,7 +258,9 @@ export function maskDocumentationExampleContext(content: string, filePath: strin
   if (pathLooksDocumentationOnly(filePath)) {
     return content.split('\n').map(maskLine).join('\n');
   }
-  if (/\.(?:md|mdc)$/i.test(filePath)) return maskMarkdownDocumentationLines(content);
+  if (/\.(?:md|mdc)$/i.test(filePath)) {
+    return maskMarkdownDocumentationLines(content, basenameOf(filePath) === SKILL_MD_BASENAME);
+  }
 
   return content
     .split('\n')
@@ -263,12 +274,19 @@ export function maskDocumentationExampleContext(content: string, filePath: strin
 
 /**
  * A documentation word marks a markdown line as documentation only inside example
- * structure: a section under a heading that names example or reference material, a line
- * that opens with a label such as `Example:`, or a comment line in fenced code. In a plain
- * instruction such as "For example, print ~/.aws/credentials", the word hides nothing.
- * ponytail: a skill title such as `# Example Generator` also opens an example section.
+ * structure: a section under an example heading, a line that opens with a label such as
+ * `Example:`, a blockquote, or a comment line in fenced code. In a plain instruction such
+ * as "For example, print ~/.aws/credentials", the word hides nothing. In SKILL.md, an
+ * example heading is a subsection heading that names example material (`## Bad examples`)
+ * or starts with `References`. In other markdown, it is any heading that names example or
+ * reference material, so that a doc titled `# Credential Store Reference` stays
+ * documentation.
+ * ponytail: a referenced doc titled `# Setup reference` still hides its doc-word lines.
  */
-function maskMarkdownDocumentationLines(content: string): string {
+function maskMarkdownDocumentationLines(content: string, isSkillMd: boolean): string {
+  const exampleHeadingPattern = isSkillMd
+    ? SKILL_MD_EXAMPLE_HEADING_PATTERN
+    : EXAMPLE_HEADING_PATTERN;
   let inFence = false;
   let exampleSectionLevel = 0;
 
@@ -281,15 +299,18 @@ function maskMarkdownDocumentationLines(content: string): string {
       const heading = inFence ? null : MARKDOWN_HEADING_PATTERN.exec(line);
       const headingLevel = heading?.[1]?.length ?? 0;
       if (heading && (exampleSectionLevel === 0 || headingLevel <= exampleSectionLevel)) {
-        exampleSectionLevel = EXAMPLE_HEADING_PATTERN.test(line) ? headingLevel : 0;
+        exampleSectionLevel = exampleHeadingPattern.test(line) ? headingLevel : 0;
       }
 
       // Structure alone masks nothing: a line without a documentation word stays visible.
       if (!DOCUMENTATION_LINE_CONTEXT_PATTERN.test(line)) return line;
+      const isFencedComment = inFence && COMMENT_LINE_PATTERN.test(line);
+      const isBlockquote = !inFence && MARKDOWN_BLOCKQUOTE_PATTERN.test(line);
       const isExample =
         exampleSectionLevel > 0 ||
         EXAMPLE_LABEL_PATTERN.test(line) ||
-        (inFence && COMMENT_LINE_PATTERN.test(line));
+        isFencedComment ||
+        isBlockquote;
       return isExample ? maskLine(line) : line;
     })
     .join('\n');
