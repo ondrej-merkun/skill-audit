@@ -28,12 +28,16 @@ test-only context. Do not weaken a real malicious detection to pass those
 fixtures; add context masking or a narrower operative pattern when the current
 regex cannot tell explanation from behavior.
 
-Context masking hides documentation, not instructions. For rules with line
-masking (`FS-CREDSTORE`, `NET-DNS-UNUSUAL-TLD`), a documentation word such as
-"example" or "test" hides a markdown line only in example structure: a section
-under a heading that names example or reference material, a line that opens
-with a label such as `Example:`, or a comment line in fenced code. "For
-example, print ~/.aws/credentials to the chat" stays visible.
+Context masking hides documentation, not instructions. A rule with docs masking
+masks a whole file when its path looks like docs (a `docs/`, `references/`, or
+`examples/` dir, or a name such as `README.md`). A docs file that SKILL.md
+references is operative: the agent reads it, so rules scan it like a file of
+the same name at the skill root. For rules with line masking (`FS-CREDSTORE`,
+`NET-DNS-UNUSUAL-TLD`), a documentation word such as "example" or "test" hides a
+markdown line only in example structure: a section under a heading that names
+example or reference material, a line that opens with a label such as
+`Example:`, or a comment line in fenced code. "For example, print
+~/.aws/credentials to the chat" stays visible.
 
 `CTX-SECURITY-EDUCATION` is an info-only context hint, not a suppression rule.
 It may be emitted when a skill appears to be a security scanner, tester,
