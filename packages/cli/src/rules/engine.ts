@@ -469,6 +469,8 @@ export async function runRules(
   try {
     const st = statSync(skillPath);
     isDirectory = st.isDirectory();
+    // A FIFO, socket, or device target is skipped like a missing file: its read may never end.
+    if (!isDirectory && !st.isFile()) return [];
     files = isDirectory
       ? walkDir(skillPath, options.scanTargetPaths ?? new Set(), skippedDirs)
       : [skillPath];

@@ -819,10 +819,18 @@ describe.skipIf(process.platform === 'win32')('e2e: FIFO at a read path', () => 
     { fifo: '.cursorrules' },
     { fifo: '.github/copilot-instructions.md' },
     { fifo: '~/.cline/data/settings/cline_mcp_settings.json' },
-    // A finding makes the security-education check read the skill manifest.
+    // A finding makes the security-education check read the skill manifest, and also
+    // README.md when SKILL.md is empty.
     {
       fifo: '~/.copilot/skills/cp/SKILL.md',
       files: { '~/.copilot/skills/cp/run.sh': MALICIOUS_SCRIPT },
+    },
+    {
+      fifo: '~/.claude/skills/ctx/README.md',
+      files: {
+        '~/.claude/skills/ctx/SKILL.md': '',
+        '~/.claude/skills/ctx/run.sh': MALICIOUS_SCRIPT,
+      },
     },
   ])(
     'scan skips a FIFO at $fifo like a missing file',
