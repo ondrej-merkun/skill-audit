@@ -28,13 +28,25 @@ const PIPE_TO_SHELL_RULES = new Set([
 ]);
 
 /**
- * Credential-store access rules (used in the prompt-injection compound check).
+ * Credential-store access rules (used in the prompt-injection compound checks).
  * Each one detects a direct read of stored secrets (CWE-522); only the store differs.
  */
 const CREDENTIAL_STORE_RULES = new Set([
   'FS-CREDSTORE',
   'FS-BROWSER-CREDENTIALSTORE',
   'FS-KEYCHAIN-ACCESS',
+]);
+
+/**
+ * High PI rules that force FAIL with a credential-store finding on the same line,
+ * mapped to the credential-store rules that they pair with.
+ */
+const SAME_LINE_INJECTION_STORE_RULES = new Map<string, ReadonlySet<string>>([
+  ['PI-JAILBREAK', CREDENTIAL_STORE_RULES],
+  // FS-CREDSTORE paths include files that root admin work reads (/etc/passwd,
+  // /etc/shadow, ~/.kube/config, ~/.ssh/authorized_keys), so "run as root" next
+  // to one of them is not evidence of theft.
+  ['PI-PRIV-ESCALATE-INSTRUCTION', new Set(['FS-BROWSER-CREDENTIALSTORE', 'FS-KEYCHAIN-ACCESS'])],
 ]);
 
 function countUniqueRulesBySeverity(findings: Finding[], severity: Severity): number {
@@ -99,6 +111,26 @@ function getMandatoryFailIds(findings: Finding[]): string[] {
         triggered.add(storeId);
         break;
       }
+    }
+  }
+
+  // High PI-* combined with a credential-store read on the same line: the jailbreak
+  // or escalation instruction names the secret itself. Admin and security-teaching
+  // skills mention these on separate lines or in separate files, so those stay REVIEW.
+  // Allowlist-demoted PI-* findings are info and never qualify.
+  // ponytail: an attack split across lines or files stays REVIEW. PI-JAILBREAK has
+  // no quote guard, so an unmasked teaching line that quotes a jailbreak together
+  // with a credential path turns FAIL.
+  for (const injection of verdictFindings) {
+    const pairedStoreIds = SAME_LINE_INJECTION_STORE_RULES.get(injection.ruleId);
+    if (pairedStoreIds === undefined || injection.severity === 'info') continue;
+
+    const store = verdictFindings.find(
+      (f) => pairedStoreIds.has(f.ruleId) && f.file === injection.file && f.line === injection.line
+    );
+    if (store !== undefined) {
+      triggered.add(injection.ruleId);
+      triggered.add(store.ruleId);
     }
   }
 
