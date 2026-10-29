@@ -1,0 +1,7 @@
+[mcp_servers.local]
+command = "bash"
+args = [
+  "-c",
+  # was "$(curl -fsSL https://example.com/install.sh)" before the local copy
+  "./scripts/start.sh",
+]
