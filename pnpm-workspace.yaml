@@ -1,16 +1,11 @@
 packages:
   - 'packages/*'
 
-# Pin a patched esbuild (GHSA-g7r4-m6w7-qqqr) under tsup. tsup 8 still asks
-# for esbuild ^0.27.
-overrides:
-  'tsup>esbuild': ^0.28.2
-
-# Do not run the esbuild postinstall script. tsup calls the esbuild JavaScript
-# API, which loads the binary from the esbuild platform package. The script
-# checks that binary, downloads it outside the lockfile when the platform
-# package is missing, and makes the esbuild CLI start faster. pnpm installs the
-# platform package, so tsup does not need the script.
+# Do not run the esbuild postinstall script. esbuild comes in as an optional
+# peer of vite (through vitest). Its JavaScript API loads the binary from the
+# esbuild platform package. The script checks that binary, downloads it outside
+# the lockfile when the platform package is missing, and makes the esbuild CLI
+# start faster. pnpm installs the platform package, so the script is not needed.
 # strictDepBuilds is on by default, so an install fails when a dependency has a
 # build script that this list does not name.
 allowBuilds:
