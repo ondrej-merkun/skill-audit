@@ -7,7 +7,9 @@ tag is not the first place a problem appears.
 
 ## Before Tagging
 
-- Confirm the release contents are final in [`packages/cli/CHANGELOG.md`](../packages/cli/CHANGELOG.md).
+- In [`packages/cli/CHANGELOG.md`](../packages/cli/CHANGELOG.md), rename the
+  `## Unreleased` heading to the new version, for example `## 0.3.0`, and
+  confirm the release contents are final.
 - Confirm package metadata in
   [`packages/cli/package.json`](../packages/cli/package.json) still points to
   `git+https://github.com/ondrej-merkun/skill-audit.git`.
