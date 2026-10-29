@@ -1,5 +1,6 @@
 import type { DiscoveryProgressCallback } from '../progress.js';
-import type { AgentDiscovery, Skill } from '../types.js';
+import { ruleInstallation } from '../rules/installation.js';
+import type { AgentDiscovery, Skill, SkillInstallation } from '../types.js';
 import agentsMdSweepDiscovery from './agents-md-sweep.js';
 import claudeCodeDiscovery from './claude-code.js';
 import clineDiscovery from './cline.js';
@@ -30,7 +31,9 @@ function cloneSkill(skill: Skill): Skill {
       ? { agentPaths: skill.agentPaths.map((path) => ({ ...path })) }
       : {}),
     ...(skill.alsoInstalledAt !== undefined ? { alsoInstalledAt: [...skill.alsoInstalledAt] } : {}),
-    ...(skill.scopes !== undefined ? { scopes: [...skill.scopes] } : {}),
+    ...(skill.installations !== undefined
+      ? { installations: skill.installations.map((installation) => ({ ...installation })) }
+      : {}),
   };
 }
 
@@ -87,11 +90,21 @@ function collectAgentPaths(skills: Skill[]): Array<{ agentId: string; path: stri
     .map(([agentId, paths]) => ({ agentId, path: selectPrimaryPath(paths) }));
 }
 
-// The primary installation's scope alone would hide a project copy of a user file
-// from the project-only rules, so the merged skill keeps every scope.
-function collectScopes(skills: Skill[]): Array<Skill['scope']> {
-  const scopes = new Set(skills.flatMap((skill) => skill.scopes ?? [skill.scope]));
-  return [...scopes].sort();
+// The merged skill has the scope, format, and scan name of its primary installation only.
+// Rule selection needs them for every installation, and as one record per installation: a
+// project copy of a user settings file must get the project-only rules, and a user settings
+// file must not get them because a project file of another name or format has the same content.
+function collectInstallations(skills: Skill[]): SkillInstallation[] {
+  const installationsByKey = new Map<string, SkillInstallation>();
+
+  for (const skill of skills) {
+    for (const installation of skill.installations ?? [ruleInstallation(skill)]) {
+      const key = [installation.scope, installation.format, installation.scanName].join('\0');
+      installationsByKey.set(key, installation);
+    }
+  }
+
+  return [...installationsByKey.values()];
 }
 
 export function dedupeDiscoveredSkills(skills: Skill[]): Skill[] {
@@ -134,14 +147,14 @@ export function dedupeDiscoveredSkills(skills: Skill[]): Skill[] {
       alsoInstalledAt: _alsoInstalledAt,
       agentIds: _agentIds,
       agentPaths: _agentPaths,
-      scopes: _scopes,
+      installations: _installations,
       ...primaryWithoutAliases
     } = selectedPrimary;
 
     const alsoInstalledAt = [...group.paths].filter((path) => path !== primaryPath).sort();
     const agentPaths = collectAgentPaths(group.skills);
     const agentIds = agentPaths.map((entry) => entry.agentId);
-    const scopes = collectScopes(group.skills);
+    const installations = collectInstallations(group.skills);
     output[group.outputIndex] = {
       ...primaryWithoutAliases,
       path: primaryPath,
@@ -149,7 +162,7 @@ export function dedupeDiscoveredSkills(skills: Skill[]): Skill[] {
       ...(agentIds.length > 1 ? { agentIds } : {}),
       ...(agentPaths.length > 1 ? { agentPaths } : {}),
       ...(alsoInstalledAt.length > 0 ? { alsoInstalledAt } : {}),
-      ...(scopes.length > 1 ? { scopes } : {}),
+      ...(installations.length > 1 ? { installations } : {}),
     };
   }
 

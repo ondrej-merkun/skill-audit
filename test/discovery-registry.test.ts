@@ -224,6 +224,10 @@ describe('discoverAll', () => {
           { agentId: 'test-agent', path: laterPath.path },
         ],
         alsoInstalledAt: ['/tmp/skills/b-primary'],
+        installations: [
+          { format: 'SKILL.md', scope: 'user', scanName: 'b-primary' },
+          { format: 'SKILL.md', scope: 'user', scanName: 'a-duplicate' },
+        ],
       },
     ]);
     expect(skills[0]).not.toBe(earlierPath);

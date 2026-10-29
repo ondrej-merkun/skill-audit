@@ -509,7 +509,7 @@ export async function runRulesForSkill(
   options: Pick<RunRulesOptions, 'scanAllSupportingFiles' | 'scanTargetPaths'> = {}
 ): Promise<Finding[]> {
   const runOptions: RunRulesOptions = {
-    scopes: skill.scopes ?? [skill.scope],
+    scopes: (skill.installations ?? [skill]).map((installation) => installation.scope),
     ...(skill.metadata?.ruleScanFilename !== undefined
       ? { filenameOverride: skill.metadata.ruleScanFilename }
       : {}),

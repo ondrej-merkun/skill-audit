@@ -229,8 +229,10 @@ the repo root and `/etc/codex/skills`, and Cursor nested project directories.
    `project`).
 2. Dedupe by `treeSha256` — if two discovered paths have identical
    content hash, report once and preserve the agent-to-path mapping on
-   the normalized skill. Also keep the scope of every installation, so
-   project-only rules still run when the primary path is a user path.
+   the normalized skill. Also keep the scope, format, and scan file name
+   of every installation as one record. Rule selection reads these
+   records, so a project copy of a user file still gets the project-only
+   rules when the primary path is a user path.
    This is a registry-level invariant owned by
    `discoverAll()`, because duplicates can come from different agents/plugins.
    Do not dedupe entries whose `treeSha256` is empty; those are synthetic
