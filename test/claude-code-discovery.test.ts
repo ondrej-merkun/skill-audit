@@ -1,6 +1,6 @@
 import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import claudeCodeDiscovery from '../packages/cli/src/discovery/claude-code.js';
 
@@ -168,35 +168,53 @@ describe('claude-code discovery plugin', () => {
     expect(skills.find((s) => s.name === 'reviewer')?.format).toBe('agents-md');
   });
 
-  it('excludes plugin marketplace inventory by default', async () => {
-    const installedDir = join(
-      tempHome,
-      '.claude',
-      'plugins',
-      'vendor',
-      'installed-tool',
-      'skills',
-      'installed-review'
-    );
-    const marketplaceDir = join(
-      tempHome,
-      '.claude',
-      'plugins',
-      'marketplaces',
-      'vendor',
-      'available-tool',
-      'skills',
-      'marketplace-review'
-    );
+  it.each([
+    { inventory: 'plugin marketplace inventory', root: ['marketplaces', 'vendor', 'tool'] },
+    {
+      // Claude Code moves the synced plugins that it removes to plugins/.trash and never loads them.
+      inventory: 'trashed synced plugins',
+      root: ['.trash', '1792147211609-46062-ioUNtF', '51df6eb1-9f1b-49d5-8bd3-98d19af7f212'],
+    },
+  ])('excludes $inventory from default discovery', async ({ root }) => {
+    const pluginsDir = join(tempHome, '.claude', 'plugins');
+    const installedDir = join(pluginsDir, 'vendor', 'installed-tool', 'skills', 'installed-review');
+    const inactiveFiles = {
+      'skills/inactive-review/SKILL.md': '# Inactive Review',
+      'commands/inactive-command.md': '# Inactive Command',
+      'agents/inactive-agent.md': '# Inactive Agent',
+      'hooks/hooks.json': JSON.stringify({
+        hooks: {
+          SessionStart: [
+            { hooks: [{ type: 'command', command: '"${CLAUDE_PLUGIN_ROOT}"/hooks/run.sh' }] },
+          ],
+        },
+      }),
+      'hooks/run.sh': 'echo run',
+      '.mcp.json': JSON.stringify({ mcpServers: { inactive: { command: 'node' } } }),
+    };
     await mkdir(installedDir, { recursive: true });
-    await mkdir(marketplaceDir, { recursive: true });
     await writeFile(join(installedDir, 'SKILL.md'), '# Installed Review');
-    await writeFile(join(marketplaceDir, 'SKILL.md'), '# Marketplace Review');
+    for (const [file, content] of Object.entries(inactiveFiles)) {
+      const path = join(pluginsDir, ...root, file);
+      await mkdir(dirname(path), { recursive: true });
+      await writeFile(path, content);
+    }
 
     const skills = await claudeCodeDiscovery.discoverSkills();
 
-    expect(skills.map((s) => s.name)).toContain('installed-review');
-    expect(skills.map((s) => s.name)).not.toContain('marketplace-review');
+    expect(skills.map((s) => s.path)).toEqual([installedDir]);
+  });
+
+  it('discovers a plugins/.trash dir inside a plugin payload', async () => {
+    // A plugin manifest can load skills from any dir in the plugin, such as ./plugins/.trash/.
+    const pluginDir = join(tempHome, '.claude', 'plugins', 'cache', 'vendor', 'tool', '1.0.0');
+    const skillDir = join(pluginDir, 'plugins', '.trash', 'payload');
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(join(skillDir, 'SKILL.md'), '# Payload');
+
+    const skills = await claudeCodeDiscovery.discoverSkills();
+
+    expect(skills.map((s) => s.path)).toEqual([skillDir]);
   });
 
   it('labels plugin marketplace inventory when explicitly included', async () => {

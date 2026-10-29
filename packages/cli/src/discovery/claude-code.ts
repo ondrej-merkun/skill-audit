@@ -25,6 +25,13 @@ function getCwd(): string {
   return process.env.SKILL_AUDIT_CWD ?? process.cwd();
 }
 
+// Claude Code moves the synced plugins that it removes to this dir and never loads them again.
+// Only this exact dir is skipped: a plugin manifest can load skills or hooks from a nested
+// `plugins/.trash` dir, so a path-segment match would hide a loaded payload.
+function pluginTrashDir(): string {
+  return join(getHomeDir(), '.claude', 'plugins', '.trash');
+}
+
 function makeId(input: string): string {
   return createHash('sha256').update(`${AGENT_ID}:${input}`).digest('hex').slice(0, 16);
 }
@@ -80,6 +87,7 @@ async function skillFromFile(
 async function walkFiles(root: string, options: DiscoverSkillsOptions = {}): Promise<string[]> {
   const files: string[] = [];
   const visitedRealDirs = new Set<string>();
+  const trashDir = pluginTrashDir();
 
   async function walk(dir: string): Promise<void> {
     if (!(await enterDirOnce(visitedRealDirs, dir))) return;
@@ -88,6 +96,7 @@ async function walkFiles(root: string, options: DiscoverSkillsOptions = {}): Pro
       const fullPath = join(dir, entry.name);
       if (entry.kind === 'dir') {
         if (shouldSkipMarketplacePath(fullPath, options.includeMarketplaces)) continue;
+        if (fullPath === trashDir) continue;
         await walk(fullPath);
       } else {
         files.push(fullPath);
