@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, dirname, join, relative } from 'node:path';
+import { enterDirOnce, readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
 import { fallbackSkillNameFromDirectory } from './names.js';
@@ -73,21 +74,17 @@ async function skillFromFile(
 
 async function walkFiles(root: string, options: DiscoverSkillsOptions = {}): Promise<string[]> {
   const files: string[] = [];
+  const visitedRealDirs = new Set<string>();
 
   async function walk(dir: string): Promise<void> {
-    let entries: Array<{ isDirectory(): boolean; isFile(): boolean; name: string }>;
-    try {
-      entries = await readdir(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
+    if (!(await enterDirOnce(visitedRealDirs, dir))) return;
 
-    for (const entry of entries) {
+    for (const entry of await readDirFollowingLinks(dir)) {
       const fullPath = join(dir, entry.name);
-      if (entry.isDirectory()) {
+      if (entry.kind === 'dir') {
         if (shouldSkipMarketplacePath(fullPath, options.includeMarketplaces)) continue;
         await walk(fullPath);
-      } else if (entry.isFile()) {
+      } else {
         files.push(fullPath);
       }
     }

@@ -202,13 +202,16 @@ describe('windsurf discovery plugin', () => {
     expect(skill?.treeSha256).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it('does not follow a legacy .windsurfrules symlink', async () => {
+  it('follows a legacy .windsurfrules symlink', async () => {
+    // Windsurf loads the link target, so the scan must see it too.
     const outsideFile = join(tempHome, 'outside.md');
     await writeFile(outsideFile, '# Outside rules\n');
     await symlink(outsideFile, join(tempCwd, '.windsurfrules'));
 
     const skills = await windsurfDiscovery.discoverSkills();
 
-    expect(skills.find((s) => s.name === '.windsurfrules')).toBeUndefined();
+    expect(skills.find((s) => s.name === '.windsurfrules')?.path).toBe(
+      join(tempCwd, '.windsurfrules')
+    );
   });
 });

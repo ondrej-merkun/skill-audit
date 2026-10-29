@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, dirname, join, relative } from 'node:path';
+import { enterDirOnce, readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
 import { fallbackSkillNameFromDirectory } from './names.js';
@@ -46,22 +47,18 @@ async function pathExists(p: string): Promise<boolean> {
 
 async function walkFiles(root: string, options: WalkOptions = {}): Promise<string[]> {
   const files: string[] = [];
+  const visitedRealDirs = new Set<string>();
 
   async function walk(dir: string): Promise<void> {
-    let entries: Array<{ isDirectory(): boolean; isFile(): boolean; name: string }>;
-    try {
-      entries = await readdir(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
+    if (!(await enterDirOnce(visitedRealDirs, dir))) return;
 
-    for (const entry of entries) {
+    for (const entry of await readDirFollowingLinks(dir)) {
       const fullPath = join(dir, entry.name);
-      if (entry.isDirectory()) {
+      if (entry.kind === 'dir') {
         if (shouldSkipMarketplacePath(fullPath, options.includeMarketplaces)) continue;
         if (options.skipDirectory?.(fullPath, entry.name, dir)) continue;
         await walk(fullPath);
-      } else if (entry.isFile()) {
+      } else {
         files.push(fullPath);
       }
     }
@@ -215,16 +212,11 @@ async function discoverActivePluginPayloadTree(
 }
 
 async function discoverPromptFiles(dir: string): Promise<Skill[]> {
-  let entries: Array<{ isFile(): boolean; name: string }>;
-  try {
-    entries = await readdir(dir, { withFileTypes: true });
-  } catch {
-    return [];
-  }
+  const entries = await readDirFollowingLinks(dir);
 
   return Promise.all(
     entries
-      .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+      .filter((entry) => entry.kind === 'file' && entry.name.endsWith('.md'))
       .map((entry) => {
         const filePath = join(dir, entry.name);
         return skillFromFile(filePath, basename(entry.name, '.md'), 'prompt-md', 'user');

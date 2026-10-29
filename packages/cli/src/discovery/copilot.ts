@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { readdir, stat } from 'node:fs/promises';
+import { stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, join } from 'node:path';
+import { readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { discoverSharedAgentSkills } from './shared-agent-skills.js';
 import { computeTreeSha256 } from './tree-hash.js';
@@ -30,17 +31,7 @@ async function pathExists(p: string): Promise<boolean> {
 }
 
 async function discoverSkillsDir(dir: string, scope: Skill['scope']): Promise<Skill[]> {
-  let entries: { isDirectory(): boolean; name: string }[];
-  try {
-    entries = (await readdir(dir, { withFileTypes: true })) as {
-      isDirectory(): boolean;
-      name: string;
-    }[];
-  } catch {
-    return [];
-  }
-
-  const skillDirs = entries.filter((e) => e.isDirectory());
+  const skillDirs = (await readDirFollowingLinks(dir)).filter((e) => e.kind === 'dir');
   const results: Skill[] = [];
 
   for (const entry of skillDirs) {
@@ -83,17 +74,9 @@ async function discoverSingleFile(
 }
 
 async function discoverInstructionsDir(dir: string, scope: Skill['scope']): Promise<Skill[]> {
-  let entries: { isFile(): boolean; name: string }[];
-  try {
-    entries = (await readdir(dir, { withFileTypes: true })) as {
-      isFile(): boolean;
-      name: string;
-    }[];
-  } catch {
-    return [];
-  }
-
-  const mdFiles = entries.filter((e) => e.isFile() && e.name.endsWith('.instructions.md'));
+  const mdFiles = (await readDirFollowingLinks(dir)).filter(
+    (e) => e.kind === 'file' && e.name.endsWith('.instructions.md')
+  );
   return Promise.all(
     mdFiles.map(async (e) => {
       const filePath = join(dir, e.name);
