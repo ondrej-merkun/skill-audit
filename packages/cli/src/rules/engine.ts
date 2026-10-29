@@ -6,6 +6,7 @@ import {
   AGENT_CONFIG_COMMANDS_SCAN_NAME,
   AGENT_CONFIG_FILENAMES,
   extractAgentConfigCommands,
+  extractAgentConfigCommandsOnOneLine,
 } from './agent-config.js';
 import { pathLooksDocumentationOnly } from './code-context.js';
 
@@ -555,11 +556,23 @@ function matchPasses(
   const passes: MatchPass[] = [{ rules: rulesForScanName(rules, name, scope), preparePath }];
 
   if (AGENT_CONFIG_FILENAMES.has(name)) {
-    passes.push({
-      rules: rulesForScanName(rules, AGENT_CONFIG_COMMANDS_SCAN_NAME, scope),
-      preparePath: join(dirname(preparePath), AGENT_CONFIG_COMMANDS_SCAN_NAME),
-      view: (content) => extractAgentConfigCommands(content, preparePath),
-    });
+    const commandRules = rulesForScanName(rules, AGENT_CONFIG_COMMANDS_SCAN_NAME, scope);
+    const commandsPath = join(dirname(preparePath), AGENT_CONFIG_COMMANDS_SCAN_NAME);
+    // Two layouts of the same commands: the shell's lines, so a `#` comment line hides only
+    // itself, and one line per command, so a pattern can span a pipeline or quoted body that
+    // the shell continues across lines. A finding needs only one layout.
+    passes.push(
+      {
+        rules: commandRules,
+        preparePath: commandsPath,
+        view: (content) => extractAgentConfigCommands(content, preparePath),
+      },
+      {
+        rules: commandRules,
+        preparePath: commandsPath,
+        view: (content) => extractAgentConfigCommandsOnOneLine(content, preparePath),
+      }
+    );
   }
 
   return passes.filter((pass) => pass.rules.length > 0);
@@ -588,14 +601,16 @@ async function matchRules(
 ): Promise<Finding[]> {
   const findings: Finding[] = [];
   const lineStarts = lineStartOffsets(content);
+  // One finding per rule per line, also when two passes match the same line.
+  const seenLinesByRule = new Map<string, Set<number>>();
 
   for (const pass of passes) {
     const passContent = pass.view === undefined ? content : pass.view(content);
     const preparedContent = new Map<PrepareContent, string>();
 
     for (const rule of pass.rules) {
-      // Track seen lines per rule to avoid duplicate findings from overlapping patterns
-      const seenLines = new Set<number>();
+      const seenLines = seenLinesByRule.get(rule.id) ?? new Set<number>();
+      seenLinesByRule.set(rule.id, seenLines);
       const matchContent = prepareForRule(rule, passContent, pass.preparePath, preparedContent);
 
       for (const pattern of rule.patterns) {

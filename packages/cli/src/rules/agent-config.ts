@@ -50,13 +50,9 @@ const CR_LINE_BREAK = /\r\n?/g;
 // `(?<=^|\n)` starts a line only after LF. A multiline `^` also starts one after U+2028,
 // which the shell does not treat as a line break.
 const SHELL_CONTINUATION = /(?<=^|\n)(?![ \t]*#)([^\n]*)\\\n/g;
-// A line that ends in a pipe or a list operator continues on the next line without a `\`.
-// While that stage is pending, the shell also skips blank and comment-only lines. A `#`
-// before the operator starts a comment, and a comment ends at the line break.
-const OPERATOR_CONTINUATION = /(?<=^|\n)([^\n#]*(?:\|&?|&&)[ \t]*)\n(?:[ \t]*(?:#[^\n]*)?\n)*/g;
 const TRAILING_SHELL_COMMENT = /(?<=^|\n)[ \t]*#[^\n]*$/;
-// A shell word starts at the beginning of the value or after a blank or a metacharacter.
-const WORD_START_BEFORE = /^$|[\s;&|()]/;
+// A line that holds only a comment. The shell skips it, also inside a pending pipeline.
+const COMMENT_ONLY_LINE = /(?<=^|[\r\n])[ \t]*#[^\r\n]*/g;
 
 // A blanked comment keeps its whitespace, so line breaks inside it stay.
 const NON_WHITESPACE = /\S/g;
@@ -68,19 +64,28 @@ const GEMINI_SETTINGS_FILENAME = 'settings.json';
 
 /**
  * Keeps only the command values of an agent config file, decoded from JSON
- * escapes and placed at their original offsets. Everything else becomes spaces.
- * The path selects the dialect: a Gemini settings file can hold comments.
+ * escapes and placed at their original offsets in the lines that the shell reads,
+ * so a `#` comment line hides only itself. Everything else becomes spaces. The path
+ * selects the dialect: a Gemini settings file can hold comments.
  */
 export function extractAgentConfigCommands(content: string, path: string): string {
-  const json = agentConfigJson(content, path);
-  const parsed = parseJson(json);
-  if (parsed === undefined) return '';
+  return keepCommandValues(content, path, toShellLines);
+}
 
-  const commands = new Set(collectCommandValues(parsed));
-  return rewriteJsonTokens(json, {
-    stringLiteral: (value) => (commands.has(value) ? toShellLines(value) : ''),
-    structure: (text) => ' '.repeat(text.length),
-  });
+/**
+ * Like extractAgentConfigCommands, but each command value stays on one line: comment-only
+ * lines become spaces, which the shell skips, and every line break becomes a space. A
+ * pattern can then span what the shell joins, such as a pipeline that continues after `|`
+ * or a quoted multi-line request body. The engine matches both layouts, so a finding needs
+ * only one of them. Blanking a line inside a quoted string only removes text, so it cannot
+ * hide a command.
+ */
+export function extractAgentConfigCommandsOnOneLine(content: string, path: string): string {
+  return keepCommandValues(content, path, (command) =>
+    command
+      .replace(COMMENT_ONLY_LINE, (comment) => ' '.repeat(comment.length))
+      .replace(LINE_BREAK, ' ')
+  );
 }
 
 /** Lists the command values of an agent config file. Invalid JSON has none. */
@@ -144,64 +149,35 @@ export function blankJsonComments(content: string): string {
   return blanked + content.slice(copiedUpTo);
 }
 
-/**
- * Lays out a decoded command value in the lines that the shell reads, so the `#`
- * comment mask hides only text that the shell does not run. CR and CRLF become LF.
- * A line break inside quotes is part of the string, so it becomes a space. A `\`
- * continuation joins the next line, except at the end of a comment line, and so does
- * a line that ends in `|`, `|&`, `||`, or `&&`. A value that ends in a comment line
- * gets a final LF, because the next value on the same JSON line is a different
- * command. The result is at most one character longer than the value, so it still
- * fits in the quoted JSON literal.
- */
-function toShellLines(command: string): string {
-  // Lines that a pending pipeline skips become spaces: the shell ignores them, and offsets
-  // stay aligned.
-  return joinQuotedLineBreaks(command.replace(CR_LINE_BREAK, '\n'))
-    .replace(SHELL_CONTINUATION, '$1  ')
-    .replace(OPERATOR_CONTINUATION, (lines, stage: string) => stage.padEnd(lines.length))
-    .replace(TRAILING_SHELL_COMMENT, '$&\n');
+function keepCommandValues(
+  content: string,
+  path: string,
+  layout: (command: string) => string
+): string {
+  const json = agentConfigJson(content, path);
+  const parsed = parseJson(json);
+  if (parsed === undefined) return '';
+
+  const commands = new Set(collectCommandValues(parsed));
+  return rewriteJsonTokens(json, {
+    stringLiteral: (value) => (commands.has(value) ? layout(value) : ''),
+    structure: (text) => ' '.repeat(text.length),
+  });
 }
 
 /**
- * Replaces each LF inside a single- or double-quoted string with a space, so a quoted
- * request body such as "prefix<LF>$(env)" stays on one line for the rule patterns. A
- * `#` at the start of a word outside quotes starts a comment, and quotes in a comment
- * open no string, so the comment still ends at its LF. A `\` outside single quotes
- * escapes the next character. An unclosed quote runs to the end of the value.
- * ponytail: quotes nested in `$(...)` inside a double-quoted string are not tracked, so
- * an LF in such an inner string still ends the line. Add a parser if that form matters.
+ * Lays out a decoded command value in the lines that the shell reads, so the `#`
+ * comment mask hides only text that the shell does not run. CR and CRLF become LF.
+ * A `\` continuation joins the next line, except at the end of a comment line. A
+ * value that ends in a comment line gets a final LF, because the next value on the
+ * same JSON line is a different command. The result is at most one character longer
+ * than the value, so it still fits in the quoted JSON literal.
  */
-function joinQuotedLineBreaks(command: string): string {
-  let joined = '';
-  let quote: string | undefined;
-  let inComment = false;
-
-  for (let index = 0; index < command.length; index += 1) {
-    const char = command[index] ?? '';
-
-    if (inComment) {
-      inComment = char !== '\n';
-    } else if (quote === "'") {
-      if (char === "'") quote = undefined;
-    } else if (char === '\\') {
-      // The escaped character is copied as is, so a `\` line continuation stays for
-      // SHELL_CONTINUATION.
-      joined += char + (command[index + 1] ?? '');
-      index += 1;
-      continue;
-    } else if (quote === '"') {
-      if (char === '"') quote = undefined;
-    } else if (char === '"' || char === "'") {
-      quote = char;
-    } else if (char === '#' && WORD_START_BEFORE.test(command[index - 1] ?? '')) {
-      inComment = true;
-    }
-
-    joined += quote !== undefined && char === '\n' ? ' ' : char;
-  }
-
-  return joined;
+function toShellLines(command: string): string {
+  return command
+    .replace(CR_LINE_BREAK, '\n')
+    .replace(SHELL_CONTINUATION, '$1  ')
+    .replace(TRAILING_SHELL_COMMENT, '$&\n');
 }
 
 type JsonTokenRewrite = {
