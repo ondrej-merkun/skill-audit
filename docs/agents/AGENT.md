@@ -21,7 +21,6 @@ new lesson, append a bullet there in the SAME commit as the fix
 | Terminal colors | chalk v5 (ESM) |
 | Terminal tables | cli-table3 |
 | Spinners | ora |
-| Multi-step pipelines | listr2 |
 | Test runner | vitest |
 | Linter/formatter | biome |
 

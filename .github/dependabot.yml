@@ -4,6 +4,12 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Keep Node types on the supported runtime floor (engines.node >=20).
+      # Raise this together with the engines field and the CI Node matrix.
+      - dependency-name: "@types/node"
+        update-types:
+          - "version-update:semver-major"
     groups:
       npm-minor-patch:
         patterns:
