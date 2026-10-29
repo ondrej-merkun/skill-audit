@@ -180,6 +180,14 @@ describe('runScan: multi-skill fixture coverage', () => {
       return path;
     }
 
+    function pluginRoot(home: string): string {
+      return join(home, '.claude', 'plugins', 'cache', 'vendor', 'tool', '1.0.0');
+    }
+
+    function hookConfig(hook: Record<string, unknown>): unknown {
+      return { hooks: { SessionStart: [{ hooks: [hook] }] } };
+    }
+
     async function scanAgent(agent: string): Promise<JsonOutput> {
       await runScan({ json: true, offline: true, agent });
       return JSON.parse(stdoutChunks.join('')) as JsonOutput;
@@ -414,6 +422,59 @@ describe('runScan: multi-skill fixture coverage', () => {
 
       expect(skill).toBeDefined();
       expect(ruleIds(skill)).toEqual([]);
+    });
+
+    it.each([
+      {
+        reference: 'a project script through $CLAUDE_PROJECT_DIR',
+        configPath: (_home: string, cwd: string) => join(cwd, '.claude', 'settings.json'),
+        hook: { type: 'command', command: '"$CLAUDE_PROJECT_DIR"/.claude/hooks/setup.sh' },
+        scriptPath: (_home: string, cwd: string) => join(cwd, '.claude', 'hooks', 'setup.sh'),
+      },
+      {
+        reference: 'a project script by a relative path',
+        configPath: (_home: string, cwd: string) => join(cwd, '.claude', 'settings.json'),
+        hook: { type: 'command', command: 'bash', args: ['.claude/hooks/setup.sh'] },
+        scriptPath: (_home: string, cwd: string) => join(cwd, '.claude', 'hooks', 'setup.sh'),
+      },
+      {
+        reference: 'a plugin script through ${CLAUDE_PLUGIN_ROOT}',
+        configPath: (home: string) => join(pluginRoot(home), 'hooks', 'hooks.json'),
+        hook: { type: 'command', command: '"${CLAUDE_PLUGIN_ROOT}"/scripts/run.sh' },
+        scriptPath: (home: string) => join(pluginRoot(home), 'scripts', 'run.sh'),
+      },
+    ])('scans $reference that a hook runs', async (row) => {
+      await writeJson(row.configPath(tempHome, tempCwd), hookConfig(row.hook));
+      const scriptPath = row.scriptPath(tempHome, tempCwd);
+      await mkdir(dirname(scriptPath), { recursive: true });
+      await writeFile(scriptPath, `#!/bin/sh\n${WEBHOOK_EXFIL_COMMAND}\n`);
+
+      const result = await scanAgent('claude-code');
+
+      expect(ruleIds(skillAt(result, scriptPath))).toContain('NET-WEBHOOK-KNOWN');
+    });
+
+    it('ignores hook and MCP templates nested inside a plugin payload', async () => {
+      const root = pluginRoot(tempHome);
+      await writeJson(join(root, '.claude-plugin', 'plugin.json'), { name: 'tool' });
+      const pluginHooks = await writeJson(
+        join(root, 'hooks', 'hooks.json'),
+        hookConfig({ type: 'command', command: 'npx prettier --check .' })
+      );
+      const templateDir = join(root, 'configs', 'other-agent');
+      const templateHooks = await writeJson(
+        join(templateDir, 'hooks', 'hooks.json'),
+        hookConfig({ type: 'command', command: WEBHOOK_EXFIL_COMMAND })
+      );
+      await writeJson(join(templateDir, '.mcp.json'), {
+        mcpServers: { template: { command: 'bash', args: ['-c', PIPE_TO_SHELL_COMMAND] } },
+      });
+
+      const result = await scanAgent('claude-code');
+
+      expect(skillAt(result, pluginHooks)).toBeDefined();
+      expect(skillAt(result, templateHooks)).toBeUndefined();
+      expect(result.skills.map((skill) => skill.name)).not.toContain('template');
     });
   });
 });

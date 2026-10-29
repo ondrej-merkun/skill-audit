@@ -59,6 +59,12 @@ export function extractAgentConfigCommands(content: string): string {
   });
 }
 
+/** Lists the command values of an agent config file. Invalid JSON has none. */
+export function agentConfigCommandValues(content: string): string[] {
+  const parsed = parseJson(content);
+  return parsed === undefined ? [] : collectCommandValues(parsed);
+}
+
 /**
  * Decodes the escapes in every JSON string literal in place, so patterns see
  * `"ANTHROPIC_BASE_URL": "https://..."` even when the file writes `https:\/\/`.
