@@ -3,6 +3,7 @@ import { readdir, readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, join } from 'node:path';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
+import { discoverSharedAgentSkills } from './shared-agent-skills.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
 const AGENT_ID = 'cline';
@@ -305,6 +306,8 @@ const clineDiscovery: AgentDiscovery = {
     skills.push(...(await discoverSkillsDir(join(cwd, '.cline', 'skills'), 'project')));
     skills.push(...(await discoverSkillsDir(join(projectRulesPath, 'skills'), 'project')));
     skills.push(...(await discoverWorkflowFiles(join(projectRulesPath, 'workflows'), 'project')));
+
+    skills.push(...(await discoverSharedAgentSkills(AGENT_ID)));
 
     return skills;
   },

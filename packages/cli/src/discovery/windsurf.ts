@@ -4,6 +4,7 @@ import os from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
+import { discoverSharedAgentSkills } from './shared-agent-skills.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
 const AGENT_ID = 'windsurf';
@@ -271,6 +272,8 @@ const windsurfDiscovery: AgentDiscovery = {
     skills.push(
       ...(await discoverRuleFile(join(cwd, '.windsurfrules'), '.windsurfrules', 'project'))
     );
+
+    skills.push(...(await discoverSharedAgentSkills(AGENT_ID)));
 
     return skills;
   },

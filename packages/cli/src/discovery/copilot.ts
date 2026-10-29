@@ -3,6 +3,7 @@ import { readdir, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, join } from 'node:path';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
+import { discoverSharedAgentSkills } from './shared-agent-skills.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
 const AGENT_ID = 'copilot';
@@ -142,6 +143,9 @@ const copilotDiscovery: AgentDiscovery = {
     skills.push(
       ...(await discoverInstructionsDir(join(cwd, '.github', 'instructions'), 'project'))
     );
+
+    // Shared: ~/.agents/skills/*/SKILL.md and .agents/skills/*/SKILL.md
+    skills.push(...(await discoverSharedAgentSkills(AGENT_ID)));
 
     return skills;
   },

@@ -3,6 +3,7 @@ import { readdir, readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, join } from 'node:path';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
+import { discoverSharedAgentSkills } from './shared-agent-skills.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
 const AGENT_ID = 'cursor';
@@ -131,6 +132,9 @@ const cursorDiscovery: AgentDiscovery = {
 
     // Legacy: .cursorrules in project root
     skills.push(...(await discoverLegacyCursorRules(join(cwd, '.cursorrules'))));
+
+    // Shared: ~/.agents/skills/*/SKILL.md and .agents/skills/*/SKILL.md
+    skills.push(...(await discoverSharedAgentSkills(AGENT_ID)));
 
     return skills;
   },
