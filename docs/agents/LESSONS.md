@@ -646,7 +646,11 @@ without a commit message explaining why it no longer applies.
   Before you add or widen a mandatory-FAIL compound, probe malicious and benign
   text with the two findings on the same line, on other lines, and in other
   files. Pick the gate from that table, and document the cases that no gate
-  can separate.
+  can separate. Run the probe through the real engine, not with synthetic
+  findings: a pattern that starts with a delimiter such as `[\n.]\s*` reports
+  the delimiter's line unless a `finding` group marks the instruction. Also
+  probe the loosest prose that each rule matches, not only admin and teaching
+  text.
 
 ---
 

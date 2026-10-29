@@ -117,7 +117,7 @@ pipe-to-shell, `FS-CREDSTORE` + any `NET-*`, a Critical `PI-*` finding +
 a credential-store rule (`FS-CREDSTORE`, `FS-BROWSER-CREDENTIALSTORE`, or
 `FS-KEYCHAIN-ACCESS`), and `PI-JAILBREAK` or `PI-PRIV-ESCALATE-INSTRUCTION` +
 a credential-store finding on the same line. `PI-PRIV-ESCALATE-INSTRUCTION`
-pairs only with `FS-BROWSER-CREDENTIALSTORE` or `FS-KEYCHAIN-ACCESS`.
+does not pair with `FS-CREDSTORE`.
 
 ## Rules
 

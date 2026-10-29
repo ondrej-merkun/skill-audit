@@ -61,11 +61,10 @@ Any of these triggers FAIL regardless of score:
   (`FS-CREDSTORE`, `FS-BROWSER-CREDENTIALSTORE`, `FS-KEYCHAIN-ACCESS`) in the
   same skill. The `PI-*` finding must still be Critical after allowlist demotion.
 - Compound trigger: a `PI-JAILBREAK` or `PI-PRIV-ESCALATE-INSTRUCTION` finding
-  + a credential-store finding on the same line of the same file.
-  `PI-PRIV-ESCALATE-INSTRUCTION` pairs only with `FS-BROWSER-CREDENTIALSTORE` or
-  `FS-KEYCHAIN-ACCESS`, because root admin work reads `FS-CREDSTORE` paths. The
-  `PI-*` finding must not be demoted by the allowlist. See SPEC section 4 for
-  the reason for the same-line gate.
+  with a credential-store finding on the same line of the same file.
+  `PI-PRIV-ESCALATE-INSTRUCTION` does not pair with `FS-CREDSTORE`, because root
+  admin work reads `FS-CREDSTORE` paths. The `PI-*` finding must not be demoted
+  by the allowlist. See SPEC section 4 for the reason for the same-line gate.
 
 ## Critical patterns (implement these exactly)
 
