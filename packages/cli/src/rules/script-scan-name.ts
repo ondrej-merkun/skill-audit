@@ -18,9 +18,23 @@ const INTERPRETER_EXTENSIONS: ReadonlyMap<string, string> = new Map([
 // A versioned name, such as python3 or python3.12, runs the language of its base name.
 const INTERPRETER_VERSION = /\d[\d.]*$/;
 
-// Extensions of the languages above. A file with one of them keeps the rules of its own name
-// when nothing tells which program runs it.
-const SCRIPT_EXTENSIONS = new Set(['.sh', '.bash', '.zsh', '.py', '.js', '.mjs', '.cjs', '.ts']);
+// Extensions that the rule globs scan as code. A file with one of them keeps the rules of its
+// own name when nothing tells which program runs it.
+const SCRIPT_EXTENSIONS = new Set([
+  '.sh',
+  '.bash',
+  '.zsh',
+  '.ps1',
+  '.py',
+  '.rb',
+  '.php',
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.ts',
+  '.jsx',
+  '.tsx',
+]);
 
 const SHEBANG = '#!';
 // Linux reads at most this many bytes of a script to find its shebang line.

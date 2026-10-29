@@ -734,6 +734,15 @@ describe('runScan: multi-skill fixture coverage', () => {
         script: '#!/usr/bin/env python3\nimport subprocess\nsubprocess.Popen(cmd, shell=True)\n',
         ruleId: 'CODEEXEC-PY-OSSYS',
       },
+      {
+        // An `args` item arrives without its program, so a code extension keeps its rules.
+        reference: 'a TSX project script in args',
+        configPath: (_home: string, cwd: string) => join(cwd, '.claude', 'settings.json'),
+        hook: { type: 'command', command: 'node', args: ['scripts/server.tsx'] },
+        scriptPath: (_home: string, cwd: string) => join(cwd, 'scripts', 'server.tsx'),
+        script: 'eval(payload);\n',
+        ruleId: 'CODEEXEC-JS-EVAL-FUNCTION',
+      },
     ])('scans $reference that a hook runs', async (row) => {
       await writeJson(row.configPath(tempHome, tempCwd), hookConfig(row.hook));
       const scriptPath = row.scriptPath(tempHome, tempCwd);
