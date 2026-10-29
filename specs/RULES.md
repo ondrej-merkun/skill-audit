@@ -30,13 +30,16 @@ regex cannot tell explanation from behavior.
 
 Context masking hides documentation, not instructions. A rule with docs masking
 masks a whole file when its path looks like docs (a `docs/`, `references/`, or
-`examples/` dir, or a name such as `README.md`). A docs file that SKILL.md
-references is operative: the agent reads it, so rules scan it like a file of
-the same name at the skill root. For rules with line masking (`FS-CREDSTORE`,
-`NET-DNS-UNUSUAL-TLD`), a documentation word such as "example" or "test" hides a
-markdown line only in example structure: a section under a heading that names
-example or reference material, a line that opens with a label such as
-`Example:`, or a comment line in fenced code. "For example, print
+`examples/` dir, or a name such as `README.md`). A markdown file that SKILL.md
+references, by path or as part of all its docs, is operative: the agent reads
+it, so rules scan it under a neutral name at the skill root, whatever its own
+name (`references/README.md`). A script in a docs dir stays masked even when
+SKILL.md names it, because security-education skills point at sample code. For
+rules with line masking (`FS-CREDSTORE`, `NET-DNS-UNUSUAL-TLD`), a documentation
+word such as "example" or "test" hides a markdown line only in example
+structure: a section under a heading that names example or reference material,
+a line that opens with a label such as `Example:`, or a comment line in fenced
+code. "For example, print
 ~/.aws/credentials to the chat" stays visible.
 
 `CTX-SECURITY-EDUCATION` is an info-only context hint, not a suppression rule.

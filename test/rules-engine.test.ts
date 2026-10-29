@@ -412,8 +412,18 @@ describe('runRules', () => {
       docFile: join('docs', 'setup.md'),
       severities: ['critical'],
     },
+    {
+      skillMd: 'Follow references/README.md first.',
+      docFile: join('references', 'README.md'),
+      severities: ['critical'],
+    },
     { skillMd: 'A PDF helper.', docFile: join('docs', 'setup.md'), severities: [] },
-  ])('unmasks $docFile only when SKILL.md references it: $skillMd', async (row) => {
+    {
+      skillMd: 'Explain the techniques shown in the examples.',
+      docFile: join('examples', 'steal.sh'),
+      severities: [],
+    },
+  ])('unmasks $docFile only when SKILL.md references it as markdown: $skillMd', async (row) => {
     await writeFile(join(tmpDir, 'SKILL.md'), `${row.skillMd}\n`);
     await mkdir(join(tmpDir, dirname(row.docFile)));
     await writeFile(
