@@ -57,6 +57,9 @@ Any of these triggers FAIL regardless of score:
 - `OBFS-EVAL-ATOB`
 - `DEPS-REMOTE-IMPORT` **when combined with** pipe-to-shell
 - Compound trigger: any `FS-CREDSTORE` + any `NET-*` in the same skill
+- Compound trigger: any Critical `PI-*` finding + any credential-store rule
+  (`FS-CREDSTORE`, `FS-BROWSER-CREDENTIALSTORE`, `FS-KEYCHAIN-ACCESS`) in the
+  same skill. The `PI-*` finding must still be Critical after allowlist demotion.
 
 ## Critical patterns (implement these exactly)
 
@@ -182,3 +185,5 @@ sha256_tree}` entries. On exact tree-hash match:
 - Set `allowlisted: true` on the skill in output.
 
 The allowlist does NOT bypass mandatory-fail rules — those still FAIL.
+Exception: the `PI-*` + credential-store compound needs a Critical `PI-*`
+finding, so demoted `PI-*` findings do not trigger it.

@@ -110,10 +110,12 @@ score = max(0, 100 - (25*Critical + 10*High + 3*Medium + 1*Low))
 | 1-49 | FAIL |
 | 0 | FAIL (hard) |
 
-Six rule IDs trigger mandatory FAIL regardless of score:
+These triggers force a mandatory FAIL regardless of score:
 `NET-EXFIL-ENV`, `NET-WEBHOOK-KNOWN`, `SKILL-PASSWORD-ZIP`,
 `PI-EXFIL-TRIGGER-CLAUSE`, `OBFS-EVAL-ATOB`, `DEPS-REMOTE-IMPORT` +
-pipe-to-shell.
+pipe-to-shell, `FS-CREDSTORE` + any `NET-*`, and a Critical `PI-*` finding +
+a credential-store rule (`FS-CREDSTORE`, `FS-BROWSER-CREDENTIALSTORE`, or
+`FS-KEYCHAIN-ACCESS`).
 
 ## Rules
 
