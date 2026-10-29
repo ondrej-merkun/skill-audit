@@ -7,8 +7,9 @@ scan results.
 ## Scope
 
 `skill-audit` inventories and scans local AI agent instructions, skills,
-commands, plugin payloads, MCP configuration, and project-level agent guidance
-that supported agents may expose to a coding assistant.
+commands, plugin payloads, MCP configuration, agent hook and settings files, and
+project-level agent guidance that supported agents may expose to a coding
+assistant.
 
 The scanner is designed to answer a narrow question: "Does this installed or
 project-local agent content match known risky patterns?" It does not sandbox,

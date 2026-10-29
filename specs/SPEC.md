@@ -124,7 +124,8 @@ interface Skill {
     | 'agents-md'
     | 'gemini-extension-json'
     | 'gemini-command-toml'
-    | 'gemini-agent-md';
+    | 'gemini-agent-md'
+    | 'agent-config';                // hook or settings file that runs commands
   scope: 'user' | 'project' | 'managed';
   treeSha256: string;                // for allowlist matching
   installState?: 'installed' | 'marketplace';
@@ -148,6 +149,26 @@ Adding a new agent = adding one file and registering in `discovery/index.ts`. No
 | **Cline** | `~/Documents/Cline/Rules/`, `~/.cline/skills/`, `~/Documents/Cline/Workflows/`, `~/.cline/data/settings/cline_mcp_settings.json`, `$CLINE_DIR/data/settings/cline_mcp_settings.json`, VS Code / JetBrains `globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`, `~/.agents/skills/` | `.clinerules`, `.clinerules/*.md`, `.clinerules/*.txt`, `.cline/skills/`, `.clinerules/skills/`, `.clinerules/workflows/`, `.agents/skills/`, cross-reads `.cursorrules`, `AGENTS.md`, `CLAUDE.md` | `SKILL.md`, `.md`, `.txt`, JSON |
 | **Windsurf** | `~/.codeium/windsurf/memories/global_rules.md`, `~/.agents/skills/` | `.windsurf/rules/*.md` in the workspace, nested workspace `.windsurf/rules/*.md`, parent `.windsurf/rules/*.md` up to git root, legacy `.windsurfrules`, `.agents/skills/`, auto-reads `AGENTS.md` | Plain `.md`, `SKILL.md` |
 | **Cross-agent (AGENTS.md sweep)** | — | `AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `CONVENTIONS.md` (catches 7+ agents in one pass) | plain `.md` |
+
+**Hook and settings rule.** Agent hooks and command-valued settings run code,
+so each installed agent also reports its hook and settings files as
+`agent-config` scan targets (verified against vendor docs October 2026; the
+full path list is in `specs/DISCOVERY.md`):
+
+| Agent | User-global | Project-local |
+|---|---|---|
+| **Claude Code** | `~/.claude/settings.json`, plugin `hooks/hooks.json` | `.claude/settings.json`, `.claude/settings.local.json` |
+| **OpenAI Codex** | `$CODEX_HOME/hooks.json` | `.codex/hooks.json` |
+| **Cursor** | `~/.cursor/hooks.json` | `.cursor/hooks.json` |
+| **Gemini CLI** | `~/.gemini/settings.json` | `.gemini/settings.json` |
+| **GitHub Copilot** | `~/.copilot/hooks/*.json`, `~/.copilot/settings.json` | `.github/hooks/*.json`, `.github/copilot/settings.json`, `.github/copilot/settings.local.json` |
+| **Windsurf** | `~/.codeium/windsurf/hooks.json`, `~/.codeium/hooks.json` | `.devin/hooks.json`, legacy `.windsurf/hooks.json` |
+
+Home files have `scope: "user"`; working-directory files have
+`scope: "project"`. Missing files are skipped. Each MCP server from
+`~/.claude.json`, `.mcp.json`, a Claude Code plugin `.mcp.json`, or
+`~/.gemini/settings.json` is scanned with only its own definition, so findings
+stay on that server and never quote other parts of a shared config file.
 
 **Discovery depth rule.** When an installed plugin path contains "plugins",
 walk the full tree and emit one Skill per leaf SKILL.md / plugin.json /
@@ -188,21 +209,21 @@ When a skill appears at both user scope and project scope, list both rows in the
 
 ## 4. Local static analysis layer
 
-### Rule taxonomy (46 rules, shipping at MVP)
+### Rule taxonomy (49 rules, shipping at MVP)
 
 Full rule catalog in Semgrep-portable YAML. Category summary:
 
 | Category | Rule IDs | Count | Severity distribution |
 |---|---|---|---|
 | Code execution | `CODEEXEC-PY-EVAL`, `CODEEXEC-PY-OSSYS`, `CODEEXEC-JS-EVAL-FUNCTION`, `CODEEXEC-JS-CHILDPROCESS-SHELL`, `CODEEXEC-DESERIALIZE`, `CODEEXEC-SHELL-BACKTICK` | 6 | 4 Critical, 2 High |
-| Network exfiltration | `NET-EXFIL-ENV`, `NET-CLOUD-METADATA-CREDENTIALS`, `NET-OUTBOUND-NONLOCAL`, `NET-WEBHOOK-KNOWN`, `NET-RAW-SOCKET`, `NET-DNS-UNUSUAL-TLD` | 6 | 3 Critical, 1 High, 2 Medium |
+| Network exfiltration | `NET-EXFIL-ENV`, `NET-CLOUD-METADATA-CREDENTIALS`, `NET-OUTBOUND-NONLOCAL`, `NET-WEBHOOK-KNOWN`, `NET-RAW-SOCKET`, `NET-DNS-UNUSUAL-TLD`, `NET-API-ENDPOINT-OVERRIDE` | 7 | 4 Critical, 1 High, 2 Medium |
 | Filesystem | `FS-CREDSTORE`, `FS-BROWSER-CREDENTIALSTORE`, `FS-KEYCHAIN-ACCESS`, `FS-DOTENV-READ`, `FS-BOUNDARY-ESCAPE`, `FS-DESTRUCTIVE-HOME-DELETE` | 6 | 4 Critical, 2 High |
 | Prompt injection | `PI-OVERRIDE`, `PI-JAILBREAK`, `PI-HIDDEN-UNICODE`, `PI-HIDDEN-HTML-COMMENT`, `PI-WHITE-ON-WHITE`, `PI-METADATA-MISMATCH`, `PI-EXFIL-TRIGGER-CLAUSE`, `PI-PRIV-ESCALATE-INSTRUCTION` | 8 | 4 Critical, 3 High, 1 Medium |
 | Git/history | `GIT-CRED-READ`, `GIT-HISTORY-SCAN` | 2 | 1 High, 1 Medium |
-| Dependencies | `DEPS-UNPINNED-SUSPECT`, `DEPS-INSTALL-SCRIPT-HOOKS`, `DEPS-TYPOSQUAT`, `DEPS-INLINE-INSTALL`, `DEPS-REMOTE-IMPORT`, `MCP-CONFIG-REMOTE-EXEC` | 6 | 2 Critical, 2 High, 2 Medium |
+| Dependencies | `DEPS-UNPINNED-SUSPECT`, `DEPS-INSTALL-SCRIPT-HOOKS`, `DEPS-TYPOSQUAT`, `DEPS-INLINE-INSTALL`, `DEPS-REMOTE-IMPORT`, `MCP-CONFIG-REMOTE-EXEC`, `MCP-PROJECT-AUTO-APPROVE` | 7 | 2 Critical, 3 High, 2 Medium |
 | Obfuscation | `OBFS-BASE64-LARGE`, `OBFS-HEX-LARGE`, `OBFS-EVAL-ATOB`, `OBFS-DECODE-EXEC`, `OBFS-STRING-CONCAT-CMD`, `OBFS-HOMOGLYPH` | 6 | 2 Critical, 2 High, 1 Medium, 1 Low |
 | SKILL.md-specific | `SKILL-CURL-BASH-IN-MD`, `SKILL-FETCH-AND-EXEC`, `SKILL-DISABLE-SAFETY`, `SKILL-PASSWORD-ZIP`, `SKILL-MEMORY-WRITE` | 5 | 4 Critical, 1 High |
-| Secrets | `SEC-HARDCODED-KEY` | 1 | 1 Critical |
+| Secrets | `SEC-HARDCODED-KEY`, `SEC-PROJECT-CREDENTIAL-HELPER` | 2 | 1 Critical, 1 High |
 
 ### Highest-signal rules (illustrative examples)
 

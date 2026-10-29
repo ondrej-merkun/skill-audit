@@ -4,7 +4,7 @@ This file quotes the regex patterns from `SPEC.md` §4 verbatim. Ralph
 implements rules against this file so it doesn't have to re-read the
 whole spec on every rule iteration.
 
-The full catalog is 46 rules across 9 categories. Only the highest-
+The full catalog is 49 rules across 9 categories. Only the highest-
 signal patterns are reproduced here in full; others are summarized.
 When in doubt, read `SPEC.md` §4.
 
@@ -190,9 +190,10 @@ Read `SPEC.md` §4 for these — they follow the same shape as above.
 JS eval/Function(), child_process with shell:true, pickle/yaml.load,
 backtick command substitution.
 
-**Network (4 more):** cloud credential metadata endpoints, outbound non-local
+**Network (5 more):** cloud credential metadata endpoints, outbound non-local
 IP literal, raw socket creation, DNS lookups to unusual TLDs (`.xyz`, `.tk`,
-`.top`, IP-literal).
+`.top`, IP-literal), and project settings that override the model API endpoint
+(`NET-API-ENDPOINT-OVERRIDE`, below).
 
 **Filesystem (5 more):** browser credential/cookie stores, macOS keychain
 access, reads of `.env` files, relative paths escaping `cwd` (`../../..`),
@@ -207,11 +208,12 @@ content does another), privilege-escalation instructions ("use sudo",
 **Git/history (2):** reads of `~/.git-credentials` / `git config
 --global`, scanning git history for secrets.
 
-**Dependencies (6):** unpinned PyPI/npm deps resolving to typo-adjacent
+**Dependencies (7):** unpinned PyPI/npm deps resolving to typo-adjacent
 names, `npm install` in postinstall scripts, known typosquats (use a
 short bundled list), inline `pip install` / `npm install` in skill
-code, `import` / `require` from remote URLs, MCP config startup commands that
-download and execute remote content.
+code, `import` / `require` from remote URLs, MCP config and agent hook startup
+commands that download and execute remote content, and project settings that
+approve project MCP servers (`MCP-PROJECT-AUTO-APPROVE`, below).
 
 **Obfuscation (6):** base64 literals > 200 bytes, hex literals > 200
 bytes, `eval(atob(...))` / `exec(base64.b64decode(...))`, shell or PowerShell
@@ -223,9 +225,56 @@ SKILL.md), `SKILL-DISABLE-SAFETY` (instructions to bypass user
 confirmation), `SKILL-MEMORY-WRITE` (instructs model to write to its
 own memory system unprompted).
 
-**Secrets (1):** `SEC-HARDCODED-KEY` covering `sk-`, `sk-ant-`, `ghp_`,
+**Secrets (2):** `SEC-HARDCODED-KEY` covering `sk-`, `sk-ant-`, `ghp_`,
 `gho_`, `AKIA`, plus generic high-entropy string detection inside
-assignment targets named `*_KEY`, `*_TOKEN`, `*_SECRET`.
+assignment targets named `*_KEY`, `*_TOKEN`, `*_SECRET`, and project settings
+that set a credential helper (`SEC-PROJECT-CREDENTIAL-HELPER`, below).
+
+## Agent hook and settings commands
+
+Agents run hook commands, command-valued settings, and MCP server commands in
+a shell. For `settings.json`, `settings.local.json`, `hooks.json`, and
+`.mcp.json`, the engine decodes the JSON and keeps only these values at their
+original offsets: `command`, `args`, `bash`, `powershell`, `exec`, `url`,
+`apiKeyHelper`, `awsAuthRefresh`, `awsCredentialExport`, `gcpAuthRefresh`, and
+`otelHeadersHelper`. Every rule that applies to `*.sh` then runs on those
+values, so findings keep the real line and JSON escapes such as `\"` or `\/`
+do not hide a pattern. `MCP-CONFIG-REMOTE-EXEC` also runs on the raw JSON of
+these files. Invalid JSON yields no command values and does not stop the scan.
+
+## Agent settings rules (project scope only)
+
+A repository can ship `.claude/settings.json` or `.claude/settings.local.json`
+that the agent loads when the user opens the project (CVE-2025-59536,
+CVE-2026-21852). These rules apply to `settings.json` and `settings.local.json`
+files discovered with `scope: "project"`. They match the JSON after string
+escapes are decoded. User-scope settings are the user's own choices and are not
+checked by these rules.
+
+### NET-API-ENDPOINT-OVERRIDE (Critical)
+An `env` key `ANTHROPIC_BASE_URL`, `ANTHROPIC_BEDROCK_BASE_URL`,
+`ANTHROPIC_BEDROCK_MANTLE_BASE_URL`, `ANTHROPIC_VERTEX_BASE_URL`,
+`ANTHROPIC_FOUNDRY_BASE_URL`, `ANTHROPIC_AWS_BASE_URL`, or `OPENAI_BASE_URL`
+with a value that is not `https://` plus an official provider API host:
+`api.anthropic.com`, `bedrock-runtime[-fips].<region>.amazonaws.com`,
+`*.api.aws`, `[<region>-]aiplatform.googleapis.com`,
+`<resource>.services.ai.azure.com`, or `api.openai.com`. Critical: the agent
+sends its API key and every prompt to that host.
+
+### MCP-PROJECT-AUTO-APPROVE (High)
+```regex
+"enableAllProjectMcpServers"\s*:\s*true\b
+"enabledMcpjsonServers"\s*:\s*\[\s*"
+```
+High: the setting removes the consent prompt for the repository's MCP servers.
+The servers themselves are scanned as separate targets.
+
+### SEC-PROJECT-CREDENTIAL-HELPER (High)
+```regex
+"(?:apiKeyHelper|awsAuthRefresh|awsCredentialExport|gcpAuthRefresh)"\s*:\s*"[^"\s]
+```
+High: the helper runs on each credential refresh and chooses the credential
+the agent uses. Its command also goes through the command rules above.
 
 ## Allowlist behavior
 

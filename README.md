@@ -22,7 +22,7 @@
   &nbsp;
   <a href=".github/SECURITY.md"><img src="https://img.shields.io/badge/security-policy-blue" alt="Security policy" /></a>
   &nbsp;
-  <a href="specs/RULES.md"><img src="https://img.shields.io/badge/rules-46-red" alt="46 shipped rules" /></a>
+  <a href="specs/RULES.md"><img src="https://img.shields.io/badge/rules-49-red" alt="49 shipped rules" /></a>
   &nbsp;
   <a href="action.yml"><img src="https://img.shields.io/badge/action-skill--audit-red" alt="GitHub Action: skill-audit" /></a>
   &nbsp;
@@ -145,10 +145,11 @@ More workflows: [`docs/EXAMPLES.md`](docs/EXAMPLES.md).
 
 `skill-audit` scans global and project-local skill locations for Claude Code,
 Codex, Copilot, Cursor, Gemini CLI, Windsurf, Cline, and cross-agent instruction
-files such as `AGENTS.md`. It matches 46 shipped rules across prompt injection,
-network exfiltration, filesystem access, code execution, obfuscation, hardcoded
-secrets, git-history access, dependency risk, and skill-specific malware
-patterns.
+files such as `AGENTS.md`. It also scans agent hook and settings files and each
+MCP server definition, because those run commands. It matches 49 shipped rules
+across prompt injection, network exfiltration, filesystem access, code
+execution, obfuscation, hardcoded secrets, git-history access, dependency risk,
+and skill-specific malware patterns.
 
 Installed or currently exposed skills are the default scan and list surface.
 Plugin marketplace payloads under `plugins/marketplaces/` are inactive local

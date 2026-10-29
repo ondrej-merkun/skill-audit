@@ -4,6 +4,11 @@ Ralph consults this when implementing discovery plugins. These paths
 were verified against official docs as of April 2026 per `SPEC.md` §3.
 Cline paths were refreshed against official docs in May 2026.
 Shared `.agents/skills` paths were verified against official docs in October 2026.
+Hook and settings paths were verified against vendor docs in October 2026.
+
+Hook and settings files run code, so they are scan targets with
+`format: "agent-config"`. Home files have `scope: "user"`; working-directory
+files have `scope: "project"`. Missing files are skipped.
 
 ## Implemented discovery set (keep this accurate)
 
@@ -20,14 +25,22 @@ move it here in the same task; do not leave implemented behavior documented as
 - `~/.claude/agents/*.md`
 - MCP servers in `~/.claude.json`, including the nested
   `projects.<absolute-path>.mcpServers` shape
+- `~/.claude/settings.json` (hooks and command-valued settings)
+- Installed plugin `hooks/hooks.json` and plugin `.mcp.json` servers
 
 **Project-local (cwd + parents until repo root):**
 - `.claude/skills/`
 - `.claude/commands/`
 - `.claude/agents/`
+- `.claude/settings.json`, `.claude/settings.local.json`
 - `.mcp.json`
 - `.claude-plugin/plugin.json`
 - `.claude-plugin/marketplace.json`
+
+Each MCP server entry is scanned with only its own definition, rendered as a
+one-server `.mcp.json` document. Findings stay on that server, line numbers
+count from the start of that document, and rules never read or quote other
+parts of a shared file such as `~/.claude.json`.
 
 **Manifest formats:** `SKILL.md` (YAML front matter + markdown body),
 `plugin.json`, `.mcp.json`.
@@ -37,10 +50,12 @@ move it here in the same task; do not leave implemented behavior documented as
 **User-global:**
 - `~/.cursor/mcp.json`
 - `~/.cursor/rules/`
+- `~/.cursor/hooks.json`
 
 **Project-local:**
 - `.cursor/mcp.json`
 - `.cursor/rules/*.mdc`
+- `.cursor/hooks.json`
 - Legacy: `.cursorrules` (single file at repo root)
 
 ### 3. GitHub Copilot
@@ -49,11 +64,16 @@ move it here in the same task; do not leave implemented behavior documented as
 - `~/.copilot/skills/*/SKILL.md`
 - Also read `~/.claude/skills/` (Copilot reads Claude skills)
 - Also read `~/.agents/skills/`
+- `~/.copilot/hooks/*.json` (each file is scanned as `hooks.json`)
+- `~/.copilot/settings.json` (inline `hooks`)
 
 **Project-local:**
 - `.github/skills/*/SKILL.md`
 - `.github/copilot-instructions.md`
 - `.github/instructions/*.instructions.md`
+- `.github/hooks/*.json` (each file is scanned as `hooks.json`)
+- `.github/copilot/settings.json`, `.github/copilot/settings.local.json`
+  (inline `hooks`)
 
 ### 4. Cline
 
@@ -79,6 +99,10 @@ move it here in the same task; do not leave implemented behavior documented as
 **Manifest formats:** `SKILL.md`, Markdown/TXT rules, Markdown workflows,
 `cline_mcp_settings.json`.
 
+Cline hook directories (`~/.cline/hooks/`, `~/Documents/Cline/Hooks/`,
+`.cline/hooks/`, `.clinerules/hooks/`) are not scanned yet: the current Cline
+docs do not define the hook file format.
+
 ### 5. Cross-agent AGENTS.md sweep
 
 One walker handles shared project instruction files for Codex, Gemini CLI,
@@ -103,11 +127,13 @@ Report each as a `Skill` with `agentId: "cross-agent"` and
 - `~/.codex/config.toml` (`[mcp_servers.*]` only)
 - `~/.codex/skills/**/SKILL.md`
 - `~/.codex/prompts/*.md`
+- `~/.codex/hooks.json`
 - `$CODEX_HOME` override for all user-global Codex paths
 
 **Project-local:**
 - `AGENTS.md` / `AGENTS.override.md` are handled by the cross-agent sweep.
 - `.codex/config.toml` may be emitted as untrusted project config.
+- `.codex/hooks.json`
 
 **Plugin cache rule:**
 - Do not scan `~/.codex/plugins/cache` wholesale. Cache payloads are only scan
@@ -125,23 +151,27 @@ Report each as a `Skill` with `agentId: "cross-agent"` and
 - `~/.gemini/extensions/**/gemini-extension.json`
 - `~/.gemini/commands/**/*.toml`
 - `~/.gemini/agents/**/*.md`
-- `~/.gemini/settings.json` (`mcpServers` only)
+- `~/.gemini/settings.json` (hooks, plus one entry per `mcpServers` server)
 
 **Project-local:**
 - `.gemini/extensions/`
 - `.gemini/commands/`
+- `.gemini/settings.json` (hooks)
 - `GEMINI.md` is handled by the cross-agent sweep.
 
 ### 7. Windsurf
 
 **User-global:**
 - `~/.codeium/windsurf/memories/global_rules.md`
+- `~/.codeium/windsurf/hooks.json`, and `~/.codeium/hooks.json` for the
+  JetBrains plugin
 
 **Project-local:**
 - `.windsurf/rules/*.md` in the current workspace
 - Nested workspace `.windsurf/rules/*.md` directories
 - Parent `.windsurf/rules/*.md` directories up to the git root
 - Legacy `.windsurfrules`
+- `.devin/hooks.json`, and the legacy `.windsurf/hooks.json`
 - `AGENTS.md` is handled by the cross-agent sweep.
 
 ### 8. Shared Agent Skills directory

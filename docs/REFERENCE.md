@@ -7,13 +7,13 @@ first screen while preserving the details users need after their first scan.
 
 | Agent | Global paths | Project-local paths |
 |---|---|---|
-| **Claude Code** | `~/.claude/skills/`, `~/.claude/plugins/`, `~/.claude/agents/`, `~/.claude/commands/`, MCP in `~/.claude.json` | `.claude/`, `.mcp.json`, `.claude-plugin/` |
-| **OpenAI Codex** | `~/.codex/AGENTS.md`, `~/.codex/config.toml`, `~/.codex/skills/`, `~/.codex/plugins/`, `~/.codex/prompts/`, `~/.agents/skills/` | `AGENTS.md`, `AGENTS.override.md`, `.codex/config.toml`, `.agents/skills/` |
-| **GitHub Copilot** | `~/.copilot/skills/*/SKILL.md`, `~/.agents/skills/` | `.github/skills/`, `.github/copilot-instructions.md`, `.github/instructions/`, `.agents/skills/` |
-| **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/`, `~/.agents/skills/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, `.cursorrules`, `.agents/skills/` |
+| **Claude Code** | `~/.claude/skills/`, `~/.claude/plugins/` (including plugin hooks and MCP servers), `~/.claude/agents/`, `~/.claude/commands/`, `~/.claude/settings.json`, MCP in `~/.claude.json` | `.claude/` (including `settings.json` and `settings.local.json`), `.mcp.json`, `.claude-plugin/` |
+| **OpenAI Codex** | `~/.codex/AGENTS.md`, `~/.codex/config.toml`, `~/.codex/hooks.json`, `~/.codex/skills/`, `~/.codex/plugins/`, `~/.codex/prompts/`, `~/.agents/skills/` | `AGENTS.md`, `AGENTS.override.md`, `.codex/config.toml`, `.codex/hooks.json`, `.agents/skills/` |
+| **GitHub Copilot** | `~/.copilot/skills/*/SKILL.md`, `~/.copilot/hooks/*.json`, `~/.copilot/settings.json`, `~/.agents/skills/` | `.github/skills/`, `.github/copilot-instructions.md`, `.github/instructions/`, `.github/hooks/*.json`, `.github/copilot/settings.json`, `.agents/skills/` |
+| **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/`, `~/.cursor/hooks.json`, `~/.agents/skills/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, `.cursor/hooks.json`, `.cursorrules`, `.agents/skills/` |
 | **Cline** | `~/Documents/Cline/Rules/`, `~/.cline/skills/`, `~/Documents/Cline/Workflows/`, Cline MCP settings, `~/.agents/skills/` | `.clinerules/`, `.cline/skills/`, `.clinerules/skills/`, `.clinerules/workflows/`, `.agents/skills/` |
-| **Gemini CLI** | `~/.gemini/extensions/`, `~/.gemini/commands/`, `~/.gemini/agents/`, `~/.gemini/settings.json`, `~/.agents/skills/` | `.gemini/extensions/`, `.gemini/commands/`, `GEMINI.md`, `.agents/skills/` |
-| **Windsurf** | `~/.codeium/windsurf/memories/global_rules.md`, `~/.agents/skills/` | `.windsurf/rules/*.md`, nested workspace `.windsurf/rules/`, `.windsurfrules`, `.agents/skills/` |
+| **Gemini CLI** | `~/.gemini/extensions/`, `~/.gemini/commands/`, `~/.gemini/agents/`, `~/.gemini/settings.json`, `~/.agents/skills/` | `.gemini/extensions/`, `.gemini/commands/`, `.gemini/settings.json`, `GEMINI.md`, `.agents/skills/` |
+| **Windsurf** | `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/hooks.json`, `~/.agents/skills/` | `.windsurf/rules/*.md`, nested workspace `.windsurf/rules/`, `.windsurfrules`, `.devin/hooks.json`, `.agents/skills/` |
 | **Cross-agent sweep** | - | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.windsurfrules`, `CONVENTIONS.md` (walks parents) |
 
 By default, `scan` and `list` include only installed or currently exposed
@@ -119,18 +119,18 @@ a credential-store rule (`FS-CREDSTORE`, `FS-BROWSER-CREDENTIALSTORE`, or
 
 ## Rules
 
-46 rules across 9 categories. Full catalog: [`../specs/RULES.md`](../specs/RULES.md).
+49 rules across 9 categories. Full catalog: [`../specs/RULES.md`](../specs/RULES.md).
 
 | Category | Rules |
 |---|---|
 | Prompt injection | `PI-OVERRIDE`, `PI-JAILBREAK`, `PI-HIDDEN-UNICODE`, `PI-HIDDEN-HTML-COMMENT`, `PI-WHITE-ON-WHITE`, `PI-METADATA-MISMATCH`, `PI-EXFIL-TRIGGER-CLAUSE`, `PI-PRIV-ESCALATE-INSTRUCTION` |
-| Network exfiltration | `NET-EXFIL-ENV`, `NET-CLOUD-METADATA-CREDENTIALS`, `NET-OUTBOUND-NONLOCAL`, `NET-WEBHOOK-KNOWN`, `NET-RAW-SOCKET`, `NET-DNS-UNUSUAL-TLD` |
+| Network exfiltration | `NET-EXFIL-ENV`, `NET-CLOUD-METADATA-CREDENTIALS`, `NET-OUTBOUND-NONLOCAL`, `NET-WEBHOOK-KNOWN`, `NET-RAW-SOCKET`, `NET-DNS-UNUSUAL-TLD`, `NET-API-ENDPOINT-OVERRIDE` |
 | Filesystem | `FS-CREDSTORE`, `FS-BROWSER-CREDENTIALSTORE`, `FS-KEYCHAIN-ACCESS`, `FS-DOTENV-READ`, `FS-BOUNDARY-ESCAPE`, `FS-DESTRUCTIVE-HOME-DELETE` |
 | Code execution | `CODEEXEC-PY-EVAL`, `CODEEXEC-PY-OSSYS`, `CODEEXEC-JS-EVAL-FUNCTION`, `CODEEXEC-JS-CHILDPROCESS-SHELL`, `CODEEXEC-DESERIALIZE`, `CODEEXEC-SHELL-BACKTICK` |
 | Obfuscation | `OBFS-BASE64-LARGE`, `OBFS-HEX-LARGE`, `OBFS-EVAL-ATOB`, `OBFS-DECODE-EXEC`, `OBFS-STRING-CONCAT-CMD`, `OBFS-HOMOGLYPH` |
-| Secrets | `SEC-HARDCODED-KEY` |
+| Secrets | `SEC-HARDCODED-KEY`, `SEC-PROJECT-CREDENTIAL-HELPER` |
 | Git history | `GIT-CRED-READ`, `GIT-HISTORY-SCAN` |
-| Dependencies | `DEPS-UNPINNED-SUSPECT`, `DEPS-INSTALL-SCRIPT-HOOKS`, `DEPS-TYPOSQUAT`, `DEPS-INLINE-INSTALL`, `DEPS-REMOTE-IMPORT`, `MCP-CONFIG-REMOTE-EXEC` |
+| Dependencies | `DEPS-UNPINNED-SUSPECT`, `DEPS-INSTALL-SCRIPT-HOOKS`, `DEPS-TYPOSQUAT`, `DEPS-INLINE-INSTALL`, `DEPS-REMOTE-IMPORT`, `MCP-CONFIG-REMOTE-EXEC`, `MCP-PROJECT-AUTO-APPROVE` |
 | Skill-specific | `SKILL-CURL-BASH-IN-MD`, `SKILL-FETCH-AND-EXEC`, `SKILL-DISABLE-SAFETY`, `SKILL-PASSWORD-ZIP`, `SKILL-MEMORY-WRITE` |
 
 ## JSON Output
