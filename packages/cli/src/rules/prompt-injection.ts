@@ -83,8 +83,9 @@ const suspiciousZwjPattern =
 const bidiControlPattern = /[\u202A-\u202E]/;
 // U+2060-U+2064: Word Joiner, invisible math operators
 const invisibleOpsPattern = /[\u2060-\u2064]/;
-// U+FEFF: BOM/ZWNBSP (flag any occurrence — BOF BOM is rare in skill files)
-const zwnbspPattern = /\uFEFF/;
+// U+FEFF: ZWNBSP. A byte order mark at the start of the file is an encoding
+// marker, not hidden text, so only flag U+FEFF after the first character (spec §4).
+const zwnbspPattern = /(?<!^)\uFEFF/;
 // U+E0020-U+E007F: tag characters (ASCII smuggling). Requires /u flag.
 const tagCharsPattern = /[\u{E0020}-\u{E007F}]/u;
 

@@ -1,4 +1,4 @@
----
+﻿---
 name: date-formatter
 description: Formats dates in various locales.
 ---
