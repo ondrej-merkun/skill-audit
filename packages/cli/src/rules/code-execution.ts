@@ -14,13 +14,16 @@ const subprocessStringCommandPattern =
 // stays in the body.
 const shellBacktickSubstitutionPattern = /(?<!\\)(?:\\\\)*`(?:[^`\\\n]|\\.){5,}`/;
 
-// eval, trap, and `sh -c` parse their double-quoted argument again, so an escaped backtick pair in
-// that argument runs at the second parse. The argument must follow the command directly, so a
+// eval, trap, and a shell with a -c flag group (bash -c, bash -lc, sh -ce) parse their
+// double-quoted argument again. The first parse turns 4n+1 backslashes before a backtick into an
+// even number of backslashes and the backtick, so the second parse runs the substitution. With
+// 4n+3 backslashes the backtick stays escaped. The argument must follow the command directly, so a
 // message that only names eval between escaped backticks stays text.
 // ponytail: ssh remote commands, unquoted eval arguments, and text that a script writes to a file
 // that a shell runs later (such as ~/.bashrc) also run escaped backticks. This pattern skips them.
+// It does not check command position, so an argument such as echo eval "\`...\`" still fires.
 const reparsedEscapedBacktickPattern =
-  /\b(?:eval|trap|(?:ba|da|k|z)?sh\s+-[a-z]*c)\s+"(?:[^"\\\n]|\\.)*?\\`(?:[^`\\\n]|\\[^`\n]){5,}\\`/;
+  /\b(?:eval|trap|(?:ba|da|k|z)?sh\s+-(?=[a-z]*c)[a-z]+)\s+"(?:[^"\\\n]|\\.)*?(?<!\\)(?:\\\\\\\\)*\\`(?:[^`\\\n]|\\[^`\n]){5,}\\`/;
 
 export const CODEEXEC_PY_EVAL: Rule = {
   id: 'CODEEXEC-PY-EVAL',

