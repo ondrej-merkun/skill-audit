@@ -1,12 +1,13 @@
 import { type Dirent, realpathSync, statSync } from 'node:fs';
 import { readdir, realpath, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 // Directory-walk helpers that follow symlinks. Agents load symlinked skills
 // (`npx skills` and skillshare link ~/.claude/skills/<name> into a shared
 // store), so every walker must treat a link exactly like its target.
-// ponytail: a link to a huge tree (for example `/`) makes the walk as large as
-// that tree; loops are safe, size is not capped.
+// ponytail: a link to a large tree that is not an ancestor of the walk root
+// (for example `/usr`) makes the walk as large as that tree. Loops and links
+// to ancestors (`/`, `~`, `..`) are safe; size is not capped.
 
 /**
  * Lists a directory with each symlink resolved to its target kind.
@@ -39,8 +40,12 @@ export function entryKindSync(dir: string, entry: Dirent): EntryKind | null {
 
 /**
  * Records that one walk entered `dir`, keyed by its real path. Returns false
- * when the walk already entered that real directory (a loop such as `a -> ..`,
- * or a second link to the same target) or the path cannot be resolved.
+ * when the walk already entered that real directory (a loop such as `a -> a`,
+ * or a second link to the same target), when `dir` is an ancestor of the walk
+ * root (a link to `/`, `~`, or `..`), or when the path cannot be resolved.
+ *
+ * Use one new, empty set per walk and enter the walk root first: that first
+ * call also marks every ancestor of the root's real path as entered.
  * ponytail: the second link to a shared target is skipped, so that alias path
  * is not reported by the walk.
  */
@@ -72,8 +77,27 @@ async function entryKind(dir: string, entry: Dirent): Promise<EntryKind | null> 
 
 function markVisited(visitedRealDirs: Set<string>, realDir: string): boolean {
   if (visitedRealDirs.has(realDir)) return false;
+
+  // A link to an ancestor reaches the walk root again only after it walks the
+  // whole parent tree (all of `/` for a link to `/`), so treat it as a loop.
+  const isWalkRoot = visitedRealDirs.size === 0;
+  if (isWalkRoot) {
+    for (const ancestor of ancestorsOf(realDir)) visitedRealDirs.add(ancestor);
+  }
+
   visitedRealDirs.add(realDir);
   return true;
+}
+
+function ancestorsOf(realDir: string): string[] {
+  const ancestors: string[] = [];
+  let dir = realDir;
+  // The filesystem root is its own dirname, so the loop ends there.
+  while (dirname(dir) !== dir) {
+    dir = dirname(dir);
+    ancestors.push(dir);
+  }
+  return ancestors;
 }
 
 function kindOf(target: { isDirectory(): boolean; isFile(): boolean }): EntryKind | null {

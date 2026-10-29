@@ -1,6 +1,6 @@
 import { readFile, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { readDirFollowingLinks } from '../fs-walk.js';
+import { enterDirOnce, readDirFollowingLinks } from '../fs-walk.js';
 import type { Skill } from '../types.js';
 
 const MAX_MANIFEST_FILES = 40;
@@ -80,10 +80,13 @@ async function skillRoot(skill: Skill): Promise<string> {
 async function findManifestFiles(root: string, fileName: string): Promise<string[]> {
   const files: string[] = [];
   const pending: Array<{ path: string; depth: number }> = [{ path: root, depth: 0 }];
+  // A link to `/` or `~` must not attribute an unrelated package.json to the skill.
+  const visitedRealDirs = new Set<string>();
 
   while (pending.length > 0 && files.length < MAX_MANIFEST_FILES) {
     const current = pending.shift();
     if (current === undefined) break;
+    if (!(await enterDirOnce(visitedRealDirs, current.path))) continue;
 
     const entries = await readDirFollowingLinks(current.path);
 
