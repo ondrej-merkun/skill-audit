@@ -250,9 +250,46 @@ the same file. The finding is on the line of the read.
   another host, such as `["ssh", host, "env | curl ..."]`; and other clients,
   such as `urllib3`.
 
-JavaScript and TypeScript: `JSON.stringify(process.env)`. Other
-serializations of `process.env` into `fetch` or `http.request`, such as
-`{...process.env}` or `Object.entries(process.env)`, are a known gap.
+JavaScript and TypeScript: `JSON.stringify(process.env)` anywhere in the file,
+and a read of the whole `process.env` whose value reaches a network send in
+the same file. The finding is on the line of the read.
+- A whole read uses `process.env` as a whole: `{ ...process.env }`,
+  `Object.entries(process.env)`, `Object.keys(process.env)`,
+  `Object.values(process.env)`, `Object.assign({}, process.env)`,
+  `new URLSearchParams(process.env)`, `util.inspect(process.env)`, or
+  `process.env` itself as a value. A key lookup (`process.env.API_KEY`,
+  `process.env["API_KEY"]`, `process.env?.API_KEY`), a write, and a membership
+  test (`"CI" in process.env`) are not whole reads.
+  `const { API_KEY } = process.env` reads one key.
+- A send is a call to `fetch`, `axios`, `axios.<verb>`, `got`, `got.<verb>`,
+  `navigator.sendBeacon`, or a client constructor (`http.request`,
+  `http.get`, `https.request`, `https.get`, `net.connect`,
+  `net.createConnection`, `tls.connect`,
+  `new WebSocket`, `new net.Socket`, `axios.create`). A `write`, `end`,
+  `send`, `get`, `post`, `put`, `patch`, `delete`, or `request` call on a name
+  that holds a client in the same scope is a send too. The data of a send is
+  its arguments. The body of a function in the arguments, such as a response
+  callback, is not data.
+- The value flows through a `const`, `let`, or `var` initializer and through
+  an assignment to a declared name (`name = value`, `name += value`,
+  `name.key = value`). A name resolves to its declaration in the innermost
+  enclosing block, so two functions that use the same local name do not share
+  its value. A key lookup on a variable that holds the environment reads one
+  item.
+- Comments and string text do not count. The code in a template literal
+  field does.
+- The `env` option of `spawn`, `spawnSync`, `exec`, `execSync`, `execFile`,
+  `execFileSync`, `fork`, `execa`, `execaSync`, `execaCommand`, and
+  `execaCommandSync` sets the environment of the child process. It does not
+  flow into the call result. A send inside that option still counts.
+- Known gaps: return values, function arguments, loop targets
+  (`for (const [k, v] of Object.entries(process.env))`), a copy key by key, a
+  rest element (`const { ...rest } = process.env`),
+  `import { env } from "node:process"`, a parameter that shadows an outer
+  name, other clients (`undici`, `ky`, `superagent`, `XMLHttpRequest`, an
+  imported `request`), a send chained on a constructor
+  (`net.connect(...).write(...)`), and JavaScript in other file types, such as
+  `node -e` in a shell script.
 
 Shell: an environment dump is `env`, `printenv`, `export`, `export -p`,
 `declare -p`, `declare -x`, or `set` with no arguments, optionally called by
@@ -297,6 +334,15 @@ launches, greps a log for the attack text, mails and sends named values over
 RPC, and writes the environment to a local file named like a stream writer; a
 script that posts a static JSON body; and a shell script that prints an
 example pipeline.
+
+JavaScript and TypeScript fixtures: a `.mjs` file that sends a spread,
+`Object.entries`, `Object.keys`, `Object.values`, `URLSearchParams`, and
+`util.inspect` through `fetch`, `axios.post`, an `http.request` body, and a
+socket, and a `.ts` file that sends a copy through two variables, are
+malicious. A JavaScript file that authenticates with one key, gives copies of
+the environment to child processes, sends a membership flag, reads the
+environment in a response callback, posts a name that another function uses
+for a copy, and quotes the attack in a comment and a string is benign.
 
 ### NET-WEBHOOK-KNOWN (Critical)
 URLs in code and markdown that deliver data to a chat webhook, a request

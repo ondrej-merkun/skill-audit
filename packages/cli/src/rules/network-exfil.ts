@@ -11,6 +11,7 @@ import {
   maskSecurityEducationExampleContext,
   maskShellCommentsAndSingleQuotedStrings,
 } from './code-context.js';
+import { maskProcessEnvReadsNotSent, PROCESS_ENV_TOKEN_SOURCE } from './js-env-flow.js';
 import { markEnvironFlow, SENT_ENVIRON_READ_MARK } from './python-env-flow.js';
 
 // Patterns are split to avoid triggering static-analysis hooks on this detector file itself.
@@ -25,12 +26,11 @@ function maskLine(line: string): string {
 }
 
 // NET-EXFIL-ENV: the whole environment (os.environ, process.env, env) sent over the network.
-// The view marks each Python read of the whole environment that reaches a network call, so any
-// mark in it is a hit.
+// The view marks each Python read of the whole environment that reaches a network call, and it
+// keeps a JavaScript `process.env` token only where the whole object reaches one, so any mark or
+// token in it is a hit.
 const pyEnvironSentPattern = new RegExp(SENT_ENVIRON_READ_MARK);
-const jsEnvStringifyPattern = new RegExp(
-  ['JSON\\.stringify\\s*\\(\\s*process\\.', 'env\\s*\\)'].join('')
-);
+const jsEnvSentPattern = new RegExp(PROCESS_ENV_TOKEN_SOURCE);
 
 // Shell commands that print every variable. With an argument (`printenv PATH`) they print one
 // value, so each pattern requires the dump to end at a `)`, a backtick, or a pipe.
@@ -134,14 +134,16 @@ function maskNonExecutingShellText(script: string): string {
 
 const PYTHON_SCAN_PATH = /\.py$/i;
 
-// The flow analysis reads Python. In a Python file it may mark a read that the view masked, such
+// The Python flow reads Python. In a Python file it may mark a read that the view masked, such
 // as one in an f-string field, and it shows each string that a shell runs as shell code. In
 // another language it marks only the reads that the language view kept: Python in a shell heredoc
-// counts, a read in a `//` comment does not.
+// counts, a read in a `//` comment does not. The JavaScript flow reads only the view of a
+// JavaScript or TypeScript file.
 function prepareEnvExfilView(content: string, filePath: string): string {
   const view = maskNonExecutingEnvDumpText(content, filePath);
   const isPython = PYTHON_SCAN_PATH.test(filePath);
-  return markEnvironFlow(view, content, isPython ? maskNonExecutingShellText : undefined);
+  const pythonView = markEnvironFlow(view, content, isPython ? maskNonExecutingShellText : undefined);
+  return maskProcessEnvReadsNotSent(pythonView, content, filePath);
 }
 
 export const NET_EXFIL_ENV: Rule = {
@@ -151,7 +153,7 @@ export const NET_EXFIL_ENV: Rule = {
   appliesTo: ['*.py', '*.sh', '*.bash', '*.js', '*.ts', '*.mjs'],
   patterns: [
     pyEnvironSentPattern,
-    jsEnvStringifyPattern,
+    jsEnvSentPattern,
     shellEnvDumpDataPattern,
     shellEnvDumpPipePattern,
     shellEnvDumpRedirectPattern,
