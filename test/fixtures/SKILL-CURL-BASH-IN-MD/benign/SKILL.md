@@ -6,6 +6,8 @@ Downloads data files for processing.
 
 ```bash
 curl https://example.com/data.json -o data.json
+curl https://example.com/data.json -o data.json && jq '.items' data.json
+curl https://example.com/data.json -o data.json && python3 -m json.tool data.json
 wget https://example.com/archive.tar.gz
 curl -s https://api.example.com/items.json | jq '.items'
 curl -fsSL https://example.com/archive.tar.gz | sha256sum
