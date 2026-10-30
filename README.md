@@ -171,8 +171,9 @@ skill-audit explain docs-assistant --llm local
 `skill-audit llm add` writes model config to
 `$XDG_CONFIG_HOME/skill-audit/llms.json`, or `~/.config/skill-audit/llms.json`
 when `XDG_CONFIG_HOME` is unset. Cloud model URLs are not accepted here. Base
-URLs must be loopback URLs such as `127.0.0.1` or `localhost`; no cloud API key,
-hosted account, or remote model is required.
+URLs must use a loopback host: `localhost`, an address in `127.0.0.0/8`, or
+`[::1]`. Names such as `ollama.localhost` or `127.0.0.1.example.com` are
+rejected. No cloud API key, hosted account, or remote model is required.
 
 For comparison runs, repeat `--llm`, pass comma-separated names, or use
 `--llm all` for every enabled configured local model:

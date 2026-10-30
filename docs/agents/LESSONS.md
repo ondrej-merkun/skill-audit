@@ -432,6 +432,13 @@ without a commit message explaining why it no longer applies.
   quantifiers that can match the same characters next to each other, and do not
   let a quantifier after a line anchor cross newlines.
 
+- **L4.8: Check a trust boundary where the value is read, not only where it
+  is written.** _The LLM loopback check accepted `127.0.0.1.evil.com` because it
+  tested the `127.` prefix. It also ran only on `llm add`, so a URL that an older
+  release saved, or a hand edit of `llms.json`, still got skill content._
+  Run the check in the loader that every send path uses, and add a test that
+  writes the bad value to the file directly.
+
 ## 5. Orphans, cleanup, and the one-task-per-loop rule
 
 - **L5.1 — Delete direct predecessors in the same commit.** _Task 1.7
