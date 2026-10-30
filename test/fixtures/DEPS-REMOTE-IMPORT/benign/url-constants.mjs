@@ -14,6 +14,8 @@ await writeFile('logo.png', Buffer.from(logo));
 await writeFile('status.json', JSON.stringify(status));
 const cached = await import('./status.json', { with: { type: 'json' } });
 const view = await import(`./views/${status.layout}.js`);
+const settings = {};
+settings . rendererPath = 'https://docs.example.com/renderers';
 const renderer = await import(rendererPath);
 
 // Never load code from a URL constant: const u = 'https://cdn.example.com/x.js'; await import(u);

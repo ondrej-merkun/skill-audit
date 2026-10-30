@@ -479,24 +479,26 @@ the same file. The view marks the loader call, and the finding is on its line:
   an `http(s)` URL literal, or to a value that starts with such a name, as in
   `` `${BASE}/x.js` `` or `BASE + '/x.js'`. The assignment can be a `const`,
   `let`, or `var` declaration, a later name in a declaration list, or a plain
-  assignment. A loader call reads the nearest assignment of the name before it,
-  or the first one after it when none comes before. A loader call whose
-  argument starts with a URL name fires: `import(u)`, `require(u)`,
+  assignment. A JSX attribute (`<Link u="<url>" />`) and a property
+  (`config.u = '<url>'`) do not set a name. A loader call reads the nearest
+  assignment of the name before it, or the first one after it when none comes
+  before. A loader call whose argument starts with a URL name fires:
+  `import(u)`, `require(u)`,
   `import(BASE + '/x.js')`, and `` import(`${BASE}/x.js`) ``.
 - **Downloaded file.** A code file (`.js`, `.mjs`, `.cjs`, `.ts`, `.mts`,
   `.cts`, `.jsx`, `.tsx`, `.py`) is downloaded when a curl or wget command
   names it, also as the last part of its URL. The command must be a string
-  argument of a call that runs it, such as `execSync`, `spawn`, `execa`,
-  `subprocess.run`, or `os.system`, so a printed or logged command does not
-  count. It is also downloaded
-  when Python `urlretrieve` writes it, or when a file that calls a network API
+  in the arguments of a call that runs it, such as `execSync`, `spawn`,
+  `execa`, `subprocess.run`, or `os.system`, at any distance from the call.
+  A printed or logged command does not count. It is also downloaded when
+  Python `urlretrieve` writes it, or when a file that calls a network API
   (`fetch`, `http(s).get`, `axios`, `got`, `urlopen`, `requests`, `httpx`)
   writes it with `writeFile`, `appendFile`, `createWriteStream`, or
   `open(<path>, 'w')`. A loader that names the same file, with or without
-  its extension, fires: `require('./x')`, `import('./x.js')`, and in Python `import m`,
-  `from m import`, `import_module('m')`, `__import__('m')`,
-  `spec_from_file_location(<name>, 'm.py')`, `SourceFileLoader(<name>, 'm.py')`,
-  and `runpy.run_path('m.py')`.
+  its extension, fires: `require('./x')`, `import('./x.js')`, and in Python
+  `import m`, `from m import`, `import_module('m')`, `__import__('m')`,
+  `spec_from_file_location(<name>, 'm.py')`,
+  `SourceFileLoader(<name>, 'm.py')`, and `runpy.run_path('m.py')`.
 
 A JSON file, an image, or another file without a code extension is data, so
 its download does not fire. A URL name that the code only logs, fetches, or
@@ -525,6 +527,8 @@ The rule misses:
   `exec(open('m.py').read())`.
 - A static `import ... from './x.js'` of a downloaded file. The static import
   runs before the download.
+- A plain assignment on a new line after a name or a string, in code without
+  semicolons, does not set a name, because it reads like a JSX attribute.
 - The rule does not know scopes, so a parameter that shadows a URL name also
   fires. Files match by name, so a different file with the same name also
   fires.
