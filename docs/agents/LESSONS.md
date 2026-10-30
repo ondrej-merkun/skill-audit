@@ -211,6 +211,13 @@ without a commit message explaining why it no longer applies.
   and run the named command on the built CLI. If no command does the job, name
   the real file or step instead.
 
+- **L1.32: A commander usage error exits 1, which is the FAIL verdict code.**
+  _`scan --fail-on foo` gated on FAIL without a warning. Commander's
+  `InvalidArgumentError` and `.choices()` exit 1 by default, so a rejected value
+  also looks like a FAIL verdict to a CI gate._
+  Validate an option value in its argument parser, and set `exitCode = 2` (the
+  spec's usage-error code) on the `InvalidArgumentError` before you throw it.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task
