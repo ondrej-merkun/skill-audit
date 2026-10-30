@@ -27,8 +27,8 @@ function makeId(input: string): string {
   return createHash('sha256').update(`${AGENT_ID}:${input}`).digest('hex').slice(0, 16);
 }
 
-// Returns the chain of directories from dir up to the filesystem root, inclusive.
-function ancestorDirs(dir: string): string[] {
+/** Returns the chain of directories from dir up to the filesystem root, inclusive. */
+export function ancestorDirs(dir: string): string[] {
   const dirs: string[] = [];
   let current = dir;
   while (true) {

@@ -9,6 +9,7 @@ import {
   type HookScriptRoot,
   mcpServerScanMetadata,
 } from './agent-config.js';
+import { ancestorDirs } from './agents-md-sweep.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
 import { fallbackSkillNameFromDirectory } from './names.js';
 import { computeTreeSha256 } from './tree-hash.js';
@@ -29,6 +30,14 @@ function getCwd(): string {
 // loads them again. Only that exact dir is skipped: a plugin manifest can load skills or hooks
 // from a nested `plugins/.trash` dir, so a path-segment match would hide a loaded payload.
 const PLUGIN_TRASH_DIR_NAME = '.trash';
+
+// Instruction files that Claude Code loads from the working directory and every dir above it.
+// The cross-agent sweep owns the root CLAUDE.md and AGENTS.md.
+const PROJECT_MEMORY_FILES = [
+  join('.claude', 'CLAUDE.md'),
+  join('.claude', 'AGENTS.md'),
+  'CLAUDE.local.md',
+];
 
 function claudePluginsDir(): string {
   return join(getHomeDir(), '.claude', 'plugins');
@@ -249,13 +258,70 @@ function sourcePluginMetadata(pluginName: string | null): Skill['metadata'] | un
   return pluginName === null ? undefined : { sourcePluginName: pluginName };
 }
 
-async function discoverCommandFiles(
+/** Emits each `.md` file below dir, at any depth: commands and rules. */
+async function discoverMarkdownFiles(
   dir: string,
+  format: Skill['format'],
   scope: Skill['scope'],
   options: DiscoverSkillsOptions = {}
 ): Promise<Skill[]> {
   const files = (await walkFiles(dir, options)).filter((file) => file.endsWith('.md'));
-  return Promise.all(files.map((f) => skillFromFile(f, 'SKILL.md', scope)));
+  return Promise.all(files.map((f) => skillFromFile(f, format, scope)));
+}
+
+/** Emits a memory file such as CLAUDE.md under its file name, as the cross-agent sweep does. */
+async function discoverMemoryFile(filePath: string, scope: Skill['scope']): Promise<Skill[]> {
+  if (!(await isRegularFile(filePath))) return [];
+
+  return [{ ...(await skillFromFile(filePath, 'agents-md', scope)), name: basename(filePath) }];
+}
+
+/**
+ * Claude Code loads memory files and `.claude/rules/` from the working directory and every dir
+ * above it, also above the repository root. In home, these paths are the user memory files that
+ * the user scope also emits; dedupe collapses the two rows.
+ */
+async function discoverProjectMemory(
+  cwd: string,
+  options: DiscoverSkillsOptions = {}
+): Promise<Skill[]> {
+  const skills: Skill[] = [];
+
+  for (const dir of ancestorDirs(cwd)) {
+    for (const file of PROJECT_MEMORY_FILES) {
+      skills.push(...(await discoverMemoryFile(join(dir, file), 'project')));
+    }
+    skills.push(
+      ...(await discoverMarkdownFiles(
+        join(dir, '.claude', 'rules'),
+        'agents-md',
+        'project',
+        options
+      ))
+    );
+  }
+
+  return skills;
+}
+
+/**
+ * Claude Code also loads project skills, commands, and agents from each parent of the working
+ * directory up to the git root. A linked worktree marks its root with a `.git` file. The walk
+ * stops below home, because `~/.claude/` holds the user files.
+ */
+async function parentProjectClaudeDirs(cwd: string, home: string): Promise<string[]> {
+  const dirs: string[] = [];
+  let dir = cwd;
+
+  while (dir !== home && !(await pathExists(join(dir, '.git')))) {
+    const parent = dirname(dir);
+    if (parent === dir || parent === home) break;
+
+    dirs.push(join(parent, '.claude'));
+    dir = parent;
+  }
+
+  return dirs;
 }
 
 async function discoverAgentEntries(
@@ -398,9 +464,15 @@ const claudeCodeDiscovery: AgentDiscovery = {
     const userBase = join(home, '.claude');
     skills.push(...(await discoverSkillDirs(join(userBase, 'skills'), 'user', options)));
     skills.push(...(await discoverPluginTree(join(userBase, 'plugins'), 'user', options)));
-    skills.push(...(await discoverCommandFiles(join(userBase, 'commands'), 'user', options)));
+    skills.push(
+      ...(await discoverMarkdownFiles(join(userBase, 'commands'), 'SKILL.md', 'user', options))
+    );
     skills.push(...(await discoverAgentEntries(join(userBase, 'agents'), 'user', options)));
     skills.push(...(await discoverSettingsFiles(userBase, '~/.claude', ['settings.json'], 'user')));
+    skills.push(...(await discoverMemoryFile(join(userBase, 'CLAUDE.md'), 'user')));
+    skills.push(
+      ...(await discoverMarkdownFiles(join(userBase, 'rules'), 'agents-md', 'user', options))
+    );
 
     // User-scoped MCP servers from ~/.claude.json
     skills.push(...(await discoverMcpFromClaudeJson(join(home, '.claude.json'))));
@@ -424,12 +496,35 @@ const claudeCodeDiscovery: AgentDiscovery = {
         ...(await discoverPluginTree(join(projectClaudeDir, 'plugins'), 'project', options))
       );
       skills.push(
-        ...(await discoverCommandFiles(join(projectClaudeDir, 'commands'), 'project', options))
+        ...(await discoverMarkdownFiles(
+          join(projectClaudeDir, 'commands'),
+          'SKILL.md',
+          'project',
+          options
+        ))
       );
       skills.push(
         ...(await discoverAgentEntries(join(projectClaudeDir, 'agents'), 'project', options))
       );
     }
+
+    // Project-scoped: skills, commands, and agents in parent .claude/ dirs. Settings, plugins,
+    // and .mcp.json load from the working directory only.
+    for (const claudeDir of await parentProjectClaudeDirs(cwd, home)) {
+      skills.push(...(await discoverSkillDirs(join(claudeDir, 'skills'), 'project', options)));
+      skills.push(
+        ...(await discoverMarkdownFiles(
+          join(claudeDir, 'commands'),
+          'SKILL.md',
+          'project',
+          options
+        ))
+      );
+      skills.push(...(await discoverAgentEntries(join(claudeDir, 'agents'), 'project', options)));
+    }
+
+    // Project-scoped: memory files and rules in the working directory and every parent
+    skills.push(...(await discoverProjectMemory(cwd, options)));
 
     // Project-scoped: .mcp.json
     skills.push(...(await discoverMcpJson(join(cwd, '.mcp.json'), 'project')));

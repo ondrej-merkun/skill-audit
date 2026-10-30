@@ -389,6 +389,16 @@ without a commit message explaining why it no longer applies.
   manifest field when it is set, and from the default folder only when it is
   not.
 
+- **L2.19: Claude Code has two parent walks; read its loader when the docs leave
+  a bound open.** _The parent-directory fix found that the docs bound skills and
+  agents at the repository root and load CLAUDE.md from every parent, but give no
+  bound for commands or `.claude/rules/`. The Claude Code 2.1.314 binary settled
+  it: `getProjectDirsUpToHome` walks skills, commands, and agents up to the git
+  root and stops below home. The memory loader walks memory files and
+  `.claude/rules/` up to the filesystem root._
+  Mirror each walk on its own. When the docs do not state a bound, run `strings`
+  on the installed agent binary and read its loader before you pick one.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**
