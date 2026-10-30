@@ -8,6 +8,9 @@ Hook and settings paths were verified against vendor docs in October 2026.
 Cursor skills, subagent, and plugin paths were verified against the Cursor docs
 in October 2026.
 
+Claude Code memory, rule, and parent-directory paths were verified against the
+Claude Code docs and the loader in Claude Code 2.1.314 in October 2026.
+
 Hook and settings files run code, so they are scan targets with
 `format: "agent-config"`. Home files have `scope: "user"`; working-directory
 files have `scope: "project"`. Missing files are skipped.
@@ -35,11 +38,28 @@ move it here in the same task; do not leave implemented behavior documented as
   in the payload (such as a template for another agent) never loads and is
   skipped.
 - Plugin scripts that a plugin hook names through `${CLAUDE_PLUGIN_ROOT}`
+- `~/.claude/CLAUDE.md` (user memory)
+- `~/.claude/rules/**/*.md` (user rules, at any depth)
 
-**Project-local (cwd + parents until repo root):**
+**Project-local, cwd and each parent up to the git root:**
 - `.claude/skills/`
 - `.claude/commands/`
 - `.claude/agents/`
+
+A linked worktree marks its root with a `.git` file, so the walk stops there.
+Without a git root, the walk continues to the filesystem root. The parent walk
+stops below home, because `~/.claude/` holds the user files.
+
+**Project-local, cwd and every parent up to the filesystem root:**
+- `.claude/CLAUDE.md`, `.claude/AGENTS.md`, `CLAUDE.local.md` (memory files)
+- `.claude/rules/**/*.md` (rules, at any depth)
+
+Claude Code loads these files at launch also above the repository root. The
+root `CLAUDE.md` and `AGENTS.md` come from the cross-agent sweep (section 5).
+When cwd is below home, the walk also finds `~/.claude/CLAUDE.md` and
+`~/.claude/rules/` as project files. Dedupe collapses them with the user rows.
+
+**Project-local, cwd only:**
 - `.claude/settings.json`, `.claude/settings.local.json`
 - Project scripts that these hooks name through `$CLAUDE_PROJECT_DIR` or by a
   path relative to the project root
@@ -60,6 +80,16 @@ Paths that the shell builds at run time are not followed. Scripts that user
 settings name are the user's
 own and are not followed. Hook scripts of the other agents are not followed
 yet.
+
+Memory and rule files are `agents-md` targets. A memory file keeps its file
+name as the skill name. A rule or command file drops the `.md` extension.
+
+Not scanned yet: the managed `CLAUDE.md` and managed `.claude/rules/` in the
+system policy directory, auto memory (`~/.claude/projects/<project>/memory/`),
+files that a memory file imports with `@path`, memory files, rules, and skills
+in subdirectories below cwd (Claude Code loads them on demand), the main
+checkout's skills that a linked worktree without `.claude/skills/` loads, and
+`--add-dir` directories.
 
 **Manifest formats:** `SKILL.md` (YAML front matter + markdown body),
 `plugin.json`, `.mcp.json`.
@@ -179,6 +209,10 @@ collect:
 
 Report each as a `Skill` with `agentId: "cross-agent"` and
 `format: "agents-md"`.
+
+Claude Code-only memory files (`CLAUDE.local.md`, `.claude/CLAUDE.md`,
+`.claude/AGENTS.md`) and `.claude/rules/` belong to the Claude Code plugin
+(section 1), so `--agent claude-code` scans them.
 
 ### 6. OpenAI Codex
 
