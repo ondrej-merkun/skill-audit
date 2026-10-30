@@ -479,6 +479,9 @@ rules. When the command runs the script directly, also after `bash -c`, the
 shebang line names the program, such as `#!/bin/sh` or
 `#!/usr/bin/env python3`. A text file without a shebang and without a script
 extension gets the `*.sh` rules, because the shell runs such a file itself.
+After a word that is no known interpreter, such as `exec` or `nohup`, the
+script keeps its own name, and its shebang adds the rules of the program that
+it names.
 
 Interpreter options do not hide the interpreter. Discovery knows the common
 options of bash, sh, zsh, Python, Node.js, Ruby, Perl, Deno, and Bun that take

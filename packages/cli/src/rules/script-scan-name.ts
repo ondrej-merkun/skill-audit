@@ -147,15 +147,19 @@ const SHEBANG = '#!';
 const SHEBANG_MAX_BYTES = 256;
 
 /**
- * Returns the scan name of a hook script, such as `setup.sh` for `bash scripts/setup`.
- * `interpreter` is the word that runs the script, or undefined when the command runs the
- * script directly. Returns undefined when the script keeps its own name.
+ * Returns the scan names of a hook script, such as `setup.sh` for `bash scripts/setup`.
+ * `interpreter` is the word before the script, or undefined when the command runs the script
+ * directly. A word that is no known interpreter, such as `exec` or `nohup`, can run the
+ * script itself, so the shebang adds its rules to the script's own name.
  */
-export function hookScriptScanName(
-  filePath: string,
-  interpreter: string | undefined
-): string | undefined {
-  return interpreterScanName(filePath, interpreter ?? directRunInterpreter(filePath));
+export function hookScriptScanNames(filePath: string, interpreter: string | undefined): string[] {
+  const name = basename(filePath);
+  if (interpreter !== undefined && interpreterExtension(interpreter) === undefined) {
+    const shebangName = shebangScanName(filePath);
+    return shebangName === undefined ? [name] : [name, shebangName];
+  }
+
+  return [interpreterScanName(filePath, interpreter ?? directRunInterpreter(filePath)) ?? name];
 }
 
 /**
