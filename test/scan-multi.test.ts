@@ -162,6 +162,14 @@ describe('runScan: multi-skill fixture coverage', () => {
     expect(result.skills.filter((s) => s.findings.length > 0).length).toBeGreaterThan(0);
     expect(result.summary.skills_scanned).toBeGreaterThan(0);
     expect(result.summary.compromised).toBeGreaterThan(0);
+
+    // The payload is in a helper script, not in SKILL.md.
+    const passwordZip = result.skills.find((skill) => skill.name === 'password-zip-skill');
+    expect(passwordZip?.summary.verdict).toBe('FAIL');
+    expect(passwordZip?.findings.map(({ rule_id, line }) => ({ rule_id, line }))).toContainEqual({
+      rule_id: 'SKILL-PASSWORD-ZIP',
+      line: 7,
+    });
   });
 
   it('produces no critical findings for benign skills', async () => {

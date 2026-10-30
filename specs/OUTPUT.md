@@ -325,7 +325,7 @@ README and into the hero GIF. Column widths are fixed.
   AGENT           SKILL                         SOURCE                         VERDICT   SCORE   TOP ISSUE
  ─────────────────────────────────────────────────────────────────────────────────
   2 agents        🔴 polymarket-trader           Plugin - trading-tools        FAIL       0    Environment variables transmitted over outbound HTTP (SKILL.md:14)
-  Claude Code     🔴 solana-wallet-tracker       Direct                         FAIL       0    Password-protected zip extraction (install.sh:3)
+  Claude Code     🔴 solana-wallet-tracker       Direct                         FAIL       0    Password-protected archive extraction or creation (install.sh:3)
   Claude Code     🟠 aws-helper@2.0              Plugin - cloud-ops            REVIEW    65    Hardcoded API key or secret (helpers.py:22)
   Cursor          🟠 web-fetcher                 Direct                         REVIEW    75    Hardcoded outbound HTTP call to non-localhost address... (SKILL.md:8)
   OpenAI Codex    🟡 git-log-pretty              MCP                            REVIEW    82    Git history scanning
