@@ -1,4 +1,4 @@
-import { Command, Option } from 'commander';
+import { Command, InvalidArgumentError, Option } from 'commander';
 import { formatSupportedAgentIds } from './agent-names.js';
 import type { ExplainOptions } from './commands/explain.js';
 import { runExplain } from './commands/explain.js';
@@ -14,9 +14,23 @@ import { VERSION } from './version.js';
 const program = new Command();
 const SUPPORTED_AGENT_OPTION_HELP = `Supported agents: ${formatSupportedAgentIds()}`;
 const DEFAULT_HTML_OUTPUT = 'scan.html';
+const FAIL_ON_BANDS = ['REVIEW', 'FAIL'] as const;
+// Commander exits 1 by default, which a CI gate cannot tell apart from a FAIL verdict.
+const USAGE_ERROR_EXIT_CODE = 2;
 
 function collectRepeatedOption(value: string, previous: string[]): string[] {
   return [...previous, value];
+}
+
+function parseFailOnBand(value: string): string {
+  const band = value.toUpperCase();
+  if (FAIL_ON_BANDS.some((allowed) => allowed === band)) return band;
+
+  const error = new InvalidArgumentError(
+    `Allowed choices are ${FAIL_ON_BANDS.join(', ')} (case-insensitive).`
+  );
+  error.exitCode = USAGE_ERROR_EXIT_CODE;
+  throw error;
 }
 
 function addScanOptions(command: Command): Command {
@@ -42,7 +56,8 @@ function addScanOptions(command: Command): Command {
     )
     .option(
       '--fail-on <band>',
-      'minimum verdict band that triggers exit code 1 (REVIEW or FAIL)',
+      `minimum verdict band that triggers exit code 1 (${FAIL_ON_BANDS.join(' or ')})`,
+      parseFailOnBand,
       'FAIL'
     );
 }
