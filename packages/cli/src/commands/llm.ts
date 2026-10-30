@@ -153,7 +153,11 @@ export async function runLlmList(opts: Partial<LlmListOptions> = {}): Promise<vo
   }
 
   process.stdout.write(`${table.toString()}\n`);
-  process.stdout.write(chalk.grey(`${registry.models.length} local LLM(s) configured.\n`));
+  process.stdout.write(
+    chalk.grey(
+      `${registry.models.length} local LLM${registry.models.length === 1 ? '' : 's'} configured.\n`
+    )
+  );
 }
 
 export async function runLlmCheck(

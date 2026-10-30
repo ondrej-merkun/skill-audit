@@ -390,7 +390,7 @@ describe('runScan flag wiring', () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     await runScan({ summary: true });
     const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).toContain('skills');
+    expect(out).toContain('1 skill · ');
     expect(out).toMatch(/PASS|REVIEW|FAIL/);
   });
 
@@ -452,7 +452,7 @@ describe('runScan flag wiring', () => {
 
       expect(stdoutChunks.join('')).toBe('');
       const out = await readFile(output, 'utf-8');
-      expect(out).toContain('skills');
+      expect(out).toContain('1 skill · ');
       expect(out).toMatch(/PASS|REVIEW|FAIL/);
       expect(out).not.toMatch(/\u001b\[/);
     });
@@ -1024,7 +1024,7 @@ describe('runScan flag wiring', () => {
 
       const stderr = stripAnsi(stderrChunks.join(''));
       expect(fetchImpl).toHaveBeenCalledTimes(1);
-      expect(stderr).toContain('LLM review 1/1 skills - active');
+      expect(stderr).toContain('LLM review 1/1 skill - active');
       expect(stderr).not.toContain('LLM review 1/2');
       expect(stderr).not.toContain('LLM review 2/2');
       expect(stderr).not.toContain('ignored: reviewer');

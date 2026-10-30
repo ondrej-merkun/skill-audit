@@ -142,4 +142,26 @@ describe('progress mode selection', () => {
     expect(out).toContain('[##########] LLM review 2/2 skills - beta');
     expect(out).toContain('LLM review complete: 2 skills reviewed');
   });
+
+  it.each([
+    [0, 'skills'],
+    [1, 'skill'],
+    [2, 'skills'],
+  ])('uses a matching noun in LLM review progress for count %i', (total, noun) => {
+    const writes: string[] = [];
+    const stream = {
+      write(chunk: string) {
+        writes.push(String(chunk));
+        return true;
+      },
+    } as NodeJS.WritableStream;
+    const progress = createProgressReporter({ mode: 'animated', unicode: false, stream });
+
+    progress.startLlmReview(total);
+    progress.updateLlmReview(total, total, 'alpha');
+
+    const out = writes.join('');
+    expect(out).toMatch(new RegExp(`LLM review 0/${total} ${noun}\\b`));
+    expect(out).toContain(`LLM review ${total}/${total} ${noun} - alpha`);
+  });
 });

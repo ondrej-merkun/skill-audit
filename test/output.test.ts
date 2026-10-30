@@ -1122,9 +1122,19 @@ describe('renderSummaryFooter', () => {
 });
 
 describe('renderSummaryCompact', () => {
-  it('includes skill count', () => {
-    const out = stripAnsi(renderSummaryCompact(makeScanResult()));
-    expect(out).toContain('1 skills');
+  it.each([
+    [0, '0 skills · '],
+    [1, '1 skill · '],
+    [2, '2 skills · '],
+  ])('starts with the skill count and a matching noun for count %i', (count, expected) => {
+    const out = stripAnsi(
+      renderSummaryCompact(
+        makeScanResult({
+          summary: { skillsScanned: count, compromised: 0, percentCompromised: 0, verdict: 'PASS' },
+        })
+      )
+    );
+    expect(out.startsWith(expected)).toBe(true);
   });
 
   it('includes compromised count', () => {
@@ -1514,6 +1524,21 @@ describe('renderSarif', () => {
 });
 
 describe('renderHtml', () => {
+  it.each([
+    [0, '0 skills scanned · '],
+    [1, '1 skill scanned · '],
+    [2, '2 skills scanned · '],
+  ])('shows a matching skill noun in the header for count %i', async (count, expected) => {
+    const { renderHtml } = await import('../packages/cli/src/output/html.js');
+    const html = renderHtml(
+      makeScanResult({
+        summary: { skillsScanned: count, compromised: 0, percentCompromised: 0, verdict: 'PASS' },
+      })
+    );
+
+    expect(html).toContain(`<div class="meta">${expected}`);
+  });
+
   it('embeds table rows in shared risk-first order', async () => {
     const { renderHtml } = await import('../packages/cli/src/output/html.js');
     const html = renderHtml(

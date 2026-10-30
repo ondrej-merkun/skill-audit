@@ -262,7 +262,7 @@ export function renderSummaryCompact(result: ScanResult): string {
   const llmSummary = formatLlmComparisonSummary(skills);
   const llmConsensus = formatLlmConsensusSummary(skills);
   const lines = [
-    `${summary.skillsScanned} skills · ${compromisedPart} · ${verdictColored}`,
+    `${summary.skillsScanned} skill${summary.skillsScanned === 1 ? '' : 's'} · ${compromisedPart} · ${verdictColored}`,
     ...(hasMarketplace
       ? [`installed: ${states.installed} · marketplace: ${states.marketplace}`]
       : []),
