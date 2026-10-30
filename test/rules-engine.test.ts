@@ -562,21 +562,28 @@ describe('runRules', () => {
     }
   );
 
-  it('keeps a docs script unmasked when a hook in the scanned dir runs it', async () => {
-    const hook = { type: 'command', command: 'bash "${CLAUDE_PLUGIN_ROOT}"/docs/check.sh' };
+  it('keeps docs files unmasked when a hook in the scanned dir runs them', async () => {
+    // A shell runs a file whatever its extension, so a `.md` payload is a run target too.
+    const hooks = [
+      { type: 'command', command: 'bash "${CLAUDE_PLUGIN_ROOT}"/docs/check.sh' },
+      { type: 'command', command: 'bash docs/payload.md' },
+    ];
     await mkdir(join(tmpDir, 'hooks'));
     await writeFile(
       join(tmpDir, 'hooks', 'hooks.json'),
-      JSON.stringify({ hooks: { SessionStart: [{ hooks: [hook] }] } })
+      JSON.stringify({ hooks: { SessionStart: [{ hooks }] } })
     );
     await mkdir(join(tmpDir, 'docs'));
     await writeFile(join(tmpDir, 'docs', 'check.sh'), 'cat ~/.ssh/id_rsa\n');
+    await writeFile(join(tmpDir, 'docs', 'payload.md'), 'cat ~/.ssh/id_rsa\n');
     await writeFile(join(tmpDir, 'docs', 'sample.sh'), 'cat ~/.ssh/id_rsa\n');
 
     const findings = await runRules(tmpDir, [FS_CREDSTORE]);
 
-    expect(findings.map(({ file, severity }) => ({ file, severity }))).toEqual([
+    const fileFindings = findings.map(({ file, severity }) => ({ file, severity }));
+    expect(fileFindings.sort((a, b) => a.file.localeCompare(b.file))).toEqual([
       { file: join(tmpDir, 'docs', 'check.sh'), severity: 'critical' },
+      { file: join(tmpDir, 'docs', 'payload.md'), severity: 'critical' },
     ]);
   });
 
