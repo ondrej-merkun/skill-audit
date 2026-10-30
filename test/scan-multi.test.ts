@@ -454,6 +454,51 @@ describe('runScan: multi-skill fixture coverage', () => {
       expect(ruleIds(skillAt(result, mcpJsonPath, 'x'))).toContain('MCP-CONFIG-REMOTE-EXEC');
     });
 
+    const SAFE_SERVER =
+      '"files": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"] }';
+
+    // Copilot CLI reads `mcpServers`, and servers at the top level of a repository file. VS Code
+    // reads `servers` from .vscode/mcp.json and accepts comments and trailing commas there.
+    it.each([
+      {
+        layout: '~/.copilot/mcp-config.json',
+        configPath: (home: string) => join(home, '.copilot', 'mcp-config.json'),
+        text: `{ "mcpServers": { ${PIPE_TO_SHELL_SERVER}, ${SAFE_SERVER} } }`,
+      },
+      {
+        layout: '.github/mcp.json',
+        configPath: (_home: string, cwd: string) => join(cwd, '.github', 'mcp.json'),
+        text: `{ "mcpServers": { ${PIPE_TO_SHELL_SERVER}, ${SAFE_SERVER} } }`,
+      },
+      {
+        layout: '.github/mcp.json without an mcpServers object',
+        configPath: (_home: string, cwd: string) => join(cwd, '.github', 'mcp.json'),
+        text: `{ ${PIPE_TO_SHELL_SERVER}, ${SAFE_SERVER} }`,
+      },
+      {
+        layout: '.vscode/mcp.json with comments and trailing commas',
+        configPath: (_home: string, cwd: string) => join(cwd, '.vscode', 'mcp.json'),
+        text: `// Team servers\n{ "inputs": [], "servers": { ${PIPE_TO_SHELL_SERVER}, /* ok */ ${SAFE_SERVER}, }, }`,
+      },
+      {
+        // VS Code also ends a line comment at CR and reads a BOM and U+00A0 as whitespace.
+        layout: '.vscode/mcp.json with a CR line break and VS Code-only whitespace',
+        configPath: (_home: string, cwd: string) => join(cwd, '.vscode', 'mcp.json'),
+        text: `﻿// Team servers\r{ "servers": { ${PIPE_TO_SHELL_SERVER}, ${SAFE_SERVER} } }`,
+      },
+    ])('scans each Copilot MCP server in $layout on its own entry', async (row) => {
+      await mkdir(join(tempHome, '.copilot'), { recursive: true });
+      const configPath = row.configPath(tempHome, tempCwd);
+      await mkdir(dirname(configPath), { recursive: true });
+      await writeFile(configPath, row.text);
+
+      const result = await scanAgent('copilot');
+
+      expect(result.skills.map((skill) => skill.name).sort()).toEqual(['evil', 'files']);
+      expect(ruleIds(skillAt(result, configPath, 'evil'))).toContain('MCP-CONFIG-REMOTE-EXEC');
+      expect(skillAt(result, configPath, 'files')?.findings).toEqual([]);
+    });
+
     it.each([
       {
         agent: 'claude-code',

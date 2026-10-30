@@ -1,6 +1,6 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import copilotDiscovery from '../packages/cli/src/discovery/copilot.js';
 
@@ -163,6 +163,49 @@ describe('copilot discovery plugin', () => {
     const names = skills.map((s) => s.name);
     expect(names).toContain('ts');
     expect(names).toContain('rust');
+  });
+
+  // --- prompt files, custom agents, and instructions in subfolders ---
+
+  it('discovers prompt files, custom agents, and instructions in subfolders', async () => {
+    const files = [
+      join(tempCwd, '.github', 'prompts', 'review.prompt.md'),
+      join(tempCwd, '.github', 'prompts', 'release', 'notes.prompt.md'),
+      join(tempCwd, '.github', 'prompts', 'README.md'),
+      join(tempCwd, '.github', 'agents', 'planner.agent.md'),
+      join(tempCwd, '.github', 'agents', 'security', 'auditor.md'),
+      join(tempCwd, '.github', 'instructions', 'frontend', 'react.instructions.md'),
+      join(tempHome, '.copilot', 'agents', 'helper.agent.md'),
+      join(tempHome, '.copilot', 'instructions', 'style.instructions.md'),
+      join(tempHome, '.copilot', 'copilot-instructions.md'),
+    ];
+    for (const file of files) {
+      await mkdir(dirname(file), { recursive: true });
+      await writeFile(file, `# ${file}\n`);
+    }
+    // A linked subfolder, as tools that share one agent store across projects create.
+    const agentStore = join(tempHome, 'agent-store');
+    await mkdir(agentStore);
+    await writeFile(join(agentStore, 'ops.agent.md'), '# ops\n');
+    await symlink(agentStore, join(tempCwd, '.github', 'agents', 'shared'));
+
+    const skills = await copilotDiscovery.discoverSkills();
+    const rows = skills
+      .map(({ name, format, scope }) => ({ name, format, scope }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    // A plain .md file in .github/prompts is not a prompt file.
+    expect(rows).toEqual([
+      { name: 'copilot-instructions', format: 'agents-md', scope: 'user' },
+      { name: 'frontend/react', format: 'agents-md', scope: 'project' },
+      { name: 'helper', format: 'agents-md', scope: 'user' },
+      { name: 'planner', format: 'agents-md', scope: 'project' },
+      { name: 'release/notes', format: 'prompt-md', scope: 'project' },
+      { name: 'review', format: 'prompt-md', scope: 'project' },
+      { name: 'security/auditor', format: 'agents-md', scope: 'project' },
+      { name: 'shared/ops', format: 'agents-md', scope: 'project' },
+      { name: 'style', format: 'agents-md', scope: 'user' },
+    ]);
   });
 
   // --- empty / no config ---
