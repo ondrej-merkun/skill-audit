@@ -529,6 +529,9 @@ The rule misses:
   runs before the download.
 - A plain assignment on a new line after a name or a string, in code without
   semicolons, does not set a name, because it reads like a JSX attribute.
+- Brackets in a regex literal count as code brackets. So a regex such as
+  `/execSync(\()/` can leave a call that runs a command open, and a later
+  printed curl or wget command then counts as a download.
 - The rule does not know scopes, so a parameter that shadows a URL name also
   fires. Files match by name, so a different file with the same name also
   fires.
