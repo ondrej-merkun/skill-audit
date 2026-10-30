@@ -1,17 +1,24 @@
 import { pythonStringStart } from './code-context.js';
 
 // Data flow for NET-EXFIL-ENV in Python: which reads of the whole environment reach a network
-// call in the same file. A value flows through an assignment, a loop target, a container update,
-// a return value, and an argument of a function that the file defines. A name that a function
-// binds is local to that function, as in Python; `self.<name>` is shared by all methods. The
-// trace visits each name reference once, and the parsers skip nested brackets, so a deep or
-// padded file stays linear.
+// call in the same file, and which strings reach a command that a shell runs. A value flows
+// through an assignment, a loop target, a container update, a return value, and an argument of a
+// function that the file defines. A name that a function binds is local to that function, and a
+// nested function also reads the locals of the functions around it, as in Python; `self.<name>`
+// is shared by all methods. A name that the file imports stands for its full name: after
+// `import requests as r`, `r.post` is `requests.post`. The trace visits each name reference once,
+// and the parsers skip nested brackets, so a deep or padded file stays linear.
 // ponytail: the flow ignores statement order, functions that share a name share their call
-// arguments, a nested function sees its parent's locals as module names, and an alias such as
-// `import os as o` or `from requests import post` hides a flow. Move to an AST pass if real scans
-// show any of these.
+// arguments, an import counts in the whole file, and the last import of a name wins. Move to an
+// AST pass if real scans show any of these.
 
 type Range = { start: number; end: number };
+/** The full dotted name that each imported name stands for: `o` is `os`, `post` is `requests.post`. */
+type ImportedNames = Map<string, string>;
+/** A call of a dotted name: the name as written, and the full name that it stands for. */
+type NamedCall = { start: number; openParen: number; text: string; name: string };
+/** A client sends with its send methods. A proxy sends each method call to its server. */
+type ClientKind = 'client' | 'proxy';
 /** The value in [start, end) flows into each target name. */
 type Flow = Range & { targets: string[] };
 /** A dotted name at `start` that reads the whole value of each of `names`. */
@@ -42,12 +49,19 @@ type FlowGraph = {
    * `def f` reads the slots that can fill it.
    */
   parameterSlots: Map<string, string[]>;
-  /** Scoped names that hold a network client. */
-  clients: Set<string>;
+  /** Scoped names that hold a network client, and the kind of each client. */
+  clients: Map<string, ClientKind>;
   /** The scope of each statement: `<name>@<offset>` of its `def`, or '' at module level. */
   statementScopes: string[];
   /** The names that each function binds: its parameters and its assignment, loop, and `as` targets. */
   locals: Map<string, Set<string>>;
+  /** The scope of each function, by its index in file order. */
+  functionScopes: string[];
+  functionIndexes: Map<string, number>;
+  /** The index of the function around each function, or -1 at module level. */
+  enclosingFunctions: number[];
+  /** For each name, the indexes of the functions that bind it. */
+  bindingFunctions: Map<string, Set<number>>;
 };
 type Statement = Range & { indent: number };
 type ParsedCode = {
@@ -58,46 +72,72 @@ type ParsedCode = {
   forKeywords: number[];
 };
 
-/** `os.environ`, or `environ` after `from os import environ`. Group 1 is the `os.` prefix. */
+/** The view marks the start of each read of the whole environment that reaches a network call. */
+export const SENT_ENVIRON_READ_MARK = '\uFFFF';
 // Split like the patterns in network-exfil.ts, so static-analysis hooks do not flag this file.
-export const ENVIRON_TOKEN_SOURCE = ['(?<![\\w.])(os\\.)?', 'environ\\b'].join('');
-const ENVIRON_TOKEN = new RegExp(ENVIRON_TOKEN_SOURCE, 'g');
-const FROM_OS_IMPORT_ENVIRON = /\bfrom\s+os\s+import\b[^;\n]*?\benviron\b/;
+const ENVIRON = ['os.', 'environ'].join('');
 
 // A key lookup, a single-key method, or an assignment touches one variable, not all of them.
 const SINGLE_ITEM_ACCESS = /\s*(?:\[|\.\s*(?:get|pop|setdefault|update|clear)\b|=(?!=))/y;
 
-const NETWORK_CLIENT_CONSTRUCTOR = String.raw`(?:requests\.Session|httpx\.(?:Async)?Client|aiohttp\.ClientSession|(?:http\.client\.)?HTTPS?Connection|socket\.(?:socket|create_connection))`;
-// Calls whose arguments leave the machine. A client constructor counts too: its host goes to a
-// DNS lookup and a connect.
-const NETWORK_CALL = new RegExp(
-  String.raw`(?:\burlopen|(?<![\w.])(?:(?:requests|httpx)\.(?:get|post|put|patch|delete|head|options|request|stream)|aiohttp\.request|${NETWORK_CLIENT_CONSTRUCTOR}))\s*\(`,
-  'g'
+const HTTP_VERB = '(?:get|post|put|patch|delete|head|options|request|stream)';
+// The full names of calls that return a connected client. A client constructor is also a
+// network call: its host goes to a DNS lookup and a connect.
+const CLIENT_CONSTRUCTOR = [
+  String.raw`requests\.Session|httpx\.(?:Async)?Client|aiohttp\.ClientSession`,
+  String.raw`(?:http\.client\.)?HTTPS?Connection|socket\.(?:socket|create_connection)`,
+  String.raw`smtplib\.(?:SMTP|SMTP_SSL|LMTP)|ftplib\.FTP(?:_TLS)?|asyncio\.open_connection`,
+  String.raw`websocket\.(?:create_connection|WebSocket)`,
+  String.raw`websockets\.(?:(?:sync|asyncio)\.)?(?:client\.)?connect`,
+].join('|');
+const RPC_PROXY_CONSTRUCTOR = String.raw`xmlrpc\.client\.ServerProxy`;
+const IS_CLIENT_CONSTRUCTOR = new RegExp(`^(?:${CLIENT_CONSTRUCTOR})$`);
+const IS_RPC_PROXY_CONSTRUCTOR = new RegExp(`^${RPC_PROXY_CONSTRUCTOR}$`);
+// The full names of calls whose arguments leave the machine.
+const IS_NETWORK_CALL = new RegExp(
+  String.raw`^(?:(?:requests|httpx)\.${HTTP_VERB}|aiohttp\.request|${CLIENT_CONSTRUCTOR}|${RPC_PROXY_CONSTRUCTOR})$|(?:^|\.)urlopen$`
 );
-// Client methods that send: HTTP verbs of the session clients, http.client requests, and socket
-// sends and connects.
-const CLIENT_SEND_METHOD =
-  '(?:get|post|put|patch|delete|head|options|request|stream|ws_connect|putrequest|putheader|endheaders|send|sendall|sendto|sendmsg|connect)';
+// `super().urlopen(...)` has no dotted name, because the receiver is a call result. The match
+// starts at the bracket: a lookbehind would scan each run of blanked text again at each offset.
+const CHAINED_URLOPEN_CALL = /[)\]]\s*\.\s*urlopen\s*\(/g;
+// Client methods that send: HTTP verbs of the session clients, http.client requests, socket and
+// stream sends and connects, mail sends, and FTP uploads.
+const CLIENT_SEND_METHOD = new RegExp(
+  `^(?:${HTTP_VERB}|ws_connect|putrequest|putheader|endheaders|send|sendall|sendto|sendmsg|connect|sendmail|send_message|write|writelines|storbinary|storlines|sendcmd)$`
+);
 // Keyword arguments of a send that set how it connects, not what it sends.
 const TRANSPORT_OPTION_ARGUMENT =
   /\s*(?:timeout|verify|allow_redirects|follow_redirects|cert|context)\s*=(?!=)/y;
-const CLIENT_CONSTRUCTOR_VALUE = new RegExp(
-  String.raw`^\s*(?:await\s+)?${NETWORK_CLIENT_CONSTRUCTOR}\s*\(`
-);
-const CLIENT_CONSTRUCTOR_CALL = new RegExp(String.raw`${NETWORK_CLIENT_CONSTRUCTOR}\s*\(`, 'g');
+const CALLED_VALUE = /^\s*(?:await\s+)?([A-Za-z_][\w.]*)\s*\(/;
 const AS_NAME = /\s*as\s+([A-Za-z_]\w*)/y;
 
-// Calls that start a child process. Their `env=` argument is the child's environment and does
-// not flow into the call result: `subprocess.run(cmd, env={**os.environ, "X": "1"})`.
-const PROCESS_LAUNCH_CALL =
-  /(?<![\w.])(?:subprocess\.(?:run|Popen|call|check_call|check_output)|asyncio\.create_subprocess_(?:exec|shell)|Popen)\s*\(/g;
+// The full names of calls that start a child process. Their `env=` argument is the child's
+// environment and does not flow into the call result: `subprocess.run(cmd, env={**os.environ})`.
+const IS_PROCESS_LAUNCH =
+  /^(?:subprocess\.(?:run|Popen|call|check_call|check_output)|asyncio\.create_subprocess_(?:exec|shell)|Popen)$/;
 const CHILD_ENVIRONMENT_KEYWORD = /\s*env\s*=(?!=)/y;
+// The full names of calls that run their command in a shell. A process launch does too with
+// `shell=True`, or with an argument list that starts a shell with a command: `["sh", "-c", cmd]`.
+const IS_SHELL_RUN =
+  /^(?:os\.(?:system|popen)|subprocess\.(?:getoutput|getstatusoutput)|asyncio\.create_subprocess_shell)$/;
+const SHELL_TRUE_ARGUMENT = /\s*shell\s*=\s*True\b/y;
+const SHELL_PROGRAM = /^(?:\/(?:usr\/)?bin\/)?(?:ba|da|k|z)?sh$/;
+const SHELL_COMMAND_OPTION = /^-[a-z]*c$/;
+const STRING_LITERAL_TEXT = /^[rRuU]?(["'])([^"'\\]*)\1$/;
+const MAX_ARGV_ITEM_LENGTH = 64;
+// A part of each shell call, so a file without one skips the shell trace.
+const SHELL_RUN_HINT = /system|popen|shell|getoutput|getstatusoutput|["']-[a-z]*c["']/;
 
+const IMPORT_STATEMENT = /^import\s/;
+const FROM_IMPORT_STATEMENT = /^from\s+([A-Za-z_][\w.]*)\s+import\s/;
+const IMPORTED_NAME = /^([A-Za-z_][\w.]*)(?:\s+as\s+([A-Za-z_]\w*))?$/;
 const FUNCTION_DEF = /^(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(/;
 const RETURN_VALUE = /^(?:return|yield)\b/;
 const FOR_LOOP = /^(?:async\s+)?for\b(.*?)\bin\b/;
 const WITH_STATEMENT = /^(?:async\s+)?with\b/;
-const CONTAINER_UPDATE = /^([A-Za-z_][\w.]*)\.(?:append|extend|insert|update|add|setdefault)\s*\(/;
+// Methods that put a value into a container or a mail message.
+const CONTAINER_UPDATE =
+  /^([A-Za-z_][\w.]*)\.(?:append|extend|insert|update|add|setdefault|set_content|set_payload|attach|add_attachment)\s*\(/;
 const PARAMETER = /^\s*(?:(\*{1,2})\s*)?([A-Za-z_]\w*)/;
 const KEYWORD_ARGUMENT = /\s*([A-Za-z_]\w*)\s*=(?!=)/y;
 const UNPACKED_ARGUMENT = /\s*(\*{1,2})/y;
@@ -117,54 +157,78 @@ const PYTHON_KEYWORDS = new Set(
 const MAX_NESTED_STRING_DEPTH = 8;
 // Method receivers, not values that a caller passes in.
 const IMPLICIT_PARAMETERS = new Set(['self', 'cls']);
+// CPython stops at 100 levels of indentation, so a real nested function is never deeper. The
+// limit keeps a crafted chain of `def`s from making each name lookup walk the whole chain.
+const MAX_ENCLOSING_FUNCTIONS = 100;
 
 /**
- * Blanks each environment token in a prepared view, except the reads of the whole environment
- * that reach a network call. Those are copied back from the content, so a read inside an
- * f-string field stays visible when the view masks strings. With `restoreMaskedReads` false,
- * a read comes back only where the view kept it: for a file in another language, the view of
- * that language decides, so a read in a JavaScript comment stays masked while Python in a
- * shell heredoc still counts.
+ * The NET-EXFIL-ENV view of a file: the prepared view with a mark at the start of each read of
+ * the whole environment that reaches a network call. Marks in the content are blanked first, so
+ * only the flow adds them. In a Python file, the caller passes `shellView`: a read gets its mark
+ * also where the view masks it, as in an f-string field, and each string that reaches a shell
+ * command is shown as `shellView` prepares it, so the shell patterns see it. In a file of another
+ * language, a read gets its mark only where the language view kept it: Python in a shell heredoc
+ * counts, a read in a JavaScript comment does not.
  */
-export function maskEnvironReadsNotSent(
+export function markEnvironFlow(
   view: string,
   content: string,
-  restoreMaskedReads = true
+  shellView?: (command: string) => string
 ): string {
-  const masked = view.replace(ENVIRON_TOKEN, (token) => ' '.repeat(token.length));
-  const sentReads = findSentEnvironReads(content);
-  if (sentReads.length === 0) return masked;
+  const unmarked = view.replaceAll(SENT_ENVIRON_READ_MARK, ' ');
+  const { sentReads, shellCommands } = findEnvironFlow(content, shellView !== undefined);
+  if (sentReads.length === 0 && shellCommands.length === 0) return unmarked;
 
-  const chars = masked.split('');
+  const chars = unmarked.split('');
+  for (const { start, end } of shellCommands) {
+    const shellText = shellView?.(content.slice(start, end)) ?? '';
+    for (let idx = start; idx < end; idx += 1) chars[idx] = shellText[idx - start] ?? ' ';
+  }
   for (const { start, end } of sentReads) {
-    if (!restoreMaskedReads && view.slice(start, end) !== content.slice(start, end)) continue;
-    for (let idx = start; idx < end; idx += 1) chars[idx] = content[idx] ?? ' ';
+    if (shellView === undefined && view.slice(start, end) !== content.slice(start, end)) continue;
+    chars[start] = SENT_ENVIRON_READ_MARK;
   }
   return chars.join('');
 }
 
-/** Returns the token range of each whole-environment read whose value reaches a network call. */
-export function findSentEnvironReads(content: string): Range[] {
-  if (!content.includes('environ')) return [];
+/**
+ * The range of each whole-environment read whose value reaches a network call, and the text of
+ * each string literal that reaches the command of a shell call (only with `traceShellCommands`).
+ */
+function findEnvironFlow(
+  content: string,
+  traceShellCommands: boolean
+): { sentReads: Range[]; shellCommands: Range[] } {
+  const mayRead = content.includes('environ');
+  const mayRunShell = traceShellCommands && SHELL_RUN_HINT.test(content);
+  if (!mayRead && !mayRunShell) return { sentReads: [], shellCommands: [] };
 
-  const parsed = blankChildEnvironmentArguments(parseCode(pythonCodeView(content)));
-  const reads = wholeEnvironReads(parsed);
-  if (reads.length === 0) return [];
+  const { code, strings } = pythonCodeView(content);
+  const unblanked = parseCode(code);
+  const imported = importedNames(unblanked);
+  const parsed = blankChildEnvironmentArguments(unblanked, namedCalls(code, imported));
+  const calls = namedCalls(parsed.code, imported);
+  const reads = mayRead ? wholeEnvironReads(parsed, imported) : [];
+  const commands = mayRunShell ? shellCommandArguments(parsed, content, calls) : [];
+  if (reads.length === 0 && commands.length === 0) return { sentReads: [], shellCommands: [] };
 
-  const graph = collectFlows(parsed);
-  const sends = networkSendArguments(parsed, graph);
-  if (sends.length === 0) return [];
-
-  return traceReadsIntoSends(parsed, graph, reads, sends);
+  const graph = collectFlows(parsed, imported);
+  const trace = flowTracer(parsed, graph);
+  const sends = reads.length > 0 ? networkSendArguments(parsed, graph, calls) : [];
+  return {
+    sentReads: sends.length > 0 ? trace(reads, sends) : [],
+    shellCommands: commands.length > 0 ? trace(strings, commands) : [],
+  };
 }
 
-/** Walks back from each send through the flows and collects the reads that it reaches. */
-function traceReadsIntoSends(
+/**
+ * Returns a function that walks back from each sink range through the flows and collects the
+ * sources that it reaches. Each walk visits each source and each name reference once.
+ */
+function flowTracer(
   parsed: ParsedCode,
-  graph: FlowGraph,
-  reads: Range[],
-  sends: Range[]
-): Range[] {
+  graph: FlowGraph
+): (sources: Range[], sinks: Range[]) => Range[] {
   const flowsByTarget = new Map<string, Flow[]>();
   for (const flow of [...graph.flows, ...callArgumentFlows(parsed, graph.callSignatures)]) {
     for (const target of flow.targets) {
@@ -173,45 +237,52 @@ function traceReadsIntoSends(
       else targetFlows.push(flow);
     }
   }
+  const references = flowReferences(parsed, graph, flowsByTarget);
 
-  const takeReads = visitOnce(reads);
-  const takeReferences = visitOnce(flowReferences(parsed, graph, flowsByTarget));
-  const sentReads: Range[] = [];
-  const visitedNames = new Set<string>();
-  const pending: Range[] = [...sends];
+  return (sources, sinks) => {
+    const takeSources = visitOnce(sources);
+    const takeReferences = visitOnce(references);
+    const reached: Range[] = [];
+    const visitedNames = new Set<string>();
+    const pending: Range[] = [...sinks];
 
-  for (let range = pending.pop(); range !== undefined; range = pending.pop()) {
-    for (const read of takeReads(range)) sentReads.push(read);
+    for (let range = pending.pop(); range !== undefined; range = pending.pop()) {
+      for (const source of takeSources(range)) reached.push(source);
 
-    for (const reference of takeReferences(range)) {
-      for (const name of reference.names) {
-        for (const source of [name, ...(graph.parameterSlots.get(name) ?? [])]) {
-          if (visitedNames.has(source)) continue;
-          visitedNames.add(source);
-          for (const flow of flowsByTarget.get(source) ?? []) pending.push(flow);
+      for (const reference of takeReferences(range)) {
+        for (const name of reference.names) {
+          for (const target of [name, ...(graph.parameterSlots.get(name) ?? [])]) {
+            if (visitedNames.has(target)) continue;
+            visitedNames.add(target);
+            for (const flow of flowsByTarget.get(target) ?? []) pending.push(flow);
+          }
         }
       }
     }
-  }
 
-  return sentReads.sort((left, right) => left.start - right.start);
+    return reached.sort((left, right) => left.start - right.start);
+  };
 }
 
 /**
  * Collects the flows of each statement, the functions and their parameters, and the client
  * names. A statement belongs to the innermost `def` that it is indented under.
  */
-function collectFlows(parsed: ParsedCode): FlowGraph {
+function collectFlows(parsed: ParsedCode, imported: ImportedNames): FlowGraph {
   const graph: FlowGraph = {
     flows: [],
     callSignatures: new Map(),
     parameterSlots: new Map(),
-    clients: new Set(),
+    clients: new Map(),
     statementScopes: [],
     locals: new Map(),
+    functionScopes: [],
+    functionIndexes: new Map(),
+    enclosingFunctions: [],
+    bindingFunctions: new Map(),
   };
   const unscopedFlows: Array<Flow & { scope: string }> = [];
-  const unscopedClients: Array<{ scope: string; name: string }> = [];
+  const unscopedClients: Array<{ scope: string; name: string; kind: ClientKind }> = [];
   const openFunctions: Array<{ indent: number; id: string; name: string }> = [];
 
   for (const statement of parsed.statements) {
@@ -237,6 +308,8 @@ function collectFlows(parsed: ParsedCode): FlowGraph {
       const openParen = statement.start + functionDef[0].length - 1;
       const parameters = parameterList(parsed, openParen);
       addFunction(graph, name, id, parameters);
+      graph.functionIndexes.set(id, graph.functionScopes.push(id) - 1);
+      graph.enclosingFunctions.push(graph.functionIndexes.get(scope) ?? -1);
       // A default value is computed in the enclosing scope and flows into its parameter.
       for (const { name: parameter, defaultValue } of parameters) {
         if (defaultValue !== undefined)
@@ -263,9 +336,13 @@ function collectFlows(parsed: ParsedCode): FlowGraph {
     }
 
     if (WITH_STATEMENT.test(text)) {
-      const names = withClientNames(parsed, statement);
-      bindLocals(graph, scope, names);
-      for (const name of names) unscopedClients.push({ scope, name });
+      const clients = withClients(parsed, statement, imported);
+      bindLocals(
+        graph,
+        scope,
+        clients.map((client) => client.name)
+      );
+      for (const client of clients) unscopedClients.push({ scope, ...client });
       continue;
     }
 
@@ -275,8 +352,10 @@ function collectFlows(parsed: ParsedCode): FlowGraph {
       const targets = assignmentTargets(leftSide);
       bindLocals(graph, scope, boundNames(leftSide));
       addFlow(targets, assignment + 1);
-      if (CLIENT_CONSTRUCTOR_VALUE.test(text.slice(assignment + 1))) {
-        for (const name of targets) unscopedClients.push({ scope, name });
+      const calledName = CALLED_VALUE.exec(text.slice(assignment + 1))?.[1];
+      const kind = calledName === undefined ? undefined : clientKind(calledName, imported);
+      if (kind !== undefined) {
+        for (const name of targets) unscopedClients.push({ scope, name, kind });
       }
       continue;
     }
@@ -286,14 +365,32 @@ function collectFlows(parsed: ParsedCode): FlowGraph {
   }
 
   // Scope the names once every local is known: Python binds a name for the whole function.
+  for (const [scope, names] of graph.locals) {
+    const index = graph.functionIndexes.get(scope) ?? -1;
+    for (const name of names) {
+      const binders = graph.bindingFunctions.get(name);
+      if (binders === undefined) graph.bindingFunctions.set(name, new Set([index]));
+      else binders.add(index);
+    }
+  }
   for (const { scope, targets, ...range } of unscopedFlows) {
     graph.flows.push({
       targets: targets.map((target) => scopedName(graph, scope, target)),
       ...range,
     });
   }
-  for (const { scope, name } of unscopedClients) graph.clients.add(scopedName(graph, scope, name));
+  for (const { scope, name, kind } of unscopedClients) {
+    graph.clients.set(scopedName(graph, scope, name), kind);
+  }
   return graph;
+}
+
+/** The kind of client that a call of `calledName` returns, if it returns one. */
+function clientKind(calledName: string, imported: ImportedNames): ClientKind | undefined {
+  const name = fullName(calledName, imported);
+  if (IS_CLIENT_CONSTRUCTOR.test(name)) return 'client';
+  if (IS_RPC_PROXY_CONSTRUCTOR.test(name)) return 'proxy';
+  return undefined;
 }
 
 /** Records a `def`: its parameters are its first locals, and each reads its call slots. */
@@ -374,10 +471,20 @@ function callArgumentFlows(parsed: ParsedCode, callSignatures: Map<string, CallS
   });
 }
 
-/** A name that the scope's function binds is local to it; any other name is a module name. */
+/**
+ * A name belongs to the innermost function around the scope that binds it, as a closure reads
+ * the locals of its parents. A name that no such function binds is a module name.
+ */
 function scopedName(graph: FlowGraph, scope: string, name: string): string {
-  const head = name.split('.', 1)[0] ?? name;
-  return graph.locals.get(scope)?.has(head) ? `${scope}:${name}` : name;
+  const binders = graph.bindingFunctions.get(headOf(name));
+  if (binders === undefined) return name;
+
+  let current = graph.functionIndexes.get(scope) ?? -1;
+  for (let depth = 0; current >= 0 && depth < MAX_ENCLOSING_FUNCTIONS; depth += 1) {
+    if (binders.has(current)) return `${graph.functionScopes[current]}:${name}`;
+    current = graph.enclosingFunctions[current] ?? -1;
+  }
+  return name;
 }
 
 function bindLocals(graph: FlowGraph, scope: string, names: string[]): void {
@@ -388,60 +495,122 @@ function bindLocals(graph: FlowGraph, scope: string, names: string[]): void {
 
 /**
  * The data arguments of each network call and of each send method on a network client. A client
- * name counts only in the scope that binds it to a client.
+ * name counts only in the scope that binds it to a client. Each method call on a proxy sends.
  */
-function networkSendArguments(parsed: ParsedCode, graph: FlowGraph): Range[] {
-  const calls = [...parsed.code.matchAll(NETWORK_CALL)];
-  if (graph.clients.size > 0) {
-    const unscopedNames = new Set(
-      [...graph.clients].map((client) => client.slice(client.indexOf(':') + 1))
-    );
-    const clientNames = [...unscopedNames].map((name) => name.replaceAll('.', '\\.')).join('|');
-    const clientCall = new RegExp(
-      String.raw`(?<![\w.])(${clientNames})\.${CLIENT_SEND_METHOD}\s*\(`,
-      'g'
-    );
+function networkSendArguments(parsed: ParsedCode, graph: FlowGraph, calls: NamedCall[]): Range[] {
+  const unscopedClients = new Set(
+    [...graph.clients.keys()].map((client) => client.slice(client.indexOf(':') + 1))
+  );
+  const sendCalls = calls.filter((call) => {
+    if (IS_NETWORK_CALL.test(call.name)) return true;
 
-    for (const match of parsed.code.matchAll(clientCall)) {
-      const statementIndex = lastIndexAtOrBefore(parsed.statements, match.index);
-      const scope = graph.statementScopes[statementIndex] ?? '';
-      if (graph.clients.has(scopedName(graph, scope, match[1] ?? ''))) calls.push(match);
-    }
-  }
+    const methodDot = call.text.lastIndexOf('.');
+    const receiver = call.text.slice(0, methodDot);
+    if (methodDot < 0 || !unscopedClients.has(receiver)) return false;
 
-  return calls.flatMap((match) =>
-    topLevelArguments(parsed, match.index + match[0].length - 1).filter((argument) => {
+    const scope = graph.statementScopes[lastIndexAtOrBefore(parsed.statements, call.start)] ?? '';
+    const kind = graph.clients.get(scopedName(graph, scope, receiver));
+    return (
+      kind === 'proxy' ||
+      (kind === 'client' && CLIENT_SEND_METHOD.test(call.text.slice(methodDot + 1)))
+    );
+  });
+
+  return sendCalls.flatMap((call) =>
+    topLevelArguments(parsed, call.openParen).filter((argument) => {
       TRANSPORT_OPTION_ARGUMENT.lastIndex = argument.start;
       return !TRANSPORT_OPTION_ARGUMENT.test(parsed.code);
     })
   );
 }
 
-/** Names bound by `with <client constructor>(...) as name`. */
-function withClientNames(parsed: ParsedCode, statement: Range): string[] {
-  const text = parsed.code.slice(statement.start, statement.end);
-  const names: string[] = [];
+/** The command argument of each call that runs its command in a shell. */
+function shellCommandArguments(parsed: ParsedCode, content: string, calls: NamedCall[]): Range[] {
+  return calls.flatMap((call) => {
+    const runsShell = IS_SHELL_RUN.test(call.name);
+    if (!runsShell && !IS_PROCESS_LAUNCH.test(call.name)) return [];
 
-  for (const match of text.matchAll(CLIENT_CONSTRUCTOR_CALL)) {
-    const openParen = statement.start + match.index + match[0].length - 1;
-    AS_NAME.lastIndex = (parsed.closingBracket[openParen] ?? parsed.code.length) + 1;
-    const alias = AS_NAME.exec(parsed.code);
-    if (alias?.[1] !== undefined) names.push(alias[1]);
-  }
+    const callArguments = topLevelArguments(parsed, call.openParen);
+    const shellTrue = callArguments.some((argument) => {
+      SHELL_TRUE_ARGUMENT.lastIndex = argument.start;
+      return SHELL_TRUE_ARGUMENT.test(parsed.code);
+    });
+    const firstArgument = callArguments[0];
+    const shellArgv = firstArgument !== undefined && startsShell(parsed, content, firstArgument);
+    if (!runsShell && !shellTrue && !shellArgv) return [];
 
-  return names;
+    // The command is the first positional argument or the `args=` keyword argument.
+    return callArguments.filter((argument, index) => {
+      const keyword = keywordOf(parsed, argument);
+      return keyword === undefined ? index === 0 : keyword === 'args';
+    });
+  });
 }
 
-/** Each whole-environment read in the code, in offset order. */
-function wholeEnvironReads(parsed: ParsedCode): Range[] {
-  const bareNameImported = FROM_OS_IMPORT_ENVIRON.test(parsed.code);
+/** Whether an argument is a list or tuple that starts a shell with a command: `["sh", "-c", cmd]`. */
+function startsShell(parsed: ParsedCode, content: string, argument: Range): boolean {
+  const openBracket = nextCodeChar(parsed.code, argument.start);
+  if (parsed.code[openBracket] !== '[' && parsed.code[openBracket] !== '(') return false;
+
+  // A program name or an option is a short string. A longer item, such as a nested call, is not
+  // copied, so nested lists stay linear.
+  const [program, ...options] = topLevelArguments(parsed, openBracket).map((item) =>
+    item.end - item.start > MAX_ARGV_ITEM_LENGTH
+      ? ''
+      : (STRING_LITERAL_TEXT.exec(content.slice(item.start, item.end).trim())?.[2] ?? '')
+  );
+  return (
+    SHELL_PROGRAM.test(program ?? '') && options.some((option) => SHELL_COMMAND_OPTION.test(option))
+  );
+}
+
+/** The keyword of a `name=value` argument, else undefined. */
+function keywordOf(parsed: ParsedCode, argument: Range): string | undefined {
+  KEYWORD_ARGUMENT.lastIndex = argument.start;
+  const keyword = KEYWORD_ARGUMENT.exec(parsed.code)?.[1];
+  return keyword !== undefined && KEYWORD_ARGUMENT.lastIndex <= argument.end ? keyword : undefined;
+}
+
+/** The names that `with <client constructor>(...) as name` binds, each with its client kind. */
+function withClients(
+  parsed: ParsedCode,
+  statement: Range,
+  imported: ImportedNames
+): Array<{ name: string; kind: ClientKind }> {
+  const text = parsed.code.slice(statement.start, statement.end);
+  const clients: Array<{ name: string; kind: ClientKind }> = [];
+
+  for (const call of namedCalls(text, imported)) {
+    const kind = clientKind(call.text, imported);
+    if (kind === undefined) continue;
+
+    const openParen = statement.start + call.openParen;
+    AS_NAME.lastIndex = (parsed.closingBracket[openParen] ?? parsed.code.length) + 1;
+    const alias = AS_NAME.exec(parsed.code);
+    if (alias?.[1] !== undefined) clients.push({ name: alias[1], kind });
+  }
+
+  return clients;
+}
+
+/**
+ * Each whole-environment read in the code, in offset order: the part of a dotted name that stands
+ * for `os.environ`, as in `os.environ`, `o.environ` after `import os as o`, and `e` after
+ * `from os import environ as e`.
+ */
+function wholeEnvironReads(parsed: ParsedCode, imported: ImportedNames): Range[] {
   const reads: Range[] = [];
 
-  for (const match of parsed.code.matchAll(ENVIRON_TOKEN)) {
-    if (match[1] === undefined && !bareNameImported) continue;
+  for (const match of parsed.code.matchAll(DOTTED_NAME)) {
+    const head = headOf(match[0]);
+    const headName = imported.get(head) ?? head;
+    const end = match.index + head.length + ENVIRON.length - headName.length;
+    if (end < match.index + head.length || end > match.index + match[0].length) continue;
 
-    const read = { start: match.index, end: match.index + match[0].length };
-    if (readsWholeValue(parsed, read.start, read.end)) reads.push(read);
+    // The head, or the head and the parts after it up to a dot, stand for `os.environ`.
+    const name = headName + parsed.code.slice(match.index + head.length, end);
+    if (name !== ENVIRON || /\w/.test(parsed.code[end] ?? '')) continue;
+    if (readsWholeValue(parsed, match.index, end)) reads.push({ start: match.index, end });
   }
 
   return reads;
@@ -550,25 +719,24 @@ function isLoopIterable(parsed: ParsedCode, offset: number): boolean {
  * Blanks the `env=` argument of each call that starts a child process, except the network calls
  * inside it: `env={"REPLY": requests.post(url, json=dict(os.environ)).text}` still sends.
  */
-function blankChildEnvironmentArguments(parsed: ParsedCode): ParsedCode {
-  const launches = [...parsed.code.matchAll(PROCESS_LAUNCH_CALL)];
+function blankChildEnvironmentArguments(parsed: ParsedCode, calls: NamedCall[]): ParsedCode {
+  const launches = calls.filter((call) => IS_PROCESS_LAUNCH.test(call.name));
   if (launches.length === 0) return parsed;
 
-  const networkCalls = [...parsed.code.matchAll(NETWORK_CALL)].map((match) => {
-    const openParen = match.index + match[0].length - 1;
-    return {
-      start: match.index,
-      end: (parsed.closingBracket[openParen] ?? parsed.code.length) + 1,
-    };
-  });
+  const networkCalls = calls
+    .filter((call) => IS_NETWORK_CALL.test(call.name))
+    .map((call) => ({
+      start: call.start,
+      end: (parsed.closingBracket[call.openParen] ?? parsed.code.length) + 1,
+    }));
   const networkCallStarts = networkCalls.map((call) => call.start);
   const chars = parsed.code.split('');
 
   for (const launch of launches) {
     // A launch inside an `env=` value that is already blank is gone with that value.
-    if (chars[launch.index] !== parsed.code[launch.index]) continue;
+    if (chars[launch.start] !== parsed.code[launch.start]) continue;
 
-    for (const argument of topLevelArguments(parsed, launch.index + launch[0].length - 1)) {
+    for (const argument of topLevelArguments(parsed, launch.openParen)) {
       CHILD_ENVIRONMENT_KEYWORD.lastIndex = argument.start;
       if (!CHILD_ENVIRONMENT_KEYWORD.test(parsed.code)) continue;
 
@@ -611,6 +779,65 @@ function parseCode(code: string): ParsedCode {
 
   const forKeywords = [...code.matchAll(FOR_KEYWORD)].map((match) => match.index);
   return { code, statements, closingBracket, forKeywords };
+}
+
+/**
+ * The full dotted name of each name that an import statement binds: `import os as o` binds `o`
+ * to `os`, and `from requests import post as p` binds `p` to `requests.post`.
+ */
+function importedNames(parsed: ParsedCode): ImportedNames {
+  const imported: ImportedNames = new Map();
+
+  for (const statement of parsed.statements) {
+    const text = parsed.code.slice(statement.start, statement.end);
+    const fromModule = FROM_IMPORT_STATEMENT.exec(text);
+    if (fromModule === null && !IMPORT_STATEMENT.test(text)) continue;
+
+    const nameList = text.slice(fromModule?.[0].length ?? 'import'.length).trim();
+    for (const item of nameList.replace(/^\(|\)$/g, '').split(',')) {
+      const [, name, alias] = IMPORTED_NAME.exec(item.trim()) ?? [];
+      if (name === undefined) continue;
+      if (fromModule?.[1] !== undefined) imported.set(alias ?? name, `${fromModule[1]}.${name}`);
+      else if (alias !== undefined) imported.set(alias, name);
+      // `import urllib.request` binds `urllib` to itself, and a later import of the name wins.
+      else imported.set(headOf(name), headOf(name));
+    }
+  }
+
+  return imported;
+}
+
+/** The full dotted name that `name` stands for, through the names that the file imports. */
+function fullName(name: string, imported: ImportedNames): string {
+  const head = headOf(name);
+  const headName = imported.get(head);
+  return headName === undefined ? name : headName + name.slice(head.length);
+}
+
+/** Each call of a dotted name in the code, in offset order. `def` and `class` headers are not calls. */
+function namedCalls(code: string, imported: ImportedNames): NamedCall[] {
+  const calls: NamedCall[] = [];
+
+  for (const match of code.matchAll(DOTTED_NAME)) {
+    const openParen = nextCodeChar(code, match.index + match[0].length);
+    if (code[openParen] !== '(') continue;
+    const previous = lastCodeCharBefore(code, match.index);
+    if (endsWithWord(code, previous, 'def') || endsWithWord(code, previous, 'class')) continue;
+    calls.push({
+      start: match.index,
+      openParen,
+      text: match[0],
+      name: fullName(match[0], imported),
+    });
+  }
+
+  for (const match of code.matchAll(CHAINED_URLOPEN_CALL)) {
+    const openParen = match.index + match[0].length - 1;
+    const start = match.index + match[0].lastIndexOf('urlopen');
+    calls.push({ start, openParen, text: 'urlopen', name: 'urlopen' });
+  }
+
+  return calls.sort((left, right) => left.start - right.start);
 }
 
 /** A `;` or a line break that no `\` continues ends a statement outside brackets. */
@@ -669,10 +896,12 @@ function callArguments(parsed: ParsedCode, openParen: number): Range {
 
 /**
  * Blanks comments and string text and keeps offsets. The fields of an f-string are code, so they
- * stay: `f"...{payload}"` sends `payload`.
+ * stay: `f"...{payload}"` sends `payload`. `strings` holds the text between the quotes of each
+ * string literal, in offset order.
  */
-function pythonCodeView(content: string): string {
+function pythonCodeView(content: string): { code: string; strings: Range[] } {
   const chars = content.split('');
+  const strings: Range[] = [];
   let idx = 0;
 
   while (idx < content.length) {
@@ -681,13 +910,18 @@ function pythonCodeView(content: string): string {
       const lineEnd = content.indexOf('\n', idx);
       idx = blankRange(chars, idx, lineEnd >= 0 ? lineEnd : content.length);
     } else if (char === '"' || char === "'") {
+      const delimiter = content.startsWith(char.repeat(3), idx) ? char.repeat(3) : char;
+      const start = idx + delimiter.length;
       idx = blankStringText(content, chars, idx);
+      const closed =
+        idx - delimiter.length >= start && content.startsWith(delimiter, idx - delimiter.length);
+      strings.push({ start, end: closed ? idx - delimiter.length : idx });
     } else {
       idx += 1;
     }
   }
 
-  return chars.join('');
+  return { code: chars.join(''), strings };
 }
 
 /**
@@ -859,6 +1093,19 @@ function visitOnce<T extends { start: number }>(items: T[]): (range: Range) => T
     }
     return visited;
   };
+}
+
+/** The offset of the first non-whitespace character at or after `idx`. */
+function nextCodeChar(code: string, idx: number): number {
+  let next = idx;
+  while (next < code.length && /\s/.test(code[next] ?? '')) next += 1;
+  return next;
+}
+
+/** The part of a dotted name before its first dot. */
+function headOf(name: string): string {
+  const dot = name.indexOf('.');
+  return dot < 0 ? name : name.slice(0, dot);
 }
 
 /** The offset of the last non-whitespace character before `idx`, or -1. */

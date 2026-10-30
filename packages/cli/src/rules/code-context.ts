@@ -330,7 +330,7 @@ function isBlank(char: string): boolean {
   return char <= ' ' || (char > '~' && /\s/.test(char));
 }
 
-function maskShellCommentsAndSingleQuotedStrings(content: string): string {
+export function maskShellCommentsAndSingleQuotedStrings(content: string): string {
   const chars = content.split('');
   let idx = 0;
   let lineStart = true;
