@@ -42,6 +42,12 @@ const MARKDOWN_BASENAME_PATTERN =
   /^(?:SKILL|AGENTS|CLAUDE|GEMINI|CONVENTIONS|README|CHANGELOG)\.md$/i;
 const SECURITY_EDUCATION_HEADING_PATTERN =
   /\b(?:detection|detector|scanner|audit(?:or)?|tester|testing|fixture|example|documentation|reference|threat|attack|red[- ]?team|training|rule(?:s)?|false positive|benign corpus|payload catalog)\b/i;
+// Inline code and double quotes, straight or curly, each with the character that closes it.
+const QUOTE_CLOSERS = new Map([
+  ['`', '`'],
+  ['"', '"'],
+  ['“', '”'],
+]);
 const SECURITY_EXAMPLE_HEADING_PATTERN =
   /\b(?:detection|detector|scanner|audit(?:or)?|tester|testing|example|pattern|documentation|reference|threat|attack|red[- ]?team|training|rule(?:s)?|false positive|benign corpus|payload catalog)\b/i;
 const SECURITY_EDUCATION_LINE_PATTERN =
@@ -320,52 +326,110 @@ function maskMarkdownDocumentationLines(content: string, isSkillMd: boolean): st
 }
 
 /**
- * Suppresses security-education examples in prompt-bearing markdown without
- * hiding active instructions in normal skill sections.
+ * Suppresses quoted security-education examples in prompt-bearing markdown without
+ * hiding active instructions. Fenced code and blockquotes are quoted in every section.
+ * Under a security-education heading, inline code and double-quoted text are quoted too.
+ * A heading never hides plain prose, list text, or its own text: the agent reads them as
+ * instructions, whatever the section or the skill title is called (`## Testing rules`,
+ * `# API rule`, `# documentation-assistant`).
  */
 export function maskMarkdownSecurityEducationContext(content: string, filePath: string): string {
   if (!isMarkdownPromptFile(filePath)) return content;
 
+  const lines = content.split('\n');
+  const kinds = classifySecurityEducationLines(lines);
+  const quoteMasked = maskQuotedEducationText(lines, kinds);
+
+  return lines
+    .map((line, index) => {
+      const isEducationNote =
+        DOCUMENTATION_LINE_CONTEXT_PATTERN.test(line) && SECURITY_EDUCATION_LINE_PATTERN.test(line);
+      if (kinds[index] === 'quoted' || isEducationNote) return maskLine(line);
+      return quoteMasked[index] ?? line;
+    })
+    .join('\n');
+}
+
+/**
+ * Marks fenced code and blockquotes as quoted, and the other lines of a security-education
+ * section, its heading included, as education text. A skill title such as
+ * `# Skill Security Auditor` opens a section too: it can mark only quoted text as examples.
+ */
+function classifySecurityEducationLines(lines: string[]): MarkdownLineKind[] {
   let inFence = false;
   let educationHeadingLevel = 0;
 
-  return content
-    .split('\n')
-    .map((line) => {
-      const trimmed = line.trimStart();
-      const fence = /^(?:```|~~~)/.test(trimmed);
+  return lines.map((line) => {
+    if (MARKDOWN_FENCE_PATTERN.test(line)) {
+      inFence = !inFence;
+      return 'quoted';
+    }
+    if (inFence || MARKDOWN_BLOCKQUOTE_PATTERN.test(line)) return 'quoted';
 
-      if (fence) {
-        inFence = !inFence;
-        return maskLine(line);
-      }
+    // A deeper heading stays inside the education section that it is part of.
+    const heading = MARKDOWN_HEADING_PATTERN.exec(line);
+    const headingLevel = heading?.[1]?.length ?? 0;
+    if (heading && headingLevel <= educationHeadingLevel) educationHeadingLevel = 0;
+    if (heading && educationHeadingLevel === 0 && SECURITY_EDUCATION_HEADING_PATTERN.test(line)) {
+      educationHeadingLevel = headingLevel;
+    }
 
-      if (inFence || /^\s*>/.test(line)) return maskLine(line);
+    return educationHeadingLevel > 0 ? 'education' : 'plain';
+  });
+}
 
-      const heading = /^(#{1,6})\s+(.+)$/.exec(trimmed);
-      if (heading) {
-        const level = heading[1]?.length ?? 0;
-        const title = heading[2] ?? '';
-        if (educationHeadingLevel > 0 && level <= educationHeadingLevel) {
-          educationHeadingLevel = 0;
-        }
-        if (SECURITY_EDUCATION_HEADING_PATTERN.test(title)) {
-          educationHeadingLevel = level;
-          return maskLine(line);
-        }
-      }
+/**
+ * Masks inline code and double-quoted text in education text. A quote pairs only inside
+ * its markdown block, so it can wrap onto the next line of a paragraph. A blank line, a
+ * heading, or a line outside the section ends the block.
+ */
+function maskQuotedEducationText(lines: string[], kinds: MarkdownLineKind[]): string[] {
+  const masked = [...lines];
+  let block: number[] = [];
+  const maskBlock = (): void => {
+    const blockLines = maskQuotedSpans(block.map((index) => lines[index]).join('\n')).split('\n');
+    block.forEach((lineIndex, offset) => {
+      masked[lineIndex] = blockLines[offset] ?? '';
+    });
+    block = [];
+  };
 
-      if (educationHeadingLevel > 0) return maskLine(line);
-      if (
-        DOCUMENTATION_LINE_CONTEXT_PATTERN.test(line) &&
-        SECURITY_EDUCATION_LINE_PATTERN.test(line)
-      ) {
-        return maskLine(line);
-      }
+  lines.forEach((line, index) => {
+    const isBlockText = kinds[index] === 'education' && line.trim() !== '';
+    const isHeading = MARKDOWN_HEADING_PATTERN.test(line);
+    if (!isBlockText || isHeading) maskBlock();
+    if (isBlockText) block.push(index);
+    if (isHeading) maskBlock();
+  });
+  maskBlock();
 
-      return line;
-    })
-    .join('\n');
+  return masked;
+}
+
+/**
+ * Masks each quoted span from its opening to its closing character. An opener without a
+ * closer masks nothing.
+ * ponytail: single quotes stay visible, because apostrophes would pair up across prose.
+ */
+function maskQuotedSpans(text: string): string {
+  const chars = text.split('');
+  // No closer after one opener means no closer after a later opener, so search only once.
+  const unclosedQuotes = new Set<string>();
+
+  for (let index = 0; index < chars.length; index += 1) {
+    const closer = QUOTE_CLOSERS.get(chars[index] ?? '');
+    if (closer === undefined || unclosedQuotes.has(closer)) continue;
+
+    const end = text.indexOf(closer, index + 1);
+    if (end < 0) {
+      unclosedQuotes.add(closer);
+      continue;
+    }
+    maskRange(chars, index, end + 1);
+    index = end;
+  }
+
+  return chars.join('');
 }
 
 /**
@@ -422,3 +486,6 @@ export function maskSecurityEducationExampleContext(content: string, filePath: s
     })
     .join('\n');
 }
+
+// How the security-education mask treats a markdown line.
+type MarkdownLineKind = 'quoted' | 'education' | 'plain';
