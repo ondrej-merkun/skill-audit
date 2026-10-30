@@ -17,7 +17,8 @@ function isPluginPath(skill: Skill): boolean {
     skill.format === 'plugin.json' ||
     segments.some(
       (segment, index) =>
-        (segment === '.claude' || segment === '.codex') && segments[index + 1] === 'plugins'
+        (segment === '.claude' || segment === '.codex' || segment === '.cursor') &&
+        segments[index + 1] === 'plugins'
     ) ||
     segments.includes('.claude-plugin') ||
     segments.includes('.codex-plugin')

@@ -30,8 +30,8 @@ export async function discoverSharedAgentSkills(agentId: string): Promise<Skill[
 }
 
 /**
- * Discover every SKILL.md directory under one skills root on behalf of one agent.
- * Gemini CLI also uses it for its own `.gemini/skills` roots.
+ * Emits one skill for each directory under `skillsDir`, root included, that holds a SKILL.md.
+ * Gemini CLI and Cursor also use it for their own `.gemini/skills` and `.cursor/skills` roots.
  */
 export async function discoverSkillDirs(
   agentId: string,

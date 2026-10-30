@@ -507,6 +507,14 @@ describe('renderTableToString', () => {
           metadata: { sourcePluginName: 'project-review-plugin' },
         }),
         makeSkill({
+          id: 'cursor-local-plugin-rule',
+          agentId: 'cursor',
+          name: 'cursor-local-plugin-rule',
+          path: '/home/user/.cursor/plugins/local/acme/rules/style.mdc',
+          format: 'rules-md',
+          metadata: { sourcePluginName: 'acme-tools' },
+        }),
+        makeSkill({
           id: 'project-direct-skill',
           name: 'project-direct-skill',
           path: '/home/user/project/plugins/project-direct-skill',
@@ -534,7 +542,7 @@ describe('renderTableToString', () => {
           format: 'gemini-extension-json',
         }),
       ],
-      summary: { skillsScanned: 8, compromised: 0, percentCompromised: 0, verdict: 'PASS' },
+      summary: { skillsScanned: 9, compromised: 0, percentCompromised: 0, verdict: 'PASS' },
     });
 
     const out = stripAnsi(renderTableToString(result));
@@ -544,6 +552,7 @@ describe('renderTableToString', () => {
     expect(out).toContain('Plugin - tool');
     expect(out).toContain('Plugin - compound-engineering');
     expect(out).toContain('Plugin - project-review-plugin');
+    expect(out).toContain('Plugin - acme-tools');
     expect(out).toContain('Marketplace');
     expect(out).toContain('MCP');
     expect(out).toContain('Extension');
