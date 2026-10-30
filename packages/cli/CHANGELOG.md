@@ -12,6 +12,15 @@
 - **Breaking:** Pin the CLI version in the bundled Claude Code skill and
   pre-approve only its default scan, `scan --json`, `scan --summary`, `list`,
   and `explain` commands. Other commands show the normal permission prompt.
+- **Breaking:** Accept only `REVIEW` or `FAIL`, in any case, for `--fail-on`.
+  Any other value, also the undocumented `any`, is a usage error with exit code
+  2. Before, an unknown value acted like `FAIL`.
+- Audit skills before you install them: `skill-audit scan <path>` and
+  `skill-audit <path>` scan the skills at a path instead of the installed ones.
+  The GitHub Action has a matching `scan-path` input.
+- Write SARIF 2.1.0 for GitHub code scanning with `--sarif [file]`, and upload
+  it with the GitHub Action's `sarif-file` input. An incomplete scan writes no
+  SARIF, so an upload cannot close the alerts of skills that the scan missed.
 - Stop scanned skill text from running scripts when you open a `scan --html`
   report.
 - Scan agent hook and settings files for Claude Code, Codex, Cursor, GitHub
@@ -22,6 +31,24 @@
 - Scan skills in the shared `~/.agents/skills` and `<project>/.agents/skills`
   directories that Codex, Cursor, GitHub Copilot, Gemini CLI, Windsurf, and
   Cline read.
+- Scan Claude Code memory files (`~/.claude/CLAUDE.md`, `.claude/CLAUDE.md`,
+  `CLAUDE.local.md`), rule files in `.claude/rules/`, and the skills, commands,
+  and agents in the `.claude/` directories of parent directories.
+- Scan only the Claude Code plugins that `installed_plugins.json` records and
+  that `enabledPlugins` does not turn off. Disabled plugins and old cached
+  plugin versions are no longer reported.
+- Skip the leftover Codex plugin install staging folders.
+- Scan Cursor skills, subagents, and the local plugins in
+  `~/.cursor/plugins/local`.
+- Scan GitHub Copilot prompt files, custom agents, instruction files in
+  subfolders, and each MCP server in `~/.copilot/mcp-config.json`,
+  `.github/mcp.json`, and `.vscode/mcp.json`.
+- Scan Gemini CLI skills in `~/.gemini/skills` and `.gemini/skills`, and each
+  MCP server in a project `.gemini/settings.json` as its own target.
+- Scan OpenCode, Amp, and OpenClaw: their MCP servers, plugins, skills,
+  agents, commands, and instruction files. OpenClaw configs are read with the
+  `json5` package, a new runtime dependency. The cross-agent sweep also reads
+  `AGENT.md`.
 - Discover and scan skills installed as symlinks, for example by `npx skills`
   or skillshare, and follow symlinked files and directories inside a skill.
 - Scan every file in a skill folder. Subfolders with a marker file such as
@@ -65,6 +92,21 @@
   fire in every file, test files included.
 - Stop reporting backslash-escaped backticks in shell scripts as
   `CODEEXEC-SHELL-BACKTICK`.
+- Detect the bidi isolates U+2066 to U+2069 and the variation selectors U+FE00
+  to U+FE0F and U+E0100 to U+E01EF as `PI-HIDDEN-UNICODE`. One emoji-style
+  selector after an emoji, or in a keycap, stays allowed.
+- Detect remote exec in an MCP server `args` array of any length. Padding args
+  no longer push `-c` and its command out of `MCP-CONFIG-REMOTE-EXEC`.
+- Send the skill's own files to the local LLM review, within a size budget, and
+  not only the snippets around rule findings. A skill without findings is now
+  reviewed too.
+- Accept only real loopback hosts for the local LLM review, also for the URLs
+  that the CLI reads from `llms.json`. `127.0.0.1.evil.com` no longer counts as
+  loopback.
+- Name the ignore list file in the notice about ignored skills, instead of an
+  `--all` flag that does not exist.
+- Remove the disabled skills.sh, GitHub, and deps.dev enrichment code. The
+  output does not change.
 - Require Node.js 22.18+ on 22.x, 24.11+ on 24.x, or 26+ to develop
   skill-audit. CI tests Node.js 22, 24, and 26 on Ubuntu and macOS.
 - Build the CLI with tsdown instead of tsup. `pnpm build:release` is removed;
