@@ -161,6 +161,15 @@ Report each as a `Skill` with `agentId: "cross-agent"` and
 - When a cache entry is active, walk it recursively and emit prompt-bearing
   leaves (`SKILL.md`, command/agent files) rather than intermediate cache
   directories.
+- Skip `~/.codex/plugins/.remote-plugin-install-staging/` and
+  `~/.codex/plugins/.marketplace-plugin-source-staging/`, also with
+  `--include-marketplaces`. Codex extracts a plugin into a temp dir there
+  (`remote-plugin-bundle-*`, `marketplace-plugin-source-*`) and then installs
+  a copy into `cache`. A temp dir that an interrupted install leaves behind is
+  never loaded. Verified against the Codex source
+  (`codex-rs/core-plugins/src/remote_bundle.rs`, `npm_source.rs`, and
+  `loader.rs`) in October 2026. A dir of the same name inside a plugin is
+  still walked.
 
 ### 7. Gemini CLI
 
