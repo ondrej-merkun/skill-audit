@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
-import { access, stat } from 'node:fs/promises';
-import { basename, join, resolve } from 'node:path';
+import { access, realpath, stat } from 'node:fs/promises';
+import { basename, join, resolve, sep } from 'node:path';
 import { enterDirOnce, readDirFollowingLinks } from '../fs-walk.js';
 import type { Skill } from '../types.js';
 import { addModifiedAt } from './modified-at.js';
@@ -76,12 +76,44 @@ async function findDirTargets(root: string): Promise<PathTarget[]> {
     targets.unshift({ path: root, manifestPath: null, name: fallbackSkillNameFromDirectory(root) });
   }
 
-  // A skipped alias reaches a dir that this walk gave to the target it entered first. The root's
-  // engine walk does not enter skill dirs, so it can reach a skill's real dir first through such
-  // an alias and scan the skill again. The engine skips every path in `alsoInstalledAt`.
-  const rootTarget = targets[0];
-  if (rootTarget?.path === root && aliasDirs.length > 0) rootTarget.alsoInstalledAt = aliasDirs;
+  await skipCrossTargetAliases(targets, aliasDirs);
   return targets;
+}
+
+/**
+ * An alias is a dir that the walk entered first through another path. When the alias sits in
+ * one target and reaches a dir of another target, the engine walk of the first target would scan
+ * the other target's files again, so that target skips the alias (`alsoInstalledAt`). Every scan
+ * skips those paths before its own alias tracking sees them, so an alias that stays inside its
+ * target is not listed: the engine pairs it with the operative path, and a `docs` link cannot
+ * demote the file that it reaches to inert docs.
+ */
+async function skipCrossTargetAliases(targets: PathTarget[], aliasDirs: string[]): Promise<void> {
+  const targetDirs = targets.map((target) => target.path);
+  const realTargetDirs = await Promise.all(targetDirs.map((dir) => realpath(dir).catch(() => dir)));
+
+  for (const alias of aliasDirs) {
+    const realAlias = await realpath(alias).catch(() => undefined);
+    if (realAlias === undefined) continue;
+
+    const aliasOwner = deepestDirHolding(alias, targetDirs);
+    const reachedOwner = deepestDirHolding(realAlias, realTargetDirs);
+    // A dir outside every target is not another target's content, so the alias stays.
+    if (aliasOwner === -1 || reachedOwner === -1 || aliasOwner === reachedOwner) continue;
+
+    const target = targets[aliasOwner];
+    if (target !== undefined) target.alsoInstalledAt = [...(target.alsoInstalledAt ?? []), alias];
+  }
+}
+
+/** Returns the index of the longest dir that is `path` or holds it, or -1. */
+function deepestDirHolding(path: string, dirs: string[]): number {
+  let best = -1;
+  dirs.forEach((dir, index) => {
+    const holds = path === dir || path.startsWith(dir + sep);
+    if (holds && (best === -1 || dir.length > (dirs[best]?.length ?? 0))) best = index;
+  });
+  return best;
 }
 
 async function pathSkill(target: PathTarget): Promise<Skill> {
