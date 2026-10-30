@@ -287,6 +287,10 @@ jobs:
           sarif_file: skill-audit.sarif
 ```
 
+An incomplete scan (exit code 3) writes no SARIF file, so the `hashFiles`
+condition skips the upload. A log of a partial scan would close the alerts of
+the skills that the scan missed.
+
 Keep the action `path` input at the repository root. GitHub reads relative
 SARIF locations from the repository root, and `skill-audit` writes locations
 relative to the scanned directory. A finding in a file outside the repository,
