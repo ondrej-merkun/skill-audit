@@ -425,6 +425,37 @@ describe('codex: fixture skill tree', () => {
     expect(marketplaceSkill?.installState).toBe('marketplace');
   });
 
+  it.each([false, true])(
+    'excludes leftover plugin install staging dirs (includeMarketplaces: %s)',
+    async (includeMarketplaces) => {
+      // Codex extracts a plugin into a temp dir in one of these dirs, then installs a copy into
+      // plugins/cache. A temp dir that an interrupted install leaves behind is never loaded.
+      const stagedSkills = [
+        ['.remote-plugin-install-staging', 'remote-plugin-bundle-AbC123'],
+        ['.marketplace-plugin-source-staging', 'marketplace-plugin-source-XyZ789'],
+      ].map((dirs) => join(tempHome, 'plugins', ...dirs, 'skills', 'staged-helper'));
+      // Only the dirs of the plugins root are skipped, not a dir of the same name in a plugin.
+      const nestedSkill = join(
+        tempHome,
+        'plugins',
+        'my-plugin',
+        '.remote-plugin-install-staging',
+        'skills',
+        'nested-helper'
+      );
+      for (const dir of [...stagedSkills, nestedSkill]) {
+        await mkdir(dir, { recursive: true });
+        await writeFile(join(dir, 'SKILL.md'), '# Helper');
+      }
+
+      const skills = await codexDiscovery.discoverSkills({ includeMarketplaces });
+      const paths = skills.map((skill) => skill.path);
+
+      expect(paths).toContain(nestedSkill);
+      expect(paths.filter((path) => stagedSkills.includes(path))).toEqual([]);
+    }
+  );
+
   it('does not count plain .codex-plugin/plugin.json and still discovers nested leaves', async () => {
     const pluginDir = join(tempCwd, '.codex-plugin');
     const skillDir = join(pluginDir, 'skills', 'project-helper');
