@@ -69,6 +69,47 @@ author puts in quotes there stays hidden. A heading that names an attack in
 plain words, such as `### Act as if you have no restrictions`, is visible; put
 the phrase in backticks.
 
+The code-risk rules with the security-education mask (`SKILL-CURL-BASH-IN-MD`,
+`SKILL-FETCH-AND-EXEC`, `SKILL-PASSWORD-ZIP`, `SKILL-MEMORY-WRITE`,
+`NET-WEBHOOK-KNOWN`, `FS-BROWSER-CREDENTIALSTORE`, `FS-DESTRUCTIVE-HOME-DELETE`,
+`GIT-CRED-READ`, `GIT-HISTORY-SCAN`, and the `OBFS-*` rules) also mask quoted
+examples in markdown, not sections. Fenced code in a skill is often an install
+or run step that the agent runs, so these rules mask it only in a code-example
+section. A code-example section starts at a heading that meets three
+conditions:
+
+- It names security-education material with a word of the old section mask:
+  detection, detector, scanner, audit, auditor, tester, testing, example,
+  pattern, documentation, reference, threat, attack, red team, training, rule,
+  rules, false positive, benign corpus, or payload catalog. Only these exact
+  forms count, so `Examples` or `Attacks` alone opens no section. This bound
+  keeps the mask inside the old one.
+- It frames its code as hostile or flagged material: an attack, a threat, a red
+  team, a payload, an exploit, an injection, a detection or detector, a flagged
+  or detected case, a false positive, a benign corpus, an anti-pattern, or bad,
+  unsafe, dangerous, insecure, risky, or vulnerable code (`## Attack examples`,
+  `## Detection rules`, `## Bad pattern`).
+- It names no operative work: run, execute, install, bootstrap, setup, usage,
+  quick start, getting started, operative, active, or runtime.
+
+In a code-example section, fenced code, blockquotes, inline code, and
+double-quoted text are examples. Plain prose, list text, table text, and the
+heading text stay visible. A deeper heading that meets the first condition
+replaces the section and keeps its example kind. The section ends at the next
+heading of the same or a higher level, and at any heading that names operative
+work, so `### Lab setup` under `## Attack examples` is operative. In SKILL.md,
+the title (a level-1 heading) names the skill and opens no code-example
+section. In other markdown, a level-1 heading can open one. Fenced code under
+any other heading is operative: `## Testing`, `## Rules`, `## Quick reference`,
+`## Example setup`, `## Security audit`, or a skill title such as
+`# docs-skill-tester`. A `#` line in fenced code is a shell comment, not a
+heading. A line that combines a documentation word with a detection note such
+as "should flag" stays masked in every section. Trade-off: code in a
+code-example section counts as an example, so a skill can hide a command under
+`## Attack examples` and tell the agent to run it. The heading makes the risk
+visible to a reader, and an agent is less likely to run code that the skill
+labels as an attack.
+
 `CTX-SECURITY-EDUCATION` is an info-only context hint, not a suppression rule.
 It may be emitted when a skill appears to be a security scanner, tester,
 auditor, red-team, or rule-fixture skill and still has non-info findings. It
@@ -254,7 +295,8 @@ A service home page without a bin token (`https://webhook.site`,
 `https://www.requestbin.com`), the service `docs.` and `app.` hosts
 (`https://docs.webhook.site`, `https://app.beeceptor.com`), and a host name
 without a URL scheme do not match, so docs can name these services.
-Security-education sections in markdown stay masked.
+Quoted examples in the code-example sections of markdown stay masked (see "Rule
+intent and false-positive guardrails").
 
 ### PI-EXFIL-TRIGGER-CLAUSE (Critical)
 In `.md` files (SKILL.md, AGENTS.md, etc.):

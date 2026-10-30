@@ -21,6 +21,7 @@ const EXPECTED_RULE_BY_FIXTURE: Record<string, string> = {
   'password-zip-skill': 'SKILL-PASSWORD-ZIP',
   'remote-import-skill': 'DEPS-REMOTE-IMPORT',
   'security-auditor-override': 'PI-OVERRIDE',
+  'testing-section-installer': 'SKILL-CURL-BASH-IN-MD',
   'trigger-clause-skill': 'PI-EXFIL-TRIGGER-CLAUSE',
   'webhook-exfil-skill': 'NET-WEBHOOK-KNOWN',
 };
