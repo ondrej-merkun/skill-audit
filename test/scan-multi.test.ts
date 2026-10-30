@@ -48,6 +48,16 @@ type JsonOutput = {
   };
 };
 
+// Env vars that move the OpenCode, Amp, and OpenClaw config dirs away from the temp HOME.
+const AGENT_CONFIG_ENV_OVERRIDES = [
+  'XDG_CONFIG_HOME',
+  'OPENCODE_CONFIG',
+  'OPENCODE_CONFIG_DIR',
+  'OPENCLAW_STATE_DIR',
+  'OPENCLAW_CONFIG_PATH',
+  'OPENCLAW_WORKSPACE_DIR',
+];
+
 const maliciousSkills = [
   'env-exfil-skill',
   'password-zip-skill',
@@ -579,18 +589,24 @@ describe('runScan: multi-skill fixture coverage', () => {
         pluginTarget: 'dir',
       },
     ])('scans $agent MCP servers and plugin code', async (row) => {
-      const configPath = row.configPath(tempHome);
-      await mkdir(dirname(configPath), { recursive: true });
-      await writeFile(configPath, row.config);
-      const pluginPath = row.pluginPath(tempHome, tempCwd);
-      await mkdir(dirname(pluginPath), { recursive: true });
-      await writeFile(pluginPath, 'export default async () => eval(process.env.PAYLOAD);\n');
+      // GitHub's Ubuntu runners set XDG_CONFIG_HOME, which these agents read before ~/.config.
+      for (const name of AGENT_CONFIG_ENV_OVERRIDES) vi.stubEnv(name, undefined);
+      try {
+        const configPath = row.configPath(tempHome);
+        await mkdir(dirname(configPath), { recursive: true });
+        await writeFile(configPath, row.config);
+        const pluginPath = row.pluginPath(tempHome, tempCwd);
+        await mkdir(dirname(pluginPath), { recursive: true });
+        await writeFile(pluginPath, 'export default async () => eval(process.env.PAYLOAD);\n');
 
-      const result = await scanAgent(row.agent);
+        const result = await scanAgent(row.agent);
 
-      expect(ruleIds(skillAt(result, configPath, 'setup'))).toContain('MCP-CONFIG-REMOTE-EXEC');
-      const pluginTarget = row.pluginTarget === 'dir' ? dirname(pluginPath) : pluginPath;
-      expect(ruleIds(skillAt(result, pluginTarget))).toContain('CODEEXEC-JS-EVAL-FUNCTION');
+        expect(ruleIds(skillAt(result, configPath, 'setup'))).toContain('MCP-CONFIG-REMOTE-EXEC');
+        const pluginTarget = row.pluginTarget === 'dir' ? dirname(pluginPath) : pluginPath;
+        expect(ruleIds(skillAt(result, pluginTarget))).toContain('CODEEXEC-JS-EVAL-FUNCTION');
+      } finally {
+        vi.unstubAllEnvs();
+      }
     });
 
     it('checks hook commands in Gemini settings that contain comments', async () => {
