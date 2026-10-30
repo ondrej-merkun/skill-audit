@@ -9,8 +9,9 @@ import {
   maskDocumentationExampleContext,
   maskDocumentationTextInCode,
   maskSecurityEducationExampleContext,
+  maskShellCommentsAndSingleQuotedStrings,
 } from './code-context.js';
-import { ENVIRON_TOKEN_SOURCE, maskEnvironReadsNotSent } from './python-env-flow.js';
+import { markEnvironFlow, SENT_ENVIRON_READ_MARK } from './python-env-flow.js';
 
 // Patterns are split to avoid triggering static-analysis hooks on this detector file itself.
 // These rules detect env-exfil and network calls in scanned skills, not in this codebase.
@@ -24,9 +25,9 @@ function maskLine(line: string): string {
 }
 
 // NET-EXFIL-ENV: the whole environment (os.environ, process.env, env) sent over the network.
-// The view keeps a Python environment token only where the whole environment reaches a network
-// call, so any token in it is a hit.
-const pyEnvironSentPattern = new RegExp(ENVIRON_TOKEN_SOURCE);
+// The view marks each Python read of the whole environment that reaches a network call, so any
+// mark in it is a hit.
+const pyEnvironSentPattern = new RegExp(SENT_ENVIRON_READ_MARK);
 const jsEnvStringifyPattern = new RegExp(
   ['JSON\\.stringify\\s*\\(\\s*process\\.', 'env\\s*\\)'].join('')
 );
@@ -113,10 +114,15 @@ const SINGLE_QUOTED_STDIN_ARGUMENT = /'(@?(?:-|\/dev\/stdin))'/g;
 const UNESCAPED_COMMAND_SUBSTITUTION = /(?<!\\)(?:\\\\)*(?:\$\(|`)/;
 
 function maskNonExecutingEnvDumpText(content: string, filePath: string): string {
-  if (!/\.(?:sh|bash)$/i.test(filePath)) return maskDocumentationTextInCode(content, filePath);
+  return /\.(?:sh|bash)$/i.test(filePath)
+    ? maskNonExecutingShellText(content)
+    : maskDocumentationTextInCode(content, filePath);
+}
 
-  const unquoted = content.replace(SINGLE_QUOTED_STDIN_ARGUMENT, '$1  ');
-  return maskDocumentationTextInCode(unquoted, filePath)
+/** The view of shell code: comments, single-quoted text, and lines that only print are masked. */
+function maskNonExecutingShellText(script: string): string {
+  const unquoted = script.replace(SINGLE_QUOTED_STDIN_ARGUMENT, '$1  ');
+  return maskShellCommentsAndSingleQuotedStrings(unquoted)
     .split('\n')
     .map((line) =>
       nonExecutingShellOutputPattern.test(line) && !UNESCAPED_COMMAND_SUBSTITUTION.test(line)
@@ -128,12 +134,14 @@ function maskNonExecutingEnvDumpText(content: string, filePath: string): string 
 
 const PYTHON_SCAN_PATH = /\.py$/i;
 
-// The flow analysis reads Python. In a Python file it may restore a read that the view masked,
-// such as one in an f-string field. In another language only the reads that the language view
-// kept come back: Python in a shell heredoc counts, a read in a `//` comment does not.
+// The flow analysis reads Python. In a Python file it may mark a read that the view masked, such
+// as one in an f-string field, and it shows each string that a shell runs as shell code. In
+// another language it marks only the reads that the language view kept: Python in a shell heredoc
+// counts, a read in a `//` comment does not.
 function prepareEnvExfilView(content: string, filePath: string): string {
   const view = maskNonExecutingEnvDumpText(content, filePath);
-  return maskEnvironReadsNotSent(view, content, PYTHON_SCAN_PATH.test(filePath));
+  const isPython = PYTHON_SCAN_PATH.test(filePath);
+  return markEnvironFlow(view, content, isPython ? maskNonExecutingShellText : undefined);
 }
 
 export const NET_EXFIL_ENV: Rule = {
