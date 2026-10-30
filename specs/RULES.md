@@ -325,7 +325,10 @@ and strings are masked, except the string after a module loader keyword
 (`import`, `require`, `from`, `import_module`). So a URL in a comment, a JSDoc
 block, or a logged or shown string does not fire. A comment between the
 keyword and its string, as in `import(/* @vite-ignore */ '<url>')`, does not
-hide the URL. `<q>` is one of `'`, `"`, or a backtick:
+hide the URL. The JavaScript masker keeps the code in a template interpolation
+(`${...}`) visible, and a quote in a regex literal does not open a string. A
+slash after `)` or `}` reads as division, so a regex literal there is not
+recognized. `<q>` is one of `'`, `"`, or a backtick:
 ```regex
 \bfrom\s*<q>https?://
 (?<![.$])\bimport\s*(?:\(\s*)?<q>https?://

