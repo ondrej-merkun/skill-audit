@@ -1,11 +1,12 @@
 import { createHash } from 'node:crypto';
 import { stat } from 'node:fs/promises';
 import os from 'node:os';
-import { basename, dirname, join } from 'node:path';
+import { basename, join } from 'node:path';
 import { enterDirOnce, isRegularFile, readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { discoverAgentConfigFiles } from './agent-config.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
+import { ancestorDirsToGitRoot, gitRootFromAncestors } from './project-dirs.js';
 import { discoverSharedAgentSkills } from './shared-agent-skills.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
@@ -102,36 +103,6 @@ async function discoverRulesDir(
       skillFromRuleFile(join(dir, entry.name), basename(entry.name, '.md'), scope)
     )
   );
-}
-
-async function ancestorDirsToGitRoot(dir: string): Promise<string[]> {
-  const dirs: string[] = [];
-  let current = dir;
-
-  while (true) {
-    dirs.push(current);
-    if (await isWorkspaceGitRoot(current)) break;
-
-    const parent = dirname(current);
-    if (parent === current) break;
-    current = parent;
-  }
-
-  return dirs;
-}
-
-async function isWorkspaceGitRoot(dir: string): Promise<boolean> {
-  const gitPath = join(dir, '.git');
-  if (await isRegularFile(gitPath)) return true;
-  return isRegularFile(join(gitPath, 'HEAD'));
-}
-
-async function gitRootFromAncestors(ancestorDirs: string[]): Promise<string | undefined> {
-  for (const dir of ancestorDirs) {
-    if (await isWorkspaceGitRoot(dir)) return dir;
-  }
-
-  return undefined;
 }
 
 async function descendantWindsurfRulesDirs(

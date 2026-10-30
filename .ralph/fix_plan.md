@@ -129,6 +129,11 @@ at the bottom and the loop will stop.
   the `ajv-draft-04` class. `ajv-formats` checks the `uri` and `uri-reference`
   formats of artifact locations. The CLI does not ship them.
 
+- `json5` `^2.2.3`, runtime dependency of `packages/cli`. OpenClaw reads
+  `openclaw.json` with json5 2.2.3, and hand-written OpenClaw configs use
+  unquoted keys and single quotes, which `JSON.parse` rejects. It has no
+  dependencies and no install script.
+
 ## Decisions made during implementation
 
 (If Ralph makes a choice that is not obvious from the task text or specs,
@@ -145,6 +150,10 @@ document it here.)
   `skills[].enrichment` field, and the CLI never emits it, as before. The
   hidden `--offline` flag stays, because it also skips LLM review.
   `specs/SPEC.md` §5 records the decision.
+- OpenCode and Amp config files are JSONC. Discovery parses them with the same
+  JSON5 parser as OpenClaw, because JSON5 accepts comments and trailing commas.
+  JSON5 also accepts unquoted keys, so a file that OpenCode or Amp rejects can
+  still show its servers. That gives extra targets, never fewer.
 
 ## Blockers
 

@@ -2,6 +2,7 @@ import type { DiscoveryProgressCallback } from '../progress.js';
 import { ruleInstallation } from '../rules/installation.js';
 import type { AgentDiscovery, Skill, SkillInstallation } from '../types.js';
 import agentsMdSweepDiscovery from './agents-md-sweep.js';
+import ampDiscovery from './amp.js';
 import claudeCodeDiscovery from './claude-code.js';
 import clineDiscovery from './cline.js';
 import codexDiscovery from './codex.js';
@@ -10,6 +11,8 @@ import cursorDiscovery from './cursor.js';
 import geminiDiscovery from './gemini.js';
 import { isPluginMarketplacePath, withInstallState } from './marketplace.js';
 import { addModifiedAt } from './modified-at.js';
+import openclawDiscovery from './openclaw.js';
+import opencodeDiscovery from './opencode.js';
 import windsurfDiscovery from './windsurf.js';
 
 // Registry starts empty so test files get a clean slate on import.
@@ -183,6 +186,9 @@ export function initDefaultPlugins(): void {
     codexDiscovery,
     geminiDiscovery,
     windsurfDiscovery,
+    opencodeDiscovery,
+    ampDiscovery,
+    openclawDiscovery,
     agentsMdSweepDiscovery
   );
 }

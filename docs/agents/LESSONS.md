@@ -436,6 +436,15 @@ without a commit message explaining why it no longer applies.
   matters, a container rescanning a skill dir, by naming each skill after its
   real directory.
 
+- **L2.23: Check a new agent against a real install, not only its current docs.**
+  _OpenClaw discovery first followed the current docs: MCP servers in
+  `mcp.servers`. A read-only scan of a real OpenClaw 2026.6 home found its server
+  in a root `mcpServers` map that OpenClaw itself wrote, and `TOOLS.md` and
+  `HEARTBEAT.md` in the workspace, which the current docs no longer list._
+  After the docs-based fixtures pass, run the built CLI on a real install (or
+  an older release) and compare the files there with the discovered rows. Read
+  the old shapes too: an extra target is cheap, and a missed one hides a server.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**
