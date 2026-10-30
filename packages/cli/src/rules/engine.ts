@@ -8,8 +8,9 @@ import {
   extractAgentConfigCommands,
   extractAgentConfigCommandsOnOneLine,
 } from './agent-config.js';
-import { pathLooksDocumentationOnly } from './code-context.js';
+import { operativeScanPath, pathLooksDocumentationOnly } from './code-context.js';
 import { ruleInstallation } from './installation.js';
+import { runTargetCheck } from './run-targets.js';
 import { shebangScanName } from './script-scan-name.js';
 
 /** Node's read error for a file longer than the V8 string limit (536,870,888 chars). */
@@ -28,6 +29,15 @@ type RunRulesOptions = {
   scanTargetPaths?: ReadonlySet<string>;
   /** The other installed copies of the skill; the manifests above them name docs in it too. */
   alsoInstalledAt?: readonly string[];
+  /** A file target is an agent config file or a script that a hook or MCP config runs. */
+  isAgentConfigTarget?: boolean;
+};
+
+// What decides the path that rules prepare a file under.
+type PrepareContext = {
+  dirAliases: DirAlias[];
+  reachability: ReachabilityIndex | undefined;
+  isRunTarget: (filePath: string) => boolean;
 };
 
 // One set of rules matched against one view of a file.
@@ -194,9 +204,6 @@ const SUPPORTING_MARKDOWN_DIRS = new Set([
   'test',
   'tests',
 ]);
-
-// A file name that no docs masking matches, unlike README.md or setup-example.md.
-const REFERENCED_DOC_PREPARE_STEM = 'referenced-doc';
 
 function normalizeRelativePath(path: string): string {
   return path.split(sep).join('/');
@@ -421,44 +428,52 @@ function hasOperativeAliasPath(filePath: string, index: ReachabilityIndex): bool
 }
 
 /**
- * The path that rules prepare a file under. A docs-like path masks every line of
- * the file, so a file that a dir alias also reaches through a path that does not
- * look like docs is prepared under that path. Otherwise `docs -> scripts` would
- * hide a script that the agent runs. A markdown doc that SKILL.md references, by
- * path or as part of all its docs, is operative too, so it is prepared under a
- * neutral name at the skill root, whatever its own name (`references/README.md`).
- * The file's real path is a known path too. A link in one skill can make discovery report
- * another skill under that link's path (`aaa/examples/zzz -> ~/.agents/skills/zzz`), and
- * that path must not mask the other skill's scripts.
- * ponytail: a script in a docs dir stays masked even when SKILL.md names it, because
- * security-education skills point at sample code (`see examples/loader.js`).
+ * The path that rules prepare a file under, for one of its scan names. A docs-like path masks
+ * every line of the file, so a file that another known path reaches through a dir that does not
+ * look like docs is prepared under that path: a dir alias (`docs -> scripts`), or the file's
+ * real path. A link in one skill can make discovery report another skill under that link's path
+ * (`aaa/examples/zzz -> ~/.agents/skills/zzz`), and that path must not mask the other skill's
+ * scripts. A file that the agent reads or runs is operative too, whatever its own path, so it is
+ * prepared under a path that does not look like docs: a markdown doc that SKILL.md references,
+ * by path or as part of all its docs (`references/README.md`), and a run target
+ * (`docs/check.sh`). The role name, the first name of the file, decides whether it is markdown.
+ * A script that SKILL.md only points at stays masked, because security-education skills point at
+ * sample code (`See examples/loader.js`).
  * ponytail: a skill whose real dir is also in a docs dir stays masked under such a link path.
  * Discovery that names each skill after the shallowest path to it would close that case.
  */
 function preparePathFor(
   filePath: string,
   scanName: string,
-  dirAliases: DirAlias[],
-  index: ReachabilityIndex | undefined
+  roleName: string,
+  context: PrepareContext
 ): string {
-  if (!pathLooksDocumentationOnly(filePath)) return filePath;
+  const ownPath = join(dirname(filePath), scanName);
+  if (!pathLooksDocumentationOnly(ownPath)) return ownPath;
 
-  const aliasPaths = aliasPathsOf(filePath, dirAliases);
-  const operativePath = [...aliasPaths, realPathOf(filePath)].find(
-    (path) => path !== undefined && !pathLooksDocumentationOnly(path)
-  );
+  const aliasPaths = aliasPathsOf(filePath, context.dirAliases);
+  const operativePath = [...aliasPaths, realPathOf(filePath)]
+    .flatMap((path) => (path === undefined ? [] : [join(dirname(path), scanName)]))
+    .find((path) => !pathLooksDocumentationOnly(path));
   if (operativePath !== undefined) return operativePath;
 
-  // The same signals make a markdown doc operative in classifySupportingFileRole.
-  if (index === undefined || !isMarkdownPromptFile(scanName)) return filePath;
+  const paths = [filePath, ...aliasPaths];
+  const isOperative =
+    paths.some(context.isRunTarget) || isReferencedMarkdown(paths, roleName, context.reachability);
+  return isOperative ? operativeScanPath(filePath, scanName) : ownPath;
+}
 
-  const isReferenced =
+// The same signals make a markdown doc operative in classifySupportingFileRole.
+function isReferencedMarkdown(
+  paths: string[],
+  roleName: string,
+  index: ReachabilityIndex | undefined
+): boolean {
+  if (index === undefined || !isMarkdownPromptFile(roleName)) return false;
+  return (
     index.allSupportingMarkdownReachable ||
-    [filePath, ...aliasPaths].some((path) => isReachableFromSkillMd(path, index));
-  // A nested skill under `references/` must not mask a doc that its parent names.
-  return isReferenced
-    ? join(nearestNonDocsDir(index.root), `${REFERENCED_DOC_PREPARE_STEM}${extname(scanName)}`)
-    : filePath;
+    paths.some((path) => isReachableFromSkillMd(path, index))
+  );
 }
 
 function realPathOf(filePath: string): string | undefined {
@@ -467,15 +482,6 @@ function realPathOf(filePath: string): string | undefined {
   } catch {
     return undefined;
   }
-}
-
-/** The nearest dir at or above `dir` whose path does not look like docs. */
-function nearestNonDocsDir(dir: string): string {
-  let current = dir;
-  while (pathLooksDocumentationOnly(current) && dirname(current) !== current) {
-    current = dirname(current);
-  }
-  return current;
 }
 
 /**
@@ -599,6 +605,13 @@ export async function runRules(
   const reachability = isDirectory
     ? buildReachabilityIndex(skillPath, files, dirAliases, options.alsoInstalledAt ?? [])
     : undefined;
+  const prepareContext: PrepareContext = {
+    dirAliases,
+    reachability,
+    isRunTarget: isDirectory
+      ? runTargetCheck(skillPath, files)
+      : () => options.isAgentConfigTarget === true,
+  };
 
   // Scan names from discovery name a single file. A merged directory target holds the names
   // of its directories there, and its files keep their own names.
@@ -608,8 +621,9 @@ export async function runRules(
     // The first name decides the file's role. A shebang adds rules but not a role, so the
     // markdown docs that preparePathFor unmasks stay markdown.
     const fileName = scanNames?.[0] ?? basename(filePath);
-    const scanPath = preparePathFor(filePath, fileName, dirAliases, reachability);
-    const passes = scanPasses(filePath, scanPath, rules, scanNames);
+    const preparePath = (name: string): string =>
+      preparePathFor(filePath, name, fileName, prepareContext);
+    const passes = scanPasses(filePath, preparePath, rules, scanNames);
     if (passes.length === 0) continue;
 
     const fileRole = classifySupportingFileRole(filePath, fileName, reachability, options);
@@ -632,6 +646,7 @@ export async function runRulesForSkill(
   const runOptions: RunRulesOptions = {
     ...(scanNames === undefined ? {} : { scanNames }),
     ...(skill.alsoInstalledAt !== undefined ? { alsoInstalledAt: skill.alsoInstalledAt } : {}),
+    ...(skill.format === 'agent-config' ? { isAgentConfigTarget: true } : {}),
     ...options,
   };
 
@@ -698,7 +713,7 @@ async function runRulesOnContent(
  */
 function scanPasses(
   filePath: string,
-  scanPath: string,
+  preparePath: (name: string) => string,
   rules: Rule[],
   scanNames: string[] | undefined
 ): MatchPass[] {
@@ -706,11 +721,8 @@ function scanPasses(
   const shebangName = scanNames === undefined ? shebangScanName(filePath) : undefined;
   const names = scanNames ?? (shebangName === undefined ? [ownName] : [ownName, shebangName]);
 
-  // Another name also prepares the content, so a script gets the comment masking of its
-  // language.
-  return names.flatMap((name) =>
-    matchPasses(rules, name, name === ownName ? scanPath : join(dirname(scanPath), name))
-  );
+  // Each name also prepares the content, so a script gets the comment masking of its language.
+  return names.flatMap((name) => matchPasses(rules, name, preparePath(name)));
 }
 
 /**

@@ -419,11 +419,46 @@ describe('runRules', () => {
     },
     { skillMd: 'A PDF helper.', docFile: join('docs', 'setup.md'), severities: [] },
     {
+      skillMd: 'Run `bash references/install.sh` before each task.',
+      docFile: join('references', 'install.sh'),
+      severities: ['critical'],
+    },
+    {
+      skillMd: 'Run docs/setup.sh first.',
+      docFile: join('docs', 'setup.sh'),
+      severities: ['critical'],
+    },
+    {
+      skillMd: 'Load the settings with `source "$SKILL_DIR/examples/env.sh"`.',
+      docFile: join('examples', 'env.sh'),
+      severities: ['critical'],
+    },
+    {
+      skillMd: '```bash\n./examples/setup.sh --init\n```',
+      docFile: join('examples', 'setup.sh'),
+      severities: ['critical'],
+    },
+    {
+      skillMd: 'Run scripts/example-setup.sh first.',
+      docFile: join('scripts', 'example-setup.sh'),
+      severities: ['critical'],
+    },
+    {
       skillMd: 'Explain the techniques shown in the examples.',
       docFile: join('examples', 'steal.sh'),
       severities: [],
     },
-  ])('unmasks $docFile only when SKILL.md references it as markdown: $skillMd', async (row) => {
+    {
+      skillMd: 'See `examples/steal.sh` for the attack sample.',
+      docFile: join('examples', 'steal.sh'),
+      severities: [],
+    },
+    {
+      skillMd: 'Read examples/steal.sh. Then run the tests.',
+      docFile: join('examples', 'steal.sh'),
+      severities: [],
+    },
+  ])('unmasks $docFile only when SKILL.md reads or runs it: $skillMd', async (row) => {
     await writeFile(join(tmpDir, 'SKILL.md'), `${row.skillMd}\n`);
     await mkdir(join(tmpDir, dirname(row.docFile)));
     await writeFile(
@@ -504,6 +539,40 @@ describe('runRules', () => {
     );
 
     expect(findings.map((finding) => finding.severity)).toEqual(['critical']);
+  });
+
+  it.each([join('docs', 'check.sh'), join('scripts', 'test-hook.sh')])(
+    'keeps the hook script %s unmasked',
+    async (script) => {
+      // Discovery reports each script that a hook runs as an agent config target of its own.
+      const file = join(tmpDir, script);
+      await mkdir(dirname(file));
+      await writeFile(file, 'cat ~/.ssh/id_rsa\n');
+
+      const findings = await runRulesForSkill({ ...makeFileSkill(file), format: 'agent-config' }, [
+        FS_CREDSTORE,
+      ]);
+
+      expect(findings.map((finding) => finding.severity)).toEqual(['critical']);
+    }
+  );
+
+  it('keeps a docs script unmasked when a hook in the scanned dir runs it', async () => {
+    const hook = { type: 'command', command: 'bash "${CLAUDE_PLUGIN_ROOT}"/docs/check.sh' };
+    await mkdir(join(tmpDir, 'hooks'));
+    await writeFile(
+      join(tmpDir, 'hooks', 'hooks.json'),
+      JSON.stringify({ hooks: { SessionStart: [{ hooks: [hook] }] } })
+    );
+    await mkdir(join(tmpDir, 'docs'));
+    await writeFile(join(tmpDir, 'docs', 'check.sh'), 'cat ~/.ssh/id_rsa\n');
+    await writeFile(join(tmpDir, 'docs', 'sample.sh'), 'cat ~/.ssh/id_rsa\n');
+
+    const findings = await runRules(tmpDir, [FS_CREDSTORE]);
+
+    expect(findings.map(({ file, severity }) => ({ file, severity }))).toEqual([
+      { file: join(tmpDir, 'docs', 'check.sh'), severity: 'critical' },
+    ]);
   });
 
   it('scans all supporting markdown normally in paranoid mode', async () => {

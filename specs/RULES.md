@@ -30,18 +30,44 @@ regex cannot tell explanation from behavior.
 
 Context masking hides documentation, not instructions. A rule with docs masking
 masks a whole file when its path looks like docs (a `docs/`, `references/`, or
-`examples/` dir, or a name such as `README.md`). A markdown file that SKILL.md
-references, by path or as part of all its docs, is operative: the agent reads
-it, so rules scan it under a neutral name at the skill root, whatever its own
-name (`references/README.md`). The SKILL.md of a parent dir counts too, so a
-nested skill cannot hide a doc that its parent names. When the skill root
-itself is in a docs dir (`references/helper/`), the neutral name goes in the
-nearest dir above it that does not look like docs. A file is masked as docs
-only when every known path to it looks like docs: the walked path, a path
-through a skipped symlink, and the real path. A script in a docs dir stays
-masked even when SKILL.md names it, because security-education skills point at
-sample code. For
-rules with line masking (`FS-CREDSTORE`, `NET-DNS-UNUSUAL-TLD`), a documentation
+`examples/` dir, or a name such as `README.md` or `test-setup.sh`). A file that
+the agent reads or runs is operative, whatever its path. Rules scan it under its
+path without the docs dirs, also when the skill root itself is in a docs dir
+(`references/helper/`), and under a neutral name with the same extension when
+its own name looks like docs. A file is masked as docs only when every known
+path to it looks like docs: the walked path, a path through a skipped symlink,
+and the real path. These files are operative:
+
+- A markdown file that SKILL.md references, by path or as part of all its docs
+  (`references/README.md`). The SKILL.md of a parent dir counts too, so a
+  nested skill cannot hide a doc that its parent names.
+- A file that SKILL.md tells the agent to run. SKILL.md names the file by its
+  path from the skill root or from a deeper dir above the file, alone or after
+  a prefix such as `./`, `$SKILL_DIR/`, or `${CLAUDE_PLUGIN_ROOT}/`, and one of
+  these is true: a run verb (`run`, `execute`, `exec`, `invoke`, `launch`)
+  comes before the path in the same sentence (`Run docs/setup.sh first.`); a
+  program comes directly before the path, with its options
+  (`bash references/install.sh`, `source docs/env.sh`, `. docs/env.sh`,
+  `python3 docs/check.py`, and the other shells and interpreters); or the path
+  starts a command in fenced code (`./examples/setup.sh --init`). The check
+  reads at most 200 characters before the path on its line.
+- A file that a command in an agent config file names: a hook or an MCP server
+  in `hooks.json`, `settings.json`, `settings.local.json`, or `.mcp.json` in the
+  same scan target. The command can name the file from any dir above it
+  (`bash "${CLAUDE_PLUGIN_ROOT}"/docs/check.sh`).
+- An agent config target that discovery reports on its own: an agent config
+  file, or a script that a hook or an MCP server runs.
+
+A file that SKILL.md only points at as reading material stays masked, because
+security-education skills point at sample code: `See examples/loader.js`,
+`Read examples/steal.sh. Then run the tests.`, or a path in a table. Trade-off:
+the run check does not read negation, so `Never run examples/attack.sh` makes
+that sample operative. The check fails closed: it can show a sample, but it
+does not hide a script that the agent runs. Known gap: a command that names a
+script only by its file name after `cd` (`cd docs && ./run.sh`) leaves the
+script masked.
+
+For rules with line masking (`FS-CREDSTORE`, `NET-DNS-UNUSUAL-TLD`), a documentation
 word such as "example" or "test" hides a markdown line only in example
 structure: a section under an example heading, a line that opens with a label
 such as `Example:`, a blockquote that names example or reference material, or a

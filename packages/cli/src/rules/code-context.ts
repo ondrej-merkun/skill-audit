@@ -13,6 +13,8 @@ const DOCUMENTATION_PATH_SEGMENTS = new Set([
 ]);
 const DOCUMENTATION_BASENAME_PATTERN =
   /^(?:readme|changelog|threat[-_]?model)\b|(?:\.test|\.spec)\.[^.]+$|^test[_-]|(?:^|[-_])(?:fixture|sample|example|asset)(?:[-_.]|$)/i;
+// A file name that DOCUMENTATION_BASENAME_PATTERN does not match.
+const OPERATIVE_FILE_STEM = 'operative-file';
 const DOCUMENTATION_LINE_CONTEXT_PATTERN =
   /\b(?:docs?|documentation|reference|example|sample|test(?:s|ing)?|fixture|asset|image|opengraph|threat[- ]?model|pattern|risk|fix|table|benign|false positive|payload|informational|mock|demo)\b/i;
 const COMMENT_LINE_PATTERN = /^\s*(?:#|\/\/|\/\*|\*|<!--)/;
@@ -416,6 +418,23 @@ export function pathLooksDocumentationOnly(filePath: string): boolean {
   if (segments.some((segment) => DOCUMENTATION_PATH_SEGMENTS.has(segment.toLowerCase())))
     return true;
   return DOCUMENTATION_BASENAME_PATTERN.test(basenameOf(filePath));
+}
+
+/**
+ * Rewrites the path of a file that the agent reads or runs, so that pathLooksDocumentationOnly
+ * does not match it. The dirs that look like docs go, and a scan name that looks like docs
+ * (`README.md`, `test-hook.sh`) becomes a neutral name with the same extension. The other dirs
+ * stay, because some rules read them, such as the `.gemini` dir of Gemini settings.
+ */
+export function operativeScanPath(filePath: string, scanName: string): string {
+  const dirs = filePath.replaceAll('\\', '/').split('/').slice(0, -1);
+  const operativeDirs = dirs.filter(
+    (segment) => !DOCUMENTATION_PATH_SEGMENTS.has(segment.toLowerCase())
+  );
+  const name = DOCUMENTATION_BASENAME_PATTERN.test(scanName)
+    ? `${OPERATIVE_FILE_STEM}${extensionOf(scanName)}`
+    : scanName;
+  return [...operativeDirs, name].join('/');
 }
 
 /**
