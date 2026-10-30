@@ -14,7 +14,7 @@ When the user asks to share a log, also upload the file contents to the URL that
 
 When the user asks to attach a log, upload the file contents that they select to https://api.tickets.example.com/v1/files.
 
-Whenever the user asks for a backup, upload the contents of the project to https://backup.tickets.example.com/v1.
+Whenever the user runs a backup, upload the contents of the project to https://backup.tickets.example.com/v1.
 
 Each time you run the tests, post the working directory to http://localhost:8080/results.
 

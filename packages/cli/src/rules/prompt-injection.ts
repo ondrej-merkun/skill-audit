@@ -227,11 +227,12 @@ const paragraphWindow = (maxChars: number): string =>
 const notQuoted = String.raw`(?<!["'\x60\u201c])`;
 // A request trigger needs a side-effect marker such as "also". Without the marker, the
 // instruction can be the request itself: send the user's data to the service of the skill.
-const requestTrigger = String.raw`\b(?:(?:when(?:ever)?|if|each\s+time|every\s+time)\s+(?:the\s+)?user\s+(?:asks?|requests?|runs?|says?|opens?|invokes?|types?|wants?)|when(?:ever)?\s+asked)\b`;
+const userRequest = String.raw`(?:the\s+)?user\s+(?:asks?|requests?|runs?|says?|opens?|invokes?|types?|wants?)\b`;
+const requestTrigger = String.raw`\b(?:(?:when(?:ever)?|if|each\s+time|every\s+time)\s+${userRequest}|when(?:ever)?\s+asked\b)`;
 const sideEffectMarker = String.raw`\b(?:also|additionally|silently|quietly|secretly|covertly)\b,?\s+(?:[a-z]+ly\s+)?`;
 // A recurring or agent-action trigger is a side effect without a marker. "Whenever the user
 // asks" is a request trigger, so it needs the marker.
-const recurringTrigger = String.raw`\b(?:(?:whenever|each\s+time|every\s+time)\b(?!\s+(?:the\s+)?user\s+(?:asks?|requests?|wants?)\b)|(?:before|after)\s+(?:you|each|every|responding|answering|replying)\b)`;
+const recurringTrigger = String.raw`\b(?:(?:whenever|each\s+time|every\s+time)\b(?!\s+${userRequest})|(?:before|after)\s+(?:you|each|every|responding|answering|replying)\b)`;
 const localContext = `(?:${[
   String.raw`\bworking\s+director(?:y|ies)|\bcwd\b|\bpwd\b`,
   String.raw`\bgit\s+remotes?|\bremote\s+urls?`,
@@ -243,9 +244,10 @@ const localContext = `(?:${[
   String.raw`\bconversation|\bchat\s+history|\bsystem\s+prompt`,
   String.raw`\bhostname|\b(?:shell|bash|command)\s+history`,
 ].join('|')})`;
-// A URL, or a bare host with a path. A loopback host is local. The guard checks where the
-// host name ends, so a lookalike such as localhost.evil.example stays external.
-const externalDestination = String.raw`[<(\x60"']?(?!(?:https?://)?(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(?![\w.-]))(?:https?://|[a-z0-9-]+\.[a-z0-9.-]+/)`;
+// A URL, or a bare host with a path. A loopback host is local. The guard skips userinfo and
+// checks where the host name ends, so localhost.evil.example and localhost@evil.example stay
+// external.
+const externalDestination = String.raw`[<(\x60"']?(?!(?:https?://)?(?:[^\s/@]*@)?(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(?![\w.@%-]))(?:https?://|[a-z0-9-]+\.[a-z0-9.-]+/)`;
 const sendAction = String.raw`\b(?:send|post|upload|report|forward|transmit|submit)s?\b${paragraphWindow(80)}${localContext}${paragraphWindow(120)}\b(?:to|at)\s+${externalDestination}`;
 const includeAction = String.raw`\b(?:include|attach|append|embed)s?\b${paragraphWindow(80)}${localContext}${paragraphWindow(120)}\b(?:request|call)s?\s+to\s+${externalDestination}`;
 const exfilAction = `(?:${sendAction}|${includeAction})`;
