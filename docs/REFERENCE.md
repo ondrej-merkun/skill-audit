@@ -271,6 +271,24 @@ jobs:
           # scan-path: skills
 ```
 
+### Action Outputs
+
+The action sets three outputs. A later step reads them as
+`steps.<id>.outputs.<name>`.
+
+| Output | Value |
+|---|---|
+| `verdict` | The worst verdict of the scanned skills: `PASS`, `REVIEW`, or `FAIL`. `PASS` when the scan finds no skills. Blank when the scan is incomplete (exit code 3) or when the CLI stops with an error, for example a usage error (exit code 2) or a `scan-path` that does not exist. |
+| `results-file` | The path of the JSON results file. Blank when the CLI writes no results file: the scan finds no skills, or the CLI stops with an error. After an incomplete scan, the file has only the skills that the scan checked. |
+| `sarif-file` | The path of the SARIF file. Blank when the `sarif-file` input is blank, the scan is incomplete, or the CLI stops with an error. |
+
+Before the scan, the action deletes the files at the `results-file` and
+`sarif-file` paths. Thus the outputs and the results artifact never show the
+files of an earlier run. The step exits with the CLI exit code.
+
+When the scan meets the `fail-on` band, the CLI exits 1 even if the scan is also
+incomplete. The `verdict` then covers only the skills that the scan checked.
+
 ### GitHub Code Scanning
 
 Set the `sarif-file` input to also write a SARIF 2.1.0 log. Then upload it with
