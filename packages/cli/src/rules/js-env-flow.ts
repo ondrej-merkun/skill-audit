@@ -52,7 +52,9 @@ const ASSIGNMENT = /(?<![\w$.])([A-Za-z_$][\w$]*)(?:\.[A-Za-z_$][\w$]*)*\s*\+?=(
 // flow into the call result: `execFileSync(cmd, args, { env: { ...process.env, CI: '1' } })`.
 const PROCESS_LAUNCH_CALL =
   /(?<![\w$])(?:[\w$]+\.)?(?:spawn|spawnSync|exec|execSync|execFile|execFileSync|fork|execa|execaSync|execaCommand|execaCommandSync)\s*\(/g;
-const ENV_OPTION = /(?<![\w$.])env(?=\s*[:,}])/g;
+// An `env` key: bare (`env:`, or shorthand `{ env }`) or quoted (`'env':`). It runs on the content,
+// because the view turns a quoted key into string text.
+const ENV_OPTION = /(?<![\w$.])(?:env(?=\s*[:,}])|(['"])env\1(?=\s*:))/g;
 
 // A line break ends a statement unless the line ends with, or the next line starts with, an
 // operator that continues the expression.
@@ -104,14 +106,12 @@ function findSentProcessEnvReads(view: string, content: string, filePath: string
   const declarations = collectDeclarations(code, scan);
   const values = valueRegions(code, ends, declarations);
   const sends = sendRegions(code, scan, declarations);
-  const functionBodies: Region[] = scan.functionBodies.map((brace) => ({
-    start: brace + 1,
-    end: scan.closing[brace] ?? code.length,
-    kind: 'barrier',
-    declaration: -1,
-  }));
+  const functionBodies = [
+    ...scan.functionBodies.map((brace) => barrier(brace + 1, scan.closing[brace] ?? code.length)),
+    ...scan.arrowExpressionBodies.map((start) => barrier(start, ends[start] ?? code.length)),
+  ];
   const flowRegions = [...sends, ...values, ...functionBodies];
-  const childEnvironments = childEnvironmentRegions(code, scan, ends, flowRegions);
+  const childEnvironments = childEnvironmentRegions(code, content, scan, ends, flowRegions);
 
   return traceReadsIntoSends(code, declarations, reads, [...flowRegions, ...childEnvironments]);
 }
@@ -156,8 +156,9 @@ function traceReadsIntoSends(
   for (let declaration = pending.pop(); declaration !== undefined; declaration = pending.pop()) {
     if (visited.has(declaration)) continue;
     visited.add(declaration);
-    sentReads.push(...(readsByDeclaration.get(declaration) ?? []));
-    pending.push(...(usesByDeclaration.get(declaration) ?? []));
+    // A loop, not a spread: a crafted file can hold more reads than a call takes arguments.
+    for (const read of readsByDeclaration.get(declaration) ?? []) sentReads.push(read);
+    for (const use of usesByDeclaration.get(declaration) ?? []) pending.push(use);
   }
   return sentReads;
 }
@@ -190,11 +191,12 @@ function wholeNameUses(code: string, names: Set<string>): NameUse[] {
     const end = start + name.length;
     SINGLE_KEY_ACCESS.lastIndex = end;
     if (SINGLE_KEY_ACCESS.test(code)) continue;
+    const previous = previousCodeIndex(code, start);
+    // A membership test (`'CI' in env`) reads one key.
+    if (endsWithWord(code, previous, 'in')) continue;
     // An object key (`{ env: value }`) names a property. A shorthand key (`{ env }`) is a use.
-    if (code[nextCodeIndex(code, end)] === ':') {
-      const previous = code[previousCodeIndex(code, start)];
-      if (previous === '{' || previous === ',') continue;
-    }
+    const startsProperty = code[previous] === '{' || code[previous] === ',';
+    if (startsProperty && code[nextCodeIndex(code, end)] === ':') continue;
 
     uses.push({ name, offset: start });
   }
@@ -287,6 +289,7 @@ function sendRegions(code: string, scan: BracketScan, declarations: Declaration[
  */
 function childEnvironmentRegions(
   code: string,
+  content: string,
   scan: BracketScan,
   ends: Int32Array,
   context: Region[]
@@ -296,9 +299,14 @@ function childEnvironmentRegions(
   );
   if (launches.length === 0) return [];
 
-  const keys = [...code.matchAll(ENV_OPTION)].filter((match) => {
+  const keys = [...content.matchAll(ENV_OPTION)].filter((match) => {
+    // A bare key must be code in the view, a quoted key string text. A key in a comment is neither.
+    const inView =
+      match[1] === undefined
+        ? code.startsWith('env', match.index)
+        : code[match.index] === STRING_TEXT;
     const previous = code[previousCodeIndex(code, match.index)];
-    return previous === '{' || previous === ',';
+    return inView && (previous === '{' || previous === ',');
   });
   const owners = innermostRanges(
     [...context, ...launches],
@@ -311,36 +319,50 @@ function childEnvironmentRegions(
     const keyEnd = match.index + match[0].length;
     const colon = nextCodeIndex(code, keyEnd);
     // `{ env }` passes the name itself; `{ env: value }` passes the value.
-    const range =
-      code[colon] === ':'
-        ? { start: colon + 1, end: ends[colon + 1] ?? code.length }
-        : { start: match.index, end: keyEnd };
-    return [{ ...range, kind: 'barrier' as const, declaration: -1 }];
+    return code[colon] === ':'
+      ? [barrier(colon + 1, ends[colon + 1] ?? code.length)]
+      : [barrier(match.index, keyEnd)];
   });
 }
 
 /**
  * Fills the string text that the view blanks with STRING_TEXT. Without it, `const url = '...'`
- * looks like a line that ends with `=`, and the value runs on into the next statement.
+ * looks like a line that ends with `=`, and the value runs on into the next statement. A line
+ * break between string text and more string text is inside a template literal, so it is string
+ * text too.
  */
 function markStringText(view: string, content: string, filePath: string): string {
   const withStrings = maskDocumentationTextInCode(content, filePath, () => true);
   const chars = view.split('');
+  let afterStringText = false;
+  let lineBreaks: number[] = [];
+
   for (let idx = 0; idx < chars.length; idx += 1) {
-    if ((chars[idx] ?? '') <= ' ' && (withStrings[idx] ?? '') > ' ') chars[idx] = STRING_TEXT;
+    const char = chars[idx] ?? '';
+    const isStringText = char <= ' ' && (withStrings[idx] ?? '') > ' ';
+    if (char === '\n' && afterStringText) lineBreaks.push(idx);
+    if (char <= ' ' && !isStringText) continue;
+
+    if (isStringText) {
+      chars[idx] = STRING_TEXT;
+      if (afterStringText) for (const lineBreak of lineBreaks) chars[lineBreak] = STRING_TEXT;
+    }
+    afterStringText = isStringText;
+    lineBreaks = [];
   }
   return chars.join('');
 }
 
 /**
- * Matches brackets, finds the blocks and the function bodies (a `{` after `)` or `=>`), and marks
- * each line break that a trailing operator continues.
+ * Matches brackets, finds the blocks, the function bodies (a `{` after `)` or `=>`), and the starts
+ * of arrow expression bodies, and marks each line break that a trailing operator continues.
  */
 function scanBrackets(code: string): BracketScan {
   const closing = new Int32Array(code.length).fill(code.length);
   const lineContinues = new Uint8Array(code.length);
   const braces: number[] = [];
   const functionBodies: number[] = [];
+  const arrowExpressionBodies: number[] = [];
   const openBrackets: number[] = [];
   let previous = -1;
 
@@ -358,14 +380,16 @@ function scanBrackets(code: string): BracketScan {
       const openBracket = openBrackets.pop();
       if (openBracket !== undefined) closing[openBracket] = idx;
     }
+    const afterArrow = code[previous] === '>' && code[previous - 1] === '=';
     if (char === '{') {
       braces.push(idx);
-      const afterArrow = code[previous] === '>' && code[previous - 1] === '=';
       if (code[previous] === ')' || afterArrow) functionBodies.push(idx);
+    } else if (afterArrow) {
+      arrowExpressionBodies.push(idx);
     }
     previous = idx;
   }
-  return { closing, braces, functionBodies, lineContinues };
+  return { closing, braces, functionBodies, arrowExpressionBodies, lineContinues };
 }
 
 /**
@@ -477,6 +501,11 @@ function argumentRegion(code: string, scan: BracketScan, match: RegExpExecArray)
   };
 }
 
+/** Code whose reads go nowhere: a function body or a child process's environment. */
+function barrier(start: number, end: number): Region {
+  return { start, end, kind: 'barrier', declaration: -1 };
+}
+
 /** Range indexes by start, and the outer range first when two start together. */
 function sortedIndexes(ranges: Range[]): number[] {
   return ranges
@@ -523,6 +552,8 @@ type BracketScan = {
   closing: Int32Array;
   braces: number[];
   functionBodies: number[];
+  /** The first code offset of each arrow function whose body is an expression. */
+  arrowExpressionBodies: number[];
   /** 1 at each line break after an operator that continues the expression. */
   lineContinues: Uint8Array;
 };

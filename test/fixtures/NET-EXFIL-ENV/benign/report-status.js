@@ -10,14 +10,17 @@ const headers = { Authorization: `Bearer ${process.env.API_TOKEN}`, 'x-api-key':
 // The child processes get a copy of the environment. The copy stays on this machine.
 const childEnv = { ...process.env, NO_COLOR: '1' }
 const commit = execFileSync('git', ['rev-parse', 'HEAD'], { env: childEnv }).toString()
+const branch = execFileSync('git', ['branch', '--show-current'], { 'env': childEnv }).toString()
 spawn('make', ['test'], { env: { ...process.env, CI: '1' }, stdio: 'inherit' })
 
 export async function postStatus() {
   // Never send { ...process.env } or Object.entries(process.env) to fetch().
   const env = process.env.DEPLOY_ENV ?? 'production'
   const note = 'fetch(url, { body: JSON.stringify({ ...process.env }) }) leaks every secret'
-  const ci = 'CI' in process.env
-  await fetch(API_URL, { method: 'POST', headers, body: JSON.stringify({ commit, env, note, ci }) })
+  const vars = process.env
+  const ci = 'CI' in process.env || 'GITHUB_ACTIONS' in vars
+  const body = JSON.stringify({ commit, branch, env, note, ci })
+  await fetch(API_URL, { method: 'POST', headers, body })
 }
 
 export function checkHealth() {
@@ -25,6 +28,7 @@ export function checkHealth() {
   https.get(`${API_URL}/health`, (res) => {
     console.log(res.statusCode, Object.keys(process.env).length)
   })
+  https.get(`${API_URL}/ping`, (res) => console.log(res.statusCode, Object.keys(process.env)))
 }
 
 export function runLocally() {

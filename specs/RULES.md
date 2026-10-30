@@ -274,14 +274,15 @@ the same file. The finding is on the line of the read.
   an assignment to a declared name (`name = value`, `name += value`,
   `name.key = value`). A name resolves to its declaration in the innermost
   enclosing block, so two functions that use the same local name do not share
-  its value. A key lookup on a variable that holds the environment reads one
-  item.
+  its value. A key lookup or a membership test on a variable that holds the
+  environment reads one item.
 - Comments and string text do not count. The code in a template literal
   field does.
-- The `env` option of `spawn`, `spawnSync`, `exec`, `execSync`, `execFile`,
-  `execFileSync`, `fork`, `execa`, `execaSync`, `execaCommand`, and
-  `execaCommandSync` sets the environment of the child process. It does not
-  flow into the call result. A send inside that option still counts.
+- The `env` option (also a quoted `"env"` key) of `spawn`, `spawnSync`,
+  `exec`, `execSync`, `execFile`, `execFileSync`, `fork`, `execa`,
+  `execaSync`, `execaCommand`, and `execaCommandSync` sets the environment of
+  the child process. It does not flow into the call result. A send inside that
+  option still counts.
 - Known gaps: return values, function arguments, loop targets
   (`for (const [k, v] of Object.entries(process.env))`), a copy key by key, a
   rest element (`const { ...rest } = process.env`),
@@ -338,11 +339,13 @@ example pipeline.
 JavaScript and TypeScript fixtures: a `.mjs` file that sends a spread,
 `Object.entries`, `Object.keys`, `Object.values`, `URLSearchParams`, and
 `util.inspect` through `fetch`, `axios.post`, an `http.request` body, and a
-socket, and a `.ts` file that sends a copy through two variables, are
-malicious. A JavaScript file that authenticates with one key, gives copies of
-the environment to child processes, sends a membership flag, reads the
-environment in a response callback, posts a name that another function uses
-for a copy, and quotes the attack in a comment and a string is benign.
+socket, and a multi-line template in a variable, and a `.ts` file that sends a
+copy through two variables, are malicious. A JavaScript file that
+authenticates with one key, gives copies of the environment to child processes
+through bare and quoted `env` keys, sends membership flags on `process.env` and
+on a copy, reads the environment in block and expression response callbacks,
+posts a name that another function uses for a copy, and quotes the attack in a
+comment and a string is benign.
 
 ### NET-WEBHOOK-KNOWN (Critical)
 URLs in code and markdown that deliver data to a chat webhook, a request
