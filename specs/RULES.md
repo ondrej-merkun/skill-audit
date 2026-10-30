@@ -470,27 +470,60 @@ names.
 Rules pick files by name, so a hook script gets a scan name from the program
 that runs it. The interpreter word before the script in the same command sets
 it: `bash`, `sh`, `dash`, `zsh`, and `ksh` select the `*.sh` rules, `python`
-(also versioned, such as `python3.12`) the `*.py` rules, and `node` the `*.js`
-rules. The interpreter ignores the file extension, so `bash scripts/setup.cfg`
-is scanned as `setup.cfg.sh`. A name that already ends in the extension keeps
-its name. A sourced script (`. scripts/setup`, `source scripts/setup`) gets the
-`*.sh` rules. When the command runs the script directly, also after `bash -c`,
-the shebang line names the program, such as `#!/bin/sh` or
+(also versioned, such as `python3.12`) the `*.py` rules, `node` the `*.js`
+rules, `ruby` the `*.rb` rules, and `deno` and `bun` the `*.ts` rules. The
+interpreter ignores the file extension, so `bash scripts/setup.cfg` is scanned
+as `setup.cfg.sh`. A name that already ends in the extension keeps its name. A
+sourced script (`. scripts/setup`, `source scripts/setup`) gets the `*.sh`
+rules. When the command runs the script directly, also after `bash -c`, the
+shebang line names the program, such as `#!/bin/sh` or
 `#!/usr/bin/env python3`. A text file without a shebang and without a script
 extension gets the `*.sh` rules, because the shell runs such a file itself.
 
-In skill directories, a file without an extension whose own name selects no
-rule, such as `scripts/setup`, gets its scan name from its shebang line. A name
-that selects rules, such as `Pipfile` or `.cursorrules`, keeps them.
+Interpreter options do not hide the interpreter. Discovery knows the common
+options of bash, sh, zsh, Python, Node.js, Ruby, Perl, Deno, and Bun that take
+a separate value, such as `bash -o pipefail`, `python3 -W ignore`,
+`node --require ./setup.js`, `ruby -I lib`, and `deno run -c deno.json`, and
+the `run` subcommand of Deno and Bun. Bash reads the value of each `o` in an
+option group from the next word, so `bash -oe pipefail scripts/run` runs
+`scripts/run`. A value that the interpreter loads as code, such as the file
+after `node --require`, `ruby -r`, or `bun --preload`, gets the rules of the
+interpreter too. A data value, such as the file after `node --env-file`, keeps
+its own name.
+
+When hooks run one script with two interpreters, such as `bash scripts/check`
+and `python3 scripts/check`, the script gets the rules of both. A rule that
+applies to both languages reports a line once. The same holds when dedupe
+merges identical copies of a script that two interpreters run.
+
+In skill directories, the file's own name selects rules, and a shebang line
+adds the rules of the program that it names. So `scripts/setup`, `run.txt`, and
+`setup.cfg` that start with `#!/bin/bash` get the `*.sh` rules, and a
+`check.py` that starts with `#!/bin/sh` gets the `*.py` and the `*.sh` rules. A
+shebang never removes rules, so a `#!` line cannot hide a `Pipfile` or a
+`.cursorrules` file. The order of the signals:
+
+- A hook command that names the interpreter wins over the extension and the
+  shebang. The interpreter reads the file, whatever its name.
+- A hook that runs the script directly uses the shebang. The kernel ignores
+  the extension.
+- In a skill directory, no followed hook tells how the agent runs a file. The
+  agent can run it through its shebang, or with the interpreter that its
+  extension names, so both rule sets apply.
+- A text file without a shebang, such as `notes.txt`, keeps the rules of its
+  own name only. Nothing shows that a program runs it, and the shell rules
+  give false positives on prose.
 
 An HTTP hook (`"type": "http"`) runs no command. It posts the hook input to its
 `url`. In project files, `NET-HOOK-HTTP-EXTERNAL` (below) checks that host.
 
-Known gap: a script that hooks run with two interpreters gets the rules of the
-first one only. An interpreter option that takes a separate value, such as
-`python3 -W ignore scripts/check`, hides the interpreter. In skill directories,
-a script with an extension that selects no rule, such as `setup.cfg`, gets no
-script rules.
+Known gaps: an interpreter option that is not in the common set and takes a
+separate value still hides the interpreter. A hook with `"command": "bash"` and
+the script in `"args"` does not pair the two, so the script gets the rules of
+its own name or its shebang. No rule reads Perl, so a Perl script keeps its own
+name. Hooks in skill or subagent frontmatter and the hooks of other agents do
+not name scripts for the scan, so a `.txt` file without a shebang that such a
+hook runs with `bash` gets no `*.sh` rules.
 
 ## Agent settings rules (project scope only)
 

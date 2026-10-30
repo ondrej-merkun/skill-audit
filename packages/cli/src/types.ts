@@ -42,8 +42,9 @@ export type Skill = {
     | 'gemini-agent-md'
     | 'agent-config';
   scope: 'user' | 'project' | 'managed';
-  // Set when dedupe merged installations that differ in scope, format, or scan name. Rule
-  // selection reads them; the JSON and list outputs do not show them.
+  // Set when installations differ in scope, format, or scan name: dedupe merged them, or
+  // hooks run one script with two interpreters. Rule selection reads them; the JSON and list
+  // outputs do not show them.
   installations?: SkillInstallation[];
   installState?: 'installed' | 'marketplace';
   treeSha256: string;
