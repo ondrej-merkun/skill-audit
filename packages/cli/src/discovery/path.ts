@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { access, realpath, stat } from 'node:fs/promises';
-import { basename, join, resolve, sep } from 'node:path';
+import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { enterDirOnce, readDirFollowingLinks } from '../fs-walk.js';
 import type { Skill } from '../types.js';
 import { addModifiedAt } from './modified-at.js';
@@ -39,16 +39,12 @@ export async function discoverPath(inputPath: string): Promise<Skill[]> {
 
 async function findDirTargets(root: string): Promise<PathTarget[]> {
   const skillDirs: string[] = [];
-  const aliasDirs: string[] = [];
   let hasFilesOutsideSkills = false;
   const visitedRealDirs = new Set<string>();
 
   // Same walk as the shared Agent Skills discovery: no depth limit, links followed.
   async function visit(dir: string, insideSkill: boolean): Promise<void> {
-    if (!(await enterDirOnce(visitedRealDirs, dir))) {
-      aliasDirs.push(dir);
-      return;
-    }
+    if (!(await enterDirOnce(visitedRealDirs, dir))) return;
 
     const entries = await readDirFollowingLinks(dir);
     const isSkill = entries.some((entry) => entry.name === SKILL_MANIFEST && entry.kind === 'file');
@@ -64,56 +60,36 @@ async function findDirTargets(root: string): Promise<PathTarget[]> {
 
   await visit(root, false);
 
-  const targets: PathTarget[] = skillDirs
+  // A skill that the walk first reached through a link keeps the path of its real dir when that
+  // dir is under the root, so the root target's walk skips the real dir too.
+  const realRoot = await realpath(root);
+  const skillPaths = await Promise.all(skillDirs.map((dir) => pathUnderRoot(dir, root, realRoot)));
+  const targets: PathTarget[] = skillPaths
     .sort((a, b) => a.localeCompare(b))
     .map((dir) => ({
       path: dir,
       manifestPath: join(dir, SKILL_MANIFEST),
       name: fallbackSkillNameFromDirectory(dir),
     }));
-  // The rule engine leaves the skill dirs out of the root's walk, so no file is scanned twice.
+  // The rule engine leaves the skill dirs out of the root's walk.
   if (hasFilesOutsideSkills) {
     targets.unshift({ path: root, manifestPath: null, name: fallbackSkillNameFromDirectory(root) });
   }
 
-  await skipCrossTargetAliases(targets, aliasDirs);
+  // No target skips a link into another target. A link can give a file an operative path in one
+  // skill and a docs path in another, so each target scans every file that it reaches, and a
+  // file can show up under more than one target.
   return targets;
 }
 
-/**
- * An alias is a dir that the walk entered first through another path. When the alias sits in
- * one target and reaches a dir of another target, the engine walk of the first target would scan
- * the other target's files again, so that target skips the alias (`alsoInstalledAt`). Every scan
- * skips those paths before its own alias tracking sees them, so an alias that stays inside its
- * target is not listed: the engine pairs it with the operative path, and a `docs` link cannot
- * demote the file that it reaches to inert docs.
- */
-async function skipCrossTargetAliases(targets: PathTarget[], aliasDirs: string[]): Promise<void> {
-  const targetDirs = targets.map((target) => target.path);
-  const realTargetDirs = await Promise.all(targetDirs.map((dir) => realpath(dir).catch(() => dir)));
+/** The path under `root` of the real dir of `dir`, or `dir` when that real dir is outside it. */
+async function pathUnderRoot(dir: string, root: string, realRoot: string): Promise<string> {
+  const realDir = await realpath(dir).catch(() => undefined);
+  if (realDir === undefined) return dir;
 
-  for (const alias of aliasDirs) {
-    const realAlias = await realpath(alias).catch(() => undefined);
-    if (realAlias === undefined) continue;
-
-    const aliasOwner = deepestDirHolding(alias, targetDirs);
-    const reachedOwner = deepestDirHolding(realAlias, realTargetDirs);
-    // A dir outside every target is not another target's content, so the alias stays.
-    if (aliasOwner === -1 || reachedOwner === -1 || aliasOwner === reachedOwner) continue;
-
-    const target = targets[aliasOwner];
-    if (target !== undefined) target.alsoInstalledAt = [...(target.alsoInstalledAt ?? []), alias];
-  }
-}
-
-/** Returns the index of the longest dir that is `path` or holds it, or -1. */
-function deepestDirHolding(path: string, dirs: string[]): number {
-  let best = -1;
-  dirs.forEach((dir, index) => {
-    const holds = path === dir || path.startsWith(dir + sep);
-    if (holds && (best === -1 || dir.length > (dirs[best]?.length ?? 0))) best = index;
-  });
-  return best;
+  const fromRoot = relative(realRoot, realDir);
+  const outside = fromRoot === '..' || fromRoot.startsWith(`..${sep}`) || isAbsolute(fromRoot);
+  return outside ? dir : join(root, fromRoot);
 }
 
 async function pathSkill(target: PathTarget): Promise<Skill> {
@@ -126,7 +102,6 @@ async function pathSkill(target: PathTarget): Promise<Skill> {
     name: target.name,
     path: target.path,
     manifestPath: target.manifestPath,
-    ...(target.alsoInstalledAt === undefined ? {} : { alsoInstalledAt: target.alsoInstalledAt }),
     format: 'SKILL.md',
     scope: 'project',
     // The user selected the path, so it is reported like an active skill.
@@ -139,5 +114,4 @@ type PathTarget = {
   path: string;
   manifestPath: string | null;
   name: string;
-  alsoInstalledAt?: string[];
 };

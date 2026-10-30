@@ -510,11 +510,16 @@ name wins over a path with the same name: use `./list` to scan a directory named
 
 - A file is one skill. Its name is the file name.
 - In a directory, each directory at or under the path that holds a `SKILL.md` is
-  one skill. The walk has no depth limit and follows symlinks.
+  one skill. The walk has no depth limit and follows symlinks. A skill that the
+  walk reaches through a symlink keeps the path and name of its real directory
+  when that directory is under the path.
 - The path itself is one more skill when it has files outside those skill
   directories, for example plugin hooks, commands, scripts, or `.mcp.json`. The
-  rule engine leaves the skill directories out of that target, so the scan reads
-  every file under the path once.
+  rule engine leaves the skill directories out of that target.
+- Each target also scans the files that its symlinks reach, also in another
+  target. One file can then show up under more than one target. A symlink can
+  give a file an operative path in one skill and a docs path in another, so no
+  target skips a link to keep the report short.
 - The scan uses the same rules, scoring, ignore list, output formats, and exit
   codes as the default scan. The rules for a project's own agent settings files
   (`MCP-PROJECT-AUTO-APPROVE`, `NET-API-ENDPOINT-OVERRIDE`,
@@ -526,9 +531,7 @@ name wins over a path with the same name: use `./list` to scan a directory named
   `SKILL.md` or a symlink must not make an injection count as inert docs.
 - JSON output keeps schema 1.0. Each target reports the agent id `cross-agent`,
   its absolute path, and `install_state: "installed"`.
-- `--skill` selects one target from the path. The other targets are then not
-  scanned, so the selected target also reads the files that its symlinks reach
-  in them. `--agent` and
+- `--skill` selects one target from the path. `--agent` and
   `--include-marketplaces` select installed skills, so a path scan with them
   exits `2`.
 - A path that does not exist, is not a file or directory, or cannot be read
