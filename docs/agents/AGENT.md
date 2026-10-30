@@ -46,7 +46,6 @@ skill-audit/
 │   │   │   ├── discovery/        per-agent discovery plugins
 │   │   │   ├── rules/            TypeScript rule defs (pure regex)
 │   │   │   ├── semgrep/          YAML rules for optional AST pass
-│   │   │   ├── enrich/           skills.sh, github, deps.dev + cache
 │   │   │   ├── output/           table, json, html, summary renderers
 │   │   │   ├── score.ts          scoring + verdict bands
 │   │   │   └── allowlist/        anthropic-skills.json etc.
@@ -118,24 +117,11 @@ commands.
   invocation behaving as documented. If the spec or README says bare
   `skill-audit` is valid, smoke-test the bare binary, not only
   `skill-audit scan`.
-- A visible report column, footer line, detail panel, or enrichment
-  section needs coverage for the populated path and the empty,
-  unavailable, skipped, or offline path. Renderer-only tests with
+- A visible report column, footer line, or detail panel needs coverage
+  for the populated path and the empty, unavailable, skipped, or
+  offline path. Renderer-only tests with
   hand-built data are not enough; add at least one realistic pipeline
   or command-level test for the data source that should populate it.
-- Enrichment success is a source-level data contract, not a batch-level
-  "no exception" signal. For `skills.sh`, GitHub, and `deps.dev`, keep
-  not-applicable, no metadata, unavailable, stale-cache, and found-data states
-  distinguishable enough that progress, table, summary, JSON, and HTML do not
-  imply data exists when it does not. Do not render failed numeric lookups such
-  as GitHub contributors or dependency advisories as `0`; use an unavailable or
-  unknown state unless the source actually returned zero.
-- Enrichment tests must be derived from current endpoint/client contracts and
-  realistic discovered skills. Do not write mocks only around the code's current
-  assumptions. Before changing `skills.sh`, GitHub, or `deps.dev` behavior,
-  verify the relevant public docs, official client behavior, or a live response
-  shape, then add one test where a realistic installed skill resolves metadata
-  without synthetic-only fields.
 - Generated HTML reports are interactive products, not static strings.
   For filters, sidebars, toolbar buttons, downloads, copy actions, or
   detail panels, execute the page script in a DOM/browser smoke test and

@@ -20,34 +20,7 @@ vi.mock('../packages/cli/src/rules/engine.js', () => ({
   runRulesForSkill: vi.fn(),
 }));
 
-vi.mock('../packages/cli/src/enrich/index.js', () => ({
-  ENRICHMENT_ENABLED: false,
-  enrichAllWithOutcomes: vi.fn(async (skills: Skill[]) =>
-    skills.map(() => ({
-      enrichment: {},
-      outcomes: [
-        { source: 'skillsSh', status: 'no-metadata' },
-        { source: 'github', status: 'no-metadata' },
-        { source: 'depsdev', status: 'no-metadata' },
-      ],
-    }))
-  ),
-  skippedEnrichmentOutcomes: vi.fn((sources: string[]) =>
-    sources.map((source) => ({
-      source,
-      status: 'skipped-offline',
-      reason: 'offline mode is active',
-    }))
-  ),
-  summarizeEnrichmentOutcomes: vi.fn((outcomes: Array<{ status: string }>) => {
-    if (outcomes.some((o) => o.status === 'found' || o.status === 'stale-cache')) return 'found';
-    if (outcomes.some((o) => o.status === 'unavailable')) return 'unavailable';
-    return 'no-metadata';
-  }),
-}));
-
 import { discoverAll } from '../packages/cli/src/discovery/index.js';
-import { enrichAllWithOutcomes } from '../packages/cli/src/enrich/index.js';
 import { runRulesForSkill as runRules } from '../packages/cli/src/rules/engine.js';
 import { runScan } from '../packages/cli/src/commands/scan.js';
 
@@ -116,16 +89,6 @@ describe('runScan flag wiring', () => {
       return true;
     });
     vi.mocked(runRules).mockResolvedValue([]);
-    vi.mocked(enrichAllWithOutcomes).mockImplementation(async (skills) =>
-      skills.map(() => ({
-        enrichment: {},
-        outcomes: [
-          { source: 'skillsSh', status: 'no-metadata' },
-          { source: 'github', status: 'no-metadata' },
-          { source: 'depsdev', status: 'no-metadata' },
-        ],
-      }))
-    );
   });
 
   afterEach(() => {
@@ -135,6 +98,7 @@ describe('runScan flag wiring', () => {
     // Vitest 4 restoreAllMocks only restores vi.spyOn spies, so reset module mocks too.
     vi.resetAllMocks();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   function makeInteractiveTTY(): void {
@@ -428,8 +392,6 @@ describe('runScan flag wiring', () => {
     const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('skills');
     expect(out).toMatch(/PASS|REVIEW|FAIL/);
-    expect(out).not.toContain('Enrichment');
-    expect(enrichAllWithOutcomes).not.toHaveBeenCalled();
   });
 
   it('--json takes precedence over --summary', async () => {
@@ -437,19 +399,6 @@ describe('runScan flag wiring', () => {
     await runScan({ json: true, summary: true });
     const out = stdoutChunks.join('');
     expect(() => JSON.parse(out)).not.toThrow();
-  });
-
-  it('default scan does not run disabled enrichment', async () => {
-    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
-
-    await runScan({});
-
-    const out = stripAnsi(stdoutChunks.join(''));
-    const stderr = stripAnsi(stderrChunks.join(''));
-    expect(enrichAllWithOutcomes).not.toHaveBeenCalled();
-    expect(out).not.toContain('ENRICHMENT');
-    expect(out).not.toContain('Enrichment');
-    expect(stderr).not.toContain('Enriching');
   });
 
   it('writes live scan progress only to stderr for pretty output', async () => {
@@ -467,77 +416,17 @@ describe('runScan flag wiring', () => {
     expect(stdout).not.toContain('Scanning skills');
     expect(stderr).toContain('Scanning skills 1/2');
     expect(stderr).toContain('Scanning skills 2/2');
-    expect(stderr).not.toContain('Enriching');
-    expect(stderr).not.toContain('skills.sh');
-    expect(stderr).not.toContain('deps.dev');
   });
 
-  it('default scan hides enrichment when disabled even if sources would find no metadata', async () => {
+  it('--json makes no network calls and omits the enrichment key', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
-    vi.mocked(enrichAllWithOutcomes).mockResolvedValue([
-      {
-        enrichment: {},
-        outcomes: [
-          { source: 'skillsSh', status: 'no-metadata' },
-          { source: 'github', status: 'no-metadata' },
-          { source: 'depsdev', status: 'no-metadata' },
-        ],
-      },
-    ]);
-
-    await runScan({});
-
-    const out = stripAnsi(stdoutChunks.join(''));
-    expect(enrichAllWithOutcomes).not.toHaveBeenCalled();
-    expect(out).not.toContain('Enrichment');
-    expect(out).not.toContain('skills.sh');
-    expect(out).not.toContain('deps.dev');
-  });
-
-  it('default scan hides enrichment when disabled even if aggregate lookup would fail', async () => {
-    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
-    vi.mocked(enrichAllWithOutcomes).mockResolvedValue([
-      {
-        enrichment: {},
-        outcomes: [
-          { source: 'skillsSh', status: 'unavailable' },
-          { source: 'github', status: 'unavailable' },
-          { source: 'depsdev', status: 'unavailable' },
-        ],
-      },
-    ]);
-
-    await runScan({});
-
-    const out = stripAnsi(stdoutChunks.join(''));
-    expect(enrichAllWithOutcomes).not.toHaveBeenCalled();
-    expect(out).not.toContain('Enrichment');
-    expect(out).not.toContain('skills.sh');
-    expect(out).not.toContain('deps.dev');
-  });
-
-  it('--json does not request disabled enrichment sources for machine output', async () => {
-    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
+    vi.stubGlobal('fetch', vi.fn());
 
     await runScan({ json: true });
 
     const json = JSON.parse(stdoutChunks.join(''));
-    expect(enrichAllWithOutcomes).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
     expect(json.skills[0]).not.toHaveProperty('enrichment');
-  });
-
-  it('--html does not request disabled enrichment sources or render enrichment UI', async () => {
-    await withTempDir(async (dir) => {
-      vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
-      const html = join(dir, 'report.html');
-
-      await runScan({ html });
-
-      const htmlOut = await readFile(html, 'utf-8');
-      expect(enrichAllWithOutcomes).not.toHaveBeenCalled();
-      expect(htmlOut).not.toContain('<th>Enrichment</th>');
-      expect(htmlOut).not.toContain('class="enrichment-cell"');
-    });
   });
 
   it('--json --output writes JSON to a file and suppresses stdout payload', async () => {
@@ -874,14 +763,10 @@ describe('runScan flag wiring', () => {
     }
   });
 
-  it('hidden --offline compatibility flag does not mention enrichment', async () => {
+  it('hidden --offline flag without --llm prints no offline notice', async () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     await runScan({ offline: true });
-    const errOut = stripAnsi(stderrChunks.join(''));
-    const out = stripAnsi(stdoutChunks.join(''));
-    expect(errOut).not.toContain('enrichment');
-    expect(errOut).not.toContain('offline mode');
-    expect(out).not.toContain('ENRICHMENT');
+    expect(stripAnsi(stderrChunks.join(''))).not.toContain('offline mode');
   });
 
   it('--llm reviews scanned skills with a configured local model', async () => {

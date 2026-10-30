@@ -127,53 +127,6 @@ export type LlmReviewResult = {
   error?: string;
 };
 
-export type SkillsShEnrichment = {
-  gen: string;
-  socketAlerts: number;
-  snyk: string;
-};
-
-export type GitHubEnrichment = {
-  stars: number;
-  ageDays: number;
-  contributors: number | null;
-  contributorsStatus?: 'found' | 'unavailable';
-};
-
-export type DepsDevEnrichment = {
-  scorecardScore: number | null;
-  osvAdvisories: number;
-};
-
-export type Enrichment = {
-  skillsSh?: SkillsShEnrichment;
-  github?: GitHubEnrichment;
-  depsdev?: DepsDevEnrichment;
-};
-
-export type EnrichmentSourceKey = 'skillsSh' | 'github' | 'depsdev';
-
-export type EnrichmentSourceStatus =
-  | 'found'
-  | 'stale-cache'
-  | 'no-input'
-  | 'no-metadata'
-  | 'unavailable'
-  | 'skipped-offline';
-
-export type EnrichmentSourceOutcome = {
-  source: EnrichmentSourceKey;
-  status: EnrichmentSourceStatus;
-  reason?: string;
-};
-
-export type EnrichmentStatus =
-  | 'not-run'
-  | 'skipped-offline'
-  | 'unavailable'
-  | 'no-metadata'
-  | 'found';
-
 export type SkillSummary = {
   critical: number;
   high: number;
@@ -190,8 +143,6 @@ export type SkillSummary = {
 export type ScannedSkill = Skill & {
   findings: Finding[];
   llmReviews?: LlmReviewResult[];
-  enrichment: Enrichment;
-  enrichmentOutcomes?: EnrichmentSourceOutcome[];
   summary: SkillSummary;
   ignored?: true;
 };
@@ -221,6 +172,4 @@ export type ScanResult = {
   agents: AgentInfo[];
   skills: ScannedSkill[];
   summary: ScanSummary;
-  enrichmentStatus?: EnrichmentStatus;
-  enrichmentOutcomes?: EnrichmentSourceOutcome[];
 };

@@ -1,14 +1,7 @@
 import chalk from 'chalk';
 import { formatAgentName } from '../agent-names.js';
 import { formatCompromisedPercent } from '../percent.js';
-import { formatEnrichmentOutcome } from '../progress.js';
-import type {
-  AgentInfo,
-  EnrichmentSourceOutcome,
-  ScannedSkill,
-  ScanResult,
-  Severity,
-} from '../types.js';
+import type { AgentInfo, ScannedSkill, ScanResult, Severity } from '../types.js';
 import { installStateLabel } from './install-state.js';
 import { formatLlmComparisonSummary, formatLlmConsensusSummary } from './llm.js';
 import { sortScanSkills } from './sort.js';
@@ -85,23 +78,6 @@ function compactSeverityBreakdown(stats: ReturnType<typeof findingsStats>): stri
   return parts.join(' · ');
 }
 
-function outcomeEnrichmentLine(outcomes: EnrichmentSourceOutcome[] | undefined): string | null {
-  if (outcomes === undefined || outcomes.length === 0) return null;
-  return outcomes.map((outcome) => formatEnrichmentOutcome(outcome)).join('  ');
-}
-
-function enrichmentLine(skills: ScannedSkill[]): string | null {
-  const hasSkillsSh = skills.some((s) => s.enrichment.skillsSh != null);
-  const hasGithub = skills.some((s) => s.enrichment.github != null);
-  const hasDepsDev = skills.some((s) => s.enrichment.depsdev != null);
-  if (!hasSkillsSh && !hasGithub && !hasDepsDev) return null;
-  const parts: string[] = [];
-  if (hasSkillsSh) parts.push(`skills.sh ${C_PASS('✓')}`);
-  if (hasGithub) parts.push(`GitHub ${C_PASS('✓')}`);
-  if (hasDepsDev) parts.push(`deps.dev ${C_PASS('✓')}`);
-  return parts.join('  ');
-}
-
 function agentCountsLine(agents: AgentInfo[]): string {
   return [...agents]
     .sort((a, b) => a.id.localeCompare(b.id))
@@ -156,16 +132,6 @@ export function renderSummaryFooter(
       ? `${C_CRITICAL(String(summary.compromised))}   (${formatCompromisedPercent(summary.percentCompromised)}% of ${hasMarketplace ? 'scanned' : 'installed'})`
       : '0';
   lines.push(`  ${label('Compromised skills')} ${compromisedStr}`);
-
-  const enrich =
-    outcomeEnrichmentLine(result.enrichmentOutcomes) ?? enrichmentLine(riskOrderedSkills);
-  if (enrich) {
-    lines.push(`  ${label('Enrichment')} ${enrich}`);
-  } else if (result.enrichmentStatus === 'no-metadata') {
-    lines.push(`  ${label('Enrichment')} no metadata found`);
-  } else if (result.enrichmentStatus === 'unavailable') {
-    lines.push(`  ${label('Enrichment')} lookup failed or timed out`);
-  }
 
   const llmSummary = formatLlmComparisonSummary(riskOrderedSkills);
   if (llmSummary !== null) {

@@ -53,51 +53,6 @@ function scoreRingSvg(score: number, verdict: string): string {
 </svg>`;
 }
 
-function renderEnrichmentCells(skill: ScannedSkill): string {
-  const rows: string[] = [];
-  const { skillsSh, github, depsdev } = skill.enrichment;
-
-  if (skillsSh !== undefined) {
-    rows.push(
-      `<div><span>skills.sh</span> Gen=${escapeHtml(skillsSh.gen)} · Socket=${skillsSh.socketAlerts} · Snyk=${escapeHtml(skillsSh.snyk)}</div>`
-    );
-  } else {
-    rows.push('<div class="enrichment-missing"><span>skills.sh</span> —</div>');
-  }
-
-  if (github !== undefined) {
-    const contributors =
-      github.contributors === null ? 'contributors unknown' : `${github.contributors} contributors`;
-    rows.push(
-      `<div><span>GitHub</span> ${github.stars} stars · ${github.ageDays} days old · ${contributors}</div>`
-    );
-  } else {
-    rows.push('<div class="enrichment-missing"><span>GitHub</span> —</div>');
-  }
-
-  if (depsdev !== undefined) {
-    const score =
-      depsdev.scorecardScore === null
-        ? 'scorecard unavailable'
-        : `scorecard ${depsdev.scorecardScore}`;
-    rows.push(
-      `<div><span>deps.dev</span> ${depsdev.osvAdvisories} OSV advisories · ${escapeHtml(score)}</div>`
-    );
-  } else {
-    rows.push('<div class="enrichment-missing"><span>deps.dev</span> —</div>');
-  }
-
-  return rows.join('');
-}
-
-function hasEnrichmentDetails(skill: ScannedSkill): boolean {
-  return (
-    skill.enrichment.skillsSh !== undefined ||
-    skill.enrichment.github !== undefined ||
-    skill.enrichment.depsdev !== undefined
-  );
-}
-
 function severityClass(severity: Severity): string {
   return `sev sev-${severity}`;
 }
@@ -218,7 +173,6 @@ export function renderHtml(result: ScanResult): string {
   const showInstallState = sorted.some(
     (skill) => installStateLabel(skill.installState) === 'marketplace'
   );
-  const showEnrichment = sorted.some(hasEnrichmentDetails);
   const showLlmReview = sorted.some((skill) => skill.llmReviews !== undefined);
 
   // Embed scan data for the client script. Skill names, paths, and snippets come from untrusted
@@ -248,7 +202,6 @@ export function renderHtml(result: ScanResult): string {
       <td>${escapeHtml(skillSourceLabel(sk))}</td>
       <td style="font-weight:600;color:${color}">${sk.summary.score}</td>
       <td>${sk.summary.critical}C ${sk.summary.high}H ${sk.summary.medium}M ${sk.summary.low}L</td>
-      ${showEnrichment ? `<td class="enrichment-cell">${renderEnrichmentCells(sk)}</td>` : ''}
       ${showLlmReview ? `<td class="llm-cell">${renderLlmReviewCells(sk)}</td>` : ''}
       <td class="top-issue">${escapeHtml(topIssue)}</td>
     </tr>`;
@@ -290,9 +243,6 @@ tbody tr.selected{background:#eff6ff}
 td{padding:10px 12px;vertical-align:middle}
 .verdict-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
 .top-issue{font-size:12px;color:#6b7280}
-.enrichment-cell{font-size:12px;line-height:1.45;color:#374151;min-width:230px}
-.enrichment-cell span{display:inline-block;min-width:54px;color:#6b7280}
-.enrichment-missing{color:#9ca3af}
 .llm-cell{font-size:12px;line-height:1.45;color:#374151;min-width:160px}
 .llm-row span{display:inline-block;min-width:54px;color:#6b7280}
 .llm-missing{color:#9ca3af}
@@ -323,11 +273,6 @@ td{padding:10px 12px;vertical-align:middle}
 .finding pre{background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:8px;font-size:12px;overflow-x:auto;margin-top:6px}
 .finding-msg{margin-top:4px;font-size:13px}
 .finding-fix{margin-top:6px;font-size:12px;color:#6b7280}
-.enrichment{border-top:1px solid #e5e7eb;margin-top:14px;padding-top:14px}
-.enrichment h3{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;margin-bottom:8px}
-.enrichment-row{font-size:13px;margin-bottom:6px;color:#374151}
-.enrichment-row.missing{color:#9ca3af}
-.enrichment-source{display:inline-block;min-width:72px;color:#6b7280}
 .agent-paths{border-top:1px solid #e5e7eb;margin-top:14px;padding-top:14px}
 .agent-paths h3{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;margin-bottom:8px}
 .agent-path-row{font-size:12px;margin-bottom:6px;color:#374151;word-break:break-all}
@@ -411,49 +356,6 @@ function makeFindingEl(f){
     fix.textContent = 'Fix: ' + f.fix;
     wrap.appendChild(fix);
   }
-  return wrap;
-}
-
-function makeEnrichmentEl(enrichment){
-  var e = enrichment || {};
-  if(!e.skillsSh && !e.github && !e.depsdev) return null;
-
-  var wrap = document.createElement('div');
-  wrap.className = 'enrichment';
-
-  var title = document.createElement('h3');
-  title.textContent = 'Enrichment';
-  wrap.appendChild(title);
-
-  function addRow(source, text, missing){
-    var row = document.createElement('div');
-    row.className = missing ? 'enrichment-row missing' : 'enrichment-row';
-    var label = document.createElement('span');
-    label.className = 'enrichment-source';
-    label.textContent = source;
-    row.appendChild(label);
-    row.appendChild(document.createTextNode(text));
-    wrap.appendChild(row);
-  }
-
-  if(e.skillsSh){
-    addRow('skills.sh', 'Gen=' + e.skillsSh.gen + ' · Socket=' + e.skillsSh.socketAlerts + ' · Snyk=' + e.skillsSh.snyk, false);
-  } else {
-    addRow('skills.sh', '—', true);
-  }
-  if(e.github){
-    var contributors = e.github.contributors === null ? 'contributors unknown' : e.github.contributors + ' contributors';
-    addRow('GitHub', e.github.stars + ' stars · ' + e.github.ageDays + ' days old · ' + contributors, false);
-  } else {
-    addRow('GitHub', '—', true);
-  }
-  if(e.depsdev){
-    var score = e.depsdev.scorecardScore === null ? 'scorecard unavailable' : 'scorecard ' + e.depsdev.scorecardScore;
-    addRow('deps.dev', e.depsdev.osvAdvisories + ' OSV advisories · ' + score, false);
-  } else {
-    addRow('deps.dev', '—', true);
-  }
-
   return wrap;
 }
 
@@ -589,9 +491,6 @@ function openPanel(idx){
     findingsEl.appendChild(none);
   }
 
-  var enrichmentEl = makeEnrichmentEl(sk.enrichment);
-  if(enrichmentEl) findingsEl.appendChild(enrichmentEl);
-
   var llmEl = makeLlmEl(sk.llmReviews);
   if(llmEl) findingsEl.appendChild(llmEl);
 
@@ -709,7 +608,6 @@ document.getElementById('btn-share').addEventListener('click', function(){
           <th>Source</th>
           <th>Score</th>
           <th>Findings</th>
-          ${showEnrichment ? '<th>Enrichment</th>' : ''}
           ${showLlmReview ? '<th>LLM Review</th>' : ''}
           <th>Top Issue</th>
         </tr>

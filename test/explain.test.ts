@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import stripAnsi from './helpers/strip-ansi.js';
 import type { LlmReviewFetch } from '../packages/cli/src/llm/review.js';
-import type { Enrichment, Finding, Skill, SkillSummary } from '../packages/cli/src/types.js';
+import type { Finding, Skill, SkillSummary } from '../packages/cli/src/types.js';
 
 vi.mock('../packages/cli/src/discovery/index.js', () => ({
   clearPlugins: vi.fn(),
@@ -19,24 +19,6 @@ vi.mock('../packages/cli/src/rules/engine.js', () => ({
 
 vi.mock('../packages/cli/src/rules/index.js', () => ({
   ALL_RULES: [],
-}));
-
-vi.mock('../packages/cli/src/enrich/index.js', () => ({
-  ENRICHMENT_ENABLED: false,
-  enrichSkillWithOutcomes: vi.fn(),
-  enrichAll: vi.fn(),
-  skippedEnrichmentOutcomes: vi.fn((sources: string[]) =>
-    sources.map((source) => ({
-      source,
-      status: 'skipped-offline',
-      reason: 'offline mode is active',
-    }))
-  ),
-  summarizeEnrichmentOutcomes: vi.fn((outcomes: Array<{ status: string }>) => {
-    if (outcomes.some((o) => o.status === 'found' || o.status === 'stale-cache')) return 'found';
-    if (outcomes.some((o) => o.status === 'unavailable')) return 'unavailable';
-    return 'no-metadata';
-  }),
 }));
 
 vi.mock('../packages/cli/src/score.js', () => ({
@@ -56,7 +38,6 @@ vi.mock('../packages/cli/src/progress.js', async (importOriginal) => {
 });
 
 import { discoverAll } from '../packages/cli/src/discovery/index.js';
-import { enrichSkillWithOutcomes } from '../packages/cli/src/enrich/index.js';
 import { createProgressReporter } from '../packages/cli/src/progress.js';
 import { runRulesForSkill as runRules } from '../packages/cli/src/rules/engine.js';
 import { scoreFindings } from '../packages/cli/src/score.js';
@@ -104,26 +85,6 @@ function makeFinding(overrides: Partial<Finding> = {}): Finding {
     fix: 'Remove credential exfiltration.',
     cwe: ['CWE-200'],
     ...overrides,
-  };
-}
-
-function makeEnrichmentResult(enrichment: Enrichment = {}) {
-  return {
-    enrichment,
-    outcomes: [
-      {
-        source: 'skillsSh' as const,
-        status: enrichment.skillsSh === undefined ? ('no-metadata' as const) : ('found' as const),
-      },
-      {
-        source: 'github' as const,
-        status: enrichment.github === undefined ? ('no-metadata' as const) : ('found' as const),
-      },
-      {
-        source: 'depsdev' as const,
-        status: enrichment.depsdev === undefined ? ('no-metadata' as const) : ('found' as const),
-      },
-    ],
   };
 }
 
@@ -236,7 +197,6 @@ describe('runExplain', () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     vi.mocked(runRules).mockResolvedValue([]);
     vi.mocked(scoreFindings).mockReturnValue(makeSummary());
-    vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult());
 
     await runExplain('test-skill', { offline: true });
 
@@ -299,7 +259,6 @@ describe('runExplain', () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     vi.mocked(runRules).mockResolvedValue(findings);
     vi.mocked(scoreFindings).mockReturnValue(makeSummary({ critical: 1, medium: 1, score: 72, verdict: 'REVIEW' }));
-    vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult());
 
     await runExplain('test-skill', { offline: true });
 
@@ -315,7 +274,6 @@ describe('runExplain', () => {
     vi.mocked(scoreFindings).mockReturnValue(
       makeSummary({ critical: 1, score: 0, verdict: 'FAIL', mandatoryFail: ['NET-EXFIL-ENV'] })
     );
-    vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult());
 
     await expect(runExplain('test-skill', { offline: true })).rejects.toThrow('process.exit called');
     expect(processExitSpy).toHaveBeenCalledWith(1);
@@ -335,7 +293,6 @@ describe('runExplain', () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     vi.mocked(runRules).mockResolvedValue([]);
     vi.mocked(scoreFindings).mockReturnValue(makeSummary());
-    vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult());
 
     await runExplain('test-skill', { offline: true });
 
@@ -349,7 +306,6 @@ describe('runExplain', () => {
     vi.mocked(scoreFindings).mockReturnValue(
       makeSummary({ critical: 1, score: 0, verdict: 'FAIL', mandatoryFail: ['NET-EXFIL-ENV'] })
     );
-    vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult());
 
     await expect(runExplain('test-skill', { offline: true })).rejects.toThrow('process.exit called');
 
@@ -361,7 +317,6 @@ describe('runExplain', () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     vi.mocked(runRules).mockResolvedValue([]);
     vi.mocked(scoreFindings).mockReturnValue(makeSummary());
-    vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult());
 
     await runExplain('test-skill', { offline: true, json: true });
 
@@ -400,7 +355,6 @@ describe('runExplain', () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill({ name: 'MyComplexSkill' })]);
     vi.mocked(runRules).mockResolvedValue([]);
     vi.mocked(scoreFindings).mockReturnValue(makeSummary());
-    vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult());
 
     await runExplain('complex', { offline: true });
 
@@ -408,96 +362,11 @@ describe('runExplain', () => {
     expect(out).toContain('MyComplexSkill');
   });
 
-  it('does not run or render enrichment while disabled', async () => {
-    const enrichment: Enrichment = {
-      github: { stars: 3, ageDays: 10, contributors: 2 },
-    };
-    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
-    vi.mocked(runRules).mockResolvedValue([]);
-    vi.mocked(scoreFindings).mockReturnValue(makeSummary());
-    vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult(enrichment));
-
-    await runExplain('test-skill', {});
-
-    const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).not.toContain('Enrichment');
-    expect(out).not.toContain('3 stars');
-    expect(enrichSkillWithOutcomes).not.toHaveBeenCalled();
-  });
-
-  it('does not render disabled GitHub enrichment contributors', async () => {
-    const enrichment: Enrichment = {
-      github: { stars: 3, ageDays: 10, contributors: null },
-    };
-    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
-    vi.mocked(runRules).mockResolvedValue([]);
-    vi.mocked(scoreFindings).mockReturnValue(makeSummary());
-    vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult(enrichment));
-
-    await runExplain('test-skill', {});
-
-    const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).not.toContain('contributors unknown');
-    expect(out).not.toContain('0 contributors');
-    expect(enrichSkillWithOutcomes).not.toHaveBeenCalled();
-  });
-
-  it('does not explain disabled enrichment when metadata would be absent', async () => {
-    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
-    vi.mocked(runRules).mockResolvedValue([]);
-    vi.mocked(scoreFindings).mockReturnValue(makeSummary());
-    vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult());
-
-    await runExplain('test-skill', {});
-
-    const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).not.toContain('Enrichment');
-    expect(out).not.toContain('skills.sh');
-    expect(out).not.toContain('deps.dev');
-    expect(enrichSkillWithOutcomes).not.toHaveBeenCalled();
-  });
-
-  it('does not explain disabled enrichment when lookup would be unavailable', async () => {
-    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
-    vi.mocked(runRules).mockResolvedValue([]);
-    vi.mocked(scoreFindings).mockReturnValue(makeSummary());
-    vi.mocked(enrichSkillWithOutcomes).mockResolvedValue({
-      enrichment: {},
-      outcomes: [
-        { source: 'skillsSh', status: 'unavailable' },
-        { source: 'github', status: 'unavailable' },
-        { source: 'depsdev', status: 'unavailable' },
-      ],
-    });
-
-    await runExplain('test-skill', {});
-
-    const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).not.toContain('Enrichment');
-    expect(out).not.toContain('skills.sh');
-    expect(out).not.toContain('deps.dev');
-    expect(enrichSkillWithOutcomes).not.toHaveBeenCalled();
-  });
-
-  it('hidden --offline compatibility flag does not mention enrichment', async () => {
-    vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
-    vi.mocked(runRules).mockResolvedValue([]);
-    vi.mocked(scoreFindings).mockReturnValue(makeSummary());
-
-    await runExplain('test-skill', { offline: true });
-
-    const out = stripAnsi(stdoutChunks.join(''));
-    expect(out).not.toContain('offline mode is active');
-    expect(out).not.toContain('Enrichment');
-    expect(enrichSkillWithOutcomes).not.toHaveBeenCalled();
-  });
-
   it('shows finding snippet with pipe-prefix lines', async () => {
     const finding = makeFinding({ snippet: 'line one\nline two' });
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     vi.mocked(runRules).mockResolvedValue([finding]);
     vi.mocked(scoreFindings).mockReturnValue(makeSummary({ critical: 1, score: 75, verdict: 'REVIEW' }));
-    vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult());
 
     await runExplain('test-skill', { offline: true });
 
@@ -511,7 +380,6 @@ describe('runExplain', () => {
     vi.mocked(discoverAll).mockResolvedValue([makeSkill()]);
     vi.mocked(runRules).mockResolvedValue([makeFinding()]);
     vi.mocked(scoreFindings).mockReturnValue(makeSummary({ critical: 1, score: 75, verdict: 'REVIEW' }));
-    vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult());
 
     await runExplain('test-skill', { offline: true });
 
@@ -534,7 +402,6 @@ describe('runExplain', () => {
       vi.mocked(scoreFindings).mockReturnValue(
         makeSummary({ critical: 1, score: 75, verdict: 'REVIEW' })
       );
-      vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult());
       const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
       const fetchImpl: LlmReviewFetch = async (url, init) => {
         calls.push({ url, body: JSON.parse(init.body) as Record<string, unknown> });
@@ -600,7 +467,6 @@ describe('runExplain', () => {
       ]);
       vi.mocked(runRules).mockResolvedValue([]);
       vi.mocked(scoreFindings).mockReturnValue(makeSummary());
-      vi.mocked(enrichSkillWithOutcomes).mockResolvedValue(makeEnrichmentResult());
       const fetchImpl: LlmReviewFetch = async () => ({
         ok: true,
         status: 200,

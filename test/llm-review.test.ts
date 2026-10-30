@@ -43,7 +43,6 @@ function makeScannedSkill(root: string, finding: Finding): ScannedSkill {
     scope: 'user',
     treeSha256: 'abc',
     findings: [finding],
-    enrichment: {},
     summary: {
       critical: 0,
       high: 1,

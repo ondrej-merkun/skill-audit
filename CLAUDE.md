@@ -58,7 +58,6 @@ packages/cli/          @ondrej-merkun/skill-audit — npm package, exposes the `
   src/commands/        scan, list, explain, ignore
   src/discovery/       per-agent plugins (claude-code, codex, cursor, copilot, cline, gemini, agents-md-sweep)
   src/rules/           50 rules grouped by category (pure regex)
-  src/enrich/          skills.sh, github, deps.dev + cache
   src/output/          table (TUI), json, html, summary
   src/score.ts         scoring + verdict bands + mandatory-fail overrides
   src/allowlist/       anthropic-skills.json tree-hash allowlist
@@ -97,17 +96,11 @@ specs/                 SPEC.md (full spec) + focused extracts (RULES, OUTPUT, DI
   cache subtree just because it exists. Codex and other plugin discovery
   must prove a cached payload is enabled/exposed before treating it as a
   scan target.
-- **Enrichment always fails silently with stale-cache fallback.** Network
-  timeouts are 5 seconds, never blocking. Offline is a first-class mode.
-- **Enrichment status must not lie.** A source is not successful just because
-  the enrichment batch completed. Keep source-level states distinct enough to
-  show found data, no metadata, not applicable, unavailable, and stale cache.
-  Unknown counts are not zero counts: if GitHub contributors or deps.dev
-  advisories cannot be fetched, render unavailable/unknown rather than `0`.
-- **External enrichment contracts drift.** Before changing skills.sh, GitHub, or
-  deps.dev code/tests, verify the current API docs, official client behavior, or
-  a live response shape. Mocks that only reflect the implementation's current
-  assumptions do not prove the integration works.
+- **There is no enrichment layer.** The skills.sh, GitHub, and deps.dev
+  clients were removed (see `specs/SPEC.md` §5). Default scans make no network
+  calls. Do not add an external lookup without a new spec section and a
+  documented `specs/OUTPUT.md` schema change. The optional JSON `enrichment`
+  field is never emitted.
 - **JSON output is a contract** — schema version 1.0, deterministic field
   order, see `specs/OUTPUT.md`. Do not add, rename, or reorder fields.
 - **Scan output is product behavior.** Table, summary, JSON, HTML, and

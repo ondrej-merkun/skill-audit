@@ -70,10 +70,6 @@ skill-audit/
 │   │   │   │   ├── dependencies.ts
 │   │   │   │   └── secrets.ts
 │   │   │   ├── semgrep/            # YAML rules for optional AST pass
-│   │   │   ├── enrich/
-│   │   │   │   ├── skills-sh.ts
-│   │   │   │   ├── github.ts
-│   │   │   │   └── cache.ts
 │   │   │   ├── output/
 │   │   │   │   ├── table.ts
 │   │   │   │   ├── json.ts
@@ -319,75 +315,23 @@ acceptable at this scale — batch regex execution per file, or
 keep execution in the main thread with a simpler safety strategy
 (e.g. pre-flight length/complexity caps on user-sourced content).
 
-## 5. Cloud enrichment layer
+## 5. Enrichment (removed)
 
-Enrichment is disabled in the current user-facing CLI and docs. Keep the
-implementation code for now, but do not expose enrichment commands, help text,
-or output until a new version can reliably identify the correct upstream data
-from only the local directory name and `SKILL.md` contents.
+skill-audit does not look up skills in external services. It makes no calls to
+skills.sh, the GitHub API, or deps.dev, and it keeps no enrichment cache.
 
-### Tier-1 enrichment calls (disabled design notes, 5s timeout, fail-silent)
+Earlier versions shipped these clients behind a disabled flag. A live check
+found that the skills.sh audit endpoint returned `{}`, and no version could
+reliably map a local directory name and `SKILL.md` to the correct upstream
+repository. The owner removed the subsystem on 2026-10-30 instead of keeping
+dead code.
 
-**skills.sh audit endpoint.** For every skill whose `package.json`/`SKILL.md`/git-remote resolves to a `<owner>/<repo>` on GitHub, call:
-```
-POST https://add-skill.vercel.sh/audit
-Content-Type: application/json
-{ "owner": "anthropic", "repo": "skills", "skill": "pdf" }
-```
-Response shape (reverse-engineered from `alonw0/secure-skills` fork):
-```json
-{ "gen": "Safe|Low|High|Critical", "socket": { "alerts": 2 }, "snyk": "Low|Med|High|Critical" }
-```
-Merge into the finding pipeline as three Info-level enrichment signals; if any returns Critical, bump display priority. Fallback: HTML scrape `https://skills.sh/<owner>/<repo>/<skill>` if JSON endpoint 404s.
+The JSON contract does not change. The optional `skills[].enrichment` field in
+schema 1.0 is never emitted, as before. See `specs/OUTPUT.md`.
 
-**GitHub API.** Unauthenticated by default (60/hr). Fetch `GET /repos/{owner}/{repo}` once per unique repo (stars, age, archived, pushed_at). ETag cache everything in `~/.cache/skill-audit/github/`. Prompt for `GITHUB_TOKEN` or `gh auth token` opportunistically if rate-limited; never require.
-
-**deps.dev.** For bundled dependencies from `package.json` / `requirements.txt`, one call per unique dep returns OSSF Scorecard + OSV vulns. No auth, generous rate limit.
-
-### Tier-2 enrichment (opt-in via flags)
-- `--with-agentskill-sh` — call `ags search --json <skill>` if installed, else direct HTTP.
-- `--with-virustotal` — reads `VT_API_KEY` env; hashes bundled binaries.
-
-### Caching strategy
-```
-~/.cache/skill-audit/
-├── github/<owner>__<repo>.json       # 24h TTL, ETag validation
-├── skills-sh/<slug>.json             # 24h TTL
-├── depsdev/<ecosystem>__<name>.json  # 24h TTL
-└── allowlist-hashes.json             # refreshed per release
-```
-All caches include `fetched_at`. TTL stale-cache is served when enrichment API fails; annotated `(cached, stale)` in output. Never blocks scan.
-
-### Graceful degradation
-- Rate-limited? Serve stale cache + proceed.
-- Skills.sh endpoint 500s? Fall back to HTML scrape; if that fails, emit Info note and continue.
-- Zero enrichment is always a complete scan — the local analyzer is the product; cloud is the garnish.
-
-### Enrichment contract verification
-
-Fail-silent does not mean success-silent. Each source needs a source-level state
-that can distinguish not applicable, no metadata, unavailable/timed out,
-cached-stale, and found data. User-facing checkmarks are only for found data or
-clearly labeled cache hits; unknown numeric fields must not be rendered as zero.
-
-Before changing these integrations, verify the current external contract:
-
-- `skills.sh`/`add-skill` is an undocumented endpoint; confirm the request and
-  response shape from the live endpoint or official client before updating code
-  or tests.
-- GitHub contributor counts come from the contributors endpoint or pagination;
-  if the contributor request fails, keep stars/age only and label contributors
-  unavailable rather than `0`.
-- deps.dev package, version, advisory, and project/scorecard data come from
-  distinct API methods. Do not hardcode scorecard as `null` or advisories as `0`
-  when the lookup failed or used the wrong endpoint.
-
-### ToS posture
-- **skills.sh endpoint** — undocumented but consumed by Vercel's own CLI and forks. Courtesy caching + User-Agent (`skill-audit/<version> (+github.com/you/skill-audit)`). Reasonable.
-- **agentskill.sh** — README explicitly states "No API key required. The learn skill uses the public API." — clean.
-- **GitHub** — documented, explicit rate limits, identify via User-Agent.
-- **deps.dev / OSV / npm / PyPI** — explicitly designed for automated consumption.
-- **Snyk, Repello** — avoid scraping; not supported.
+To add enrichment again, write a new spec section first. It must prove that the
+tool resolves the correct upstream data from local files only, and it must
+document the schema change in `specs/OUTPUT.md` before any code lands.
 
 ## 6. Output and UX layer
 
@@ -669,11 +613,8 @@ Highest-probability failure mode. The `PI-*` rules trigger on security-education
 5. README explicitly documents expected FPR of ~5-10% on legitimate security skills before allowlist, ~2% after. Honesty is the only defense.
 
 ### Legal/ToS risk
-- **skills.sh `/audit` endpoint** is undocumented but consumed by Vercel's own tooling and forks. Risk: silent deprecation. Mitigation: graceful HTML-scrape fallback + cache + never block on failure. Identify with honest User-Agent. Do not hammer.
-- **agentskill.sh** — MIT-licensed CLI and explicit "public API" statement; no risk.
 - **Repello** — do NOT automate. Link out only.
 - **Snyk** — use `mcp-scan` OSS directly if you ever want to shell out, never the authenticated Snyk REST.
-- **GitHub API** — fully documented, identify with User-Agent, respect rate limits via ETag. Zero risk.
 - **Published rules reference CVE/CWE IDs** — public-domain, unlimited reuse.
 
 ---

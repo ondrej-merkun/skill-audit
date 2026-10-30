@@ -109,9 +109,11 @@ Field notes:
 - `modified_at` is present only when the scanner can read a filesystem mtime
   for the skill manifest or file. It is an ISO 8601 timestamp and is not an
   install or creation time.
-- `enrichment` is omitted while enrichment is disabled. If enrichment is
-  reintroduced later, it must be present only when source data exists and the
-  schema update must be documented here first.
+- `enrichment` is an optional schema 1.0 field that skill-audit never emits.
+  skill-audit removed its enrichment subsystem (skills.sh, GitHub, and
+  deps.dev lookups). Earlier releases also omitted the field, because
+  enrichment was disabled. Consumers must not expect it. A new enrichment field
+  needs a schema update documented here first.
 
 Do not add fields beyond this schema. Do not rename fields. Do not reorder in
 the source JSON stringifier (use a deterministic serializer).
@@ -204,7 +206,7 @@ remain visible and authoritative for the baseline scan.
   output says so and still renders deterministic findings normally.
 - LLM review progress and per-skill model status are stderr-only. Interactive
   pretty scans show live `LLM review N/total skills - <name>` progress after
-  deterministic scanning and before enrichment; JSON, summary, HTML, and file
+  deterministic scanning; JSON, summary, HTML, and file
   output keep stdout and written payloads free of progress text.
 - Review payloads sent to local models are bounded to skill metadata,
   deterministic findings, capped snippets around the findings, and capped
@@ -215,41 +217,18 @@ remain visible and authoritative for the baseline scan.
 
 ## Visible data contract
 
-If a human output adds a visible column, footer line, panel field, badge, or
-enrichment section, it must define and test:
+If a human output adds a visible column, footer line, panel field, or badge,
+it must define and test:
 
-- one realistic populated path through discovery/scan/enrichment into the
-  renderer;
+- one realistic populated path through discovery and scan into the renderer;
 - one empty or unavailable state that tells the user whether data was absent,
-  not requested, disabled in the current build, or unavailable after a lookup;
+  not requested, or unavailable;
 - consistency with JSON/HTML/summary behavior when the same information appears
   in multiple renderers.
 
 Do not ship visible columns that are usually blank without a compact reason.
-Fail-silent enrichment is acceptable for scanner correctness, but the user
-should still understand whether enrichment was not requested, had no metadata,
-or could not be displayed.
-
-For enrichment specifically, track and render source-level truth:
-
-- A source checkmark means that source produced displayable metadata, or a valid
-  stale-cache value that is labeled as cached/stale. It must not mean only that
-  the enrichment batch finished without throwing.
-- Distinguish not-applicable input (for example no repo slug or no dependency
-  manifest) from a source lookup that returned no metadata and from a lookup
-  that failed or timed out.
-- Numeric source fields must preserve unknown vs zero. If GitHub contributors,
-  deps.dev advisories, stars, scorecard data, or skills.sh audit counts cannot
-  be fetched, render an unavailable/unknown state rather than `0`.
-- `enrichment.github.contributors` is a number only when the public GitHub
-  contributors endpoint returned a count. It is `null` when repository metadata
-  was available but contributors were rate-limited, forbidden, timed out, or
-  otherwise unavailable.
-- Tests for `skills.sh`, GitHub, and `deps.dev` must use response shapes and URL
-  paths verified against the current external contract, not only mocks invented
-  from the implementation under test. Include at least one realistic installed
-  skill fixture whose repository/dependency metadata is discovered the same way
-  a user's local installation would be discovered.
+Numeric fields must preserve unknown vs zero: render an unavailable or unknown
+state rather than `0` when a value could not be read.
 
 ## File output contract
 

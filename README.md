@@ -66,10 +66,9 @@ skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model llama3.1
 skill-audit scan --llm local
 ```
 
-Default scans make no model calls and no enrichment lookups. Optional local LLM
-review uses your loopback OpenAI-compatible server, labels model findings
-separately from rule findings, and does not require a cloud account or remote
-model. This version does not perform enrichment lookups in the user-facing CLI.
+Default scans make no network calls. Optional local LLM review uses your
+loopback OpenAI-compatible server, labels model findings separately from rule
+findings, and does not require a cloud account or remote model.
 
 ## Read The First Result
 

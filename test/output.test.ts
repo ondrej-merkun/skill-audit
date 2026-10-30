@@ -31,7 +31,6 @@ function makeSkill(overrides: Partial<ScannedSkill> = {}): ScannedSkill {
     scope: 'user',
     treeSha256: 'deadbeef',
     findings: [],
-    enrichment: {},
     summary: {
       critical: 0,
       high: 0,
@@ -712,71 +711,6 @@ describe('renderTableToString', () => {
     expect(out).toContain('—');
   });
 
-  it('shows skills.sh and deps.dev enrichment details per skill', () => {
-    const result = makeScanResult({
-      skills: [
-        makeSkill({
-          enrichment: {
-            skillsSh: { gen: 'Low', socketAlerts: 0, snyk: 'Low' },
-            depsdev: { scorecardScore: 8.5, osvAdvisories: 2 },
-          },
-        }),
-      ],
-    });
-    const out = stripAnsi(renderTableToString(result));
-    expect(out).toContain('ENRICHMENT');
-    expect(out).toContain('Gen=Low');
-    expect(out).toContain('Socket=0');
-    expect(out).toContain('Snyk=Low');
-    expect(out).toContain('2 OSV advisories');
-  });
-
-  it('renders zero deps.dev advisories compactly', () => {
-    const result = makeScanResult({
-      skills: [makeSkill({ enrichment: { depsdev: { scorecardScore: null, osvAdvisories: 0 } } })],
-    });
-    const out = stripAnsi(renderTableToString(result));
-    expect(out).toContain('0 OSV');
-  });
-
-  it('omits enrichment when no table enrichment data exists', () => {
-    const out = stripAnsi(renderTableToString(makeScanResult()));
-    expect(out).not.toContain('ENRICHMENT');
-    expect(out).not.toContain('Enrichment');
-  });
-
-  it('omits the enrichment column when enrichment was skipped for offline mode', () => {
-    const out = stripAnsi(
-      renderTableToString(makeScanResult({ enrichmentStatus: 'skipped-offline' }))
-    );
-    expect(out).not.toContain('ENRICHMENT');
-  });
-
-  it('shows GitHub enrichment in the default table enrichment column', () => {
-    const result = makeScanResult({
-      skills: [makeSkill({ enrichment: { github: { stars: 10, ageDays: 20, contributors: 3 } } })],
-    });
-    const out = stripAnsi(renderTableToString(result));
-    expect(out).toContain('GitHub=10 stars');
-    expect(out).toContain('3 contributors');
-  });
-
-  it('does not render unknown GitHub contributors as zero in table output', () => {
-    const result = makeScanResult({
-      skills: [
-        makeSkill({
-          enrichment: {
-            github: { stars: 10, ageDays: 20, contributors: null },
-          },
-        }),
-      ],
-    });
-    const out = stripAnsi(renderTableToString(result));
-    expect(out).toContain('GitHub=10 stars');
-    expect(out).toContain('contributors unknown');
-    expect(out).not.toContain('0 contributors');
-  });
-
   it('shows compact per-model LLM review status and highest severity', () => {
     const result = makeScanResult({
       skills: [
@@ -1078,62 +1012,6 @@ describe('renderSummaryFooter', () => {
     expect(out).toContain('skill-audit explain fail-score-0 --llm local');
     expect(out).not.toContain('skill-audit explain fail-score-40');
     expect(out).not.toContain('skill-audit scan --skill fail-score-40 --llm local');
-  });
-
-  it('omits Enrichment line when no enrichment data', () => {
-    const out = stripAnsi(renderSummaryFooter(makeScanResult(), [makeSkill()]));
-    expect(out).not.toContain('Enrichment');
-  });
-
-  it('explains when enrichment ran but found no metadata', () => {
-    const result = makeScanResult({ enrichmentStatus: 'no-metadata' });
-    const out = stripAnsi(renderSummaryFooter(result, result.skills));
-    expect(out).toContain('Enrichment');
-    expect(out).toContain('no metadata found');
-  });
-
-  it('uses source outcomes instead of checkmarks when requested sources return no data', () => {
-    const result = makeScanResult({
-      enrichmentStatus: 'no-metadata',
-      enrichmentOutcomes: [
-        { source: 'skillsSh', status: 'no-metadata' },
-        { source: 'github', status: 'no-input' },
-        { source: 'depsdev', status: 'unavailable' },
-      ],
-    });
-    const out = stripAnsi(renderSummaryFooter(result, result.skills));
-    expect(out).toContain('skills.sh no metadata');
-    expect(out).toContain('GitHub no input');
-    expect(out).toContain('deps.dev unavailable');
-    expect(out).not.toContain('skills.sh ✓');
-    expect(out).not.toContain('deps.dev ✓');
-  });
-
-  it('explains when enrichment lookup is unavailable', () => {
-    const result = makeScanResult({ enrichmentStatus: 'unavailable' });
-    const out = stripAnsi(renderSummaryFooter(result, result.skills));
-    expect(out).toContain('Enrichment');
-    expect(out).toContain('lookup failed or timed out');
-  });
-
-  it('shows Enrichment line when skills.sh data is present', () => {
-    const enrichedSkill = makeSkill({
-      enrichment: { skillsSh: { gen: 'Low', socketAlerts: 0, snyk: 'Low' } },
-    });
-    const result = makeScanResult({ skills: [enrichedSkill] });
-    const out = stripAnsi(renderSummaryFooter(result, [enrichedSkill]));
-    expect(out).toContain('Enrichment');
-    expect(out).toContain('skills.sh');
-  });
-
-  it('shows Enrichment line when deps.dev data is present', () => {
-    const enrichedSkill = makeSkill({
-      enrichment: { depsdev: { scorecardScore: null, osvAdvisories: 0 } },
-    });
-    const result = makeScanResult({ skills: [enrichedSkill] });
-    const out = stripAnsi(renderSummaryFooter(result, [enrichedSkill]));
-    expect(out).toContain('Enrichment');
-    expect(out).toContain('deps.dev');
   });
 
   it('shows LLM review comparison in detailed and compact summaries', () => {
@@ -1465,27 +1343,6 @@ describe('renderJson', () => {
     expect(json.skills[0].summary).not.toHaveProperty('mandatoryFail');
   });
 
-  it('serializes enrichment with snake_case field names', () => {
-    const result = makeScanResult({
-      skills: [
-        makeSkill({
-          enrichment: {
-            skillsSh: { gen: 'Critical', socketAlerts: 7, snyk: 'Critical' },
-            github: { stars: 2, ageDays: 4, contributors: 1 },
-            depsdev: { osvAdvisories: 2, scorecardScore: 8.5 },
-          },
-        }),
-      ],
-    });
-    const json = JSON.parse(renderJson(result));
-    const enrich = json.skills[0].enrichment;
-    expect(enrich.skills_sh.socket_alerts).toBe(7);
-    expect(enrich.github.age_days).toBe(4);
-    expect(enrich.deps_dev.osv_advisories).toBe(2);
-    expect(enrich.deps_dev.scorecard_score).toBe(8.5);
-    expect(Object.keys(enrich)).toEqual(['skills_sh', 'github', 'deps_dev']);
-  });
-
   it('serializes LLM reviews with stable snake_case fields', () => {
     const result = makeScanResult({
       skills: [
@@ -1559,36 +1416,6 @@ describe('renderJson', () => {
     ]);
   });
 
-  it('serializes deps.dev scorecard_score as null when unavailable', () => {
-    const result = makeScanResult({
-      skills: [makeSkill({ enrichment: { depsdev: { osvAdvisories: 0, scorecardScore: null } } })],
-    });
-
-    const json = JSON.parse(renderJson(result));
-    expect(json.skills[0].enrichment.deps_dev).toEqual({
-      osv_advisories: 0,
-      scorecard_score: null,
-    });
-  });
-
-  it('serializes GitHub contributors as null when unavailable', () => {
-    const result = makeScanResult({
-      skills: [makeSkill({ enrichment: { github: { stars: 2, ageDays: 4, contributors: null } } })],
-    });
-
-    const json = JSON.parse(renderJson(result));
-    expect(json.skills[0].enrichment.github).toEqual({
-      stars: 2,
-      age_days: 4,
-      contributors: null,
-    });
-  });
-
-  it('omits enrichment when all enrichment keys are absent', () => {
-    const json = JSON.parse(renderJson(makeScanResult()));
-    expect(json.skills[0]).not.toHaveProperty('enrichment');
-  });
-
   it('serializes top-level summary with snake_case keys', () => {
     const result = makeScanResult({
       summary: { skillsScanned: 47, compromised: 8, percentCompromised: 17.0, verdict: 'FAIL' },
@@ -1651,65 +1478,6 @@ describe('renderHtml', () => {
     expect(html.indexOf('fail-score-0')).toBeLessThan(html.indexOf('fail-score-40'));
     expect(html.indexOf('fail-score-40')).toBeLessThan(html.indexOf('review-score-50'));
     expect(html.indexOf('review-score-50')).toBeLessThan(html.indexOf('pass-clean'));
-  });
-
-  it('renders all enrichment sources visibly in the report table and detail panel script', async () => {
-    const { renderHtml } = await import('../packages/cli/src/output/html.js');
-    const html = renderHtml(
-      makeScanResult({
-        skills: [
-          makeSkill({
-            enrichment: {
-              skillsSh: { gen: 'Critical', socketAlerts: 7, snyk: 'High' },
-              github: { stars: 12, ageDays: 34, contributors: 2 },
-              depsdev: { scorecardScore: 8.5, osvAdvisories: 1 },
-            },
-          }),
-        ],
-      })
-    );
-
-    expect(html).toContain('Enrichment');
-    expect(html).toContain('skills.sh');
-    expect(html).toContain('GitHub');
-    expect(html).toContain('deps.dev');
-    expect(html).toContain('Gen=Critical');
-    expect(html).toContain('Socket=7');
-    expect(html).toContain('Snyk=High');
-    expect(html).toContain('12 stars');
-    expect(html).toContain('34 days old');
-    expect(html).toContain('2 contributors');
-    expect(html).toContain('1 OSV advisories');
-    expect(html).toContain('scorecard 8.5');
-  });
-
-  it('does not render unknown GitHub contributors as zero in HTML', async () => {
-    const { renderHtml } = await import('../packages/cli/src/output/html.js');
-    const html = renderHtml(
-      makeScanResult({
-        skills: [
-          makeSkill({
-            enrichment: {
-              github: { stars: 12, ageDays: 34, contributors: null },
-            },
-          }),
-        ],
-      })
-    );
-
-    expect(html).toContain('contributors unknown');
-    expect(html).not.toContain('0 contributors');
-  });
-
-  it('omits HTML enrichment UI when sources are missing', async () => {
-    const { renderHtml } = await import('../packages/cli/src/output/html.js');
-    const html = renderHtml(makeScanResult({ skills: [makeSkill({ enrichment: {} })] }));
-
-    expect(html).not.toContain('<th>Enrichment</th>');
-    expect(html).not.toContain('class="enrichment-cell"');
-    expect(html).not.toContain('<span>skills.sh</span> —');
-    expect(html).not.toContain('<span>GitHub</span> —');
-    expect(html).not.toContain('<span>deps.dev</span> —');
   });
 
   it('renders friendly agent names in visible HTML while keeping raw filter ids', async () => {
