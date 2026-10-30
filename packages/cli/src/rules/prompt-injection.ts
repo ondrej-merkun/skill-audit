@@ -80,9 +80,18 @@ const zeroWidthNonJoinerPattern = /[\u200B\u200C\u200E\u200F]/;
 const suspiciousZwjPattern =
   /(?<!\p{Extended_Pictographic})\u200D|\u200D(?!\p{Extended_Pictographic})/u;
 // U+202A-U+202E: LRE, RLE, PDF, LRO, RLO (bidi controls)
-const bidiControlPattern = /[\u202A-\u202E]/;
+// U+2066-U+2069: LRI, RLI, FSI, PDI (bidi isolates, Trojan Source CVE-2021-42574)
+const bidiControlPattern = /[\u202A-\u202E\u2066-\u2069]/;
 // U+2060-U+2064: Word Joiner, invisible math operators
 const invisibleOpsPattern = /[\u2060-\u2064]/;
+// U+FE00-U+FE0D (VS1-VS14) and U+E0100-U+E01EF (VS17-VS256) give no emoji style.
+// With one selector per byte, they can hide a payload in text that looks normal.
+const variationSelectorPattern = /[\uFE00-\uFE0D\u{E0100}-\u{E01EF}]/u;
+// U+FE0E, U+FE0F (VS15, VS16): text or emoji style. Allow one selector directly
+// after an emoji or symbol, and VS16 in a keycap such as 1 U+FE0F U+20E3.
+// Flag them after a plain character, after a selector, or after a bare keycap base.
+const emojiStyleSelectorPattern =
+  /(?<![\p{Extended_Pictographic}#*0-9])[\uFE0E\uFE0F]|(?<=[#*0-9])(?!\uFE0F\u20E3)[\uFE0E\uFE0F]/u;
 // U+FEFF: ZWNBSP. A byte order mark at the start of the file is an encoding
 // marker, not hidden text, so only flag U+FEFF after the first character (spec §4).
 const zwnbspPattern = /(?<!^)\uFEFF/;
@@ -99,13 +108,15 @@ export const PI_HIDDEN_UNICODE: Rule = {
     suspiciousZwjPattern,
     bidiControlPattern,
     invisibleOpsPattern,
+    variationSelectorPattern,
+    emojiStyleSelectorPattern,
     zwnbspPattern,
     tagCharsPattern,
   ],
   prepareContent: maskMarkdownSecurityEducationContext,
   message:
     'Invisible or bidi-control unicode character detected — may smuggle hidden instructions.',
-  fix: 'Remove hidden unicode: U+200B-200F, U+202A-202E, U+2060-2064, U+FEFF, U+E0020-E007F.',
+  fix: 'Remove hidden unicode: U+200B-200F, U+202A-202E, U+2060-2064, U+2066-2069, U+FEFF, U+FE00-FE0F (except one U+FE0E or U+FE0F after an emoji), U+E0020-E007F, U+E0100-E01EF.',
   cwe: ['CWE-1425'],
 };
 
