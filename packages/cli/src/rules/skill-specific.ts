@@ -119,20 +119,49 @@ export const SKILL_DISABLE_SAFETY: Rule = {
 
 // ---------------------------------------------------------------------------
 // SKILL-PASSWORD-ZIP (Critical)
-// AV-evasion via password-protected zip — ClawHavoc IOC, per spec §4
+// A password hides archive content from antivirus and data-loss scanners. Extraction
+// with a password is the ClawHavoc AV-evasion IOC (spec §4). Creation with a password
+// stages data for exfiltration.
 // ---------------------------------------------------------------------------
 const unzipPasswordPattern = /unzip\s+-P\s+["']?\S+["']?\s+\S+\.zip/;
 const sevenZipPasswordPattern = /7z\s+x\s+-p\S+\s+\S+/;
+
+// The archive command must start a word, so `unzip`, `gzip`, and a `.zip` file name do
+// not match. The bounded argument gap stops at a pipe, a list separator, or a line end,
+// so the `-P` of a next command (`&& scp -P 2222`) does not count.
+const MAX_ARCHIVE_ARGS_CHARS = 200;
+// Info-ZIP `-P <password>`, also in a flag cluster such as `-rP`, or `--password`.
+const zipCreatePasswordPattern = new RegExp(
+  String.raw`(?<![\w.-])zip(?=[ \t])[^\n|;&]{0,${MAX_ARCHIVE_ARGS_CHARS}}[ \t](?:-[A-Za-z0-9]{0,8}P|--password\b)`
+);
+// 7-Zip `a -p<password>`, RAR `a -p<password>` or `a -hp<password>`. RAR `-p-` turns the
+// password prompt off.
+const sevenZipOrRarCreatePasswordPattern = new RegExp(
+  String.raw`(?<![\w.-])(?:7z[az]?|rar)[ \t]+a(?=[ \t])[^\n|;&]{0,${MAX_ARCHIVE_ARGS_CHARS}}[ \t]-h?p(?!-)\S`,
+  'i'
+);
+// pyzipper encrypts a written zip only with WZ_AES. Standard-library `zipfile` cannot
+// write an encrypted zip: its `setpassword` applies only to reading.
+const pyzipperEncryptPattern = /\bWZ_AES\b/;
+// The format name that archiver-zip-encrypted registers with Node.js `archiver`.
+const archiverEncryptedZipPattern = /["']zip-encrypted["']/;
 
 export const SKILL_PASSWORD_ZIP: Rule = {
   id: 'SKILL-PASSWORD-ZIP',
   category: 'skill-specific',
   severity: 'critical',
   appliesTo: [...SKILL_FILES, ...SCRIPT_AND_CODE_FILES],
-  patterns: [unzipPasswordPattern, sevenZipPasswordPattern],
+  patterns: [
+    unzipPasswordPattern,
+    sevenZipPasswordPattern,
+    zipCreatePasswordPattern,
+    sevenZipOrRarCreatePasswordPattern,
+    pyzipperEncryptPattern,
+    archiverEncryptedZipPattern,
+  ],
   prepareContent: maskSecurityEducationExampleContext,
-  message: 'Password-protected zip extraction detected — AV-evasion IOC (ClawHavoc pattern).',
-  fix: 'Do not embed or execute password-protected archives. This is a known AV-evasion technique used by ClawHavoc and similar payloads.',
+  message: 'Password-protected archive extraction or creation detected.',
+  fix: 'Do not extract or create password-protected archives. The password hides the content from antivirus and data-loss scanners: ClawHavoc payloads use it to evade antivirus, and exfiltration uses it to hide stolen data.',
   cwe: ['CWE-506'],
 };
 

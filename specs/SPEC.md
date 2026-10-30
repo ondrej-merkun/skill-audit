@@ -284,10 +284,17 @@ source\s*<\(\s*(curl|wget)\s+\S+\s*\)
 eval\s*["'`]?\$\(\s*(curl|wget)
 ```
 
-**`SKILL-PASSWORD-ZIP` — Critical.** Direct ClawHavoc IOC — AV-evasion:
+**`SKILL-PASSWORD-ZIP` — Critical.** A password hides archive content from antivirus and data-loss scanners. Prompt files and scripts get the same severity. Extraction is the direct ClawHavoc AV-evasion IOC; a skill that opens the archive and password that the user gives (`unzip -P "$PASSWORD" "$ARCHIVE"`) does not match:
 ```regex
 unzip\s+-P\s+["']?\S+["']?\s+\S+\.zip
 7z\s+x\s+-p\S+\s+\S+
+```
+Creation stages data for exfiltration and matches any password value, also a variable. The 7-Zip and RAR line is case-insensitive; RAR `-p-` (no password) does not match. See `specs/RULES.md` for the boundaries:
+```regex
+(?<![\w.-])zip(?=[ \t])[^\n|;&]{0,200}[ \t](?:-[A-Za-z0-9]{0,8}P|--password\b)
+(?<![\w.-])(?:7z[az]?|rar)[ \t]+a(?=[ \t])[^\n|;&]{0,200}[ \t]-h?p(?!-)\S
+\bWZ_AES\b
+["']zip-encrypted["']
 ```
 
 **`FS-CREDSTORE` — Critical.** Path-literal regex over code + markdown. Each `~/` prefix also matches `$HOME/` and `${HOME}/`, also with the quote closed before the slash (`"$HOME"/`):
@@ -363,7 +370,7 @@ document the schema change in `specs/OUTPUT.md` before any code lands.
   AGENT           SKILL                         SOURCE                         VERDICT   SCORE   TOP ISSUE
  ─────────────────────────────────────────────────────────────────────────────────
   2 agents        🔴 polymarket-trader           Plugin - trading-tools        FAIL       0    Environment variables transmitted over outbound HTTP (SKILL.md:14)
-  Claude Code     🔴 solana-wallet-tracker       Direct                         FAIL       0    Password-protected zip extraction (install.sh:3)
+  Claude Code     🔴 solana-wallet-tracker       Direct                         FAIL       0    Password-protected archive extraction or creation (install.sh:3)
   Claude Code     🟠 aws-helper@2.0              Plugin - cloud-ops            REVIEW    65    Hardcoded API key or secret (helpers.py:22)
   Cursor          🟠 web-fetcher                 Direct                         REVIEW    75    Hardcoded outbound HTTP call to non-localhost address... (SKILL.md:8)
   OpenAI Codex    🟡 git-log-pretty              MCP                            REVIEW    82    Git history scanning

@@ -195,11 +195,33 @@ eval\s*["'`]?\$\(\s*(curl|wget)
 ```
 
 ### SKILL-PASSWORD-ZIP (Critical)
-Direct ClawHavoc IOC:
+A password hides archive content from antivirus and data-loss scanners. The
+rule reads prompt files and scripts (`*.sh`, `*.bash`, `*.py`, `*.js`, `*.ts`,
+`*.mjs`, `*.cjs`) with one severity, because a script runs the command itself.
+
+Extraction is the direct ClawHavoc IOC. The `unzip` form needs a named `.zip`
+operand, so a skill that opens the archive and password that the user gives
+(`unzip -P "$PASSWORD" "$ARCHIVE"`) does not match:
 ```regex
 unzip\s+-P\s+["']?\S+["']?\s+\S+\.zip
 7z\s+x\s+-p\S+\s+\S+
 ```
+
+Creation stages data for exfiltration. It matches any password value, also a
+variable, because a variable that holds a fixed password evades a literal-only
+check. The command must start a word, and the argument gap stops at `|`, `;`,
+`&`, or a line end. The 7-Zip and RAR line is case-insensitive. RAR `-p-` turns
+the password prompt off and does not match. pyzipper encrypts a written zip
+only with `WZ_AES`, and `zip-encrypted` is the Node.js `archiver` format of
+archiver-zip-encrypted:
+```regex
+(?<![\w.-])zip(?=[ \t])[^\n|;&]{0,200}[ \t](?:-[A-Za-z0-9]{0,8}P|--password\b)
+(?<![\w.-])(?:7z[az]?|rar)[ \t]+a(?=[ \t])[^\n|;&]{0,200}[ \t]-h?p(?!-)\S
+\bWZ_AES\b
+["']zip-encrypted["']
+```
+Standard-library `zipfile` cannot write an encrypted zip. Its `setpassword`
+applies only to reading, so no `zipfile` pattern marks creation.
 
 ### FS-CREDSTORE (Critical)
 Path-literal regex over both code and markdown. Each `~/` prefix also matches
