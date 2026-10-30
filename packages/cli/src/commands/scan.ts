@@ -13,6 +13,7 @@ import {
 import { skillAgentIds } from '../output/agents.js';
 import { renderHtml } from '../output/html.js';
 import { renderJson } from '../output/json.js';
+import { renderSarif } from '../output/sarif.js';
 import { sortScanSkills } from '../output/sort.js';
 import { renderSummaryCompact } from '../output/summary.js';
 import { renderTableToString } from '../output/table.js';
@@ -51,6 +52,8 @@ export type ScanOptions = {
   summary: boolean;
   html: string | undefined;
   output: string | undefined;
+  // `true` makes SARIF the stdout payload. A path writes SARIF there beside the selected payload.
+  sarif: string | true | undefined;
   offline: boolean;
   strict: boolean;
   agent: string | undefined;
@@ -67,6 +70,7 @@ const DEFAULT_OPTIONS: ScanOptions = {
   summary: false,
   html: undefined,
   output: undefined,
+  sarif: undefined,
   offline: false,
   strict: false,
   agent: undefined,
@@ -83,8 +87,11 @@ const SUPPORTED_SCAN_AGENTS: ReadonlySet<string> = new Set(SUPPORTED_AGENT_IDS);
 
 function renderScanPayload(
   result: ScanResult,
-  options: Pick<ScanOptions, 'json' | 'summary'>
+  options: Pick<ScanOptions, 'json' | 'summary' | 'sarif'>
 ): string {
+  if (options.sarif === true) {
+    return `${renderSarif(result, scanProjectRoot())}\n`;
+  }
   if (options.json) {
     return `${renderJson(result)}\n`;
   }
@@ -120,10 +127,36 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
+// The project directory that discovery searches. SKILL_AUDIT_CWD lets tests inject it.
+function scanProjectRoot(): string {
+  return process.env.SKILL_AUDIT_CWD ?? process.cwd();
+}
+
+/** Writes the selected payload to `--output`, or to stdout without it. */
+async function writeScanPayload(payload: string, output: string | undefined): Promise<void> {
+  if (output === undefined) {
+    process.stdout.write(payload);
+    return;
+  }
+  await writeFile(output, stripVTControlCharacters(payload), 'utf-8');
+  process.stderr.write(`[skill-audit] report written to ${output}\n`);
+}
+
+async function writeSarifFile(path: string, log: string): Promise<void> {
+  await writeFile(path, log, 'utf-8');
+  process.stderr.write(`[skill-audit] SARIF report written to ${path}\n`);
+}
+
 function scanProgressOutputKind(options: ScanOptions): ProgressOutputKind {
-  if (options.json) return 'json';
+  if (options.json || options.sarif === true) return 'json';
   if (options.summary) return 'summary';
-  if (options.output !== undefined || options.html !== undefined) return 'file';
+  if (
+    options.output !== undefined ||
+    options.html !== undefined ||
+    typeof options.sarif === 'string'
+  ) {
+    return 'file';
+  }
   return 'pretty';
 }
 
@@ -133,6 +166,14 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   if (options.html !== undefined && options.output !== undefined) {
     process.stderr.write(
       '[skill-audit] cannot combine --html and --output; choose one destination\n'
+    );
+    process.exit(2);
+    return; // unreachable in production; allows mocked exit in tests
+  }
+
+  if (options.sarif === true && (options.json || options.summary)) {
+    process.stderr.write(
+      '[skill-audit] --sarif without a file prints SARIF to stdout; it cannot combine with --json or --summary. Give --sarif a file, or choose one stdout format\n'
     );
     process.exit(2);
     return; // unreachable in production; allows mocked exit in tests
@@ -209,11 +250,26 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   }
 
   if (skills.length === 0) {
-    process.stdout.write(
+    const notice =
       options.agent === undefined
         ? 'No skills found. Install some agent skills and try again.\n'
-        : `No skills found for agent "${options.agent}". Install or enable skills for that agent and try again.\n`
-    );
+        : `No skills found for agent "${options.agent}". Install or enable skills for that agent and try again.\n`;
+
+    if (options.sarif === undefined) {
+      process.stdout.write(notice);
+    } else {
+      // An empty SARIF log lets an upload close the alerts of skills that a project removed.
+      const emptySarif = `${renderSarif({ skills: [] }, scanProjectRoot())}\n`;
+      if (options.sarif === true) {
+        // The log is the payload, so the notice goes to stderr.
+        await writeScanPayload(emptySarif, options.output);
+        process.stderr.write(notice);
+      } else {
+        await writeSarifFile(options.sarif, emptySarif);
+        process.stdout.write(notice);
+      }
+    }
+
     if (discoveryFailureCount > 0) process.exitCode = INCOMPLETE_SCAN_EXIT_CODE;
     return;
   }
@@ -341,19 +397,17 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     },
   };
 
+  if (typeof options.sarif === 'string') {
+    await writeSarifFile(options.sarif, `${renderSarif(result, scanProjectRoot())}\n`);
+  }
+
   if (options.html !== undefined) {
     const htmlOut = renderHtml(result);
     await writeFile(options.html, htmlOut, 'utf-8');
     process.stderr.write(`[skill-audit] HTML report written to ${options.html}\n`);
     process.stdout.write(renderScanPayload(result, options));
   } else {
-    const payload = renderScanPayload(result, options);
-    if (options.output !== undefined) {
-      await writeFile(options.output, stripVTControlCharacters(payload), 'utf-8');
-      process.stderr.write(`[skill-audit] report written to ${options.output}\n`);
-    } else {
-      process.stdout.write(payload);
-    }
+    await writeScanPayload(renderScanPayload(result, options), options.output);
   }
 
   const exitOpts: { failOn?: string; strict?: boolean } = {};

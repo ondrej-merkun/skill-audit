@@ -118,11 +118,68 @@ Field notes:
 Do not add fields beyond this schema. Do not rename fields. Do not reorder in
 the source JSON stringifier (use a deterministic serializer).
 
+## SARIF output contract
+
+`scan --sarif [file]` writes a SARIF 2.1.0 log for GitHub code scanning. The
+SARIF log is a second machine format. It does not change the JSON schema.
+
+- `skill-audit scan --sarif skill-audit.sarif` writes SARIF to the file. Stdout
+  keeps the selected payload (table, `--json`, or `--summary`), and `--output`
+  still applies to that payload.
+- `skill-audit scan --sarif` without a file prints SARIF to stdout.
+  `--output <file>` then writes the SARIF to that file. This form cannot combine
+  with `--json` or `--summary`; that is a usage error with exit code 2.
+- When discovery finds no skills, both forms still write a SARIF log with no
+  results, so an upload closes the alerts of removed skills. The `No skills
+  found` notice stays on stdout, except with bare `--sarif`, where it goes to
+  stderr.
+
+The log has one run:
+
+- `tool.driver` has `name: "skill-audit"`, `semanticVersion` equal to the
+  package version, `informationUri`, and `rules`.
+- `tool.driver.rules` lists every shipped rule, then each rule that exists only
+  as a finding (`CTX-SECURITY-EDUCATION`). Each rule has `id`,
+  `shortDescription.text` (the rule message), `help.text` (the message and the
+  fix text that `explain` prints), `defaultConfiguration.level`, and
+  `properties.tags` (`security`, the rule category, and the rule CWE ids).
+- `results` has one result per deterministic finding, in the global scan
+  ordering below. Each result has `ruleId`, `ruleIndex`, `level`,
+  `message.text` (the finding message), and one location with
+  `region.startLine` and `region.startColumn`. Columns are UTF-16 code units
+  (`run.columnKind: "utf16CodeUnits"`). Results do not include snippets, so the
+  log does not copy matched secrets.
+- `level` comes from the finding severity: `critical` and `high` are `error`,
+  `medium` is `warning`, `low` and `info` are `note`. A demoted finding in inert
+  supporting docs has `info` severity, so it is a `note`.
+- A location names the real file, with symlinks resolved, because GitHub cannot
+  show a result in a symlinked file.
+- A file in the project directory (the scan working directory) has a URI that
+  is relative to that directory, with `uriBaseId: "%SRCROOT%"`. A colon in the
+  relative path is percent-encoded (`%3A`), so the first segment cannot read as
+  a URI scheme.
+  `run.originalUriBaseIds["%SRCROOT%"].uri` is the absolute `file://` URI of
+  the directory. GitHub reads relative URIs from the repository root, so run a
+  SARIF scan from the repository root.
+- A file outside the project directory, such as a skill in the home directory,
+  has an absolute `file://` URI. GitHub keeps such a URI as it is.
+- `partialFingerprints.primaryLocationLineHash` is present only for a file
+  outside the project directory. Its value is `<16 hex chars>:<n>`: a hash of
+  the rule id, the URI, and the line text, plus the count of identical lines.
+  The hash does not include the line number, so an alert keeps its identity
+  when lines above it change. For a file in the repository, the
+  `github/codeql-action/upload-sarif` action computes the fingerprint, and it
+  warns when a supplied fingerprint differs from its own.
+- LLM review findings are not in the SARIF log. They are model opinions without
+  a reliable line, and JSON keeps them in `llm_reviews`.
+- Tests validate the log against the OASIS SARIF 2.1.0 errata01 schema in
+  `test/schemas/sarif-schema-2.1.0.json`.
+
 ## Global scan ordering contract
 
 Every scan renderer must show the same risk-first skill order unless a command
 explicitly documents a different sort. This applies to the default table,
-compact summary suggestions, JSON, HTML, and any file-output path.
+compact summary suggestions, JSON, HTML, SARIF, and any file-output path.
 
 1. Primary: `summary.score` ascending; lower means worse.
 2. Secondary: verdict severity `FAIL`, then `REVIEW`, then `PASS`.
@@ -242,6 +299,8 @@ state rather than `0` when a value could not be read.
 - `--html [file]` remains the dedicated HTML report destination. If `file` is
   omitted, it writes `scan.html`. Supplying both `--html` and `--output` is a
   usage error with exit code 2.
+- `skill-audit scan --json --output report.json --sarif report.sarif` writes
+  JSON and SARIF from one scan. See the SARIF output contract above.
 
 Verdict exit codes are unchanged and must be set only after file writes flush.
 

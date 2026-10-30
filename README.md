@@ -114,6 +114,7 @@ skill-audit scan --json -o skill-audit-report.json   # machine-readable JSON
 skill-audit scan --summary -o skill-audit-summary.txt # compact text summary
 skill-audit scan --html                              # standalone HTML report at scan.html
 skill-audit scan --html skill-audit-report.html      # standalone HTML report at a custom path
+skill-audit scan --sarif skill-audit.sarif           # SARIF 2.1.0 for GitHub code scanning
 ```
 
 Add local LLM review:
@@ -220,6 +221,8 @@ also ships a GitHub Action:
 - uses: ondrej-merkun/skill-audit@v1
 ```
 
+To show findings as GitHub code scanning alerts, set the action's `sarif-file`
+input and upload that file with `github/codeql-action/upload-sarif`.
 See the [CI reference](docs/REFERENCE.md#use-in-ci) for the full workflow. In
 CI, `skill-audit` scans files locally inside the GitHub Actions runner and
 writes report artifacts. It does not upload skill contents to a separate

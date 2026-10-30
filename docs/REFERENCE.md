@@ -62,6 +62,7 @@ skill-audit ignore <name>      # add a skill's treeSha256 to your ignore list
 | `--strict` | Treat REVIEW as FAIL for exit-code purposes |
 | `--fail-on <band>` | Override exit-code threshold (`REVIEW` or `FAIL`) |
 | `--html [file]` | Write standalone HTML report to file, defaulting to `scan.html` |
+| `--sarif [file]` | Write SARIF 2.1.0 for GitHub code scanning to file, or to stdout without a file |
 
 ## What Leaves The Machine
 
@@ -78,6 +79,7 @@ For the full security boundary, see [`THREAT_MODEL.md`](THREAT_MODEL.md).
 | `skill-audit scan --summary` | Skill contents | No | Nothing |
 | `skill-audit scan --json` | Skill contents and dependency manifests | No | Nothing |
 | `skill-audit scan --html [file]` | Skill contents and dependency manifests | No | Nothing |
+| `skill-audit scan --sarif [file]` | Skill contents and dependency manifests | No | Nothing |
 | `skill-audit scan --llm local` | Skill contents and deterministic findings | Only to loopback model URL | Bounded skill metadata, findings, snippets, and capped skill files |
 | `skill-audit scan --skill <name> --llm local` | Selected skill contents and deterministic findings | Only to loopback model URL | Bounded selected-skill metadata, findings, snippets, and capped skill files |
 | `skill-audit explain <name>` | Selected skill contents | No | Nothing |
@@ -256,6 +258,43 @@ jobs:
           fail-on: REVIEW
           results-file: skill-audit-results.json
 ```
+
+### GitHub Code Scanning
+
+Set the `sarif-file` input to also write a SARIF 2.1.0 log. Then upload it with
+`github/codeql-action/upload-sarif`, and GitHub shows each finding as a code
+scanning alert. The upload step needs `security-events: write`. Private
+repositories also need `actions: read` and `contents: read`.
+
+```yaml
+jobs:
+  scan-skills:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ondrej-merkun/skill-audit@v1
+        with:
+          sarif-file: skill-audit.sarif
+      - name: Upload SARIF
+        # Upload also when the scan step fails on a FAIL verdict.
+        if: ${{ !cancelled() && hashFiles('skill-audit.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: skill-audit.sarif
+```
+
+Keep the action `path` input at the repository root. GitHub reads relative
+SARIF locations from the repository root, and `skill-audit` writes locations
+relative to the scanned directory. A finding in a file outside the repository,
+such as a skill in the runner home directory, keeps an absolute `file://`
+location. The upload sends the SARIF log to GitHub: rule ids, messages, file
+paths, and line numbers. The log does not contain snippets or file contents.
+See [`specs/OUTPUT.md`](../specs/OUTPUT.md#sarif-output-contract) for the full
+mapping.
 
 ## FAQ
 

