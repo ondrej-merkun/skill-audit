@@ -33,7 +33,10 @@ masks a whole file when its path looks like docs (a `docs/`, `references/`, or
 `examples/` dir, or a name such as `README.md`). A markdown file that SKILL.md
 references, by path or as part of all its docs, is operative: the agent reads
 it, so rules scan it under a neutral name at the skill root, whatever its own
-name (`references/README.md`). A script in a docs dir stays masked even when
+name (`references/README.md`). The SKILL.md of a parent dir counts too, so a
+nested skill cannot hide a doc that its parent names. When the skill root
+itself is in a docs dir (`references/helper/`), the neutral name goes in the
+nearest dir above it that does not look like docs. A script in a docs dir stays masked even when
 SKILL.md names it, because security-education skills point at sample code. For
 rules with line masking (`FS-CREDSTORE`, `NET-DNS-UNUSUAL-TLD`), a documentation
 word such as "example" or "test" hides a markdown line only in example

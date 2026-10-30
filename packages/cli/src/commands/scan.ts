@@ -348,8 +348,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
         const findings = withSecurityEducationContextFinding(
           skill,
           await runRulesForSkill(skill, ALL_RULES, {
-            // A path scan audits content before install, and its split into targets decides
-            // which manifest can name a doc. So no supporting doc counts as inert there.
+            // A path scan audits content before install, so no supporting doc counts as inert there.
             scanAllSupportingFiles: options.scanAllSupportingFiles || options.path !== undefined,
             scanTargetPaths,
           })

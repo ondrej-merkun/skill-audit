@@ -24,6 +24,8 @@ type RunRulesOptions = {
   scanAllSupportingFiles?: boolean;
   /** Paths from collectScanTargetPaths; a directory walk does not enter them. */
   scanTargetPaths?: ReadonlySet<string>;
+  /** The other installed copies of the skill; the manifests above them name docs in it too. */
+  alsoInstalledAt?: readonly string[];
 };
 
 // One set of rules matched against one view of a file.
@@ -218,7 +220,16 @@ function normalizeReferencedPath(rawPath: string): string | undefined {
   return candidate.replaceAll('\\', '/');
 }
 
-function addReachablePath(index: ReachabilityIndex, rawPath: string): void {
+/**
+ * Adds a path that a manifest names to the index. `rootFromManifest` is the path of the scan
+ * target from the manifest's dir: `''` for the target's own SKILL.md, `helper/` for the
+ * SKILL.md of its parent. A path outside the target names nothing in it.
+ */
+function addReachablePath(
+  index: ReachabilityIndex,
+  rawPath: string,
+  rootFromManifest: string
+): void {
   const ref = normalizeReferencedPath(rawPath);
   if (ref === undefined) return;
 
@@ -226,66 +237,121 @@ function addReachablePath(index: ReachabilityIndex, rawPath: string): void {
   if (globIndex >= 0) {
     const prefix = ref.slice(0, globIndex);
     const dir = prefix.includes('/') ? prefix.slice(0, prefix.lastIndexOf('/') + 1) : '';
-    if (dir !== '') index.referencedDirs.add(dir);
+    if (dir !== '') addReferencedDir(index, dir, rootFromManifest);
     return;
   }
 
   if (ref.endsWith('/')) {
-    index.referencedDirs.add(ref);
+    addReferencedDir(index, ref, rootFromManifest);
     return;
   }
 
   if (extname(ref) === '') {
-    index.referencedDirs.add(`${ref}/`);
+    addReferencedDir(index, `${ref}/`, rootFromManifest);
     return;
   }
 
-  index.referencedFiles.add(ref);
+  if (ref.startsWith(rootFromManifest)) {
+    index.referencedFiles.add(ref.slice(rootFromManifest.length));
+  }
 }
 
+function addReferencedDir(index: ReachabilityIndex, dir: string, rootFromManifest: string): void {
+  if (dir.startsWith(rootFromManifest)) {
+    index.referencedDirs.add(dir.slice(rootFromManifest.length));
+  } else if (rootFromManifest.startsWith(dir)) {
+    // The named dir holds the whole target, so it names every file in it.
+    index.referencedDirs.add('');
+  }
+}
+
+function addManifestReferences(
+  index: ReachabilityIndex,
+  content: string,
+  rootFromManifest: string
+): void {
+  if (
+    /\b(?:nearby files|bundled resources|all supporting (?:files|docs|documents)|all docs)\b/i.test(
+      content
+    )
+  ) {
+    index.allSupportingMarkdownReachable = true;
+  }
+
+  for (const match of content.matchAll(/\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g)) {
+    if (match[1] !== undefined) addReachablePath(index, match[1], rootFromManifest);
+  }
+
+  for (const match of content.matchAll(
+    /(?:^|[\s`"'(])((?:\.\/)?[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.{}*?[\]-]+)+(?:\/)?|(?:\.\/)?[A-Za-z0-9_.-]+\.(?:md|mdc|txt|json|toml|ya?ml|js|ts|mjs|cjs|py|sh|bash))(?:[\s`"',).;:]|$)/g
+  )) {
+    if (match[1] !== undefined) addReachablePath(index, match[1], rootFromManifest);
+  }
+
+  for (const match of content.matchAll(
+    /\b(?:in|under|from|inside|within)\s+(?:the\s+)?(docs?|documentation|examples?|references?)\b/gi
+  )) {
+    if (match[1] !== undefined) addReachablePath(index, `${match[1]}/`, rootFromManifest);
+  }
+}
+
+/**
+ * Indexes the paths that the skill's manifests name. These are its own SKILL.md and each
+ * SKILL.md in a dir above one of its installed copies. Discovery reports a nested SKILL.md dir
+ * as its own skill, and the parent's walk leaves it out, so the parent's references must reach
+ * the nested skill here. Otherwise a nested SKILL.md would make a doc that the parent names inert.
+ * ponytail: the walk goes up to the filesystem root. A SKILL.md above the skills dir can only
+ * add references, so it can add findings, not hide them. Stop at the discovery root if a stray
+ * SKILL.md there causes false positives.
+ */
 function buildReachabilityIndex(
   skillRoot: string,
   files: string[],
-  dirAliases: DirAlias[]
+  dirAliases: DirAlias[],
+  alsoInstalledAt: readonly string[]
 ): ReachabilityIndex | undefined {
   const skillMdPath = join(skillRoot, 'SKILL.md');
   if (!files.includes(skillMdPath)) return undefined;
 
-  let content: string;
-  try {
-    content = readFileSync(skillMdPath, 'utf-8');
-  } catch {
-    return undefined;
-  }
+  const content = readManifest(skillMdPath);
+  if (content === undefined) return undefined;
 
   const index: ReachabilityIndex = {
     root: skillRoot,
     dirAliases,
     referencedFiles: new Set(),
     referencedDirs: new Set(),
-    allSupportingMarkdownReachable:
-      /\b(?:nearby files|bundled resources|all supporting (?:files|docs|documents)|all docs)\b/i.test(
-        content
-      ),
+    allSupportingMarkdownReachable: false,
   };
+  addManifestReferences(index, content, '');
 
-  for (const match of content.matchAll(/\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g)) {
-    if (match[1] !== undefined) addReachablePath(index, match[1]);
-  }
-
-  for (const match of content.matchAll(
-    /(?:^|[\s`"'(])((?:\.\/)?[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.{}*?[\]-]+)+(?:\/)?|(?:\.\/)?[A-Za-z0-9_.-]+\.(?:md|mdc|txt|json|toml|ya?ml|js|ts|mjs|cjs|py|sh|bash))(?:[\s`"',).;:]|$)/g
-  )) {
-    if (match[1] !== undefined) addReachablePath(index, match[1]);
-  }
-
-  for (const match of content.matchAll(
-    /\b(?:in|under|from|inside|within)\s+(?:the\s+)?(docs?|documentation|examples?|references?)\b/gi
-  )) {
-    if (match[1] !== undefined) addReachablePath(index, `${match[1]}/`);
+  for (const installPath of [skillRoot, ...alsoInstalledAt]) {
+    const target = resolve(installPath);
+    // The filesystem root is its own dirname, so the loop ends after it.
+    let dir = target;
+    while (dirname(dir) !== dir) {
+      dir = dirname(dir);
+      const manifestContent = readManifest(join(dir, 'SKILL.md'));
+      if (manifestContent === undefined) continue;
+      addManifestReferences(
+        index,
+        manifestContent,
+        `${normalizeRelativePath(relative(dir, target))}/`
+      );
+    }
   }
 
   return index;
+}
+
+/** Reads a SKILL.md, or returns undefined when it is missing, unreadable, or not a regular file. */
+function readManifest(path: string): string | undefined {
+  try {
+    // A FIFO named SKILL.md would block the read forever.
+    return statSync(path).isFile() ? readFileSync(path, 'utf-8') : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Resolves each dir that the walk skipped as already entered to its real path. */
@@ -380,9 +446,19 @@ function preparePathFor(
   const isReferenced =
     index.allSupportingMarkdownReachable ||
     [filePath, ...aliasPaths].some((path) => isReachableFromSkillMd(path, index));
+  // A nested skill under `references/` must not mask a doc that its parent names.
   return isReferenced
-    ? join(index.root, `${REFERENCED_DOC_PREPARE_STEM}${extname(scanName)}`)
+    ? join(nearestNonDocsDir(index.root), `${REFERENCED_DOC_PREPARE_STEM}${extname(scanName)}`)
     : filePath;
+}
+
+/** The nearest dir at or above `dir` whose path does not look like docs. */
+function nearestNonDocsDir(dir: string): string {
+  let current = dir;
+  while (pathLooksDocumentationOnly(current) && dirname(current) !== current) {
+    current = dirname(current);
+  }
+  return current;
 }
 
 /**
@@ -504,7 +580,7 @@ export async function runRules(
   }
   const dirAliases = resolveDirAliases(skippedDirs);
   const reachability = isDirectory
-    ? buildReachabilityIndex(skillPath, files, dirAliases)
+    ? buildReachabilityIndex(skillPath, files, dirAliases, options.alsoInstalledAt ?? [])
     : undefined;
 
   for (const filePath of files) {
@@ -535,6 +611,7 @@ export async function runRulesForSkill(
     ...(skill.metadata?.ruleScanFilename !== undefined
       ? { filenameOverride: skill.metadata.ruleScanFilename }
       : {}),
+    ...(skill.alsoInstalledAt !== undefined ? { alsoInstalledAt: skill.alsoInstalledAt } : {}),
     ...options,
   };
 

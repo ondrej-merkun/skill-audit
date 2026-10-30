@@ -546,9 +546,11 @@ name wins over a path with the same name: use `./list` to scan a directory named
   `NET-HOOK-HTTP-EXTERNAL`, `SEC-PROJECT-CREDENTIAL-HELPER`) do not run, because
   no agent loads the files under the path as its settings.
 - Supporting Markdown keeps its normal prompt-risk severity, as with
-  `--scan-all-supporting-files`. The scan audits content before install, and
-  the split into targets decides which `SKILL.md` can name a doc, so a nested
-  `SKILL.md` or a symlink must not make an injection count as inert docs.
+  `--scan-all-supporting-files`, because the scan audits content before
+  install. A nested `SKILL.md` or a symlink must not make an injection count
+  as inert docs. The default scan also demotes a doc only when no `SKILL.md`
+  of its skill or of a dir above it names the doc (`specs/DISCOVERY.md`,
+  disambiguation rule 6).
 - JSON output keeps schema 1.0. Each target reports the agent id `cross-agent`,
   its absolute path, and `install_state: "installed"`.
 - `--skill` selects one target from the path. `--agent` and
