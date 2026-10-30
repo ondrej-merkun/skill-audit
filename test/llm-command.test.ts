@@ -106,9 +106,15 @@ describe('llm commands', () => {
     expect(stripAnsi(stdoutChunks.join(''))).toContain(expected);
   });
 
-  it('checks a model with the minimal OpenAI-compatible chat request', async () => {
+  // The documented base URL ends in /v1, as in the OpenAI SDK. A base URL without
+  // /v1 is a server root, which older releases expected.
+  it.each([
+    ['http://127.0.0.1:1234/v1', 'http://127.0.0.1:1234/v1/chat/completions'],
+    ['http://127.0.0.1:1234', 'http://127.0.0.1:1234/v1/chat/completions'],
+    ['http://127.0.0.1:1234/api', 'http://127.0.0.1:1234/api/v1/chat/completions'],
+  ])('checks base URL %s with the minimal chat request to %s', async (baseUrl, expectedUrl) => {
     await runLlmAdd('lmstudio', {
-      baseUrl: 'http://127.0.0.1:1234/api',
+      baseUrl,
       model: 'local-model',
     });
     stdoutChunks = [];
@@ -118,7 +124,7 @@ describe('llm commands', () => {
 
     const out = stripAnsi(stdoutChunks.join(''));
     expect(out).toContain('lmstudio ok');
-    expect(calls[0]?.url).toBe('http://127.0.0.1:1234/api/v1/chat/completions');
+    expect(calls[0]?.url).toBe(expectedUrl);
     expect(calls[0]?.body).toMatchObject({
       model: 'local-model',
       messages: [{ role: 'user', content: 'Reply with OK.' }],
