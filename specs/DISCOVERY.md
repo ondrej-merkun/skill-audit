@@ -368,7 +368,8 @@ Every directory that holds a `SKILL.md` is one skill, at any depth and with
 the skills root itself included. Codex and Cursor load skills nested under
 grouping directories, and Gemini CLI loads a root `SKILL.md`. The walk has no
 depth limit and does not skip hidden directories, because the rule engine
-scans each `SKILL.md` directory as its own root.
+scans each `SKILL.md` directory as its own root. The docs that a parent
+`SKILL.md` names still count in the nested skill (disambiguation rule 6).
 
 One shared walker emits these skills once for each of those agents that is
 installed. `discoverAll()` then collapses the identical rows into one skill
@@ -516,6 +517,16 @@ workspaces that the config assigns to other agents.
    `docs -> scripts` cannot mask `scripts/setup.sh`. Each skipped second
    link also goes into `treeSha256`, so two copies that differ only by
    such a link do not collapse under rule 2.
+6. A nested `SKILL.md` dir is its own skill, and the rule engine leaves it
+   out of the parent's walk. That split must not change whether a doc
+   that a manifest names counts. A doc in a skill is referenced when its
+   own `SKILL.md` names it, or when a `SKILL.md` in any dir above the skill
+   names it. "Above" covers every installed path of the skill: the
+   reported path and each identical copy that rule 2 collapsed into it.
+   So with `helper/SKILL.md` in `date-parser`, an injection in
+   `helper/docs/inject.md` that the `date-parser` manifest names keeps its
+   severity. A doc in a nested skill that no manifest names stays inert
+   supporting docs.
 
 ## Path expansion
 
