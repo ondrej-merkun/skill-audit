@@ -12,7 +12,7 @@ inputs:
     # Pinned so that the action ref also identifies the CLI package version that
     # runs. The CLI runtime dependencies still resolve within their semver ranges.
     # Keep equal to packages/cli/package.json (test/version-pins.test.ts).
-    default: '0.2.1'
+    default: '0.3.0'
   path:
     description: 'Working directory for the scan and the results file (default: repo root)'
     required: false

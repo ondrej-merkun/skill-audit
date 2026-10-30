@@ -1,6 +1,6 @@
 # skill-audit — Claude Code Skill
 
-Lets Claude Code run `npx @ondrej-merkun/skill-audit@0.2.1` on your behalf to audit
+Lets Claude Code run `npx @ondrej-merkun/skill-audit@0.3.0` on your behalf to audit
 installed agent skills for prompt injection, exfiltration, and malicious code.
 
 ## Install
@@ -26,7 +26,7 @@ After installing, ask Claude Code:
 > "Check my skills for anything suspicious"
 > "Run skill-audit on my Cursor rules"
 
-Claude will run `npx --yes @ondrej-merkun/skill-audit@0.2.1 scan --json`, parse the
+Claude will run `npx --yes @ondrej-merkun/skill-audit@0.3.0 scan --json`, parse the
 output, and summarize compromised skills with one-line remediations.
 
 To audit a specific skill:
@@ -35,7 +35,7 @@ To audit a specific skill:
 
 ## What it does
 
-Invokes `npx @ondrej-merkun/skill-audit@0.2.1` (no install required; npx runs it) and
+Invokes `npx @ondrej-merkun/skill-audit@0.3.0` (no install required; npx runs it) and
 interprets the structured JSON output. Claude will:
 
 1. Report total skills scanned and how many are compromised
@@ -48,11 +48,11 @@ confirmation.
 ## Requirements
 
 - Node.js 22+ (for `npx`)
-- Internet access for `npx @ondrej-merkun/skill-audit@0.2.1` on first run (cached
+- Internet access for `npx @ondrej-merkun/skill-audit@0.3.0` on first run (cached
   afterward by npm)
 
 ## Source
 
 This skill is part of the [skill-audit](https://github.com/ondrej-merkun/skill-audit)
-project. The CLI it invokes (`npx @ondrej-merkun/skill-audit@0.2.1`) runs entirely
+project. The CLI it invokes (`npx @ondrej-merkun/skill-audit@0.3.0`) runs entirely
 locally — no skill content is sent to any server by the deterministic scan.

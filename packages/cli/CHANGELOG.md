@@ -1,6 +1,33 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
+
+### Highlights
+
+- **Breaking changes:** The CLI needs Node.js 22 or later and ships only the
+  ESM `skill-audit` bin. The GitHub Action runs the CLI version that matches
+  its ref, and `--fail-on` accepts only `REVIEW` or `FAIL`. The full list is
+  below.
+- **Audit before you install:** `skill-audit scan <path>` scans the skills at a
+  path, and the GitHub Action has a matching `scan-path` input.
+- **GitHub code scanning:** `--sarif` writes SARIF 2.1.0, and the GitHub Action
+  can upload it.
+- **Much wider coverage:** The scan reads agent hooks and settings, each MCP
+  server as its own target, Claude Code memory and rule files, the shared
+  `.agents/skills` directories, and symlinked skills. It also covers more
+  agents: Cursor, GitHub Copilot, Gemini CLI, OpenCode, Amp, and OpenClaw.
+- **Stronger detection:** The catalog has 50 rules. New and extended rules
+  catch environment exfiltration in Python and JavaScript, remote code imports,
+  `curl | bash` installs, password-protected archives, trigger clauses that
+  send local context, hidden Unicode, and risky project settings from recent
+  CVEs.
+- **Harder to evade:** Headings, skill titles, padding, comments, interpreter
+  options, docs folders, and nested `SKILL.md` files no longer hide findings.
+- **Safer, more honest results:** An incomplete scan exits 3 instead of
+  reporting PASS, the HTML report no longer runs scripts from scanned skills,
+  and the local LLM review accepts only real loopback hosts.
+
+### All changes
 
 - **Breaking:** Require Node.js 22 or later to run the CLI. Node.js 20 is no
   longer supported.
