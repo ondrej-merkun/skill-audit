@@ -122,6 +122,12 @@ at the bottom and the loop will stop.
 - `tsdown` `^0.23.3`, dev dependency of `packages/cli`, added in #69. It
   replaced `tsup`, which is no longer maintained, and builds the one ESM bin,
   `dist/index.js`. It needs Node.js `^22.18.0 || ^24.11.0 || >=26.0.0`.
+- `ajv` `^8.20.0`, `ajv-draft-04` `^1.0.0`, and `ajv-formats` `^3.0.1`, root
+  dev dependencies for the SARIF output tests. They validate `scan --sarif`
+  output against the vendored OASIS SARIF 2.1.0 errata01 schema
+  (`test/schemas/sarif-schema-2.1.0.json`). That schema is draft-04, so it needs
+  the `ajv-draft-04` class. `ajv-formats` checks the `uri` and `uri-reference`
+  formats of artifact locations. The CLI does not ship them.
 
 ## Decisions made during implementation
 

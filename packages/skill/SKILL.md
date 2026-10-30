@@ -91,6 +91,7 @@ Options:
 | `--summary` | Emit compact one-line summary output. |
 | `--html <file>` | Write a standalone HTML report and still print the selected scan payload. |
 | `-o, --output <file>` | Write the selected non-HTML output to a file instead of stdout. |
+| `--sarif [file]` | Write SARIF 2.1.0 for GitHub code scanning to a file, or to stdout without a file. |
 | `--strict` | Treat REVIEW as FAIL for exit-code purposes. |
 | `--fail-on <band>` | Set exit threshold to `FAIL` or `REVIEW`; default is `FAIL`. |
 | `--agent <id>` | Restrict scan to one agent id. |

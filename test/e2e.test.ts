@@ -7,14 +7,17 @@
  */
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { cp, mkdir, mkdtemp, open, readFile, rm, writeFile } from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
+import { cp, mkdir, mkdtemp, open, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { sarifSchemaErrors } from './helpers/sarif-schema.js';
 import stripAnsi from './helpers/strip-ansi.js';
 import { SUPPORTED_AGENT_IDS } from '../packages/cli/src/agent-names.js';
+import { ALL_RULES } from '../packages/cli/src/rules/index.js';
 
 const CLI = fileURLToPath(new URL('../packages/cli/dist/index.js', import.meta.url));
 const PACKAGE_JSON = fileURLToPath(new URL('../packages/cli/package.json', import.meta.url));
@@ -85,6 +88,7 @@ type JsonFinding = {
   severity: string;
   category: string;
   file: string;
+  line: number;
   message: string;
 };
 
@@ -117,6 +121,38 @@ type JsonOutput = {
     percent_compromised: number;
     verdict: string;
   };
+};
+
+type SarifResult = {
+  ruleId: string;
+  ruleIndex: number;
+  level: string;
+  message: { text: string };
+  locations: Array<{
+    physicalLocation: {
+      artifactLocation: { uri: string; uriBaseId?: string };
+      region: { startLine: number; startColumn?: number };
+    };
+  }>;
+  partialFingerprints?: { primaryLocationLineHash: string };
+};
+
+type SarifLog = {
+  version: string;
+  runs: Array<{
+    tool: { driver: { name: string; rules: Array<{ id: string; help: { text: string } }> } };
+    originalUriBaseIds: Record<string, { uri: string }>;
+    results: SarifResult[];
+  }>;
+};
+
+// specs/OUTPUT.md maps finding severities to SARIF levels.
+const SARIF_LEVEL_BY_SEVERITY: Record<string, string> = {
+  critical: 'error',
+  high: 'error',
+  medium: 'warning',
+  low: 'note',
+  info: 'note',
 };
 
 describe('e2e: CLI binary', () => {
@@ -402,6 +438,7 @@ describe('e2e: scan flags', () => {
     expect(stdout).toContain('--json');
     expect(stdout).toContain('--html [file]');
     expect(normalizedStdout).toContain('default: scan.html');
+    expect(stdout).toContain('--sarif [file]');
     expect(stdout).toContain('--include-marketplaces');
     expect(normalizedStdout).toContain('locally available but inactive marketplace');
     expect(stdout).toContain('--scan-all-supporting-files');
@@ -584,6 +621,118 @@ describe('e2e: scan flags', () => {
     const result = JSON.parse(await readFile(outputPath, 'utf-8')) as JsonOutput;
     expect(result.schema_version).toBe('1.0');
     expect(result.skills).toHaveLength(1);
+  });
+
+  it('scan --json --output with --sarif writes one risk-first order with GitHub-ready locations', async () => {
+    // A project skill reached through a symlink, in a dir name with a space, and a home skill.
+    const sharedSkill = join(tempCwd, 'shared skills', 'security auditor');
+    await cp(join(MALICIOUS_DIR, 'security-auditor-override'), sharedSkill, { recursive: true });
+    await mkdir(join(tempCwd, '.claude', 'skills'), { recursive: true });
+    await symlink(sharedSkill, join(tempCwd, '.claude', 'skills', 'security-auditor-override'));
+    await cp(
+      join(MALICIOUS_DIR, 'override-instructions-skill'),
+      join(skillsDir, 'override-instructions-skill'),
+      { recursive: true }
+    );
+
+    const jsonPath = join(tempCwd, 'skill-audit-results.json');
+    const sarifPath = join(tempCwd, 'skill-audit.sarif');
+    const env = { HOME: tempHome, USERPROFILE: tempHome, SKILL_AUDIT_CWD: tempCwd };
+    const { stdout, code } = await runCli(
+      ['scan', '--json', '--output', jsonPath, '--sarif', sarifPath, '--agent', 'claude-code'],
+      env
+    );
+
+    expect(code).toBe(1);
+    expect(stdout).toBe('');
+    const json = JSON.parse(await readFile(jsonPath, 'utf-8')) as JsonOutput;
+    const sarif = JSON.parse(await readFile(sarifPath, 'utf-8')) as SarifLog;
+    expect(sarifSchemaErrors(sarif)).toEqual([]);
+
+    const run = sarif.runs[0];
+    if (run === undefined) throw new Error('SARIF log has no run');
+    const jsonFindings = json.skills.flatMap((skill) =>
+      skill.findings.map((finding) => ({
+        ...finding,
+        inHome: skill.agents.every((agent) => agent.path.startsWith(tempHome)),
+      }))
+    );
+    expect(new Set(jsonFindings.map((finding) => finding.inHome))).toEqual(new Set([true, false]));
+    expect(run.results.map((result) => result.ruleId)).toEqual(
+      jsonFindings.map((finding) => finding.rule_id)
+    );
+
+    const ruleIds = run.tool.driver.rules.map((rule) => rule.id);
+    expect(ruleIds).toEqual(expect.arrayContaining(ALL_RULES.map((rule) => rule.id)));
+    const piOverride = ALL_RULES.find((rule) => rule.id === 'PI-OVERRIDE');
+    const piOverrideHelp = run.tool.driver.rules.find((rule) => rule.id === 'PI-OVERRIDE')?.help;
+    expect(piOverrideHelp?.text).toContain(piOverride?.message);
+    expect(piOverrideHelp?.text).toContain(piOverride?.fix);
+
+    const projectRootUri = `${pathToFileURL(realpathSync(tempCwd)).href}/`;
+    const homeSkillUri = `${pathToFileURL(realpathSync(tempHome)).href}/.claude/skills/override-instructions-skill/`;
+    expect(run.originalUriBaseIds['%SRCROOT%']?.uri).toBe(projectRootUri);
+    run.results.forEach((result, index) => {
+      const finding = jsonFindings[index];
+      const location = result.locations[0]?.physicalLocation;
+      expect(run.tool.driver.rules[result.ruleIndex]?.id).toBe(result.ruleId);
+      expect(result.level).toBe(SARIF_LEVEL_BY_SEVERITY[finding?.severity ?? '']);
+      expect(result.message.text).toBe(finding?.message);
+      expect(location?.region.startLine).toBe(finding?.line);
+      if (finding?.inHome) {
+        expect(location?.artifactLocation.uriBaseId).toBeUndefined();
+        expect(location?.artifactLocation.uri.startsWith(homeSkillUri)).toBe(true);
+        expect(result.partialFingerprints?.primaryLocationLineHash).toMatch(/^[0-9a-f]{16}:\d+$/);
+      } else {
+        // The link is resolved, because GitHub cannot show a result in a symlinked file.
+        expect(location?.artifactLocation.uriBaseId).toBe('%SRCROOT%');
+        expect(location?.artifactLocation.uri.startsWith('shared%20skills/security%20auditor/')).toBe(
+          true
+        );
+        // upload-sarif computes the fingerprint of a repository file itself.
+        expect(result.partialFingerprints).toBeUndefined();
+      }
+    });
+  });
+
+  it('documented --sarif invocations write SARIF to a file or to stdout', async () => {
+    await cp(
+      join(MALICIOUS_DIR, 'override-instructions-skill'),
+      join(skillsDir, 'override-instructions-skill'),
+      { recursive: true }
+    );
+
+    const env = { HOME: tempHome, USERPROFILE: tempHome, SKILL_AUDIT_CWD: tempCwd };
+    const fileRun = await runCli(['scan', '--sarif', 'skill-audit.sarif'], env, { cwd: tempCwd });
+    const stdoutRun = await runCli(['--sarif'], env);
+    const conflictRun = await runCli(['scan', '--sarif', '--json'], env);
+
+    expect(fileRun.code).toBe(stdoutRun.code);
+    expect(fileRun.code).toBeLessThan(2);
+    expect(stripAnsi(fileRun.stdout)).toContain('override-instructions-skill');
+    expect(stripAnsi(fileRun.stderr)).toContain('SARIF report written to skill-audit.sarif');
+    const fileLog = JSON.parse(await readFile(join(tempCwd, 'skill-audit.sarif'), 'utf-8'));
+    expect(sarifSchemaErrors(fileLog)).toEqual([]);
+    expect((fileLog as SarifLog).runs[0]?.results.length).toBeGreaterThan(0);
+    expect(JSON.parse(stdoutRun.stdout)).toEqual(fileLog);
+    expect(conflictRun.code).toBe(2);
+    expect(conflictRun.stderr).toContain('--sarif');
+  });
+
+  it('--sarif writes a log with no results when no skills are found', async () => {
+    // An empty log lets an upload close the alerts of skills that a repository removed.
+    const env = { HOME: tempHome, USERPROFILE: tempHome, SKILL_AUDIT_CWD: tempCwd };
+    const fileRun = await runCli(['scan', '--sarif', 'skill-audit.sarif'], env, { cwd: tempCwd });
+    const stdoutRun = await runCli(['--sarif'], env);
+
+    expect(fileRun.code).toBe(0);
+    expect(fileRun.stdout).toContain('No skills found');
+    const fileLog = JSON.parse(await readFile(join(tempCwd, 'skill-audit.sarif'), 'utf-8'));
+    expect(sarifSchemaErrors(fileLog)).toEqual([]);
+    expect((fileLog as SarifLog).runs[0]?.results).toEqual([]);
+    expect(stdoutRun.code).toBe(0);
+    expect(JSON.parse(stdoutRun.stdout)).toEqual(fileLog);
+    expect(stdoutRun.stderr).toContain('No skills found');
   });
 
   it('--strict is accepted as a flag without tool error', async () => {

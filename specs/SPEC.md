@@ -433,6 +433,7 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 | (default) | TUI table |
 | `--json` | Machine-readable per the schema below |
 | `--html [file]` | Standalone HTML report, defaulting to `scan.html` |
+| `--sarif [file]` | SARIF 2.1.0 for GitHub code scanning, to `file` or to stdout (see `specs/OUTPUT.md`) |
 | `--summary` | 3-line output for CI logs: `47 skills · 8 compromised · FAIL` |
 | `--include-marketplaces` | Include inactive local marketplace inventory and label rows as marketplace |
 
@@ -477,7 +478,7 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 | `skill-audit scan --agent claude-code` | Restrict to one agent |
 | `skill-audit scan --skill <skill-name-or-id>` | Restrict scan to one matching skill |
 | `skill-audit scan --include-marketplaces` | Include inactive local marketplace inventory and label it separately |
-| `skill-audit scan --json` / `--html [file]` / `--summary` | Output formats |
+| `skill-audit scan --json` / `--html [file]` / `--sarif [file]` / `--summary` | Output formats |
 | `skill-audit scan --llm <name>` | Optional local LLM review; repeat, comma-separate, or use `all` |
 | `skill-audit scan --strict` | REVIEW becomes FAIL; exit non-zero |
 | `skill-audit llm add <name> --base-url <url> --model <id>` | Store a loopback OpenAI-compatible local model |

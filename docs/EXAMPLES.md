@@ -102,6 +102,25 @@ Open the generated file in a browser or upload it as a CI artifact. `--html`
 and `--output` are separate destination modes; use only one of them in the same
 command.
 
+## SARIF For GitHub Code Scanning
+
+Write a SARIF 2.1.0 log beside the normal scan output:
+
+```bash
+skill-audit scan --sarif skill-audit.sarif
+skill-audit scan --json --output skill-audit-results.json --sarif skill-audit.sarif
+```
+
+Without a file, `--sarif` prints SARIF to stdout, and `--output` can write it:
+
+```bash
+skill-audit scan --sarif --output skill-audit.sarif
+```
+
+Upload the file with `github/codeql-action/upload-sarif` to see the findings as
+code scanning alerts. Run the scan from the repository root. See the
+[GitHub code scanning workflow](REFERENCE.md#github-code-scanning).
+
 ## Explain One Skill
 
 Use `explain` when a table row needs investigation:

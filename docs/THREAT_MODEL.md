@@ -70,7 +70,9 @@ rule engine boundaries as the CLI.
 Action runs should not require long-lived publish or scan secrets. If a token is
 available through GitHub Actions, it should be scoped to the job need. Reports
 generated in CI should be treated as potentially sensitive because snippets and
-file paths can reveal repository internals.
+file paths can reveal repository internals. A SARIF log that a workflow uploads
+to GitHub code scanning holds rule ids, messages, file paths, and line numbers,
+but no snippets.
 
 ## False Positives
 

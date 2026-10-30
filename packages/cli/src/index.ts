@@ -39,6 +39,10 @@ function addScanOptions(command: Command): Command {
     .option('--summary', 'emit compact one-liner summary instead of full table')
     .option('--html [file]', 'write standalone HTML report to [file] (default: scan.html)')
     .option('-o, --output <file>', 'write selected non-HTML scan output to <file>')
+    .option(
+      '--sarif [file]',
+      'write SARIF 2.1.0 for GitHub code scanning to [file], or to stdout without [file]'
+    )
     .addOption(new Option('--offline', 'skip optional LLM review').hideHelp())
     .option('--strict', 'treat REVIEW band as FAIL for exit code purposes')
     .option('--agent <id>', `restrict scan to a single agent. ${SUPPORTED_AGENT_OPTION_HELP}`)
@@ -73,6 +77,8 @@ function scanOptionsFrom(cmdOpts: Record<string, unknown>): Partial<ScanOptions>
           ? cmdOpts.html
           : undefined,
     output: typeof cmdOpts.output === 'string' ? cmdOpts.output : undefined,
+    sarif:
+      cmdOpts.sarif === true ? true : typeof cmdOpts.sarif === 'string' ? cmdOpts.sarif : undefined,
     offline: cmdOpts.offline === true,
     strict: cmdOpts.strict === true,
     agent: typeof cmdOpts.agent === 'string' ? cmdOpts.agent : undefined,

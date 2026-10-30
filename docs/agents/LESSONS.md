@@ -619,6 +619,15 @@ without a commit message explaining why it no longer applies.
   change. Serve the HTML report on `127.0.0.1` for browser checks, because the
   Playwright MCP blocks `file://` URLs.
 
+- **L6.18: Read the SARIF consumer's code, not only the field docs.** _The
+  SARIF output design first gave every result a `primaryLocationLineHash`.
+  `github/codeql-action/upload-sarif` (`src/fingerprints.ts`) computes that hash
+  for each file in the checkout and warns for each result whose supplied hash
+  differs. It skips absolute paths outside the checkout, ignores `uriBaseId`,
+  and reads every relative URI from the checkout root._
+  Before you emit an optional SARIF field, check what the upload action does
+  with it. Supply a fingerprint only where the action cannot compute one.
+
 ## 7. Rule fixtures
 
 - **L7.1 — Malicious secret fixtures must not use provider placeholder keys.** _Task
