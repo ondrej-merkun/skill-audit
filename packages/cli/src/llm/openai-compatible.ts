@@ -24,12 +24,13 @@ export type FetchLike = (
   json: () => Promise<unknown>;
 }>;
 
-// OpenAI-compatible health checks intentionally use only the stable local-server
-// subset: POST <baseUrl>/v1/chat/completions with model, messages, max_tokens,
-// temperature, and stream=false; a 2xx JSON response with a choices array is
-// considered reachable. No skill content, headers, or secrets are sent here.
-function chatCompletionsUrl(baseUrl: string): string {
-  return `${baseUrl.replace(/\/+$/, '')}/v1/chat/completions`;
+// The base URL follows the OpenAI SDK convention that Ollama, LM Studio, llama.cpp
+// server, and vLLM document: it ends in /v1, and the client appends
+// /chat/completions. A base URL without the /v1 suffix is a server root, which
+// older releases expected, so it gets /v1/chat/completions.
+export function chatCompletionsUrl(baseUrl: string): string {
+  const base = baseUrl.replace(/\/+$/, '');
+  return base.endsWith('/v1') ? `${base}/chat/completions` : `${base}/v1/chat/completions`;
 }
 
 function isAbortError(err: unknown): boolean {
@@ -45,6 +46,10 @@ function validChatCompletionsResponse(value: unknown): boolean {
 // 60s - intentionally long as cold-starting a local LLM can genuinely take a while
 const DEFAULT_LLM_LOAD_TIMEOUT_MS = 60_000;
 
+// OpenAI-compatible health checks intentionally use only the stable local-server
+// subset: POST chatCompletionsUrl(baseUrl) with model, messages, max_tokens,
+// temperature, and stream=false; a 2xx JSON response with a choices array is
+// considered reachable. No skill content, headers, or secrets are sent here.
 export async function checkOpenAiCompatibleConnection(
   config: LocalLlmConfig,
   fetchImpl: FetchLike = fetch

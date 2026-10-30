@@ -146,7 +146,7 @@ describe('runExplain', () => {
             {
               name: 'reviewer',
               provider: 'openai-compatible',
-              baseUrl: 'http://localhost:11434',
+              baseUrl: 'http://localhost:11434/v1',
               model: 'local-reviewer',
               timeoutMs: 1000,
               contextTokens: 800,

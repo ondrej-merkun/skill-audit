@@ -1,6 +1,7 @@
 import type { LlmReviewFinding, LlmReviewResult, Severity } from '../types.js';
 import { LLM_REVIEW_CATEGORIES } from './categories.js';
 import type { LocalLlmConfig } from './config.js';
+import { chatCompletionsUrl } from './openai-compatible.js';
 import type { LlmReviewPayload } from './prompt.js';
 import { buildLlmReviewMessages, LLM_REVIEW_PROMPT_VERSION } from './prompt.js';
 
@@ -30,10 +31,6 @@ const PLACEHOLDER_STRINGS = new Set([
 ]);
 
 type ParsedReviewFinding = LlmReviewFinding | 'skip' | null;
-
-function chatCompletionsUrl(baseUrl: string): string {
-  return `${baseUrl.replace(/\/+$/, '')}/v1/chat/completions`;
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
