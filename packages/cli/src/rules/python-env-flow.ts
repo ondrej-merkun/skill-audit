@@ -21,6 +21,8 @@ type TargetTrie = { name: string | undefined; children: Map<string, TargetTrie> 
 type Parameter = {
   name: string;
   kind: 'positional' | 'variadic' | 'keywords';
+  /** A parameter before `/` takes no keyword argument. */
+  positionalOnly: boolean;
   defaultValue: Range | undefined;
 };
 /**
@@ -98,7 +100,7 @@ const WITH_STATEMENT = /^(?:async\s+)?with\b/;
 const CONTAINER_UPDATE = /^([A-Za-z_][\w.]*)\.(?:append|extend|insert|update|add|setdefault)\s*\(/;
 const PARAMETER = /^\s*(?:(\*{1,2})\s*)?([A-Za-z_]\w*)/;
 const KEYWORD_ARGUMENT = /\s*([A-Za-z_]\w*)\s*=(?!=)/y;
-const UNPACKED_ARGUMENT = /\s*\*/y;
+const UNPACKED_ARGUMENT = /\s*(\*{1,2})/y;
 const DOTTED_NAME = /(?<![\w.])[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*/g;
 const LEADING_DOTTED_NAME = /[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*/;
 const IDENTIFIER = /[A-Za-z_]\w*/g;
@@ -306,8 +308,11 @@ function addFunction(graph: FlowGraph, name: string, id: string, parameters: Par
     }
     if (parameter.kind === 'keywords') slots.push(`${name}()=*`);
     if (parameter.kind === 'positional') {
-      slots.push(`${name}()#${position}`, `${name}()=${parameter.name}`);
-      signature.namedParameters.add(parameter.name);
+      slots.push(`${name}()#${position}`);
+      if (!parameter.positionalOnly) {
+        slots.push(`${name}()=${parameter.name}`);
+        signature.namedParameters.add(parameter.name);
+      }
       position += 1;
     }
     graph.parameterSlots.set(`${id}:${parameter.name}`, slots);
@@ -317,9 +322,10 @@ function addFunction(graph: FlowGraph, name: string, id: string, parameters: Par
 /**
  * The arguments of each call to a function that the file defines flow into call slots: a keyword
  * argument into `f()=<name>`, a positional argument into `f()#<position>`, and an unpacked
- * argument (`*args`, `**kwargs`) into `f()?`, which every parameter reads. An argument that no
- * named parameter takes also flows into `f()#*` or `f()=*`, for `*args` or `**kwargs`. Each
- * argument has a fixed number of slots, however many functions share the name.
+ * argument (`*args`, `**kwargs`) into `f()?`, which every parameter reads. So does a positional
+ * argument after `*args`, whose position is unknown. An argument that no named parameter takes
+ * also flows into `f()#*` or `f()=*`, for `*args` or `**kwargs`. Each argument has a fixed number
+ * of slots, however many functions share the name.
  */
 function callArgumentFlows(parsed: ParsedCode, callSignatures: Map<string, CallSignature>): Flow[] {
   if (callSignatures.size === 0) return [];
@@ -333,6 +339,7 @@ function callArgumentFlows(parsed: ParsedCode, callSignatures: Map<string, CallS
     const name = match[1] ?? '';
     const signature = callSignatures.get(name);
     let position = 0;
+    let positionKnown = true;
 
     return topLevelArguments(parsed, match.index + match[0].length - 1).map((argument): Flow => {
       KEYWORD_ARGUMENT.lastIndex = argument.start;
@@ -344,7 +351,10 @@ function callArgumentFlows(parsed: ParsedCode, callSignatures: Map<string, CallS
       }
 
       UNPACKED_ARGUMENT.lastIndex = argument.start;
-      if (UNPACKED_ARGUMENT.test(parsed.code)) return { targets: [`${name}()?`], ...argument };
+      const stars = UNPACKED_ARGUMENT.exec(parsed.code)?.[1];
+      // After `*items`, the position of the next positional arguments is unknown.
+      if (stars === '*') positionKnown = false;
+      if (stars !== undefined || !positionKnown) return { targets: [`${name}()?`], ...argument };
 
       const targets = [`${name}()#${position}`];
       if (position >= (signature?.variadicFrom ?? Number.POSITIVE_INFINITY)) {
@@ -786,16 +796,22 @@ function boundNames(leftSide: string): string[] {
 
 /** The parameters of a `def`, without `self` and `cls`, each with its default value. */
 function parameterList(parsed: ParsedCode, openParen: number): Parameter[] {
-  return topLevelArguments(parsed, openParen).flatMap((argument): Parameter[] => {
-    const text = parsed.code.slice(argument.start, argument.end);
+  const texts = topLevelArguments(parsed, openParen).map((argument) => ({
+    argument,
+    text: parsed.code.slice(argument.start, argument.end),
+  }));
+  const positionalOnlyEnd = texts.findIndex(({ text }) => text.trim() === '/');
+
+  return texts.flatMap(({ argument, text }, index): Parameter[] => {
     const [, stars, name] = PARAMETER.exec(text) ?? [];
     if (name === undefined || IMPLICIT_PARAMETERS.has(name)) return [];
 
     const kind = stars === '*' ? 'variadic' : stars === '**' ? 'keywords' : 'positional';
+    const positionalOnly = index < positionalOnlyEnd;
     const equals = assignmentOperator(text);
     const defaultValue =
       equals >= 0 ? { start: argument.start + equals + 1, end: argument.end } : undefined;
-    return [{ name, kind, defaultValue }];
+    return [{ name, kind, positionalOnly, defaultValue }];
   });
 }
 
