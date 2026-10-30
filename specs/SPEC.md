@@ -143,7 +143,7 @@ Adding a new agent = adding one file and registering in `discovery/index.ts`. No
 |---|---|---|---|
 | **Claude Code** | `~/.claude/skills/*/SKILL.md`; installed plugin payloads under `~/.claude/plugins/<marketplace>/<plugin>/` **(recursive — walk to any depth where a SKILL.md is present)**; `~/.claude/plugins/<marketplace>/<plugin>/{agents,commands}/**`; `~/.claude/commands/*.md`; `~/.claude/agents/*.md`; MCP in `~/.claude.json` (inc. `projects.<abs-path>.mcpServers`). Inactive marketplace inventory under `plugins/marketplaces/` is skipped unless `--include-marketplaces` is set. | `.claude/skills/`, `.claude/commands/`, `.claude/agents/`, `.mcp.json`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` | `SKILL.md` (YAML+MD), `plugin.json`, `.mcp.json` |
 | **OpenAI Codex** | `~/.codex/AGENTS.md`, `~/.codex/AGENTS.override.md`, `~/.codex/config.toml`, `~/.codex/skills/`, `~/.codex/plugins/`, `~/.codex/prompts/`, `~/.agents/skills/`. `$CODEX_HOME` overrides the `~/.codex` paths. | `AGENTS.md` (walked up), `.codex/config.toml` (if trusted), `.agents/skills/` | `AGENTS.md`, `SKILL.md`, TOML `[mcp_servers.*]` |
-| **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/`, `~/.agents/skills/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, legacy `.cursorrules`, `.agents/skills/` | `.mdc`, JSON, `SKILL.md` |
+| **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/`, `~/.cursor/skills/`, `~/.cursor/agents/`, local plugins in `~/.cursor/plugins/local/`, `~/.agents/skills/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, `.cursor/skills/`, `.cursor/agents/`, legacy `.cursorrules`, `.agents/skills/` | `.mdc`, JSON, `SKILL.md`, `.cursor-plugin/plugin.json` or root `plugin.json` |
 | **Gemini CLI** | `~/.gemini/extensions/*/gemini-extension.json`, `~/.gemini/commands/*.toml`, `~/.gemini/agents/`, `~/.gemini/skills/`, `~/.gemini/settings.json`, `~/.agents/skills/` | `.gemini/extensions/`, `.gemini/commands/`, `.gemini/skills/`, `.gemini/settings.json`, `GEMINI.md`, `.agents/skills/` | `gemini-extension.json` (JSON), `.toml`, `SKILL.md` |
 | **GitHub Copilot** | `~/.copilot/skills/*/SKILL.md`, `~/.claude/skills/`, `~/.agents/skills/` | `.github/skills/*/SKILL.md`, `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.agents/skills/` | `SKILL.md`, plain `.md` |
 | **Cline** | `~/Documents/Cline/Rules/`, `~/.cline/skills/`, `~/Documents/Cline/Workflows/`, `~/.cline/data/settings/cline_mcp_settings.json`, `$CLINE_DIR/data/settings/cline_mcp_settings.json`, VS Code / JetBrains `globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`, `~/.agents/skills/` | `.clinerules`, `.clinerules/*.md`, `.clinerules/*.txt`, `.cline/skills/`, `.clinerules/skills/`, `.clinerules/workflows/`, `.agents/skills/`, cross-reads `.cursorrules`, `AGENTS.md`, `CLAUDE.md` | `SKILL.md`, `.md`, `.txt`, JSON |
@@ -159,7 +159,7 @@ full path list is in `specs/DISCOVERY.md`):
 |---|---|---|
 | **Claude Code** | `~/.claude/settings.json`, plugin `hooks/hooks.json` | `.claude/settings.json`, `.claude/settings.local.json` |
 | **OpenAI Codex** | `$CODEX_HOME/hooks.json` | `.codex/hooks.json` |
-| **Cursor** | `~/.cursor/hooks.json` | `.cursor/hooks.json` |
+| **Cursor** | `~/.cursor/hooks.json`, local plugin hooks files | `.cursor/hooks.json` |
 | **Gemini CLI** | `~/.gemini/settings.json` | `.gemini/settings.json` |
 | **GitHub Copilot** | `~/.copilot/hooks/*.json`, `~/.copilot/settings.json` | `.github/hooks/*.json`, `.github/copilot/settings.json`, `.github/copilot/settings.local.json` |
 | **Windsurf** | `~/.codeium/windsurf/hooks.json`, `~/.codeium/hooks.json` | `.devin/hooks.json`, legacy `.windsurf/hooks.json` |
@@ -188,7 +188,9 @@ All other discovered skills default to `installed`.
 enabled plugin/config/source proves the cached payload is exposed to an
 agent. For Codex, do not scan `~/.codex/plugins/cache` wholesale; resolve
 enabled plugins from `~/.codex/config.toml` or documented built-in runtime
-metadata, then walk only those active payload roots.
+metadata, then walk only those active payload roots. Cursor keeps no install
+or enable record next to `~/.cursor/plugins/cache`, so discovery scans only
+the plugins in `~/.cursor/plugins/local/`, which Cursor loads after a reload.
 
 **Shared Agent Skills rule.** `~/.agents/skills/` (user) and `.agents/skills/`
 (project) are read by Codex, Cursor, GitHub Copilot, Gemini CLI, Windsurf, and
@@ -199,7 +201,7 @@ registry dedupe collapses them into one skill that keeps every owning agent.
 
 **MVP discovery shortlist** (covers ~85% of user value):
 1. Claude Code (skills, plugins, agents, commands, all MCP sources)
-2. Cursor (MCP + rules)
+2. Cursor (MCP, rules, skills, subagents, hooks, local plugins)
 3. OpenAI Codex (`~/.codex/AGENTS*.md`, `config.toml`, `skills/`, `plugins/`, `prompts/`)
 4. Gemini CLI (extensions, commands, agents, skills, settings MCP)
 5. Cline (rules, skills, workflows, MCP settings)
