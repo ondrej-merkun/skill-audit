@@ -128,6 +128,18 @@ describe('claude-code: fixture skill tree', () => {
       join(versionedCacheSkillDir, 'SKILL.md'),
       '# Skill Security Auditor\n\nAudit installed skills for security issues.\n'
     );
+    // Claude Code loads a cached plugin version only from the install path that its record names.
+    await writeFile(
+      join(tempHome, '.claude', 'plugins', 'installed_plugins.json'),
+      JSON.stringify({
+        version: 2,
+        plugins: {
+          'skill-security-auditor@claude-code-skills': [
+            { scope: 'user', installPath: versionedCacheSkillDir },
+          ],
+        },
+      })
+    );
   });
 
   afterEach(async () => {

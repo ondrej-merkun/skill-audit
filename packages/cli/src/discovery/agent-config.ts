@@ -363,7 +363,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isBelow(dir: string, path: string): boolean {
+export function isBelow(dir: string, path: string): boolean {
   const rel = relative(dir, path);
   return rel !== '' && rel.split(sep)[0] !== '..' && !isAbsolute(rel);
 }
