@@ -12,6 +12,15 @@ import { computeTreeSha256 } from './tree-hash.js';
 
 const AGENT_ID = 'codex';
 
+// Dirs of `$CODEX_HOME/plugins` that the plugin walk skips. Enabled `cache` payloads are walked
+// on their own. Codex extracts a plugin into a temp dir in a staging dir and then installs a copy
+// into `cache`, so a temp dir that an interrupted install leaves behind is never loaded.
+const SKIPPED_PLUGINS_DIR_ENTRIES = new Set([
+  'cache',
+  '.marketplace-plugin-source-staging',
+  '.remote-plugin-install-staging',
+]);
+
 type WalkOptions = {
   includeMarketplaces?: boolean;
   skipDirectory?: (dirPath: string, entryName: string, parentPath: string) => boolean;
@@ -153,7 +162,8 @@ async function discoverPluginTree(
 ): Promise<Skill[]> {
   const files = await walkFiles(dir, {
     ...(options.includeMarketplaces === true ? { includeMarketplaces: true } : {}),
-    skipDirectory: (_dirPath, entryName, parentPath) => entryName === 'cache' && parentPath === dir,
+    skipDirectory: (_dirPath, entryName, parentPath) =>
+      SKIPPED_PLUGINS_DIR_ENTRIES.has(entryName) && parentPath === dir,
   });
   const skills: Skill[] = [];
 
