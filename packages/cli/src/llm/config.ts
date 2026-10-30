@@ -1,4 +1,5 @@
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { isIPv4 } from 'node:net';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -73,7 +74,8 @@ function parseConfig(value: unknown): LocalLlmConfig {
   return {
     name: value.name,
     provider: value.provider,
-    baseUrl: value.baseUrl,
+    // A hand-edited file, or one saved by an older release, must not route skill content off this machine.
+    baseUrl: normalizeLoopbackBaseUrl(value.baseUrl),
     model: value.model,
     ...(timeoutMs !== undefined ? { timeoutMs } : {}),
     ...(contextTokens !== undefined ? { contextTokens } : {}),
@@ -117,9 +119,16 @@ export async function saveLlmRegistry(registry: LocalLlmRegistry): Promise<void>
   await writeFile(path, `${JSON.stringify(registry, null, 2)}\n`, 'utf-8');
 }
 
+// Takes a WHATWG-parsed hostname: the parser lowercases it, writes `127.1` as
+// `127.0.0.1`, and writes every IPv6 loopback spelling as `[::1]`.
+// Names below `localhost`, such as `ollama.localhost`, are rejected: the system
+// resolver decides where they go. IPv4-mapped IPv6 is rejected; use 127.0.0.1.
 function isLoopbackHostname(hostname: string): boolean {
-  const normalized = hostname.toLowerCase().replace(/^\[(.*)\]$/, '$1');
-  return normalized === 'localhost' || normalized === '::1' || normalized.startsWith('127.');
+  return (
+    hostname === 'localhost' ||
+    hostname === '[::1]' ||
+    (isIPv4(hostname) && hostname.startsWith('127.'))
+  );
 }
 
 export function normalizeLoopbackBaseUrl(rawUrl: string): string {

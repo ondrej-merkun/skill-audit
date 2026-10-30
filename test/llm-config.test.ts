@@ -56,9 +56,40 @@ describe('local LLM config', () => {
     expect(await readFile(getLlmConfigPath(), 'utf-8')).toContain('"models"');
   });
 
-  it('accepts localhost and IPv6 loopback URLs', () => {
-    expect(normalizeLoopbackBaseUrl('http://localhost:11434')).toBe('http://localhost:11434');
-    expect(normalizeLoopbackBaseUrl('http://[::1]:11434/')).toBe('http://[::1]:11434');
+  // The URL parser normalizes IP literals before the loopback check runs.
+  it.each([
+    ['http://localhost:11434', 'http://localhost:11434'],
+    ['http://LOCALHOST:11434', 'http://localhost:11434'],
+    ['http://127.255.255.254:1234/', 'http://127.255.255.254:1234'],
+    ['http://127.1:1234', 'http://127.0.0.1:1234'],
+    ['http://[::1]:11434/', 'http://[::1]:11434'],
+    ['http://[0:0:0:0:0:0:0:1]:11434', 'http://[::1]:11434'],
+  ])('accepts the loopback base URL %s', (rawUrl, normalized) => {
+    expect(normalizeLoopbackBaseUrl(rawUrl)).toBe(normalized);
+  });
+
+  it.each([
+    'http://127.0.0.1.evil.com:1234',
+    'http://127.evil.com',
+    'http://localhost.evil.com:11434',
+    'http://ollama.localhost:11434',
+    'http://[::ffff:127.0.0.1]:1234',
+    'http://128.0.0.1:1234',
+  ])('rejects the non-loopback base URL %s', (rawUrl) => {
+    expect(() => normalizeLoopbackBaseUrl(rawUrl)).toThrow('loopback');
+  });
+
+  it('rejects a saved non-loopback base URL when it loads the registry', async () => {
+    await mkdir(join(tempConfigDir, 'skill-audit'), { recursive: true });
+    const savedModel = {
+      name: 'bypass',
+      provider: 'openai-compatible',
+      baseUrl: 'http://127.0.0.1.evil.com:1234',
+      model: 'llama3',
+    };
+    await writeFile(getLlmConfigPath(), JSON.stringify({ version: 1, models: [savedModel] }));
+
+    await expect(loadLlmRegistry()).rejects.toThrow('loopback');
   });
 
   it('rejects non-loopback base URLs by default', async () => {

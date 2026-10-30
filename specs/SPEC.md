@@ -566,9 +566,15 @@ Configuration is local-first:
   `~/.config/skill-audit/llms.json` when `XDG_CONFIG_HOME` is unset.
 - The initial provider type is `openai-compatible`, joined with
   `/v1/chat/completions`.
-- Base URLs must be loopback HTTP(S) hosts such as `127.0.0.1`, `localhost`,
-  or `[::1]`. Cloud-hosted model APIs, remote model URLs, accounts, and API
-  keys are not required for the default path.
+- Base URLs must be loopback HTTP(S) hosts: `localhost`, an IPv4 address in
+  `127.0.0.0/8`, or `[::1]`, after WHATWG URL parsing. So `http://127.1` is
+  loopback, and `http://127.0.0.1.evil.com` is not. Names below `localhost`,
+  such as `ollama.localhost`, are rejected because the system resolver decides
+  where they go. IPv4-mapped IPv6 addresses are rejected; use `127.0.0.1`.
+  The check runs on `llm add` and again each time `llms.json` loads, so a
+  hand-edited remote URL stops every LLM command. Cloud-hosted model APIs,
+  remote model URLs, accounts, and API keys are not required for the default
+  path.
 - `skill-audit llm check <name>` sends the smallest health-check request and
   never includes skill content.
 
