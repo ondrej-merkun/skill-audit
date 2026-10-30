@@ -444,6 +444,16 @@ describe('runRules', () => {
       severities: ['critical'],
     },
     {
+      skillMd: '```bash\n"${CLAUDE_PLUGIN_ROOT}"/examples/setup.sh\n```',
+      docFile: join('examples', 'setup.sh'),
+      severities: ['critical'],
+    },
+    {
+      skillMd: 'Check the setup with `bash "${CLAUDE_PLUGIN_ROOT}"/docs/setup.sh`.',
+      docFile: join('docs', 'setup.sh'),
+      severities: ['critical'],
+    },
+    {
       skillMd: 'Run scripts/example-setup.sh first.',
       docFile: join('scripts', 'example-setup.sh'),
       severities: ['critical'],
