@@ -285,14 +285,16 @@ source\s*<\(\s*(curl|wget)\s+\S+\s*\)
 eval\s*["'`]?\$\(\s*(curl|wget)
 ```
 
-**`SKILL-PASSWORD-ZIP` — Critical.** A password hides archive content from antivirus and data-loss scanners. Prompt files and scripts get the same severity. Extraction is the direct ClawHavoc AV-evasion IOC; a skill that opens the archive and password that the user gives (`unzip -P "$PASSWORD" "$ARCHIVE"`) does not match:
+**`SKILL-PASSWORD-ZIP` — Critical.** A password hides archive content from antivirus and data-loss scanners. Prompt files and scripts get the same severity. Extraction is the direct ClawHavoc AV-evasion IOC. `unzip` with a fixed password matches for any archive. A skill that opens the archive and password that the user gives (`unzip -P "$PASSWORD" "$ARCHIVE"`) does not match:
 ```regex
 unzip\s+-P\s+["']?\S+["']?\s+\S+\.zip
 7z\s+x\s+-p\S+\s+\S+
+\bunzip[ \t]+-P[ \t]*(?:["'](?![\s"'$%{<`])|[^\s"'$%{<`])
 ```
-Creation stages data for exfiltration and matches any password value, also a variable. The 7-Zip and RAR line is case-insensitive; RAR `-p-` (no password) does not match. See `specs/RULES.md` for the boundaries:
+Creation stages data for exfiltration and matches any password value, also a variable. Command names ignore case, because `ZIP` runs zip on a macOS file system. `zip -e` and `zipcloak` read the password from the terminal, and `expect` types it unattended. RAR `-p-` (no password) does not match. List-style process calls such as `subprocess.run(["zip", "-P", pw, ...])` and `spawn('zip', ['-P', pw])` also match. See `specs/RULES.md` for the boundaries and the list-style patterns:
 ```regex
-(?<![\w.-])zip(?=[ \t])[^\n|;&]{0,200}[ \t](?:-[A-Za-z0-9]{0,8}P|--password\b)
+[Zz](?<![\w.-][Zz])[Ii][Pp](?=[ \t])[^\n|;&]{0,200}[ \t](?:-[A-Za-z0-9]{0,8}[Pe]|--(?:password|encrypt)\b)
+zipcloak(?<![\w.-]zipcloak)[ \t]+(?:[-"'$]|[^\s|;&]{0,200}\.zip\b)
 (?<![\w.-])(?:7z[az]?|rar)[ \t]+a(?=[ \t])[^\n|;&]{0,200}[ \t]-h?p(?!-)\S
 \bWZ_AES\b
 ["']zip-encrypted["']
