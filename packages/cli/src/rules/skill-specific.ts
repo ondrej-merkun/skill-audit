@@ -70,8 +70,9 @@ export const SKILL_CURL_BASH_IN_MD: Rule = {
 const fetchThenEvalPattern = /fetch\s*\([^)]+\)\s*\.then\s*\([^)]*\beval\s*\(/;
 const requestsExecPattern =
   /\bexec\s*\(\s*(?:__import__\s*\(\s*['"]requests['"]\s*\)|requests)\s*\.\s*(?:get|post)\s*\([^)]+\)\s*\.\s*text/;
-// Any urllib call inside exec(), such as exec(urllib.request.urlopen(url).read()).
-const urllibExecPattern = /\bexec\s*\(\s*urllib\./;
+// Any urllib call inside exec(), such as exec(urllib.request.urlopen(url).read()), or a urlopen
+// that the file imported by name.
+const urllibExecPattern = /\bexec\s*\(\s*(?:urllib\.|urlopen\s*\()/;
 const awaitFetchEvalPattern =
   /eval\s*\(\s*await\s+(?:resp|response|res|r|data)\s*\.\s*text\s*\(\s*\)/;
 

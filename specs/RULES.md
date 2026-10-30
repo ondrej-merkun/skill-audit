@@ -325,7 +325,7 @@ decode-and-execute chains, string concatenation constructing shell commands,
 homoglyph characters in identifiers.
 
 **Skill-specific (3 more):** `SKILL-FETCH-AND-EXEC` (fetch-then-run in
-SKILL.md), `SKILL-DISABLE-SAFETY` (instructions to bypass user
+SKILL.md and code, such as `exec(urlopen(url).read())`), `SKILL-DISABLE-SAFETY` (instructions to bypass user
 confirmation), `SKILL-MEMORY-WRITE` (instructs model to write to its
 own memory system unprompted).
 
