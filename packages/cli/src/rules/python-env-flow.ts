@@ -23,11 +23,17 @@ type Parameter = {
   kind: 'positional' | 'variadic' | 'keywords';
   defaultValue: Range | undefined;
 };
+/**
+ * What the `def`s of one name take: the named parameters, which consume the keyword arguments of
+ * those names, and the first position that `*args` takes. Only the other arguments reach
+ * `*args` and `**kwargs`.
+ */
+type CallSignature = { namedParameters: Set<string>; variadicFrom: number };
 type FlowGraph = {
   /** Flow targets are scoped names. */
   flows: Flow[];
-  /** The names of the functions that the file defines with at least one parameter. */
-  callableNames: Set<string>;
+  /** The call shape of each function name that the file defines with at least one parameter. */
+  callSignatures: Map<string, CallSignature>;
   /**
    * The call slots that feed each parameter. A call does not know which `def` of a name it
    * reaches, so its arguments flow into slots (`f()#0`, `f()=name`), and each parameter of each
@@ -104,6 +110,9 @@ const PYTHON_KEYWORDS = new Set(
     'from global if import in is lambda nonlocal not or pass raise return try while with yield'
   ).split(' ')
 );
+// Before Python 3.12, each nested f-string needs a new quote style, so four levels is the most.
+// The limit keeps a crafted file from exhausting the stack.
+const MAX_NESTED_STRING_DEPTH = 8;
 // Method receivers, not values that a caller passes in.
 const IMPLICIT_PARAMETERS = new Set(['self', 'cls']);
 
@@ -147,7 +156,7 @@ function traceReadsIntoSends(
   sends: Range[]
 ): Range[] {
   const flowsByTarget = new Map<string, Flow[]>();
-  for (const flow of [...graph.flows, ...callArgumentFlows(parsed, graph.callableNames)]) {
+  for (const flow of [...graph.flows, ...callArgumentFlows(parsed, graph.callSignatures)]) {
     for (const target of flow.targets) {
       const targetFlows = flowsByTarget.get(target);
       if (targetFlows === undefined) flowsByTarget.set(target, [flow]);
@@ -185,7 +194,7 @@ function traceReadsIntoSends(
 function collectFlows(parsed: ParsedCode): FlowGraph {
   const graph: FlowGraph = {
     flows: [],
-    callableNames: new Set(),
+    callSignatures: new Map(),
     parameterSlots: new Map(),
     clients: new Set(),
     statementScopes: [],
@@ -280,15 +289,25 @@ function collectFlows(parsed: ParsedCode): FlowGraph {
 /** Records a `def`: its parameters are its first locals, and each reads its call slots. */
 function addFunction(graph: FlowGraph, name: string, id: string, parameters: Parameter[]): void {
   graph.locals.set(id, new Set(parameters.map((parameter) => parameter.name)));
-  if (parameters.length > 0) graph.callableNames.add(name);
+  if (parameters.length === 0) return;
+
+  const signature = graph.callSignatures.get(name) ?? {
+    namedParameters: new Set(),
+    variadicFrom: Number.POSITIVE_INFINITY,
+  };
+  graph.callSignatures.set(name, signature);
 
   let position = 0;
   for (const parameter of parameters) {
     const slots = [`${name}()?`];
-    if (parameter.kind === 'variadic') slots.push(`${name}()#*`);
+    if (parameter.kind === 'variadic') {
+      slots.push(`${name}()#*`);
+      signature.variadicFrom = Math.min(signature.variadicFrom, position);
+    }
     if (parameter.kind === 'keywords') slots.push(`${name}()=*`);
     if (parameter.kind === 'positional') {
       slots.push(`${name}()#${position}`, `${name}()=${parameter.name}`);
+      signature.namedParameters.add(parameter.name);
       position += 1;
     }
     graph.parameterSlots.set(`${id}:${parameter.name}`, slots);
@@ -298,33 +317,39 @@ function addFunction(graph: FlowGraph, name: string, id: string, parameters: Par
 /**
  * The arguments of each call to a function that the file defines flow into call slots: a keyword
  * argument into `f()=<name>`, a positional argument into `f()#<position>`, and an unpacked
- * argument (`*args`, `**kwargs`) into `f()?`, which every parameter reads. Each argument has a
- * fixed number of slots, however many functions share the name.
+ * argument (`*args`, `**kwargs`) into `f()?`, which every parameter reads. An argument that no
+ * named parameter takes also flows into `f()#*` or `f()=*`, for `*args` or `**kwargs`. Each
+ * argument has a fixed number of slots, however many functions share the name.
  */
-function callArgumentFlows(parsed: ParsedCode, callableNames: Set<string>): Flow[] {
-  if (callableNames.size === 0) return [];
+function callArgumentFlows(parsed: ParsedCode, callSignatures: Map<string, CallSignature>): Flow[] {
+  if (callSignatures.size === 0) return [];
 
   // A `def` header declares parameters. It is not a call.
   const call = new RegExp(
-    String.raw`(?<!\bdef\s+)(?<!\w)(${[...callableNames].join('|')})\s*\(`,
+    String.raw`(?<!\bdef\s+)(?<!\w)(${[...callSignatures.keys()].join('|')})\s*\(`,
     'g'
   );
   return [...parsed.code.matchAll(call)].flatMap((match) => {
     const name = match[1] ?? '';
+    const signature = callSignatures.get(name);
     let position = 0;
 
     return topLevelArguments(parsed, match.index + match[0].length - 1).map((argument): Flow => {
       KEYWORD_ARGUMENT.lastIndex = argument.start;
       const keyword = KEYWORD_ARGUMENT.exec(parsed.code)?.[1];
       if (keyword !== undefined && KEYWORD_ARGUMENT.lastIndex <= argument.end) {
-        const targets = [`${name}()=${keyword}`, `${name}()=*`];
+        const targets = [`${name}()=${keyword}`];
+        if (!signature?.namedParameters.has(keyword)) targets.push(`${name}()=*`);
         return { targets, start: KEYWORD_ARGUMENT.lastIndex, end: argument.end };
       }
 
       UNPACKED_ARGUMENT.lastIndex = argument.start;
       if (UNPACKED_ARGUMENT.test(parsed.code)) return { targets: [`${name}()?`], ...argument };
 
-      const targets = [`${name}()#${position}`, `${name}()#*`];
+      const targets = [`${name}()#${position}`];
+      if (position >= (signature?.variadicFrom ?? Number.POSITIVE_INFINITY)) {
+        targets.push(`${name}()#*`);
+      }
       position += 1;
       return { targets, ...argument };
     });
@@ -576,8 +601,9 @@ function isStatementEnd(code: string, idx: number): boolean {
 }
 
 /**
- * Adds the statement without its leading whitespace. Its indent is its column, except after a
- * `;` on the same line, where it shares the block of the statement before it.
+ * Adds the statement without its leading whitespace. Its indent is its column. After a `;` on
+ * the same line, it is one deeper than the statement before it: it shares that statement's block,
+ * or it is the inline body of `def f(x): pass; send(x)`.
  */
 function pushStatement(
   statements: Statement[],
@@ -592,7 +618,7 @@ function pushStatement(
   }
   if (textStart >= end) return;
 
-  const indent = lineStart >= 0 ? textStart - lineStart : (statements.at(-1)?.indent ?? 0);
+  const indent = lineStart >= 0 ? textStart - lineStart : (statements.at(-1)?.indent ?? 0) + 1;
   statements.push({ start: textStart, end, indent });
 }
 
@@ -646,8 +672,17 @@ function pythonCodeView(content: string): string {
   return chars.join('');
 }
 
-/** Blanks one string literal from its prefix to its closing quote and returns the end offset. */
-function blankStringText(content: string, chars: string[], quoteIndex: number): number {
+/**
+ * Blanks one string literal from its prefix to its closing quote and returns the end offset. A
+ * string inside a field is parsed the same way, so a nested f-string keeps its fields, up to a
+ * depth that real code does not reach.
+ */
+function blankStringText(
+  content: string,
+  chars: string[],
+  quoteIndex: number,
+  nesting = 0
+): number {
   const quote = content[quoteIndex] ?? '"';
   const delimiter = content.startsWith(quote.repeat(3), quoteIndex) ? quote.repeat(3) : quote;
   const prefixStart = pythonStringStart(content, quoteIndex);
@@ -659,7 +694,10 @@ function blankStringText(content: string, chars: string[], quoteIndex: number): 
     const char = content[idx];
     if (fieldDepth > 0 && (char === '"' || char === "'")) {
       // A string inside a field is text too, and its braces do not open or close the field.
-      idx = blankRange(chars, idx, nestedStringEnd(content, idx));
+      idx =
+        nesting < MAX_NESTED_STRING_DEPTH
+          ? blankStringText(content, chars, idx, nesting + 1)
+          : blankRange(chars, idx, nestedStringEnd(content, idx));
     } else if (fieldDepth > 0) {
       if (char === '{') fieldDepth += 1;
       if (char === '}') fieldDepth -= 1;
@@ -681,7 +719,7 @@ function blankStringText(content: string, chars: string[], quoteIndex: number): 
   return idx;
 }
 
-/** The end offset of a one-line string literal inside an f-string field. */
+/** The end offset of a one-line string literal, for strings nested past the depth limit. */
 function nestedStringEnd(content: string, quoteIndex: number): number {
   const quote = content[quoteIndex];
   for (let idx = quoteIndex + 1; idx < content.length; idx += 1) {
