@@ -375,19 +375,26 @@ prose such as "zipcloak and zipnote" does not match.
 
 A list-style process call passes each argument as its own string:
 `subprocess.run(["zip", "-P", pw, out, src])`, `os.execvp("zip", ["zip", ...])`,
-or `spawn('zip', ['-P', pw])`. The quoted command name must follow `[`, `(`, or
-`,`, and it can carry a path and `.exe`. Markdown quotes tool names with
-backticks, so a backtick does not open a command name. The argument gap crosses
-line breaks, because formatters put each item on its own line. It stops at `]`,
-`)`, `}`, and `;`, so a `-P` of another call does not count. A call before the
-flag, as in `["zip", "-r", str(out), "-P", pw]`, also ends the gap. 7-Zip and
-RAR need the `a` command and a password in the switch (`-pSECRET`, `f"-p{pw}"`)
-or a concatenation (`'-p' + pw`). A bare `-p` asks on the terminal and does not
-match. The 7-Zip, RAR, and `zipcloak` lines ignore case:
+or `spawn('zip', ['-P', pw])`. The quoted command name must open a call (`(`)
+or a list (`[`), so an argument such as `"zip"` in `["grep", "zip", "-P", log]`
+does not count. A list after a `,` holds only arguments, as in
+`spawn('grep', ['zip', '-P', log])`, so it does not open a command name. The
+name can carry a path and `.exe`. Markdown quotes tool names with backticks, so
+a backtick does not open a command name. The argument gap crosses line breaks,
+because formatters put each item on its own line. It stops at `]`, `)`, `}`,
+and `;`, so a `-P` of another call does not count. A call before the flag, as
+in `["zip", "-r", str(out), "-P", pw]`, also ends the gap. A name after a `,`,
+as in `os.spawnlp(mode, "zip", ...)` or `os.execvp(path, ["zip", ...])`, does
+not match. 7-Zip and RAR need the `a` command and a password in the switch
+(`-pSECRET`, `f"-p{pw}"`) or a concatenation (`'-p' + pw`). A bare `-p` asks on
+the terminal and does not match. `zipcloak` needs no flag, so the call must pass arguments: more items
+after the name in a list, or an argument list or argv[0] string after the name
+in a call. So `shutil.which("zipcloak", path=p)` does not match. The 7-Zip,
+RAR, and `zipcloak` lines ignore case:
 ```regex
-["'](?<=[\[(,][ \t\r\n]{0,40}["'])(?:[^"'\n]{0,120}[\\/])?(?:[Zz][Ii][Pp])(?:\.exe)?["'][^\])};]{0,200}["'`](?:-[A-Za-z0-9]{0,8}[Pe]|--(?:password|encrypt)\b)
-["'](?<=[\[(,][ \t\r\n]{0,40}["'])(?:[^"'\n]{0,120}[\\/])?(?:7z[az]?|rar)(?:\.exe)?["'][^\])};]{0,40}["'`]a["'`][^\])};]{0,200}["'`]-h?p(?!-)(?:[^\s"'`]|["'`][ \t]{0,4}\+)
-["'](?<=[\[(,][ \t\r\n]{0,40}["'])(?:[^"'\n]{0,120}[\\/])?(?:zipcloak)(?:\.exe)?["'][ \t]*,
+["'](?<=(?:\(|(?<!,[ \t\r\n]{0,40})\[)[ \t\r\n]{0,40}["'])(?:[^"'\n]{0,120}[\\/])?(?:[Zz][Ii][Pp])(?:\.exe)?["'][^\])};]{0,200}["'`](?:-[A-Za-z0-9]{0,8}[Pe]|--(?:password|encrypt)\b)
+["'](?<=(?:\(|(?<!,[ \t\r\n]{0,40})\[)[ \t\r\n]{0,40}["'])(?:[^"'\n]{0,120}[\\/])?(?:7z[az]?|rar)(?:\.exe)?["'][^\])};]{0,40}["'`]a["'`][^\])};]{0,200}["'`]-h?p(?!-)(?:[^\s"'`]|["'`][ \t]{0,4}\+)
+["'](?<=(?<!,[ \t\r\n]{0,40})\[[ \t\r\n]{0,40}["'])(?:[^"'\n]{0,120}[\\/])?(?:zipcloak)(?:\.exe)?["'][ \t]*,|["'](?<=\([ \t\r\n]{0,40}["'])(?:[^"'\n]{0,120}[\\/])?(?:zipcloak)(?:\.exe)?["'][ \t]*,[ \t\r\n]*[\["']
 ```
 Standard-library `zipfile` cannot write an encrypted zip. Its `setpassword`
 applies only to reading, so no `zipfile` pattern marks creation.

@@ -9,3 +9,4 @@ spawnSync('7z', ['a', '-mx=9', 'backup.7z', 'src/']);
 const formats = ['zip', 'tar'];
 spawnSync('rsync', ['-avP', 'backup.zip', 'deploy@example.com:/srv/']);
 spawn('xargs', ['-P', '4', 'gzip'], { stdio: 'inherit' });
+spawnSync('grep', ['zip', '-P', 'build.log']);
