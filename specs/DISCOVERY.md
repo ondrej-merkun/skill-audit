@@ -7,6 +7,8 @@ Shared `.agents/skills` paths were verified against official docs in October 202
 Hook and settings paths were verified against vendor docs in October 2026.
 Cursor skills, subagent, and plugin paths were verified against the Cursor docs
 in October 2026.
+Claude Code plugin install records and `enabledPlugins` were verified against
+vendor docs in October 2026.
 
 Claude Code memory, rule, and parent-directory paths were verified against the
 Claude Code docs and the loader in Claude Code 2.1.314 in October 2026.
@@ -25,9 +27,12 @@ move it here in the same task; do not leave implemented behavior documented as
 
 **User-global:**
 - `~/.claude/skills/*/SKILL.md`
-- `~/.claude/plugins/`, except `~/.claude/plugins/.trash/`. Claude Code moves
-  the synced plugins that it removes there and never loads them again, so
-  discovery always skips that subtree, also with `--include-marketplaces`.
+- `~/.claude/plugins/`, except `~/.claude/plugins/.trash/` and
+  `~/.claude/plugins/cache/`. Claude Code moves the synced plugins that it
+  removes to `.trash` and never loads them again. Discovery always skips both
+  subtrees, also with `--include-marketplaces`.
+- Enabled plugin installs in `~/.claude/plugins/cache/`. See the plugin cache
+  rule below.
 - `~/.claude/commands/*.md`
 - `~/.claude/agents/*.md`
 - MCP servers in `~/.claude.json`, including the nested
@@ -93,6 +98,36 @@ checkout's skills that a linked worktree without `.claude/skills/` loads, and
 
 **Manifest formats:** `SKILL.md` (YAML front matter + markdown body),
 `plugin.json`, `.mcp.json`.
+
+**Plugin cache rule** (verified against the Claude Code
+[plugin loading reference](https://code.claude.com/docs/en/plugins/loading.md)
+and the [`enabledPlugins` setting](https://code.claude.com/docs/en/settings-reference.md#enabledplugins)
+in October 2026):
+- Claude Code loads a marketplace plugin only from the `installPath` of its
+  record in `~/.claude/plugins/installed_plugins.json`, in
+  `cache/<marketplace>/<plugin>/<version>/`. Other cache dirs, such as the
+  previous version that Claude Code keeps for 14 days after an update, are
+  inventory and are not scan targets, also with `--include-marketplaces`.
+- A record is active when its plugin is enabled. `enabledPlugins` maps
+  `<plugin>@<marketplace>` to `true` or `false`. The user
+  (`~/.claude/settings.json`), project (`.claude/settings.json`), and local
+  (`.claude/settings.local.json`) values merge key by key, and a later file
+  wins for each plugin id that it names. A plugin that no file names is
+  enabled.
+- A `user` record uses the working directory's project and local settings. A
+  `project` or `local` record uses the settings of its `projectPath`. A
+  `managed` record is always active: managed settings installed it and turn it
+  on.
+- Discovery does not read managed settings sources (remote, MDM, registry, or
+  `managed-settings.json`). A managed `false` can therefore leave a blocked
+  plugin in the scan. A managed `true` on a plugin that has only a `user`,
+  `project`, or `local` record, which those settings turn off, is not seen, so
+  that payload is not scanned.
+- Discovery does not read the manifest `defaultEnabled` value, so a plugin
+  that turns itself off by default is still scanned.
+- A record whose `installPath` is outside `~/.claude/plugins/cache/` is
+  ignored. A missing or unreadable `installed_plugins.json` means that no
+  cached plugin is active, as in Claude Code.
 
 ### 2. Cursor
 

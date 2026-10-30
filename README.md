@@ -154,7 +154,9 @@ and skill-specific malware patterns.
 Installed or currently exposed skills are the default scan and list surface.
 Plugin marketplace payloads under `plugins/marketplaces/` are inactive local
 inventory; include them only with `--include-marketplaces`, where output labels
-rows as `installed` or `marketplace`.
+rows as `installed` or `marketplace`. A cached Claude Code plugin in
+`~/.claude/plugins/cache/` is scanned only when `installed_plugins.json`
+records that version and `enabledPlugins` does not turn the plugin off.
 
 ## Optional Local LLM Review
 

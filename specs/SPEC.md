@@ -137,7 +137,7 @@ Adding a new agent = adding one file and registering in `discovery/index.ts`. No
 
 | Agent | User-global paths | Project-local | Manifest |
 |---|---|---|---|
-| **Claude Code** | `~/.claude/skills/*/SKILL.md`; installed plugin payloads under `~/.claude/plugins/<marketplace>/<plugin>/` **(recursive: walk to any depth where a SKILL.md is present)**; `~/.claude/plugins/<marketplace>/<plugin>/{agents,commands}/**`; `~/.claude/commands/*.md`; `~/.claude/agents/*.md`; `~/.claude/CLAUDE.md`; `~/.claude/rules/**/*.md`; MCP in `~/.claude.json` (inc. `projects.<abs-path>.mcpServers`). Inactive marketplace inventory under `plugins/marketplaces/` is skipped unless `--include-marketplaces` is set. | `.claude/skills/`, `.claude/commands/`, `.claude/agents/` (cwd and parents up to the git root); `.claude/CLAUDE.md`, `.claude/AGENTS.md`, `CLAUDE.local.md`, `.claude/rules/**/*.md` (cwd and every parent); `.mcp.json`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` | `SKILL.md` (YAML+MD), `plugin.json`, `.mcp.json` |
+| **Claude Code** | `~/.claude/skills/*/SKILL.md`; installed plugin payloads under `~/.claude/plugins/<marketplace>/<plugin>/` **(recursive: walk to any depth where a SKILL.md is present)**; `~/.claude/plugins/<marketplace>/<plugin>/{agents,commands}/**`; enabled installs in `~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/` (see the active cache rule); `~/.claude/commands/*.md`; `~/.claude/agents/*.md`; `~/.claude/CLAUDE.md`; `~/.claude/rules/**/*.md`; MCP in `~/.claude.json` (inc. `projects.<abs-path>.mcpServers`). Inactive marketplace inventory under `plugins/marketplaces/` is skipped unless `--include-marketplaces` is set. | `.claude/skills/`, `.claude/commands/`, `.claude/agents/` (cwd and parents up to the git root); `.claude/CLAUDE.md`, `.claude/AGENTS.md`, `CLAUDE.local.md`, `.claude/rules/**/*.md` (cwd and every parent); `.mcp.json`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` | `SKILL.md` (YAML+MD), `plugin.json`, `.mcp.json` |
 | **OpenAI Codex** | `~/.codex/AGENTS.md`, `~/.codex/AGENTS.override.md`, `~/.codex/config.toml`, `~/.codex/skills/`, `~/.codex/plugins/`, `~/.codex/prompts/`, `~/.agents/skills/`. `$CODEX_HOME` overrides the `~/.codex` paths. | `AGENTS.md` (walked up), `.codex/config.toml` (if trusted), `.agents/skills/` | `AGENTS.md`, `SKILL.md`, TOML `[mcp_servers.*]` |
 | **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/`, `~/.cursor/skills/`, `~/.cursor/agents/`, local plugins in `~/.cursor/plugins/local/`, `~/.agents/skills/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, `.cursor/skills/`, `.cursor/agents/`, legacy `.cursorrules`, `.agents/skills/` | `.mdc`, JSON, `SKILL.md`, `.cursor-plugin/plugin.json` or root `plugin.json` |
 | **Gemini CLI** | `~/.gemini/extensions/*/gemini-extension.json`, `~/.gemini/commands/*.toml`, `~/.gemini/agents/`, `~/.gemini/skills/`, `~/.gemini/settings.json`, `~/.agents/skills/` | `.gemini/extensions/`, `.gemini/commands/`, `.gemini/skills/`, `.gemini/settings.json`, `GEMINI.md`, `.agents/skills/` | `gemini-extension.json` (JSON), `.toml`, `SKILL.md` |
@@ -187,6 +187,10 @@ enabled plugins from `~/.codex/config.toml` or documented built-in runtime
 metadata, then walk only those active payload roots. Cursor keeps no install
 or enable record next to `~/.cursor/plugins/cache`, so discovery scans only
 the plugins in `~/.cursor/plugins/local/`, which Cursor loads after a reload.
+For Claude Code, do not scan `~/.claude/plugins/cache` wholesale; walk only the
+`installPath` of each record in `~/.claude/plugins/installed_plugins.json`
+whose plugin is enabled (verified against official docs in October 2026).
+`--include-marketplaces` does not add other cache dirs.
 
 **Shared Agent Skills rule.** `~/.agents/skills/` (user) and `.agents/skills/`
 (project) are read by Codex, Cursor, GitHub Copilot, Gemini CLI, Windsurf, and
