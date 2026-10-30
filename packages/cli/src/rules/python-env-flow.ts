@@ -110,6 +110,7 @@ const TRANSPORT_OPTION_ARGUMENT =
   /\s*(?:timeout|verify|allow_redirects|follow_redirects|cert|context)\s*=(?!=)/y;
 const CALLED_VALUE = /^\s*(?:await\s+)?([A-Za-z_][\w.]*)\s*\(/;
 const AS_NAME = /\s*as\s+([A-Za-z_]\w*)/y;
+const AS_TARGET = /\bas\s+([A-Za-z_]\w*)/g;
 
 // The full names of calls that start a child process. Their `env=` argument is the child's
 // environment and does not flow into the call result: `subprocess.run(cmd, env={**os.environ})`.
@@ -319,6 +320,14 @@ function collectFlows(parsed: ParsedCode, imported: ImportedNames): FlowGraph {
       continue;
     }
 
+    // `as` only binds a name: in `with ... as f`, `except ... as e`, and `import ... as m`. A
+    // closure must not read the parent's name past it.
+    bindLocals(
+      graph,
+      scope,
+      [...text.matchAll(AS_TARGET)].map((match) => match[1] ?? '')
+    );
+
     const returned = RETURN_VALUE.exec(text);
     if (returned !== null) {
       // A method's result is read as `self.<name>()`.
@@ -336,13 +345,9 @@ function collectFlows(parsed: ParsedCode, imported: ImportedNames): FlowGraph {
     }
 
     if (WITH_STATEMENT.test(text)) {
-      const clients = withClients(parsed, statement, imported);
-      bindLocals(
-        graph,
-        scope,
-        clients.map((client) => client.name)
-      );
-      for (const client of clients) unscopedClients.push({ scope, ...client });
+      for (const client of withClients(parsed, statement, imported)) {
+        unscopedClients.push({ scope, ...client });
+      }
       continue;
     }
 
@@ -531,44 +536,54 @@ function shellCommandArguments(parsed: ParsedCode, content: string, calls: Named
     if (!runsShell && !IS_PROCESS_LAUNCH.test(call.name)) return [];
 
     const callArguments = topLevelArguments(parsed, call.openParen);
+    const commands = callArguments.flatMap((argument, index) => {
+      const command = commandValue(parsed, argument, index);
+      return command === undefined ? [] : [command];
+    });
     const shellTrue = callArguments.some((argument) => {
       SHELL_TRUE_ARGUMENT.lastIndex = argument.start;
       return SHELL_TRUE_ARGUMENT.test(parsed.code);
     });
-    const firstArgument = callArguments[0];
-    const shellArgv = firstArgument !== undefined && startsShell(parsed, content, firstArgument);
-    if (!runsShell && !shellTrue && !shellArgv) return [];
+    if (runsShell || shellTrue) return commands;
 
-    // The command is the first positional argument or the `args=` keyword argument.
-    return callArguments.filter((argument, index) => {
-      const keyword = keywordOf(parsed, argument);
-      return keyword === undefined ? index === 0 : keyword === 'args';
+    return commands.flatMap((command) => {
+      const shellCommand = shellArgvCommand(parsed, content, command);
+      return shellCommand === undefined ? [] : [shellCommand];
     });
   });
 }
 
-/** Whether an argument is a list or tuple that starts a shell with a command: `["sh", "-c", cmd]`. */
-function startsShell(parsed: ParsedCode, content: string, argument: Range): boolean {
-  const openBracket = nextCodeChar(parsed.code, argument.start);
-  if (parsed.code[openBracket] !== '[' && parsed.code[openBracket] !== '(') return false;
+/** The command of a process call: the first positional argument, or the value of `args=`. */
+function commandValue(parsed: ParsedCode, argument: Range, index: number): Range | undefined {
+  KEYWORD_ARGUMENT.lastIndex = argument.start;
+  const keyword = KEYWORD_ARGUMENT.exec(parsed.code)?.[1];
+  if (keyword === undefined || KEYWORD_ARGUMENT.lastIndex > argument.end) {
+    return index === 0 ? argument : undefined;
+  }
+  return keyword === 'args' ? { start: KEYWORD_ARGUMENT.lastIndex, end: argument.end } : undefined;
+}
+
+/**
+ * The command string of a list or tuple that starts a shell with `-c`: `cmd` in
+ * `["sh", "-c", cmd, name, arg]`. The items after it are the shell's parameters, which are data.
+ */
+function shellArgvCommand(parsed: ParsedCode, content: string, value: Range): Range | undefined {
+  const openBracket = nextCodeChar(parsed.code, value.start);
+  if (openBracket >= value.end) return undefined;
+  if (parsed.code[openBracket] !== '[' && parsed.code[openBracket] !== '(') return undefined;
 
   // A program name or an option is a short string. A longer item, such as a nested call, is not
   // copied, so nested lists stay linear.
-  const [program, ...options] = topLevelArguments(parsed, openBracket).map((item) =>
+  const items = topLevelArguments(parsed, openBracket);
+  const texts = items.map((item) =>
     item.end - item.start > MAX_ARGV_ITEM_LENGTH
       ? ''
       : (STRING_LITERAL_TEXT.exec(content.slice(item.start, item.end).trim())?.[2] ?? '')
   );
-  return (
-    SHELL_PROGRAM.test(program ?? '') && options.some((option) => SHELL_COMMAND_OPTION.test(option))
-  );
-}
+  if (!SHELL_PROGRAM.test(texts[0] ?? '')) return undefined;
 
-/** The keyword of a `name=value` argument, else undefined. */
-function keywordOf(parsed: ParsedCode, argument: Range): string | undefined {
-  KEYWORD_ARGUMENT.lastIndex = argument.start;
-  const keyword = KEYWORD_ARGUMENT.exec(parsed.code)?.[1];
-  return keyword !== undefined && KEYWORD_ARGUMENT.lastIndex <= argument.end ? keyword : undefined;
+  const option = texts.findIndex((text, index) => index > 0 && SHELL_COMMAND_OPTION.test(text));
+  return option < 0 ? undefined : items[option + 1];
 }
 
 /** The names that `with <client constructor>(...) as name` binds, each with its client kind. */

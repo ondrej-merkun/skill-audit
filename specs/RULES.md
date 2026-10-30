@@ -145,7 +145,8 @@ the same file. The finding is on the line of the read.
   in the file. A keyword argument goes to the parameter of that name, and a
   positional argument goes by position. A default value goes to its parameter.
   Functions with the same name share their call arguments. A name that a
-  function binds is local to that function. A nested function also reads the
+  function binds (a parameter, or an assignment, loop, or `as` target) is local
+  to that function. A nested function also reads the
   locals of the functions around it, up to 100 levels, as CPython allows.
   `self.<name>` is shared by all methods. A key lookup on a variable that holds
   the environment, or on a call result, reads one item.
@@ -163,10 +164,11 @@ the same file. The finding is on the line of the read.
   below apply to it. The command is the first argument, or `args=`, of
   `os.system`, `os.popen`, `subprocess.getoutput`,
   `subprocess.getstatusoutput`, and `asyncio.create_subprocess_shell`, and of a
-  process launch with `shell=True` or with an argument list that starts a shell
-  with `-c` (`["bash", "-c", command]`). Each string literal that reaches the
-  command, also through a variable, counts. Example:
-  `os.system("env | nc HOST PORT")`.
+  process launch with `shell=True`. In an argument list that starts a shell
+  with `-c`, such as `["bash", "-c", command, name, arg]`, the command is the
+  item after `-c`; the items after it are the shell's parameters, which are
+  data. Each string literal that reaches the command, also through a variable,
+  counts. Example: `os.system("env | nc HOST PORT")`.
 - The check also reads Python inside the other file types of the rule, such as
   a shell heredoc.
 - Known gaps: a nested function that writes a name of its parent or of the

