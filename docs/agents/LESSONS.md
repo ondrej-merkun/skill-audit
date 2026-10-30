@@ -378,6 +378,17 @@ without a commit message explaining why it no longer applies.
   and list every root that it reads. When you add a feature to one settings
   scope, run the same test table for every scope.
 
+- **L2.18: Read a plugin manifest's component paths before you trust the
+  default folders.** _Cursor plugin discovery: the real `~/.cursor/plugins/cache`
+  held 20+ public plugins that were downloaded at the same minute, each with a
+  `.cache-complete` marker and no install record. Their manifests named
+  `./hooks/hooks-cursor.json`, `.mcp.json`, and `../mcp.json`, so a scan of the
+  default `hooks/hooks.json` and `mcp.json` alone would miss those payloads._
+  Check the real plugin dirs on disk next to the vendor docs. Scan only the
+  plugins that the agent records as loaded. Resolve each component from the
+  manifest field when it is set, and from the default folder only when it is
+  not.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**

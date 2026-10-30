@@ -5,7 +5,12 @@ import { basename, join } from 'node:path';
 import { isRegularFile, readDirFollowingLinks } from '../fs-walk.js';
 import type { AgentDiscovery, DiscoverSkillsOptions, Skill } from '../types.js';
 import { discoverAgentConfigFiles } from './agent-config.js';
-import { discoverSharedAgentSkills } from './shared-agent-skills.js';
+import {
+  CURSOR_AGENTS,
+  discoverCursorLocalPlugins,
+  discoverMarkdownComponent,
+} from './cursor-plugins.js';
+import { discoverSharedAgentSkills, discoverSkillDirs } from './shared-agent-skills.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
 const AGENT_ID = 'cursor';
@@ -134,11 +139,27 @@ const cursorDiscovery: AgentDiscovery = {
     // User-scoped: ~/.cursor/rules/*.mdc
     skills.push(...(await discoverRulesDir(join(home, '.cursor', 'rules'), 'user')));
 
+    // User-scoped: ~/.cursor/skills/**/SKILL.md and ~/.cursor/agents/ subagents
+    skills.push(...(await discoverSkillDirs(AGENT_ID, join(home, '.cursor', 'skills'), 'user')));
+    skills.push(
+      ...(await discoverMarkdownComponent([join(home, '.cursor', 'agents')], CURSOR_AGENTS, 'user'))
+    );
+
     // Project-scoped: .cursor/mcp.json
     skills.push(...(await discoverMcpJson(join(cwd, '.cursor', 'mcp.json'), 'project')));
 
     // Project-scoped: .cursor/rules/*.mdc
     skills.push(...(await discoverRulesDir(join(cwd, '.cursor', 'rules'), 'project')));
+
+    // Project-scoped: .cursor/skills/**/SKILL.md and .cursor/agents/ subagents
+    skills.push(...(await discoverSkillDirs(AGENT_ID, join(cwd, '.cursor', 'skills'), 'project')));
+    skills.push(
+      ...(await discoverMarkdownComponent(
+        [join(cwd, '.cursor', 'agents')],
+        CURSOR_AGENTS,
+        'project'
+      ))
+    );
 
     // Legacy: .cursorrules in project root
     skills.push(...(await discoverLegacyCursorRules(join(cwd, '.cursorrules'))));
@@ -149,6 +170,9 @@ const cursorDiscovery: AgentDiscovery = {
     // Hooks: ~/.cursor/hooks.json and .cursor/hooks.json
     skills.push(...(await discoverHooksFile(join(home, '.cursor'), '~/.cursor', 'user')));
     skills.push(...(await discoverHooksFile(join(cwd, '.cursor'), '.cursor', 'project')));
+
+    // Plugins: ~/.cursor/plugins/local/<plugin>
+    skills.push(...(await discoverCursorLocalPlugins(home)));
 
     return skills;
   },
