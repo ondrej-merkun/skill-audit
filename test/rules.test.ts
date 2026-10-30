@@ -237,6 +237,7 @@ describe('malicious fixture attack lines', () => {
         'const remoteRules = require(RULES_URL);',
         'const legacy = await import(LEGACY_URL);',
         'const fallback = await import(fallbackUrl);',
+        'const source = await import(sourceUrl);',
         // A module that the code downloads to a file and then loads.
         "fetch(url).then(r => r.text()).then(t => fs.writeFileSync('x.js', t)); require('./x.js');",
         "const format = require('./lib/format');",

