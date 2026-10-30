@@ -66,9 +66,8 @@ skill-audit ignore <name>      # add a skill's treeSha256 to your ignore list
 ## What Leaves The Machine
 
 Rule scanning is local. Skill contents are read from disk and matched on your
-machine; they are not uploaded by `skill-audit`. User-facing scan, list,
-explain, JSON, and HTML flows do not contact enrichment services in this
-version.
+machine; they are not uploaded by `skill-audit`. The scan, list, explain,
+JSON, and HTML flows do not contact external lookup services.
 
 For the full security boundary, see [`THREAT_MODEL.md`](THREAT_MODEL.md).
 
@@ -267,8 +266,8 @@ Please use private vulnerability reporting. See [`../.github/SECURITY.md`](../.g
 Your skills contain your custom instructions, tool configs, and potentially
 secrets. Sending skill contents to a cloud service to scan them is the threat
 model we're trying to prevent. Rule scanning runs on your machine and there is
-no telemetry. User-facing scan, list, explain, JSON, and HTML flows do not
-perform enrichment lookups in this version.
+no telemetry. The scan, list, explain, JSON, and HTML flows do not contact
+external lookup services.
 
 **How does this compare to Snyk's `mcp-scan`?**
 Snyk's scanner is excellent and has a larger rule set. It requires a

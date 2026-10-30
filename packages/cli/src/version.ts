@@ -24,4 +24,3 @@ export const VERSION =
   typeof __PACKAGE_VERSION__ === 'string' && __PACKAGE_VERSION__.length > 0
     ? __PACKAGE_VERSION__
     : readPackageVersion();
-export const USER_AGENT = `skill-audit/${VERSION} (+github.com/ondrej-merkun/skill-audit)`;

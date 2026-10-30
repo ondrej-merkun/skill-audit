@@ -97,7 +97,7 @@ Options:
 | `--skill <name-or-id>` | Restrict scan to one matching skill. |
 | `--include-marketplaces` | Include inactive local marketplace inventory as well as installed/exposed skills. |
 | `--llm <name>` | Add optional local LLM review; repeat, comma-separate, or pass `all`. |
-| `--offline` | Hidden maintenance option; skip enrichment and LLM review. Use only when explicitly requested. |
+| `--offline` | Hidden maintenance option; skip optional LLM review. Use only when explicitly requested. |
 
 Supported `--agent` ids are `claude-code`, `codex`, `cross-agent`, `cursor`,
 `gemini`, `copilot`, `windsurf`, and `cline`.
@@ -180,7 +180,7 @@ Options:
 |---|---|
 | `--json` | Emit the detail payload as JSON. |
 | `--llm <name>` | Add optional local LLM review for this selected skill. |
-| `--offline` | Hidden maintenance option; skip disabled network enrichment. |
+| `--offline` | Hidden maintenance option; skip optional LLM review. |
 
 Examples:
 

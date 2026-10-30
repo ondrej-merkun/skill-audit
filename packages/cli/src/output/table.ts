@@ -65,54 +65,8 @@ function topIssue(skill: ScannedSkill): string {
   return issue.label;
 }
 
-function enrichmentDetails(skill: ScannedSkill): string {
-  const parts: string[] = [];
-  const skillsSh = skill.enrichment.skillsSh;
-  if (skillsSh !== undefined) {
-    parts.push(`Gen=${skillsSh.gen}`, `Socket=${skillsSh.socketAlerts}`, `Snyk=${skillsSh.snyk}`);
-  }
-
-  const github = skill.enrichment.github;
-  if (github !== undefined) {
-    const starLabel = github.stars === 1 ? '1 star' : `${github.stars} stars`;
-    const contributorLabel =
-      github.contributors === null
-        ? 'contributors unknown'
-        : github.contributors === 1
-          ? '1 contributor'
-          : `${github.contributors} contributors`;
-    parts.push(`GitHub=${starLabel}`, contributorLabel);
-  }
-
-  const depsdev = skill.enrichment.depsdev;
-  if (depsdev !== undefined) {
-    const advisoryLabel =
-      depsdev.osvAdvisories === 0
-        ? '0 OSV'
-        : depsdev.osvAdvisories === 1
-          ? '1 OSV advisory'
-          : `${depsdev.osvAdvisories} OSV advisories`;
-    parts.push(advisoryLabel);
-  }
-
-  return parts.length > 0 ? parts.join('  ') : C_GREY('-');
-}
-
-function hasEnrichmentDetails(skill: ScannedSkill): boolean {
-  return (
-    skill.enrichment.skillsSh !== undefined ||
-    skill.enrichment.github !== undefined ||
-    skill.enrichment.depsdev !== undefined
-  );
-}
-
 export function renderTableToString(result: ScanResult): string {
   const { skills, scan, agents, summary } = result;
-  const showEnrichmentColumn =
-    skills.some(hasEnrichmentDetails) ||
-    (result.enrichmentOutcomes !== undefined && result.enrichmentOutcomes.length > 0) ||
-    result.enrichmentStatus === 'no-metadata' ||
-    result.enrichmentStatus === 'unavailable';
   const showInstallStateColumn = skills.some(
     (skill) => installStateLabel(skill.installState) === 'marketplace'
   );
@@ -146,9 +100,6 @@ export function renderTableToString(result: ScanResult): string {
     ...(showLlmColumn ? [chalk.bold('LLM REVIEW')] : []),
     chalk.bold('TOP ISSUE'),
   ];
-  if (showEnrichmentColumn) {
-    head.splice(4, 0, chalk.bold('ENRICHMENT'));
-  }
 
   // ── Rows ──────────────────────────────────────────────────────────────
   const ordered = sortScanSkills(skills);
@@ -173,9 +124,6 @@ export function renderTableToString(result: ScanResult): string {
       ...(showLlmColumn ? [formatLlmReviewInline(skill.llmReviews)] : []),
       topIssue(skill),
     ];
-    if (showEnrichmentColumn) {
-      row.splice(4, 0, enrichmentDetails(skill));
-    }
     table.push(row);
   }
 

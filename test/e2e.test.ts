@@ -406,18 +406,16 @@ describe('e2e: scan flags', () => {
     expect(normalizedStdout).toContain('locally available but inactive marketplace');
     expect(stdout).toContain('--scan-all-supporting-files');
     expect(stdout).not.toContain('--offline');
-    expect(stdout).not.toContain('enrichment');
     expect(stdout).not.toContain('--deep');
     expect(stdout).not.toContain('coming soon');
   });
 
-  it('explain help hides disabled enrichment flags', async () => {
+  it('explain help hides the --offline flag', async () => {
     const env = { HOME: tempHome, USERPROFILE: tempHome, SKILL_AUDIT_CWD: tempCwd };
     const { code, stdout } = await runCli(['explain', '--help'], env);
     expect(code).toBe(0);
     expect(stdout).toContain('Show full detail view');
     expect(stdout).not.toContain('--offline');
-    expect(stdout).not.toContain('enrichment');
   });
 
   it('list help documents marketplace inventory as inactive opt-in output', async () => {

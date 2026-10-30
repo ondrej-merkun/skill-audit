@@ -1,5 +1,4 @@
 import type {
-  Enrichment,
   Finding,
   LlmReviewFinding,
   LlmReviewResult,
@@ -23,31 +22,6 @@ function serializeFinding(f: Finding): object {
     fix: f.fix,
     cwe: f.cwe,
   };
-}
-
-function serializeEnrichment(e: Enrichment): object {
-  const out: Record<string, object> = {};
-  if (e.skillsSh !== undefined) {
-    out.skills_sh = {
-      gen: e.skillsSh.gen,
-      socket_alerts: e.skillsSh.socketAlerts,
-      snyk: e.skillsSh.snyk,
-    };
-  }
-  if (e.github !== undefined) {
-    out.github = {
-      stars: e.github.stars,
-      age_days: e.github.ageDays,
-      contributors: e.github.contributors,
-    };
-  }
-  if (e.depsdev !== undefined) {
-    out.deps_dev = {
-      osv_advisories: e.depsdev.osvAdvisories,
-      scorecard_score: e.depsdev.scorecardScore,
-    };
-  }
-  return out;
 }
 
 function serializeLlmFinding(f: LlmReviewFinding): object {
@@ -74,8 +48,6 @@ function serializeLlmReview(review: LlmReviewResult): object {
 }
 
 function serializeSkill(s: ScannedSkill): object {
-  const enrichment = serializeEnrichment(s.enrichment);
-  const hasEnrichment = Object.keys(enrichment).length > 0;
   return {
     id: s.id,
     agents: skillAgentPaths(s).map((entry) => ({ id: entry.agentId, path: entry.path })),
@@ -87,7 +59,7 @@ function serializeSkill(s: ScannedSkill): object {
     ignored: s.ignored === true,
     findings: s.findings.map(serializeFinding),
     ...(s.llmReviews !== undefined ? { llm_reviews: s.llmReviews.map(serializeLlmReview) } : {}),
-    ...(hasEnrichment ? { enrichment } : {}),
+    // The optional schema 1.0 `enrichment` key is never emitted: see specs/OUTPUT.md.
     summary: {
       critical: s.summary.critical,
       high: s.summary.high,

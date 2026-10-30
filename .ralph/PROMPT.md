@@ -65,19 +65,10 @@ Rules for implementation:
 - For output changes, test product behavior across all affected renderers,
   not only snapshots: risk-first ordering, first-screen prioritization,
   file/export ergonomics, and consistency between human and machine output.
-- For visible output data such as enrichment columns, summary lines, or
+- For visible output data such as table columns, summary lines, or
   detail panels, cover both the realistic populated path and the clear
   empty/skipped/offline/unavailable path. A renderer test with synthetic data
   does not prove the command can populate the UI.
-- For enrichment work, verify source-level status semantics. A progress
-  checkmark means displayable data or a valid stale cache exists for that
-  source, not merely that a Promise resolved. Do not coerce failed or skipped
-  numeric lookups into `0`; render unavailable/unknown unless the source
-  returned an actual zero.
-- For skills.sh, GitHub, or deps.dev changes, derive mocks from the current
-  endpoint/client contract or official docs. Include at least one realistic
-  installed-skill fixture whose metadata resolves through discovery into
-  enrichment output.
 - For generated HTML reports, test interactive behavior in a DOM/browser
   environment. Clicking agent filters, rows, and toolbar buttons must change
   the visible state without relying on network access.

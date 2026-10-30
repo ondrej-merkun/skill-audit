@@ -15,8 +15,7 @@ pnpm-debug.log*
 coverage/
 .vitest-cache/
 
-# Cache directories (enrichment cache lives in ~/.cache/skill-audit/ per spec,
-# not in the repo — but just in case)
+# Cache directories are not expected in the repo, but ignore them just in case.
 .cache/
 .serena/
 

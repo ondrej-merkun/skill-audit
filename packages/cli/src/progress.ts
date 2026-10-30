@@ -1,7 +1,5 @@
 import type { Ora, Spinner } from 'ora';
 import ora from 'ora';
-import type { EnrichmentSource } from './enrich/index.js';
-import type { EnrichmentSourceOutcome } from './types.js';
 
 export type ProgressMode = 'animated' | 'silent';
 export type ProgressOutputKind = 'pretty' | 'json' | 'summary' | 'file';
@@ -71,22 +69,6 @@ export function supportsUnicode(env: NodeJS.ProcessEnv = process.env): boolean {
   return env.WT_SESSION !== undefined || env.TERM_PROGRAM === 'vscode';
 }
 
-export function formatEnrichmentSource(source: EnrichmentSource): string {
-  if (source === 'skillsSh') return 'skills.sh';
-  if (source === 'depsdev') return 'deps.dev';
-  return 'GitHub';
-}
-
-export function formatEnrichmentOutcome(outcome: EnrichmentSourceOutcome): string {
-  const name = formatEnrichmentSource(outcome.source);
-  if (outcome.status === 'found') return `${name} ✓`;
-  if (outcome.status === 'stale-cache') return `${name} stale`;
-  if (outcome.status === 'no-input') return `${name} no input`;
-  if (outcome.status === 'skipped-offline') return `${name} skipped`;
-  if (outcome.status === 'unavailable') return `${name} unavailable`;
-  return `${name} no metadata`;
-}
-
 function skillNoun(count: number): string {
   return count === 1 ? 'skill' : 'skills';
 }
@@ -113,9 +95,6 @@ export type ProgressReporter = {
   startLlmReview(total: number): void;
   updateLlmReview(completed: number, total: number, skillName: string): void;
   succeedLlmReview(total: number): void;
-  startEnrichment(sources: EnrichmentSource[]): void;
-  succeedEnrichment(outcomes: EnrichmentSourceOutcome[]): void;
-  warnEnrichment(text?: string): void;
 };
 
 export function createProgressReporter(options: ProgressReporterOptions = {}): ProgressReporter {
@@ -150,12 +129,6 @@ export function createProgressReporter(options: ProgressReporterOptions = {}): P
   function fail(text: string): void {
     if (spinner === null) return;
     spinner.fail(text);
-    spinner = null;
-  }
-
-  function warn(text: string): void {
-    if (spinner === null) return;
-    spinner.warn(text);
     spinner = null;
   }
 
@@ -220,20 +193,6 @@ export function createProgressReporter(options: ProgressReporterOptions = {}): P
     },
     succeedLlmReview(total) {
       succeed(`LLM review complete: ${total} ${skillNoun(total)} reviewed`);
-    },
-    startEnrichment(sources) {
-      const names = sources.map(formatEnrichmentSource).join(', ');
-      start(
-        `Enriching with ${names}`,
-        unicode ? { frames: ['⠋', '⠙', '⠹', '⠸'], interval: 80 } : STATIC_ASCII_SPINNER
-      );
-    },
-    succeedEnrichment(outcomes) {
-      const done = outcomes.map(formatEnrichmentOutcome).join('  ');
-      succeed(`Enrichment complete: ${done}`);
-    },
-    warnEnrichment(text = 'Enrichment failed (continuing)') {
-      warn(text);
     },
   };
 }

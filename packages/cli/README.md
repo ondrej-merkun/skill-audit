@@ -28,7 +28,6 @@ skill-audit explain <name> --llm local
 skill-audit ignore <name>
 ```
 
-Scanning is local-first. This version does not perform enrichment lookups in
-the user-facing CLI.
+Scanning is local-first. Default scans make no network calls.
 
 Repository: <https://github.com/ondrej-merkun/skill-audit>

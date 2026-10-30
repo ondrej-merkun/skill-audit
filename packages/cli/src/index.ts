@@ -39,7 +39,7 @@ function addScanOptions(command: Command): Command {
     .option('--summary', 'emit compact one-liner summary instead of full table')
     .option('--html [file]', 'write standalone HTML report to [file] (default: scan.html)')
     .option('-o, --output <file>', 'write selected non-HTML scan output to <file>')
-    .addOption(new Option('--offline', 'skip disabled network enrichment calls').hideHelp())
+    .addOption(new Option('--offline', 'skip optional LLM review').hideHelp())
     .option('--strict', 'treat REVIEW band as FAIL for exit code purposes')
     .option('--agent <id>', `restrict scan to a single agent. ${SUPPORTED_AGENT_OPTION_HELP}`)
     .option('--skill <name-or-id>', 'scan only one matching skill')
@@ -123,7 +123,7 @@ program
 program
   .command('explain <skill-name-or-id>')
   .description('Show full detail view for a single skill')
-  .addOption(new Option('--offline', 'skip disabled network enrichment calls').hideHelp())
+  .addOption(new Option('--offline', 'skip optional LLM review').hideHelp())
   .option('--json', 'emit JSON to stdout instead of detail view')
   .option(
     '--llm <name>',

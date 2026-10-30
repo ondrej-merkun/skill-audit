@@ -38,8 +38,8 @@ sent to skills, written into reports, or used during local rule evaluation.
 ## Network Access
 
 Core scanning is local. The user-facing scan, list, explain, JSON, and HTML
-flows do not contact external metadata services in this version; scan verdicts
-come from local discovery and deterministic rules.
+flows do not contact external metadata services; scan verdicts come from local
+discovery and deterministic rules.
 
 ## Rule Updates
 

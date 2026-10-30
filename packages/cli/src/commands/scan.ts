@@ -3,13 +3,6 @@ import { stripVTControlCharacters } from 'node:util';
 import { formatSupportedAgentIds, SUPPORTED_AGENT_IDS } from '../agent-names.js';
 import { getIgnoreListPath, loadIgnoreList } from '../allowlist/ignore.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
-import type { EnrichmentSource } from '../enrich/index.js';
-import {
-  ENRICHMENT_ENABLED,
-  enrichAllWithOutcomes,
-  skippedEnrichmentOutcomes,
-  summarizeEnrichmentOutcomes,
-} from '../enrich/index.js';
 import type { LocalLlmConfig } from '../llm/config.js';
 import type { LlmReviewFetch } from '../llm/review.js';
 import {
@@ -33,15 +26,7 @@ import { collectScanTargetPaths, runRulesForSkill } from '../rules/engine.js';
 import { ALL_RULES } from '../rules/index.js';
 import { withSecurityEducationContextFinding } from '../rules/security-education.js';
 import { scoreFindings } from '../score.js';
-import type {
-  AgentInfo,
-  EnrichmentSourceOutcome,
-  EnrichmentStatus,
-  ScannedSkill,
-  ScanResult,
-  Skill,
-  Verdict,
-} from '../types.js';
+import type { AgentInfo, ScannedSkill, ScanResult, Skill, Verdict } from '../types.js';
 import { VERSION } from '../version.js';
 import { findSkillByNameOrId } from './skill-match.js';
 
@@ -96,15 +81,6 @@ const DEFAULT_OPTIONS: ScanOptions = {
 const SCAN_CONCURRENCY = 8;
 const SUPPORTED_SCAN_AGENTS: ReadonlySet<string> = new Set(SUPPORTED_AGENT_IDS);
 
-export function selectScanEnrichmentSources(
-  options: Pick<ScanOptions, 'json' | 'summary' | 'html'>
-): EnrichmentSource[] {
-  if (!ENRICHMENT_ENABLED) return [];
-  if (options.summary) return [];
-  if (options.json || options.html !== undefined) return ['skillsSh', 'github', 'depsdev'];
-  return ['skillsSh', 'github', 'depsdev'];
-}
-
 function renderScanPayload(
   result: ScanResult,
   options: Pick<ScanOptions, 'json' | 'summary'>
@@ -116,30 +92,6 @@ function renderScanPayload(
     return renderSummaryCompact(result);
   }
   return renderTableToString(result);
-}
-
-function summarizeOutcomesBySource(
-  outcomes: EnrichmentSourceOutcome[],
-  sources: EnrichmentSource[]
-): EnrichmentSourceOutcome[] {
-  const rank: Record<EnrichmentSourceOutcome['status'], number> = {
-    found: 0,
-    'stale-cache': 1,
-    unavailable: 2,
-    'no-input': 3,
-    'no-metadata': 4,
-    'skipped-offline': 5,
-  };
-  return sources.map((source) => {
-    const sourceOutcomes = outcomes.filter((o) => o.source === source);
-    return (
-      sourceOutcomes.sort((a, b) => rank[a.status] - rank[b.status])[0] ?? {
-        source,
-        status: 'no-metadata',
-        reason: 'no metadata found',
-      }
-    );
-  });
 }
 
 async function mapWithConcurrency<T, R>(
@@ -250,9 +202,6 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     skills = [target];
   }
 
-  if (options.offline && ENRICHMENT_ENABLED) {
-    process.stderr.write('[skill-audit] offline mode — enrichment skipped\n');
-  }
   if (options.offline) {
     if (selectedLlmConfigs.length > 0) {
       process.stderr.write('[skill-audit] offline mode — LLM review skipped\n');
@@ -298,7 +247,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   // Ignored skills appear in output with no findings and ignored: true
   for (const skill of ignoredSkills) {
     const summary = scoreFindings([], skill.treeSha256);
-    scannedSkills.push({ ...skill, findings: [], enrichment: {}, summary, ignored: true });
+    scannedSkills.push({ ...skill, findings: [], summary, ignored: true });
     for (const agentId of skillAgentIds(skill)) {
       agentMap.set(agentId, (agentMap.get(agentId) ?? 0) + 1);
     }
@@ -317,7 +266,7 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
           })
         );
         const summary = scoreFindings(findings, skill.treeSha256);
-        return { skill, scannedSkill: { ...skill, findings, enrichment: {}, summary } };
+        return { skill, scannedSkill: { ...skill, findings, summary } };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         return { skill, error: msg };
@@ -360,39 +309,6 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     scannedSkills.splice(0, scannedSkills.length, ...reviewedSkills);
   }
 
-  const enrichmentSources = selectScanEnrichmentSources(options);
-  let enrichmentStatus: EnrichmentStatus =
-    ENRICHMENT_ENABLED && options.offline ? 'skipped-offline' : 'not-run';
-  let enrichmentOutcomes: EnrichmentSourceOutcome[] | undefined;
-  if (ENRICHMENT_ENABLED && options.offline && enrichmentSources.length > 0) {
-    enrichmentOutcomes = skippedEnrichmentOutcomes(enrichmentSources);
-  }
-  if (
-    ENRICHMENT_ENABLED &&
-    !options.offline &&
-    scannedSkills.length > 0 &&
-    enrichmentSources.length > 0
-  ) {
-    progress.startEnrichment(enrichmentSources);
-    const enrichments = await enrichAllWithOutcomes(scannedSkills, { sources: enrichmentSources });
-    const allOutcomes: EnrichmentSourceOutcome[] = [];
-    for (let i = 0; i < scannedSkills.length; i++) {
-      const s = scannedSkills[i];
-      const e = enrichments[i];
-      if (s !== undefined && e !== undefined) {
-        scannedSkills[i] = {
-          ...s,
-          enrichment: e.enrichment,
-          enrichmentOutcomes: e.outcomes,
-        };
-        allOutcomes.push(...e.outcomes);
-      }
-    }
-    enrichmentOutcomes = summarizeOutcomesBySource(allOutcomes, enrichmentSources);
-    enrichmentStatus = summarizeEnrichmentOutcomes(enrichmentOutcomes);
-    progress.succeedEnrichment(enrichmentOutcomes);
-  }
-
   const durationMs = Date.now() - start;
 
   const agents: AgentInfo[] = [...agentMap.entries()]
@@ -423,8 +339,6 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
       percentCompromised: calculateCompromisedPercent(compromised, toScan.length),
       verdict: overallVerdict,
     },
-    enrichmentStatus,
-    ...(enrichmentOutcomes !== undefined ? { enrichmentOutcomes } : {}),
   };
 
   if (options.html !== undefined) {

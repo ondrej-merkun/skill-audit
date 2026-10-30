@@ -595,6 +595,19 @@ without a commit message explaining why it no longer applies.
   Before release tooling accepts a version form, check that the publish step
   can ship it, not only that the workflow trigger matches it.
 
+- **L6.17: Prove a dead-code removal with a before/after diff of the built CLI.**
+  _The enrichment removal deleted about 1,000 lines behind
+  `ENRICHMENT_ENABLED = false`. Outputs captured from the old build for one
+  fixed temp HOME showed the same JSON (except `started_at` and
+  `duration_ms`), table, summary, explain, list, and help output after the
+  change. The HTML report lost only the empty `enrichment: {}` objects in its
+  embedded data. L1.18, L6.7, and L6.8 describe the removed layer and apply
+  only if enrichment comes back._
+  Before you delete code that feeds output, build the old version, capture
+  every output mode for one fixture, and diff the same captures after the
+  change. Serve the HTML report on `127.0.0.1` for browser checks, because the
+  Playwright MCP blocks `file://` URLs.
+
 ## 7. Rule fixtures
 
 - **L7.1 — Malicious secret fixtures must not use provider placeholder keys.** _Task

@@ -37,8 +37,6 @@ tag is not the first place a problem appears.
 - Confirm changed README screenshots, SVGs, and badges render at their embedded
   GitHub dimensions in a browser or image renderer without clipping, overlap,
   stale output, unreadable text, or broken external targets.
-- If enrichment is re-enabled in a release, confirm each touched external
-  source has a source-level smoke or contract check before publishing.
 
 ## Local Verification
 
