@@ -73,6 +73,11 @@ jobs:
         run: pnpm typecheck
 
       - name: Check clean build output
+        env:
+          # setup-node's .npmrc holds `_authToken=${NODE_AUTH_TOKEN}` for the
+          # publish step. Trusted publishing sets no token, so pnpm warns about
+          # that line on every command. The build needs no registry auth.
+          NPM_CONFIG_USERCONFIG: /dev/null
         run: |
           set -o pipefail
           pnpm build 2>&1 | tee /tmp/skill-audit-build.log
