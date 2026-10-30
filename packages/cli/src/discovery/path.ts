@@ -39,18 +39,23 @@ export async function discoverPath(inputPath: string): Promise<Skill[]> {
 
 async function findDirTargets(root: string): Promise<PathTarget[]> {
   const skillDirs: string[] = [];
-  let hasFilesOutsideSkills = false;
+  let hasContentOutsideSkills = false;
   const visitedRealDirs = new Set<string>();
 
   // Same walk as the shared Agent Skills discovery: no depth limit, links followed.
   async function visit(dir: string, insideSkill: boolean): Promise<void> {
-    if (!(await enterDirOnce(visitedRealDirs, dir))) return;
+    if (!(await enterDirOnce(visitedRealDirs, dir))) {
+      // A link outside every skill dir is root content: the root target's walk follows it, and
+      // that can be the operative path of a file that a skill reads under a docs path.
+      if (!insideSkill) hasContentOutsideSkills = true;
+      return;
+    }
 
     const entries = await readDirFollowingLinks(dir);
     const isSkill = entries.some((entry) => entry.name === SKILL_MANIFEST && entry.kind === 'file');
     if (isSkill) skillDirs.push(dir);
     if (!insideSkill && !isSkill && entries.some((entry) => entry.kind === 'file')) {
-      hasFilesOutsideSkills = true;
+      hasContentOutsideSkills = true;
     }
 
     for (const entry of entries) {
@@ -72,7 +77,7 @@ async function findDirTargets(root: string): Promise<PathTarget[]> {
       name: fallbackSkillNameFromDirectory(dir),
     }));
   // The rule engine leaves the skill dirs out of the root's walk.
-  if (hasFilesOutsideSkills) {
+  if (hasContentOutsideSkills) {
     targets.unshift({ path: root, manifestPath: null, name: fallbackSkillNameFromDirectory(root) });
   }
 
