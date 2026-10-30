@@ -26,7 +26,11 @@ tag is not the first place a problem appears.
   `@ondrej-merkun/skill-audit@<version>` pin in
   [`packages/skill/SKILL.md`](../packages/skill/SKILL.md), including the
   `allowed-tools` rules, and in
-  [`packages/skill/README.md`](../packages/skill/README.md). It prints each
+  [`packages/skill/README.md`](../packages/skill/README.md). It also sets the
+  tag in every `uses: ondrej-merkun/skill-audit@v<version>` GitHub Action
+  example in [`README.md`](../README.md),
+  [`docs/EXAMPLES.md`](EXAMPLES.md), and [`docs/REFERENCE.md`](REFERENCE.md),
+  because the action is released from the same tag. It prints each
   change. It accepts only a plain `x.y.z` version, because the release workflow
   publishes without `--tag` and npm refuses a prerelease version that way. The
   test fails when a pin differs from the package version.
