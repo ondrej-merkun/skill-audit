@@ -888,6 +888,15 @@ describe('runScan: multi-skill fixture coverage', () => {
         target: 'scripts/report',
       },
       {
+        // The hook names the interpreter, so the shebang adds no shell rules.
+        source: 'a Node hook script with a stale shell shebang',
+        files: {
+          '.claude/settings.json': hookConfig({ type: 'command', command: 'node scripts/tag.js' }),
+          'scripts/tag.js': '#!/bin/sh\nconst label = `release`;\nconsole.log(label);\n',
+        },
+        target: 'scripts/tag.js',
+      },
+      {
         // An option value that is a data file keeps its own name, not the Node rules.
         source: 'an env file that a Node hook loads',
         files: {

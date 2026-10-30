@@ -224,7 +224,7 @@ describe('cursor discovery plugin', () => {
 
     expect(summarize(skills)).toEqual([
       { name: 'acme-tools/hooks/hooks.json', format: 'agent-config', scope: 'user', scanName: 'hooks.json' },
-      { name: 'acme-tools/scripts/start.sh', format: 'agent-config', scope: 'user' },
+      { name: 'acme-tools/scripts/start.sh', format: 'agent-config', scope: 'user', scanName: 'start.sh' },
       { name: 'auditor', format: 'agents-md', scope: 'user' },
       { name: 'deploy', format: 'SKILL.md', scope: 'user', scanName: 'deploy.md' },
       { name: 'plugin-acme-tools-db', format: 'mcp-server', scope: 'user', scanName: '.mcp.json' },

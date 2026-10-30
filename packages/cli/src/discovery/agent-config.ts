@@ -152,11 +152,12 @@ async function discoverHookScripts(
   for (const path of [...scripts.keys()].sort()) {
     const name = posix.join(root.displayDir, relative(root.dir, path).split(sep).join('/'));
     // The config file's metadata does not apply to its scripts. A script gets the scan name
-    // of each language that the hooks run it with, as one installation per name.
+    // of each language that the hooks run it with, as one installation per name. The scan
+    // name is set also when it is the file's own name: the hooks decide the language, so the
+    // engine adds no shebang rules.
     const scanNames = [...(scripts.get(path) ?? [])];
     const [ruleScanFilename = basename(path)] = scanNames;
-    const metadata = ruleScanFilename === basename(path) ? undefined : { ruleScanFilename };
-    const skill = await agentConfigSkill(files, path, name, metadata);
+    const skill = await agentConfigSkill(files, path, name, { ruleScanFilename });
     const installations = scanNames.map((scanName) => ({
       format: skill.format,
       scope: skill.scope,
