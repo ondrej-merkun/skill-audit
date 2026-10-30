@@ -85,7 +85,9 @@ follows literal paths in a command word; quoted words keep their spaces.
 Paths that the shell builds at run time are not followed. Scripts that user
 settings name are the user's
 own and are not followed. Hook scripts of the other agents are not followed
-yet.
+yet. A script that hooks run with two interpreters is one target with the scan
+name of each interpreter, such as `check.sh` and `check.py` (see
+`specs/RULES.md`).
 
 Memory and rule files are `agents-md` targets. A memory file keeps its file
 name as the skill name. A rule or command file drops the `.md` extension.

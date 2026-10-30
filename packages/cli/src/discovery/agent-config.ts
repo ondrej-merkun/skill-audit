@@ -1,9 +1,14 @@
 import { createHash } from 'node:crypto';
 import { readFile, realpath } from 'node:fs/promises';
-import { isAbsolute, join, posix, relative, resolve, sep } from 'node:path';
+import { basename, isAbsolute, join, posix, relative, resolve, sep } from 'node:path';
 import { isRegularFile } from '../fs-walk.js';
 import { agentConfigCommandValues, jsonStringEnd } from '../rules/agent-config.js';
-import { hookScriptScanName, isShellInterpreter } from '../rules/script-scan-name.js';
+import {
+  hookScriptScanName,
+  isShellInterpreter,
+  keepsInterpreter,
+  optionValueInterpreters,
+} from '../rules/script-scan-name.js';
 import type { Skill } from '../types.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
@@ -55,7 +60,9 @@ export type HookScriptRoot = {
   isWorkingDir: boolean;
 };
 
-// The interpreter is the word that runs `word`, or undefined when `word` starts a command.
+// The interpreter is the word that runs `word`, or undefined when `word` starts a command. A
+// data option value, such as `.env` in `node --env-file .env`, pairs with its option word,
+// which runs no file.
 type CommandWord = { word: string; interpreter: string | undefined };
 
 /** Emits each agent hook or settings file that exists, and the scripts its hooks run. */
@@ -145,10 +152,17 @@ async function discoverHookScripts(
   for (const path of [...scripts.keys()].sort()) {
     const name = posix.join(root.displayDir, relative(root.dir, path).split(sep).join('/'));
     // The config file's metadata does not apply to its scripts. A script gets the scan name
-    // of the language that the hook runs it with.
-    const ruleScanFilename = scripts.get(path);
-    const metadata = ruleScanFilename === undefined ? undefined : { ruleScanFilename };
-    skills.push(await agentConfigSkill(files, path, name, metadata));
+    // of each language that the hooks run it with, as one installation per name.
+    const scanNames = [...(scripts.get(path) ?? [])];
+    const [ruleScanFilename = basename(path)] = scanNames;
+    const metadata = ruleScanFilename === basename(path) ? undefined : { ruleScanFilename };
+    const skill = await agentConfigSkill(files, path, name, metadata);
+    const installations = scanNames.map((scanName) => ({
+      format: skill.format,
+      scope: skill.scope,
+      scanName,
+    }));
+    skills.push(installations.length > 1 ? { ...skill, installations } : skill);
   }
 
   return skills;
@@ -156,15 +170,16 @@ async function discoverHookScripts(
 
 /**
  * Finds the files below the root that hook commands in the config files name. Each maps to
- * its scan name, such as `setup.sh` for `bash scripts/setup`, or undefined for its own name.
+ * its scan names: `check.sh` and `check.py` for `bash scripts/check; python3 scripts/check`,
+ * and its own name for a hook that keeps it.
  */
 async function hookScripts(
   configPaths: string[],
   root: HookScriptRoot
-): Promise<Map<string, string | undefined>> {
+): Promise<Map<string, Set<string>>> {
   const placeholder = new RegExp(`^\\$\\{?${root.placeholder}\\}?(?=[\\\\/])`);
   const realRoot = await realPathOrUndefined(root.dir);
-  const scripts = new Map<string, string | undefined>();
+  const scripts = new Map<string, Set<string>>();
   if (realRoot === undefined) return scripts;
 
   // ponytail: each command value is split alone, so `"command": "bash"` does not pair with a
@@ -180,9 +195,9 @@ async function hookScripts(
       // A symlink can point outside the root, so the real path must stay below it too.
       const realPath = await realPathOrUndefined(path);
       if (realPath !== undefined && isBelow(realRoot, realPath) && (await isRegularFile(path))) {
-        // ponytail: one scan name per script. When hooks run it with two interpreters, as in
-        // `bash scripts/check; python3 scripts/check`, only the first one's rules apply.
-        scripts.set(path, scripts.get(path) ?? hookScriptScanName(path, interpreter));
+        const scanNames = scripts.get(path) ?? new Set<string>();
+        scanNames.add(hookScriptScanName(path, interpreter) ?? basename(path));
+        scripts.set(path, scanNames);
       }
     }
   }
@@ -192,37 +207,45 @@ async function hookScripts(
 
 /**
  * Splits a command into unquoted words. Each word comes with its interpreter: the last word
- * before it in the same command that is not an option, so `bash -e scripts/setup` pairs the
- * script with `bash`.
+ * before it in the same command that is not an option, an option value, or a subcommand, so
+ * `bash -o pipefail scripts/setup` pairs the script with `bash`. An option value that the
+ * interpreter loads as code pairs with it too, as `./setup` in `node --require ./setup`.
  */
 function commandWords(command: string): CommandWord[] {
   const words: CommandWord[] = [];
   let interpreter: string | undefined;
+  // The interpreters of the next words that hold option values, as `ignore` in
+  // `python3 -W ignore scripts/check`. The script still follows them.
+  let valueInterpreters: string[] = [];
 
   for (const token of command.match(SHELL_TOKEN) ?? []) {
     if (COMMAND_SEPARATORS.has(token)) {
       interpreter = undefined;
+      valueInterpreters = [];
       continue;
     }
 
     const word = token.replace(SHELL_QUOTES, '');
+    const valueInterpreter = valueInterpreters.shift();
+    if (valueInterpreter !== undefined) {
+      words.push({ word, interpreter: valueInterpreter });
+      continue;
+    }
+
     words.push({ word, interpreter });
+    valueInterpreters = optionValueInterpreters(interpreter, word);
     interpreter = nextInterpreter(word, interpreter);
   }
 
   return words;
 }
 
-/**
- * Returns the interpreter of the word after `word`.
- * ponytail: an option with a separate value hides the interpreter, so in
- * `python3 -W ignore scripts/check` the script pairs with `ignore`.
- */
+/** Returns the interpreter of the word after `word`. */
 function nextInterpreter(word: string, interpreter: string | undefined): string | undefined {
   if (isShellInterpreter(interpreter) && SHELL_COMMAND_OPTION.test(word)) return undefined;
   if (interpreter === undefined && SOURCE_COMMANDS.has(word)) return SOURCING_SHELL;
 
-  return word.startsWith('-') ? interpreter : word;
+  return keepsInterpreter(interpreter, word) ? interpreter : word;
 }
 
 async function commandValues(configPaths: string[]): Promise<string[]> {
