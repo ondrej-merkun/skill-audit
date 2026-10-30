@@ -21,6 +21,11 @@
 - Write SARIF 2.1.0 for GitHub code scanning with `--sarif [file]`, and upload
   it with the GitHub Action's `sarif-file` input. An incomplete scan writes no
   SARIF, so an upload cannot close the alerts of skills that the scan missed.
+- Leave the GitHub Action's `verdict` output blank when the CLI stops before it
+  finishes a scan, for example on a usage error or an incomplete scan, instead
+  of `PASS`. The `results-file` and `sarif-file` outputs are blank when no file
+  exists, and the action deletes the files at those paths before it scans, so a
+  file from an earlier run cannot feed the outputs.
 - Stop scanned skill text from running scripts when you open a `scan --html`
   report.
 - Scan agent hook and settings files for Claude Code, Codex, Cursor, GitHub
@@ -107,6 +112,28 @@
   `--all` flag that does not exist.
 - Remove the disabled skills.sh, GitHub, and deps.dev enrichment code. The
   output does not change.
+- Stop a Markdown heading or a skill title from hiding a prompt injection. A
+  security-education heading now marks only quoted text and code as an
+  example, so a skill titled "documentation-assistant" gets `PI-OVERRIDE` for
+  "Ignore all previous instructions".
+- Detect Python that sends the whole environment (`os.environ`, also through
+  variables and function calls) with urllib, requests, httpx, aiohttp,
+  http.client, or socket as `NET-EXFIL-ENV`, also in a shell heredoc.
+- Detect scripts and instructions that create a password-protected archive
+  (`zip -P`, `7z a -p`, `rar a -hp`, pyzipper, archiver) as
+  `SKILL-PASSWORD-ZIP`.
+- Detect dynamic `import()` of a URL, `import` and `export ... from` a URL, and
+  `require()` of a URL as `DEPS-REMOTE-IMPORT`, and `exec(urlopen(...).read())`
+  as `SKILL-FETCH-AND-EXEC`.
+- Detect trigger clauses that send local context, such as the working
+  directory, git remote, files, environment, or conversation, to an external
+  URL as `PI-EXFIL-TRIGGER-CLAUSE`.
+- Stop flagging standard emoji ZWJ sequences, such as flags and skin-tone
+  variants, as `PI-HIDDEN-UNICODE`.
+- Send local LLM review requests to `/v1/chat/completions` for the documented
+  base URL that ends in `/v1`. Before, they went to `/v1/v1/chat/completions`.
+- Write "1 skill", not "1 skills", in the summary, the HTML report, LLM
+  progress, and `llm list`.
 - Require Node.js 22.18+ on 22.x, 24.11+ on 24.x, or 26+ to develop
   skill-audit. CI tests Node.js 22, 24, and 26 on Ubuntu and macOS.
 - Build the CLI with tsdown instead of tsup. `pnpm build:release` is removed;
