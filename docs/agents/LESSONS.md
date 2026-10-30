@@ -533,6 +533,25 @@ without a commit message explaining why it no longer applies.
   passes its `scanTargetPaths` to the review, so a nested skill is not reviewed
   twice.
 
+- **L4.10: Find every copy of a URL builder before you fix one.** _The local LLM
+  review sent its requests to `/v1/v1/chat/completions`. The URL was built
+  twice, for `llm check` and for the review, and both copies appended `/v1`._
+  Search for every place that builds the same URL or path, and route them
+  through one function before you change it. Check server docs for port and
+  path defaults before you put them in our docs; they change between releases.
+
+- **L4.11: A masked view hides every match that the masker hides.**
+  _`DEPS-REMOTE-IMPORT` moved to the JavaScript code view, which masked template
+  interpolations and regex literals, so `${require('<url>')}` and code after a
+  quote in a regex vanished. The first static-import pattern also took 11 s on
+  8,000 spaces, and a walk back over masked text was quadratic on many adjacent
+  strings._
+  Before a rule moves to a masked view, check how the masker treats template
+  literals, regex literals, and division, and keep attack lines for the forms
+  that the raw text matched. Record the last code position while masking
+  instead of walking back from each string, and time hostile inputs through
+  `runRules`.
+
 ## 5. Orphans, cleanup, and the one-task-per-loop rule
 
 - **L5.1 — Delete direct predecessors in the same commit.** _Task 1.7
@@ -691,6 +710,18 @@ without a commit message explaining why it no longer applies.
   Smoke-test the action's run script against the built CLI, and say in the PR
   that the input works only after the next release.
 
+- **L6.20: Derive an action output only from this run.** _The action wrote
+  `verdict=PASS` when the CLI exited before it wrote results, and an output
+  file from an earlier run in the same job could feed the outputs and the
+  SARIF upload._
+  Set no optimistic default such as `PASS`, read outputs only after the exit
+  codes that write them, and delete the declared output files before the run.
+  Test a composite action's run script directly: extract the `run: |` block and
+  run it with `bash --noprofile --norc -eo pipefail`, a stand-in `npx` on
+  `PATH`, and `GITHUB_OUTPUT` pointing at a temp file. To force an incomplete
+  scan (exit 3) in a test, use a sparse file above the V8 string limit; an
+  unreadable file does not trigger it.
+
 ## 7. Rule fixtures
 
 - **L7.1 — Malicious secret fixtures must not use provider placeholder keys.** _Task
@@ -827,6 +858,56 @@ without a commit message explaining why it no longer applies.
   Test an emoji exception against sequences with U+FE0F, skin-tone modifiers,
   and keycaps, not only bare pictographs. `\p{Emoji}` also matches `#`, `*`,
   and digits, so use `\p{Extended_Pictographic}` and handle keycap bases apart.
+
+- **L7.16: Probe an emoji exception with Unicode's own sequence list.** _The
+  bare-pictograph ZWJ exception fired on 1,391 of the 1,614 RGI emoji ZWJ
+  sequences, because most real sequences put U+FE0F or a skin tone before the
+  joiner. Hand-picked samples did not show the size of the gap._
+  Run an emoji exception against `emoji-zwj-sequences.txt` from Unicode. Also
+  check each malicious line against the pattern under change on its own: a rule
+  reports one finding per line, so a line can pass the per-line table because
+  another pattern of the same rule fires on it.
+
+- **L7.17: Assert the verdict of each malicious fixture skill.** _Five of the
+  eleven skills under `test/fixtures/malicious/` scored PASS 100 or missed
+  their own rule, also in v0.2.1, and every test stayed green. The rule tests
+  run a rule only on `test/fixtures/<RULE-ID>/`, and the multi-skill test only
+  checked that some malicious skill had findings._
+  `test/malicious-fixtures.test.ts` now maps each fixture skill to its rule and
+  requires that finding and a verdict other than PASS. Add a new fixture skill
+  to that map. Keep a malicious fixture line under the 120-character snippet
+  limit, and put a made-up secret on its own line with the
+  `autoreview: allow-secret` marker.
+
+- **L7.18: A regex check for a local URL host must fail closed.** _The trigger
+  clause rule treated `https://localhost@evil.example`,
+  `https://localhost:80@collector.example.net`, and `?tag=@localhost` as local,
+  one bypass per review round._
+  In a pure-regex rule that cannot call `new URL` (see L7.10), accept only a
+  loopback host directly after the scheme, an optional port, and then the end
+  of the authority. Treat every other form as external.
+
+- **L7.19: A heading must not hide plain prose.** _A skill titled
+  `documentation-assistant` hid "Ignore all previous instructions" from
+  `PI-OVERRIDE`, because the security-education mask covered every section
+  whose heading named documentation, rules, testing, or similar words._
+  Let a heading mark only quoted text (inline code, double quotes) as an
+  example; fences and blockquotes stay masked everywhere. When you narrow a
+  mask, compare the old and new mask character by character on a large real
+  corpus: the new mask must never hide a character that the old one showed.
+  Probe headings at any indent and nested education sections.
+
+- **L7.20: A data-flow rule that forces FAIL needs a probe over real files.**
+  _For Python `NET-EXFIL-ENV`, "reads the environment and imports a network
+  client in one file" flagged Anthropic's office skills, and file-wide variable
+  names flagged an NVIDIA skill through a chain of shared local names. A later
+  fix that ran the Python flow only on Python files lost Python in shell
+  heredocs._
+  Scope names per function, as Python does. In a file of another language, let
+  the flow restore a read only where that language's view kept the text. Time
+  hostile shapes through `runRules`: many functions with one name, many `;`
+  statements on one line, and long dotted names each took quadratic time or
+  memory before the fix.
 
 ---
 
