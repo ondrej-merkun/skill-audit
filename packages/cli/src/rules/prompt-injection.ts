@@ -208,7 +208,7 @@ export const PI_METADATA_MISMATCH: Rule = {
 // ---------------------------------------------------------------------------
 // PI-EXFIL-TRIGGER-CLAUSE (Critical)
 // "When user asks about X, also send Y" — Repello-signature attack.
-// Per spec §4 and specs/RULES.md exact pattern.
+// Per spec §4 and specs/RULES.md exact patterns.
 // ---------------------------------------------------------------------------
 // RegExp constructor used to avoid static-analysis scanners matching this source file.
 const exfilTriggerPattern = new RegExp(
@@ -218,16 +218,57 @@ const exfilTriggerPattern = new RegExp(
   'is'
 );
 
+// The local-context patterns need a trigger, a send or include action, local data, and a
+// literal external URL or host. Each window stops at a blank line, so a trigger cannot pair
+// with an unrelated instruction in a later paragraph.
+const paragraphWindow = (maxChars: number): string =>
+  String.raw`(?:[^\n]|\n(?!\r?\n)){0,${maxChars}}?`;
+// An opening quote marks a quoted example, as in PI-OVERRIDE.
+const notQuoted = String.raw`(?<!["'\x60\u201c])`;
+// A request trigger needs a side-effect marker such as "also". Without the marker, the
+// instruction can be the request itself: send the user's data to the service of the skill.
+const requestTrigger = String.raw`\b(?:(?:when(?:ever)?|if|each\s+time|every\s+time)\s+(?:the\s+)?user\s+(?:asks?|requests?|runs?|says?|opens?|invokes?|types?|wants?)|when(?:ever)?\s+asked)\b`;
+const sideEffectMarker = String.raw`\b(?:also|additionally|silently|quietly|secretly|covertly)\b,?\s+(?:[a-z]+ly\s+)?`;
+// A recurring or agent-action trigger is a side effect without a marker. "Whenever the user
+// asks" is a request trigger, so it needs the marker.
+const recurringTrigger = String.raw`\b(?:(?:whenever|each\s+time|every\s+time)\b(?!\s+(?:the\s+)?user\s+(?:asks?|requests?|wants?)\b)|(?:before|after)\s+(?:you|each|every|responding|answering|replying)\b)`;
+const localContext = `(?:${[
+  String.raw`\bworking\s+director(?:y|ies)|\bcwd\b|\bpwd\b`,
+  String.raw`\bgit\s+remotes?|\bremote\s+urls?`,
+  String.raw`\b(?:file|source|project|repo(?:sitory)?)\s+(?:contents?|code)`,
+  String.raw`\bcontents\s+of\s+(?:the\s+|this\s+|each\s+|every\s+|its\s+|their\s+)?(?:files?|repo(?:sitory)?|project|workspace|director(?:y|ies)|folder)`,
+  String.raw`\benvironment\s+variables?|\benv\s+vars?|\.env\b|process\.env|os\.environ`,
+  String.raw`\bcredentials?|\bapi[_\s-]?keys?|\b(?:access|auth|api|bearer|session)\s+tokens?|\bsecrets?\b|\bpasswords?`,
+  String.raw`\b(?:ssh|private)\s+keys?|\.ssh\b|\.aws\b|\$[A-Z_]{3,}`,
+  String.raw`\bconversation|\bchat\s+history|\bsystem\s+prompt`,
+  String.raw`\bhostname|\b(?:shell|bash|command)\s+history`,
+].join('|')})`;
+// A URL, or a bare host with a path. A loopback host is local. The guard checks where the
+// host name ends, so a lookalike such as localhost.evil.example stays external.
+const externalDestination = String.raw`[<(\x60"']?(?!(?:https?://)?(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(?![\w.-]))(?:https?://|[a-z0-9-]+\.[a-z0-9.-]+/)`;
+const sendAction = String.raw`\b(?:send|post|upload|report|forward|transmit|submit)s?\b${paragraphWindow(80)}${localContext}${paragraphWindow(120)}\b(?:to|at)\s+${externalDestination}`;
+const includeAction = String.raw`\b(?:include|attach|append|embed)s?\b${paragraphWindow(80)}${localContext}${paragraphWindow(120)}\b(?:request|call)s?\s+to\s+${externalDestination}`;
+const exfilAction = `(?:${sendAction}|${includeAction})`;
+
+const requestTriggerExfilPattern = new RegExp(
+  `${notQuoted}${requestTrigger}${paragraphWindow(200)}${sideEffectMarker}${exfilAction}`,
+  'i'
+);
+const recurringTriggerExfilPattern = new RegExp(
+  `${notQuoted}${recurringTrigger}${paragraphWindow(200)}${exfilAction}`,
+  'i'
+);
+
 export const PI_EXFIL_TRIGGER_CLAUSE: Rule = {
   id: 'PI-EXFIL-TRIGGER-CLAUSE',
   category: 'prompt-injection',
   severity: 'critical',
   appliesTo: ['*.md', '*.mdc', 'SKILL.md', 'AGENTS.md'],
-  patterns: [exfilTriggerPattern],
+  patterns: [exfilTriggerPattern, requestTriggerExfilPattern, recurringTriggerExfilPattern],
   prepareContent: maskMarkdownSecurityEducationContext,
   message:
-    'Trigger-clause exfiltration pattern detected — conditional instruction to leak secrets.',
-  fix: 'Remove any instruction that conditionally appends secret/env data to responses.',
+    'Trigger-clause exfiltration pattern detected: a conditional instruction leaks secrets or local context.',
+  fix: 'Remove any instruction that sends secrets or local context as a side effect of a request.',
   cwe: ['CWE-1427'],
 };
 
