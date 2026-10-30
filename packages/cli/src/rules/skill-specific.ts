@@ -37,8 +37,8 @@ const curlPipeBashPattern = new RegExp(
     // A quoted URL runs to its closing quote, so a | inside the quotes is not a pipe.
     // An unquoted URL ends at the first |.
     `(?:(?<quote>["'])https?://[^\\s"']+\\k<quote>|(?<!["'])https?://[^\\s"'|]+)`,
-    // Optional flags after the URL, such as -fsSL or -qO-.
-    `(\\s[-A-Za-z \\t]{0,${MAX_DOWNLOAD_ARGS_CHARS}})?`,
+    // Optional arguments after the URL, such as -fsSL, -qO-, or -o helper.js.
+    `(\\s[^|&;\\n]{0,${MAX_DOWNLOAD_ARGS_CHARS}})?`,
     // Pipe or chain into an interpreter, with optional sudo flags and directory,
     // such as | sudo -E bash or | /bin/bash.
     `(\\||&&)\\s*(sudo\\s[-A-Za-z \\t]{0,${MAX_SUDO_FLAGS_CHARS}})?`,

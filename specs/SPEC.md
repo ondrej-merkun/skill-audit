@@ -280,7 +280,7 @@ Two more patterns catch a trigger clause (`when the user asks`, `whenever`, `eac
 
 **`SKILL-CURL-BASH-IN-MD` — Critical.** In fenced code blocks:
 ```regex
-\b(curl|wget|fetch)\s[^|&;\n]{0,80}(?:(?<quote>["'])https?://[^\s"']+\k<quote>|(?<!["'])https?://[^\s"'|]+)(\s[-A-Za-z \t]{0,80})?(\||&&)\s*(sudo\s[-A-Za-z \t]{0,20})?(/[\w./-]{0,40}/)?(bash|sh|zsh|python3?(?!\s+-[cm]\b)|node(?!\s+-[ep]\b))\b
+\b(curl|wget|fetch)\s[^|&;\n]{0,80}(?:(?<quote>["'])https?://[^\s"']+\k<quote>|(?<!["'])https?://[^\s"'|]+)(\s[^|&;\n]{0,80})?(\||&&)\s*(sudo\s[-A-Za-z \t]{0,20})?(/[\w./-]{0,40}/)?(bash|sh|zsh|python3?(?!\s+-[cm]\b)|node(?!\s+-[ep]\b))\b
 source\s*<\(\s*(curl|wget)\s+\S+\s*\)
 eval\s*["'`]?\$\(\s*(curl|wget)
 ```

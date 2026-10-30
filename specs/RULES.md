@@ -359,10 +359,13 @@ showing what the content looks like with the invisibles stripped.
 ### SKILL-CURL-BASH-IN-MD (Critical)
 In fenced code blocks within `.md` files:
 ```regex
-\b(curl|wget|fetch)\s[^|&;\n]{0,80}(?:(?<quote>["'])https?://[^\s"']+\k<quote>|(?<!["'])https?://[^\s"'|]+)(\s[-A-Za-z \t]{0,80})?(\||&&)\s*(sudo\s[-A-Za-z \t]{0,20})?(/[\w./-]{0,40}/)?(bash|sh|zsh|python3?(?!\s+-[cm]\b)|node(?!\s+-[ep]\b))\b
+\b(curl|wget|fetch)\s[^|&;\n]{0,80}(?:(?<quote>["'])https?://[^\s"']+\k<quote>|(?<!["'])https?://[^\s"'|]+)(\s[^|&;\n]{0,80})?(\||&&)\s*(sudo\s[-A-Za-z \t]{0,20})?(/[\w./-]{0,40}/)?(bash|sh|zsh|python3?(?!\s+-[cm]\b)|node(?!\s+-[ep]\b))\b
 source\s*<\(\s*(curl|wget)\s+\S+\s*\)
 eval\s*["'`]?\$\(\s*(curl|wget)
 ```
+Arguments after the URL can hold a path, so `curl <url> -o x.js && node x.js`
+fires like `curl -o x.js <url> && node x.js`. This rule owns a download and a
+run in one shell command, also in a JavaScript `child_process` call.
 
 ### SKILL-PASSWORD-ZIP (Critical)
 A password hides archive content from antivirus and data-loss scanners. The
