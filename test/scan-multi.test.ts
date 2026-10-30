@@ -1056,6 +1056,14 @@ describe('runScan: multi-skill fixture coverage', () => {
         ruleId: 'CODEEXEC-PY-OSSYS',
       },
       {
+        // `env` sets FOO and runs the script, so the shebang decides its language.
+        reference: 'a project script that env runs after an assignment',
+        configPath: (_home: string, cwd: string) => join(cwd, '.claude', 'settings.json'),
+        hook: { type: 'command', command: 'env FOO=bar scripts/setup' },
+        scriptPath: (_home: string, cwd: string) => join(cwd, 'scripts', 'setup'),
+        script: `#!/bin/sh\n${WEBHOOK_EXFIL_COMMAND}\n`,
+      },
+      {
         reference: 'a project script after deno run options with values',
         configPath: (_home: string, cwd: string) => join(cwd, '.claude', 'settings.json'),
         hook: { type: 'command', command: 'deno run -c deno.json --allow-read scripts/run' },
