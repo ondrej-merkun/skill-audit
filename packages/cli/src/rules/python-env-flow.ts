@@ -111,7 +111,8 @@ const TRANSPORT_OPTION_ARGUMENT =
 const CALLED_VALUE = /^\s*(?:await\s+)?([A-Za-z_][\w.]*)\s*\(/;
 const AS_NAME = /\s*as\s+([A-Za-z_]\w*)/y;
 // A plain name after `as`. An attribute or a subscript target, as in `as self.log`, binds no name.
-const AS_TARGET = /\bas\s+([A-Za-z_]\w*)(?!\s*[\w.[])/g;
+// A keyword after the name, as in `case x as name if ...`, still binds it.
+const AS_TARGET = /\bas\s+([A-Za-z_]\w*)(?!\w|\s*[.[])/g;
 
 // The full names of calls that start a child process. Their `env=` argument is the child's
 // environment and does not flow into the call result: `subprocess.run(cmd, env={**os.environ})`.
