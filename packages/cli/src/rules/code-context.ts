@@ -103,7 +103,7 @@ function pythonStringStart(content: string, quoteIndex: number): number {
   return start;
 }
 
-function maskPythonStringsAndComments(content: string): string {
+function maskPythonStringsAndComments(content: string, keepString?: KeepString): string {
   const chars = content.split('');
   let idx = 0;
 
@@ -141,7 +141,7 @@ function maskPythonStringsAndComments(content: string): string {
         end += 1;
       }
 
-      maskRange(chars, start, end);
+      if (!keepString?.(chars, start)) maskRange(chars, start, end);
       idx = end;
       continue;
     }
@@ -152,7 +152,7 @@ function maskPythonStringsAndComments(content: string): string {
   return chars.join('');
 }
 
-function maskJavaScriptStringsAndComments(content: string): string {
+function maskJavaScriptStringsAndComments(content: string, keepString?: KeepString): string {
   const chars = content.split('');
   let idx = 0;
 
@@ -193,7 +193,7 @@ function maskJavaScriptStringsAndComments(content: string): string {
         end += 1;
       }
 
-      maskRange(chars, idx, end);
+      if (!keepString?.(chars, idx)) maskRange(chars, idx, end);
       idx = end;
       continue;
     }
@@ -242,10 +242,19 @@ function maskShellCommentsAndSingleQuotedStrings(content: string): string {
   return chars.join('');
 }
 
-export function maskDocumentationTextInCode(content: string, filePath: string): string {
+/**
+ * Masks comments and strings in Python, JavaScript, and shell code. In Python and JavaScript,
+ * `keepString` can keep a string that the code itself reads, such as a module specifier.
+ */
+export function maskDocumentationTextInCode(
+  content: string,
+  filePath: string,
+  keepString?: KeepString
+): string {
   const ext = extensionOf(filePath);
-  if (PYTHON_CODE_EXTENSIONS.has(ext)) return maskPythonStringsAndComments(content);
-  if (JAVASCRIPT_CODE_EXTENSIONS.has(ext)) return maskJavaScriptStringsAndComments(content);
+  if (PYTHON_CODE_EXTENSIONS.has(ext)) return maskPythonStringsAndComments(content, keepString);
+  if (JAVASCRIPT_CODE_EXTENSIONS.has(ext))
+    return maskJavaScriptStringsAndComments(content, keepString);
   if (SHELL_CODE_EXTENSIONS.has(ext)) return maskShellCommentsAndSingleQuotedStrings(content);
   return content;
 }
@@ -530,3 +539,7 @@ export function maskSecurityEducationExampleContext(content: string, filePath: s
 
 // How the security-education mask treats a markdown line.
 type MarkdownLineKind = 'quoted' | 'education' | 'plain';
+
+// Decides whether the masker keeps the string that starts at `stringStart`. `masked` holds the
+// content masked so far, so comments and strings before that string read as spaces.
+export type KeepString = (masked: readonly string[], stringStart: number) => boolean;

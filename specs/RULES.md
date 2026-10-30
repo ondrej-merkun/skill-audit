@@ -265,6 +265,26 @@ Path-literal regex over both code and markdown. Each `~/` prefix also matches
 ~/Library/Keychains/|/etc/(passwd|shadow)
 ```
 
+### DEPS-REMOTE-IMPORT (Critical)
+Code that loads a module from an `http(s)` URL at run time. No review of the
+skill covers that code. Applies to `.js`, `.ts`, `.mjs`, `.cjs`, `.jsx`,
+`.tsx`, and `.py` files. The patterns match a view of the file where comments
+and strings are masked, except the string after a module loader keyword
+(`import`, `require`, `from`, `import_module`). So a URL in a comment, a JSDoc
+block, or a logged or shown string does not fire. A comment between the
+keyword and its string, as in `import(/* @vite-ignore */ '<url>')`, does not
+hide the URL. `<q>` is one of `'`, `"`, or a backtick:
+```regex
+\bfrom\s*<q>https?://
+(?<![.$])\bimport\s*(?:\(\s*)?<q>https?://
+(?<![.$])\brequire\s*\(\s*<q>https?://
+\bimportlib\.import_module\s*\(\s*<q>https?://
+```
+The rule does not follow data flow. It misses a URL held in a variable
+(`import(url)`) and a module that the code downloads to a file and then
+imports. Fetch-then-run is `CODEEXEC-JS-EVAL-FUNCTION` (any JS `eval` or
+`new Function`) and `SKILL-FETCH-AND-EXEC`.
+
 ## Summary of remaining rules
 
 Read `SPEC.md` §4 for these — they follow the same shape as above.
@@ -295,7 +315,7 @@ content does another), privilege-escalation instructions ("use sudo",
 **Dependencies (7):** unpinned PyPI/npm deps resolving to typo-adjacent
 names, `npm install` in postinstall scripts, known typosquats (use a
 short bundled list), inline `pip install` / `npm install` in skill
-code, `import` / `require` from remote URLs, MCP config and agent hook startup
+code, `import` / `require` from remote URLs (`DEPS-REMOTE-IMPORT`, above), MCP config and agent hook startup
 commands that download and execute remote content, and project settings that
 approve project MCP servers (`MCP-PROJECT-AUTO-APPROVE`, below).
 
