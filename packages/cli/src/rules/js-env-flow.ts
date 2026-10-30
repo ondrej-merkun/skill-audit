@@ -52,9 +52,9 @@ const ASSIGNMENT = /(?<![\w$.])([A-Za-z_$][\w$]*)(?:\.[A-Za-z_$][\w$]*)*\s*\+?=(
 // flow into the call result: `execFileSync(cmd, args, { env: { ...process.env, CI: '1' } })`.
 const PROCESS_LAUNCH_CALL =
   /(?<![\w$])(?:[\w$]+\.)?(?:spawn|spawnSync|exec|execSync|execFile|execFileSync|fork|execa|execaSync|execaCommand|execaCommandSync)\s*\(/g;
-// An `env` key: bare (`env:`, or shorthand `{ env }`) or quoted (`'env':`). It runs on the content,
-// because the view turns a quoted key into string text.
-const ENV_OPTION = /(?<![\w$.])(?:env(?=\s*[:,}])|(['"])env\1(?=\s*:))/g;
+// The word of an `env` key, bare or quoted (`'env'`). It runs on the content, because the view
+// turns a quoted key into string text. The flow reads the punctuation around it in the view.
+const ENV_OPTION = /(?<![\w$.])(?:env|(['"])env\1)(?![\w$])/g;
 
 // A line break ends a statement unless the line ends with, or the next line starts with, an
 // operator that continues the expression.
@@ -299,29 +299,35 @@ function childEnvironmentRegions(
   );
   if (launches.length === 0) return [];
 
-  const keys = [...content.matchAll(ENV_OPTION)].filter((match) => {
-    // A bare key must be code in the view, a quoted key string text. A key in a comment is neither.
-    const inView =
-      match[1] === undefined
-        ? code.startsWith('env', match.index)
-        : code[match.index] === STRING_TEXT;
-    const previous = code[previousCodeIndex(code, match.index)];
-    return inView && (previous === '{' || previous === ',');
+  const keys = [...content.matchAll(ENV_OPTION)].flatMap((match) => {
+    const quoted = match[1] !== undefined;
+    const start = match.index;
+    const end = start + match[0].length;
+    // A bare key must be code in the view, a quoted key string text. A word in a comment is
+    // neither, and it is dropped before the walks below cross the blank comment.
+    const inView = quoted ? code[start] === STRING_TEXT : code.startsWith('env', start);
+    if (!inView) return [];
+
+    const previous = code[previousCodeIndex(code, start)];
+    const after = nextCodeIndex(code, end);
+    const next = code[after];
+    const startsProperty = previous === '{' || previous === ',';
+    // A quoted key needs a value. A bare key can be shorthand (`{ env }`).
+    const isKey = next === ':' || (!quoted && (next === ',' || next === '}'));
+    return startsProperty && isKey ? [{ start, end, colon: next === ':' ? after : -1 }] : [];
   });
   const owners = innermostRanges(
     [...context, ...launches],
-    keys.map((match) => match.index)
+    keys.map((key) => key.start)
   );
 
-  return keys.flatMap((match, idx) => {
+  return keys.flatMap((key, idx) => {
     if ((owners[idx] ?? -1) < context.length) return [];
 
-    const keyEnd = match.index + match[0].length;
-    const colon = nextCodeIndex(code, keyEnd);
     // `{ env }` passes the name itself; `{ env: value }` passes the value.
-    return code[colon] === ':'
-      ? [barrier(colon + 1, ends[colon + 1] ?? code.length)]
-      : [barrier(match.index, keyEnd)];
+    return key.colon < 0
+      ? [barrier(key.start, key.end)]
+      : [barrier(key.colon + 1, ends[key.colon + 1] ?? code.length)];
   });
 }
 
