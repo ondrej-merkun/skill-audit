@@ -424,6 +424,18 @@ without a commit message explaining why it no longer applies.
   it. Report a file that two agents read from one plugin, and document the gap,
   until MCP entries dedupe across agents.
 
+- **L2.22: Do not dedupe scan targets by skipping symlinks.** _The path scan
+  made a target skip each link into another target, so the same bytes were
+  scanned only under the other target's path. Three review rounds found three
+  ways that path hid a finding: a `docs` link demoted an injection to inert
+  docs, `--skill` dropped the target that the link reached, and
+  `zzz/scripts -> ../aaa/docs` masked a script as documentation._
+  A path gives a file its context: docs or operative, reachable from a
+  manifest or not. Let each target scan every file it reaches, and accept that
+  a file can show up under more than one target. Avoid the duplicate that
+  matters, a container rescanning a skill dir, by naming each skill after its
+  real directory.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**
