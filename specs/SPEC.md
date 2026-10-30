@@ -37,7 +37,7 @@ Justification, in order of weight:
 
 ### Distribution
 1. **Primary:** `npm publish` → `npx @ondrej-merkun/skill-audit` and `pnpm dlx @ondrej-merkun/skill-audit` work instantly.
-2. **GitHub Action wrapper:** `uses: ondrej-merkun/skill-audit@v1` — thin composite action.
+2. **GitHub Action wrapper:** `uses: ondrej-merkun/skill-audit@v1` — thin composite action. Its `scan-path` input passes a path to `skill-audit scan <path>`, so a workflow can audit the skills in its checkout. A blank `scan-path` keeps the default scan.
 
 ### Directory layout
 ```
@@ -480,6 +480,7 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 | Command | Purpose |
 |---|---|
 | `skill-audit` / `skill-audit scan` | Default — discover and scan all agents, TUI output |
+| `skill-audit scan <path>` / `skill-audit <path>` | Scan the skills at a path instead of the installed skills, for example before you install them |
 | `skill-audit scan --agent claude-code` | Restrict to one agent |
 | `skill-audit scan --skill <skill-name-or-id>` | Restrict scan to one matching skill |
 | `skill-audit scan --include-marketplaces` | Include inactive local marketplace inventory and label it separately |
@@ -500,6 +501,35 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 - `1`: the overall verdict meets the `--fail-on` band, `fail` (default) or `review`. Band values are case-insensitive. `--strict` sets the band to `review`.
 - `2`: tool error or usage error, such as a `--fail-on` value that is not a band.
 - `3`: scan incomplete. A discovery plugin or a skill scan failed (exit `1` still wins).
+
+**Path scan.** `skill-audit scan <path>` scans the skills at a path and does not
+run discovery. Use it to audit a skill, a skills repository, or a plugin checkout
+before you install it. `skill-audit <path>` is the same command. A subcommand
+name wins over a path with the same name: use `./list` to scan a directory named
+`list`.
+
+- A file is one skill. Its name is the file name.
+- In a directory, each directory at or under the path that holds a `SKILL.md` is
+  one skill. The walk has no depth limit and follows symlinks.
+- The path itself is one more skill when it has files outside those skill
+  directories, for example plugin hooks, commands, scripts, or `.mcp.json`. The
+  rule engine leaves the skill directories out of that target, so the scan reads
+  every file under the path once.
+- The scan uses the same rules, scoring, ignore list, output formats, and exit
+  codes as the default scan. The rules for a project's own agent settings files
+  (`MCP-PROJECT-AUTO-APPROVE`, `NET-API-ENDPOINT-OVERRIDE`,
+  `NET-HOOK-HTTP-EXTERNAL`, `SEC-PROJECT-CREDENTIAL-HELPER`) do not run, because
+  no agent loads the files under the path as its settings.
+- JSON output keeps schema 1.0. Each target reports the agent id `cross-agent`,
+  its absolute path, and `install_state: "installed"`.
+- `--skill` selects one target from the path. `--agent` and
+  `--include-marketplaces` select installed skills, so a path scan with them
+  exits `2`.
+- A path that does not exist, is not a file or directory, or cannot be read
+  exits `2` with an error on stderr.
+- The table footer suggests `skill-audit scan <path> ...` commands. It does not
+  suggest `explain`, `ignore`, or `--agent`, because these look up installed
+  skills.
 
 **Interactivity.** Zero prompts at MVP. No "Press y to continue". No auth flow. Running the binary with no args performs a full scan. The single most-important UX rule: **a first-time user can type the install command, hit enter, and be reading the result in under 5 seconds.**
 

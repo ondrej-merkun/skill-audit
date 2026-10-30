@@ -39,6 +39,7 @@ produce shareable CLI output without an account.
 
 ```bash
 skill-audit scan               # scan all discovered skills (default)
+skill-audit scan <path>        # scan the skills at a path, for example before you install them
 skill-audit scan --json -o skill-audit-report.json
 skill-audit scan --skill <name-or-id>
 skill-audit scan --include-marketplaces
@@ -241,6 +242,12 @@ Each action revision runs the CLI version from the same revision, so the action
 ref also pins the CLI package version. To run a different npm version, set the
 `version` input, for example `version: latest`.
 
+By default, the action scans the installed and project skills that discovery
+finds from `path`. Set `scan-path` to scan the skills at a path in the checkout
+instead, for example a `skills/` directory in a pull request, before anyone
+installs them. The action passes it to `skill-audit scan <path>`, relative to
+`path`.
+
 ```yaml
 name: Skill audit
 
@@ -257,6 +264,8 @@ jobs:
         with:
           fail-on: REVIEW
           results-file: skill-audit-results.json
+          # Optional: scan only the skills in this directory of the checkout.
+          # scan-path: skills
 ```
 
 ### GitHub Code Scanning

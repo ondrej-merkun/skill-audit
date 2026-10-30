@@ -11,7 +11,7 @@ import { realpathSync } from 'node:fs';
 import { cp, mkdir, mkdtemp, open, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { sarifSchemaErrors } from './helpers/sarif-schema.js';
@@ -923,6 +923,97 @@ describe('e2e: scan flags', () => {
     expect(stdout).toBe('');
     expect(stderr).toContain(`option '--fail-on <band>' argument '${band}' is invalid`);
     expect(stderr).toContain('REVIEW, FAIL');
+  });
+});
+
+describe('e2e: scan a path', () => {
+  let tempHome: string;
+  let collection: string;
+  let env: Record<string, string>;
+
+  // A plugin checkout: two skills and a hooks file outside them.
+  beforeEach(async () => {
+    tempHome = await mkdtemp(join(tmpdir(), 'skill-audit-e2e-home-'));
+    collection = await mkdtemp(join(tmpdir(), 'skill-audit-e2e-path-'));
+    env = { HOME: tempHome, USERPROFILE: tempHome, SKILL_AUDIT_CWD: tempHome };
+
+    // An installed skill that a path scan must not report.
+    await cp(join(BENIGN_DIR, 'csv-processor'), join(tempHome, '.claude', 'skills', 'csv'), {
+      recursive: true,
+    });
+    for (const [fixtureDir, name] of [
+      [MALICIOUS_DIR, 'webhook-exfil-skill'],
+      [BENIGN_DIR, 'date-parser'],
+    ] as const) {
+      await cp(join(fixtureDir, name), join(collection, 'skills', name), { recursive: true });
+    }
+    await mkdir(join(collection, 'hooks'));
+    await cp(
+      join(FIXTURES_DIR, 'MCP-CONFIG-REMOTE-EXEC', 'malicious', 'hooks.json'),
+      join(collection, 'hooks', 'hooks.json')
+    );
+  });
+
+  afterEach(async () => {
+    await rm(tempHome, { recursive: true, force: true });
+    await rm(collection, { recursive: true, force: true });
+  });
+
+  it.each([{ invocation: ['scan'] }, { invocation: [] }])(
+    'skill-audit $invocation <dir> scans each SKILL.md dir and the files outside them',
+    async ({ invocation }) => {
+      const { stdout, code } = await runCli([...invocation, collection, '--json'], env);
+
+      expect(code).toBe(1);
+      const result = JSON.parse(stdout) as JsonOutput;
+      const byName = new Map(result.skills.map((skill) => [skill.name, skill]));
+      expect([...byName.keys()].sort()).toEqual(
+        [basename(collection), 'date-parser', 'webhook-exfil-skill'].sort()
+      );
+      expect(byName.get('webhook-exfil-skill')?.summary.verdict).toBe('FAIL');
+      expect(byName.get('date-parser')?.summary.verdict).toBe('PASS');
+      const rootFindings = byName.get(basename(collection))?.findings ?? [];
+      expect(rootFindings.length).toBeGreaterThan(0);
+      expect(rootFindings.every((finding) => finding.file.endsWith('hooks.json'))).toBe(true);
+      expect(result.agents).toEqual([{ id: 'cross-agent', installed: true, skills_scanned: 3 }]);
+    }
+  );
+
+  it('scans a single skill dir or file, and suggests next steps for that path', async () => {
+    const skillDir = join(collection, 'skills', 'date-parser');
+    const skillRun = await runCli(['scan', skillDir, '--json'], env);
+    const skillResult = JSON.parse(skillRun.stdout) as JsonOutput;
+    expect(skillRun.code).toBe(0);
+    expect(skillResult.skills.map((skill) => skill.name)).toEqual(['date-parser']);
+    expect(skillResult.skills[0]?.agents).toEqual([{ id: 'cross-agent', path: skillDir }]);
+
+    const file = join(collection, 'skills', 'webhook-exfil-skill', 'notify.py');
+    const fileRun = await runCli(['scan', file, '--json'], env);
+    const fileResult = JSON.parse(fileRun.stdout) as JsonOutput;
+    expect(fileRun.code).toBe(1);
+    expect(fileResult.skills.map((skill) => skill.name)).toEqual(['notify.py']);
+    expect(fileResult.skills[0]?.summary.verdict).toBe('FAIL');
+
+    // The installed-skill commands (`explain`, `ignore`, `--agent`) cannot find a path target.
+    const tableOut = stripAnsi((await runCli(['scan', file], env)).stdout);
+    expect(tableOut).toContain(`skill-audit scan ${file} --html report.html`);
+    expect(tableOut).toContain(`skill-audit scan ${file} --skill notify.py --llm local`);
+    expect(tableOut).not.toMatch(/skill-audit (explain|ignore|--agent)/);
+  });
+
+  it.each([
+    { args: ['scan', 'no-such-skill-dir'], error: 'path not found: no-such-skill-dir' },
+    { args: ['no-such-skill-dir'], error: 'path not found: no-such-skill-dir' },
+    {
+      args: ['scan', '.', '--agent', 'claude-code'],
+      error: 'a path scan cannot use --agent or --include-marketplaces',
+    },
+  ])('skill-audit $args exits 2 with a clear error', async ({ args, error }) => {
+    const { stdout, stderr, code } = await runCli(args, env, { cwd: collection });
+
+    expect(code).toBe(2);
+    expect(stdout).toBe('');
+    expect(stripAnsi(stderr)).toContain(error);
   });
 });
 

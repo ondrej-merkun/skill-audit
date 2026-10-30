@@ -65,7 +65,7 @@ function topIssue(skill: ScannedSkill): string {
   return issue.label;
 }
 
-export function renderTableToString(result: ScanResult): string {
+export function renderTableToString(result: ScanResult, scanPath?: string): string {
   const { skills, scan, agents, summary } = result;
   const showInstallStateColumn = skills.some(
     (skill) => installStateLabel(skill.installState) === 'marketplace'
@@ -134,7 +134,7 @@ export function renderTableToString(result: ScanResult): string {
   }
 
   lines.push('');
-  lines.push(renderSummaryFooter(result, ordered, boxWidth));
+  lines.push(renderSummaryFooter(result, ordered, boxWidth, scanPath));
 
   return lines.join('\n');
 }
