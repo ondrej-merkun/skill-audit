@@ -14,6 +14,7 @@ const MALICIOUS_DIR = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 
 const EXPECTED_RULE_BY_FIXTURE: Record<string, string> = {
   'code-execution-skill': 'CODEEXEC-PY-EVAL',
   'credstore-read-skill': 'FS-CREDSTORE',
+  'docs-script-installer': 'SKILL-CURL-BASH-IN-MD',
   'env-exfil-skill': 'NET-EXFIL-ENV',
   'hidden-unicode-skill': 'PI-HIDDEN-UNICODE',
   'obfuscated-eval-skill': 'OBFS-EVAL-ATOB',
