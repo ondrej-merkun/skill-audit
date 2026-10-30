@@ -52,7 +52,11 @@ const CR_LINE_BREAK = /\r\n?/g;
 const SHELL_CONTINUATION = /(?<=^|\n)(?![ \t]*#)([^\n]*)\\\n/g;
 const TRAILING_SHELL_COMMENT = /(?<=^|\n)[ \t]*#[^\n]*$/;
 // A line that holds only a comment. The shell skips it, also inside a pending pipeline.
-const COMMENT_ONLY_LINE = /(?<=^|[\r\n])[ \t]*#[^\r\n]*/g;
+const COMMENT_ONLY_LINE = /^[ \t]*#/;
+// Splits after each LF, CR, or CRLF, so each line keeps its line break.
+const AFTER_LINE_BREAK = /(?<=\n|\r(?!\n))/;
+// A `#` starts a comment only at the start of a word.
+const WORD_BREAK = /[\s;&|()<>]/;
 
 // A blanked comment keeps its whitespace, so line breaks inside it stay.
 const NON_WHITESPACE = /\S/g;
@@ -77,14 +81,11 @@ export function extractAgentConfigCommands(content: string, path: string): strin
  * lines become spaces, which the shell skips, and every line break becomes a space. A
  * pattern can then span what the shell joins, such as a pipeline that continues after `|`
  * or a quoted multi-line request body. The engine matches both layouts, so a finding needs
- * only one of them. Blanking a line inside a quoted string only removes text, so it cannot
- * hide a command.
+ * only one of them.
  */
 export function extractAgentConfigCommandsOnOneLine(content: string, path: string): string {
   return keepCommandValues(content, path, (command) =>
-    command
-      .replace(COMMENT_ONLY_LINE, (comment) => ' '.repeat(comment.length))
-      .replace(LINE_BREAK, ' ')
+    blankCommentOnlyLines(command).replace(LINE_BREAK, ' ')
   );
 }
 
@@ -178,6 +179,48 @@ function toShellLines(command: string): string {
     .replace(CR_LINE_BREAK, '\n')
     .replace(SHELL_CONTINUATION, '$1  ')
     .replace(TRAILING_SHELL_COMMENT, '$&\n');
+}
+
+/**
+ * Blanks each line that holds only a comment. A line that starts inside a quoted string is
+ * text, also when it starts with `#`, so it stays.
+ */
+function blankCommentOnlyLines(command: string): string {
+  let quote = '';
+  return command
+    .split(AFTER_LINE_BREAK)
+    .map((line) => {
+      if (quote === '' && COMMENT_ONLY_LINE.test(line)) return ' '.repeat(line.length);
+
+      quote = openQuoteAfter(line, quote);
+      return line;
+    })
+    .join('');
+}
+
+/**
+ * Returns the quote that is still open at the end of the line: `'`, `"`, or '' for none.
+ * A quote after an unquoted comment `#` opens no string.
+ * ponytail: `$(...)` and backticks inside double quotes are not tracked, so a quote nested in
+ * them can flip the state. Track them if a real hook needs it.
+ */
+function openQuoteAfter(line: string, open: string): string {
+  let quote = open;
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index] ?? '';
+    if (quote === "'") {
+      if (char === "'") quote = '';
+    } else if (char === '\\') {
+      index += 1;
+    } else if (quote === '"') {
+      if (char === '"') quote = '';
+    } else if (char === "'" || char === '"') {
+      quote = char;
+    } else if (char === '#' && WORD_BREAK.test(line[index - 1] ?? ' ')) {
+      return '';
+    }
+  }
+  return quote;
 }
 
 type JsonTokenRewrite = {

@@ -616,7 +616,9 @@ without a commit message explaining why it no longer applies.
   multi-line body, a quoted `#`. Four review rounds each found a new form, and
   each special case had a gap. Match both layouts instead: the shell's lines,
   and one line per command with comment-only lines blanked. Keep one finding
-  per rule per line across the two passes.
+  per rule per line across the two passes. Find comment-only lines with the
+  quote state: a line that starts inside a quoted string is text, also when it
+  starts with `#`, as in `curl -d "prefix\n#$(env)"`.
 
 ---
 
