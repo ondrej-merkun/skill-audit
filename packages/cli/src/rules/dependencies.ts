@@ -1,29 +1,66 @@
 import { basename } from 'node:path';
 import type { Rule } from '../types.js';
 import { agentConfigJson, decodeJsonStrings } from './agent-config.js';
+import { maskDocumentationTextInCode } from './code-context.js';
 
 // Patterns are split to avoid triggering static-analysis hooks on this detector file.
 
 // DEPS-REMOTE-IMPORT: importing modules directly from remote HTTP/HTTPS URLs (Deno, esm.sh, etc.)
 // This bypasses local integrity checks and can serve arbitrary code at runtime.
-const jsRemoteImportPattern = new RegExp(
-  ['import\\s+[\\s\\S]{0,100}\\s+from\\s+[\'"]', 'https?://'].join('')
-);
-const jsRequireRemotePattern = new RegExp(['require\\s*\\(\\s*[\'"]', 'https?://'].join(''));
+// The patterns match a view where comments and strings are masked, except the string that a
+// module loader reads. So a URL that code only logs or shows does not fire.
+const remoteSpecifier = ['[\'"`]', 'https?://'].join('');
+// Static imports and re-exports, also over many lines: `import x from`, `export * from`.
+const jsFromRemotePattern = new RegExp(`\\bfrom\\s*${remoteSpecifier}`);
+// Dynamic `import('<url>')` and side-effect `import '<url>'`.
+const jsImportRemotePattern = new RegExp(`(?<![.$])\\bimport\\s*(?:\\(\\s*)?${remoteSpecifier}`);
+const jsRequireRemotePattern = new RegExp(`(?<![.$])\\brequire\\s*\\(\\s*${remoteSpecifier}`);
 const pyImportlibRemotePattern = new RegExp(
-  ['importlib\\.import_module\\s*\\(\\s*[\'"]', 'https?://'].join('')
+  `\\bimportlib\\.import_module\\s*\\(\\s*${remoteSpecifier}`
 );
+// Keywords whose next string names the code that a loader fetches. A method such as
+// `Array.from` or `loader.require` is not a loader keyword.
+const moduleLoaderKeywordAtEndPattern = /(?:\bimport_module|(?<![.$\w])(?:import|require|from))$/;
+// The window that the pattern reads also holds the character before the keyword.
+const LONGEST_LOADER_KEYWORD = 'import_module';
 
 export const DEPS_REMOTE_IMPORT: Rule = {
   id: 'DEPS-REMOTE-IMPORT',
   category: 'dependencies',
   severity: 'critical',
-  appliesTo: ['*.js', '*.ts', '*.mjs', '*.py'],
-  patterns: [jsRemoteImportPattern, jsRequireRemotePattern, pyImportlibRemotePattern],
+  appliesTo: ['*.js', '*.ts', '*.mjs', '*.cjs', '*.jsx', '*.tsx', '*.py'],
+  patterns: [
+    jsFromRemotePattern,
+    jsImportRemotePattern,
+    jsRequireRemotePattern,
+    pyImportlibRemotePattern,
+  ],
+  prepareContent: keepModuleSpecifiers,
   message: 'Remote URL import detected — code fetched from the network with no integrity check.',
   fix: 'Bundle dependencies locally. Remote imports can serve arbitrary code and bypass supply-chain controls.',
   cwe: ['CWE-829'],
 };
+
+function keepModuleSpecifiers(content: string, filePath: string): string {
+  return maskDocumentationTextInCode(content, filePath, isModuleSpecifier);
+}
+
+// True when a loader keyword comes before the string, with at most one open paren between them.
+// Comments before the string are masked to spaces, so `import(/* @vite-ignore */ '<url>')` and a
+// comment that holds a quote still count.
+function isModuleSpecifier(masked: readonly string[], stringStart: number): boolean {
+  let idx = indexBeforeSpaces(masked, stringStart - 1);
+  if (masked[idx] === '(') idx = indexBeforeSpaces(masked, idx - 1);
+
+  const keywordWindow = masked.slice(Math.max(0, idx - LONGEST_LOADER_KEYWORD.length), idx + 1);
+  return moduleLoaderKeywordAtEndPattern.test(keywordWindow.join(''));
+}
+
+function indexBeforeSpaces(masked: readonly string[], from: number): number {
+  let idx = from;
+  while (idx >= 0 && /\s/.test(masked[idx] ?? '')) idx -= 1;
+  return idx;
+}
 
 // DEPS-INSTALL-SCRIPT-HOOKS: npm postinstall/preinstall lifecycle scripts that install packages.
 // These run automatically on `npm install` and can silently pull in malicious packages.

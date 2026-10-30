@@ -170,6 +170,13 @@ describe('runScan: multi-skill fixture coverage', () => {
       rule_id: 'SKILL-PASSWORD-ZIP',
       line: 7,
     });
+
+    // Its utils.js loads code with a dynamic import() of a URL.
+    const remoteImport = result.skills.find((skill) => skill.name === 'remote-import-skill');
+    expect(remoteImport?.findings.map((finding) => finding.rule_id)).toContain(
+      'DEPS-REMOTE-IMPORT'
+    );
+    expect(remoteImport?.summary.verdict).not.toBe('PASS');
   });
 
   it('produces no critical findings for benign skills', async () => {
