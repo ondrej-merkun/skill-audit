@@ -56,12 +56,19 @@ const QUOTE_CLOSERS = new Map([
   ['"', '"'],
   ['“', '”'],
 ]);
+// The headings that opened the old whole-section mask of the code-risk rules. They still bound
+// a code-example section, so the narrower mask never hides text that the old one showed.
 const SECURITY_EXAMPLE_HEADING_PATTERN =
   /\b(?:detection|detector|scanner|audit(?:or)?|tester|testing|example|pattern|documentation|reference|threat|attack|red[- ]?team|training|rule(?:s)?|false positive|benign corpus|payload catalog)\b/i;
+// Words that frame the code of a section as hostile or flagged material, not as steps to run.
+// Words such as testing, rules, or reference also name sections of operative steps.
+const HOSTILE_EXAMPLE_HEADING_PATTERN =
+  /\b(?:attacks?|malicious|payloads?|exploits?|injections?|red[- ]?team(?:ing)?|threats?|false positives?|benign corpus|detections?|detectors?|detect(?:s|ed)|flag(?:s|ged)?|bad|unsafe|dangerous|insecure|risky|vulnerable|anti[- ]?patterns?)\b/i;
 const SECURITY_EDUCATION_LINE_PATTERN =
   /\b(?:quoted attacks?|fenced examples?|example payload|malicious example|benign example|scanner test|tester fixture|rule documentation|detection docs?|should flag|must flag|flags? quoted|false positive|red[- ]?team training)\b/i;
+// A heading that names operative work, such as `## Install` or `### Lab setup`.
 const ACTIVE_RUNTIME_CONTEXT_PATTERN =
-  /\b(?:operative|active|runtime|run(?:s|time)?|execute|executes?|install|bootstrap)\b/i;
+  /\b(?:operative|active|runtime|run(?:s|time)?|execute|executes?|install|bootstrap|set[- ]?up|usage|quick[- ]?start|getting started)\b/i;
 
 function extensionOf(filePath: string): string {
   const lastSlash = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
@@ -491,7 +498,14 @@ export function maskMarkdownSecurityEducationContext(content: string, filePath: 
   if (!isMarkdownPromptFile(filePath)) return content;
 
   const lines = content.split('\n');
-  const kinds = classifySecurityEducationLines(lines);
+  return maskEducationLines(lines, classifySecurityEducationLines(lines));
+}
+
+/**
+ * Masks quoted lines, the quoted text in education lines, and a line that combines a
+ * documentation word with a detection note such as "should flag" in any section.
+ */
+function maskEducationLines(lines: string[], kinds: MarkdownLineKind[]): string {
   const quoteMasked = maskQuotedEducationText(lines, kinds);
 
   return lines
@@ -627,58 +641,61 @@ function maskDoubleQuotes(text: string): string {
 }
 
 /**
- * Suppresses clearly inert security-education examples without hiding active
- * markdown install/run blocks that a skill may ask the agent to execute.
+ * Suppresses quoted security-education examples in markdown for the code-risk rules without
+ * hiding a command that the skill asks the agent to run. Fenced code, blockquotes, inline code,
+ * and double-quoted text are examples only in a code-example section, whose heading frames its
+ * code as hostile or flagged material (`## Attack examples`, `## Detection rules`). Elsewhere,
+ * fenced code is a step that the agent runs, also under `## Testing`, `## Quick reference`, or
+ * a skill title such as `# docs-skill-tester`. A heading never hides plain prose.
  */
 export function maskSecurityEducationExampleContext(content: string, filePath: string): string {
-  if (!isMarkdownPromptFile(filePath)) return maskDocumentationExampleContext(content, filePath);
-  if (pathLooksDocumentationOnly(filePath))
+  if (!isMarkdownPromptFile(filePath) || pathLooksDocumentationOnly(filePath)) {
     return maskDocumentationExampleContext(content, filePath);
+  }
 
+  const lines = content.split('\n');
+  const isSkillMd = basenameOf(filePath) === SKILL_MD_BASENAME;
+  return maskEducationLines(lines, classifyCodeExampleLines(lines, isSkillMd));
+}
+
+/**
+ * Marks fenced code and blockquotes in a code-example section as quoted, and the other lines of
+ * the section as education text. A section opens and ends where the old whole-section mask
+ * opened and ended one, so the mask never grows. It is a code-example section only when a
+ * heading that opened it also frames its code as hostile or flagged. In SKILL.md, the title
+ * names the skill and opens no code-example section. A heading that names operative work
+ * (`### Lab setup`) ends the section, and a `#` line in fenced code is a comment, not a heading.
+ */
+function classifyCodeExampleLines(lines: string[], isSkillMd: boolean): MarkdownLineKind[] {
   let inFence = false;
-  let educationHeadingLevel = 0;
+  let sectionLevel = 0;
+  let isExampleSection = false;
 
-  return content
-    .split('\n')
-    .map((line) => {
-      const trimmed = line.trimStart();
-      const fence = /^(?:```|~~~)/.test(trimmed);
+  return lines.map((line) => {
+    const isFence = MARKDOWN_FENCE_PATTERN.test(line);
+    if (isFence) inFence = !inFence;
+    if (isFence || inFence || MARKDOWN_BLOCKQUOTE_PATTERN.test(line)) {
+      return isExampleSection ? 'quoted' : 'plain';
+    }
 
-      if (fence) {
-        const masked = educationHeadingLevel > 0 ? maskLine(line) : line;
-        inFence = !inFence;
-        return masked;
+    const heading = ANY_INDENT_HEADING_PATTERN.exec(line);
+    if (heading) {
+      const headingLevel = heading[1]?.length ?? 0;
+      const isActive = ACTIVE_RUNTIME_CONTEXT_PATTERN.test(line);
+      if (headingLevel <= sectionLevel || isActive) {
+        sectionLevel = 0;
+        isExampleSection = false;
       }
-
-      if (educationHeadingLevel > 0 && inFence) return maskLine(line);
-
-      const heading = /^(#{1,6})\s+(.+)$/.exec(trimmed);
-      if (heading) {
-        const level = heading[1]?.length ?? 0;
-        const title = heading[2] ?? '';
-        if (educationHeadingLevel > 0 && level <= educationHeadingLevel) {
-          educationHeadingLevel = 0;
-        }
-        if (
-          SECURITY_EXAMPLE_HEADING_PATTERN.test(title) &&
-          !ACTIVE_RUNTIME_CONTEXT_PATTERN.test(title)
-        ) {
-          educationHeadingLevel = level;
-          return maskLine(line);
-        }
+      if (!isActive && SECURITY_EXAMPLE_HEADING_PATTERN.test(line)) {
+        // A nested heading replaces the outer section and keeps its example kind.
+        sectionLevel = headingLevel;
+        isExampleSection ||=
+          HOSTILE_EXAMPLE_HEADING_PATTERN.test(line) && !(isSkillMd && headingLevel === 1);
       }
+    }
 
-      if (educationHeadingLevel > 0) return maskLine(line);
-      if (
-        DOCUMENTATION_LINE_CONTEXT_PATTERN.test(line) &&
-        SECURITY_EDUCATION_LINE_PATTERN.test(line)
-      ) {
-        return maskLine(line);
-      }
-
-      return line;
-    })
-    .join('\n');
+    return isExampleSection ? 'education' : 'plain';
+  });
 }
 
 // How the security-education mask treats a markdown line.

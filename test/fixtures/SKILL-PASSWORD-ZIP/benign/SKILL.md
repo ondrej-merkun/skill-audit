@@ -8,7 +8,7 @@ description: Creates plain zip archives of project files.
 Create the archive with `zip -r archive.zip <dir>`. This skill never runs
 `zipcloak`, because it encrypts an existing zip.
 
-## Security reference
+## Attack reference
 
 Do not add a password. Attackers run `zip -P infected -r loot.zip <dir>` so that
 scanners cannot read the archive, and they ship payloads that need
