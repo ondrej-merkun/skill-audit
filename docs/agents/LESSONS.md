@@ -682,6 +682,15 @@ without a commit message explaining why it no longer applies.
   When a rule ignores escaped or quoted text, add attack lines where `eval`,
   `trap`, or `sh -c` gets that text, and keep them firing.
 
+- **L7.15: Probe an emoji exception with full emoji sequences.** _While adding
+  variation selectors to `PI-HIDDEN-UNICODE`, a probe showed that the ZWJ
+  exception fires on a heart on fire and a rainbow flag. In these sequences,
+  U+FE0F sits between the pictograph and the U+200D, so a lookbehind for one
+  `\p{Extended_Pictographic}` character does not see the pictograph._
+  Test an emoji exception against sequences with U+FE0F, skin-tone modifiers,
+  and keycaps, not only bare pictographs. `\p{Emoji}` also matches `#`, `*`,
+  and digits, so use `\p{Extended_Pictographic}` and handle keycap bases apart.
+
 ---
 
 ## How to add a new lesson

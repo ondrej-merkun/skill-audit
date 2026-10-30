@@ -163,8 +163,16 @@ Enumerate these codepoint ranges explicitly; scan all text files:
 - `U+200B`–`U+200F` (ZWSP, ZWNJ, ZWJ, LRM, RLM)
 - `U+202A`–`U+202E` (bidi controls)
 - `U+2060`–`U+2064` (WJ, invisible ops)
+- `U+2066`–`U+2069` (LRI, RLI, FSI, PDI bidi isolates; Trojan Source, CVE-2021-42574)
 - `U+FEFF` when NOT at start of file (BOF is fine)
 - `U+E0020`–`U+E007F` (tag chars — ASCII smuggling)
+- `U+FE00`–`U+FE0D` and `U+E0100`–`U+E01EF` (variation selectors; one
+  selector per byte can encode a hidden payload)
+- `U+FE0E` and `U+FE0F` (VS15, VS16), except one selector directly after an
+  `Extended_Pictographic` character (`U+2764` `U+FE0F`, a red heart) and `U+FE0F` in a keycap
+  sequence (`1` `U+FE0F` `U+20E3`). A run of selectors, a selector after a
+  plain character, and a selector after `#`, `*`, or a digit outside a keycap
+  sequence fire.
 
 Report: codepoint, byte offset, and a decoded "visible-text" diff
 showing what the content looks like with the invisibles stripped.
