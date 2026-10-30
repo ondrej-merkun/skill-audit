@@ -277,8 +277,9 @@ the same file. The finding is on the line of the read.
   declaration in the innermost enclosing block. A parameter is a declaration
   of its function, and a destructuring pattern (`const { a, b: c } = d`)
   declares the names that it binds, so two functions that use the same name do
-  not share its value. A key, a type, and a default value bind no name. A private member (`this.#name`) is not a variable. A key
-  lookup or a test on a variable that holds the environment reads one item.
+  not share its value. A key, a type, and a default value bind no name. A
+  private member (`this.#name`) is not a variable. A key lookup or a test on a
+  variable that holds the environment reads one item.
 - Comments, string text, and regex literals do not count. The code in a
   template literal field does.
 - The `env` option (also a quoted `"env"` key) of `spawn`, `spawnSync`,

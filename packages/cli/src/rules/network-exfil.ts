@@ -141,8 +141,8 @@ const PYTHON_SCAN_PATH = /\.py$/i;
 // JavaScript or TypeScript file.
 function prepareEnvExfilView(content: string, filePath: string): string {
   const view = maskNonExecutingEnvDumpText(content, filePath);
-  const isPython = PYTHON_SCAN_PATH.test(filePath);
-  const pythonView = markEnvironFlow(view, content, isPython ? maskNonExecutingShellText : undefined);
+  const shellView = PYTHON_SCAN_PATH.test(filePath) ? maskNonExecutingShellText : undefined;
+  const pythonView = markEnvironFlow(view, content, shellView);
   return maskProcessEnvReadsNotSent(pythonView, content, filePath);
 }
 
