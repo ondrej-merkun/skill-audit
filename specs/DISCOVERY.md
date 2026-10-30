@@ -5,6 +5,8 @@ were verified against official docs as of April 2026 per `SPEC.md` §3.
 Cline paths were refreshed against official docs in May 2026.
 Shared `.agents/skills` paths were verified against official docs in October 2026.
 Hook and settings paths were verified against vendor docs in October 2026.
+Cursor skills, subagent, and plugin paths were verified against the Cursor docs
+in October 2026.
 
 Hook and settings files run code, so they are scan targets with
 `format: "agent-config"`. Home files have `scope: "user"`; working-directory
@@ -68,12 +70,54 @@ yet.
 - `~/.cursor/mcp.json`
 - `~/.cursor/rules/`
 - `~/.cursor/hooks.json`
+- `~/.cursor/skills/**/SKILL.md`
+- `~/.cursor/agents/**/*.md` subagents (also `.mdc` and `.markdown`)
+- Plugins in `~/.cursor/plugins/local/<plugin>/`
 
 **Project-local:**
 - `.cursor/mcp.json`
 - `.cursor/rules/*.mdc`
 - `.cursor/hooks.json`
+- `.cursor/skills/**/SKILL.md`
+- `.cursor/agents/**/*.md` subagents (also `.mdc` and `.markdown`)
 - Legacy: `.cursorrules` (single file at repo root)
+
+**Plugin rule:**
+- Cursor loads every plugin in `~/.cursor/plugins/local/` after a reload,
+  unless an Enterprise admin turns off local plugin imports. A symlinked
+  plugin loads only when its target is inside that folder, so discovery
+  skips the other links. A folder without a manifest is not a plugin.
+- Do not scan `~/.cursor/plugins/cache/`. Marketplace installs land there,
+  but Cursor keeps no install or enable record next to them, so the cache is
+  inventory. `~/.cursor/plugins/marketplaces/` is marketplace inventory too.
+- A Cursor Plugin has `.cursor-plugin/plugin.json`. Each component comes from
+  the paths in the manifest field (`skills`, `rules`, `agents`, `commands`,
+  `hooks`, `mcpServers`), or from its default location when the field is
+  absent: `skills/`, `rules/`, `agents/`, `commands/`, `hooks/hooks.json`,
+  `mcp.json`. A manifest path replaces the default location. A root
+  `SKILL.md` is a single-skill plugin when there is no `skills/` dir and no
+  `skills` field.
+- An Agent Plugin (the open standard) has a root `plugin.json` and loads only
+  `skills/` and a root `mcp.json`.
+- In both formats, a skills path is a skill when it holds a `SKILL.md`, and so
+  is each dir directly inside it that holds one. A deeper `SKILL.md`, such as
+  an example inside a skill, is not a loaded skill.
+- A plugin hooks file is scanned as `hooks.json`, whatever its name. Its
+  scripts below the plugin root are scan targets too, named through
+  `${CURSOR_PLUGIN_ROOT}` or by a path relative to the plugin root. Inline
+  `hooks` or `mcpServers` objects in the manifest make the manifest a
+  hooks-file target.
+- Each plugin MCP server is one entry, named `plugin-<plugin>-<server>` as
+  Cursor shows it, and scanned with only its own definition.
+- Command files (`.md`, `.mdc`, `.markdown`, `.txt`) are one-file skills.
+  `.markdown` and `.txt` files get a `.md` scan name, so the markdown rules
+  apply.
+
+Not scanned yet: the Claude and Codex compatibility dirs that Cursor also
+reads (`.claude/skills`, `.codex/skills`, `.claude/agents`, `.codex/agents`
+and their home copies; the Claude Code and Codex plugins report most of
+them), `.cursor/skills` dirs nested deeper in the project, and the
+undocumented built-in skills in `~/.cursor/skills-cursor/`.
 
 ### 3. GitHub Copilot
 
