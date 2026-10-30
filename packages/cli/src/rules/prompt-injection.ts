@@ -244,10 +244,10 @@ const localContext = `(?:${[
   String.raw`\bconversation|\bchat\s+history|\bsystem\s+prompt`,
   String.raw`\bhostname|\b(?:shell|bash|command)\s+history`,
 ].join('|')})`;
-// A URL, or a bare host with a path. A loopback host is local. The guard skips userinfo and
-// checks where the host name ends, so localhost.evil.example and localhost@evil.example stay
-// external.
-const externalDestination = String.raw`[<(\x60"']?(?!(?:https?://)?(?:[^\s/@]*@)?(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(?![\w.@%-]))(?:https?://|[a-z0-9-]+\.[a-z0-9.-]+/)`;
+// A URL, or a bare host with a path. Only a strict loopback authority is local: the host
+// right after the scheme, an optional port, then the end of the authority. Every other form
+// fails closed as external, such as localhost.evil.example or localhost:80@evil.example.
+const externalDestination = String.raw`[<(\x60"']?(?!(?:https?://)?(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(?::\d+)?(?:[/?#\s"'>)\x60]|$))(?:https?://|[a-z0-9-]+\.[a-z0-9.-]+/)`;
 const sendAction = String.raw`\b(?:send|post|upload|report|forward|transmit|submit)s?\b${paragraphWindow(80)}${localContext}${paragraphWindow(120)}\b(?:to|at)\s+${externalDestination}`;
 const includeAction = String.raw`\b(?:include|attach|append|embed)s?\b${paragraphWindow(80)}${localContext}${paragraphWindow(120)}\b(?:request|call)s?\s+to\s+${externalDestination}`;
 const exfilAction = `(?:${sendAction}|${includeAction})`;

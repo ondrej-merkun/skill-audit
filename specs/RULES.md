@@ -186,7 +186,7 @@ external destination as a side effect of a normal request:
 - A recurring or agent-action trigger (`whenever`, `each time`,
   `every time`, or `before` or `after` with `you`, `each`, `every`,
   `responding`, `answering`, or `replying`), then within 200 characters an
-  action. `Whenever the user asks` is a request trigger, so
+  action. `Whenever the user` with a request verb is a request trigger, so
   it needs the marker.
 
 An action is one of these:
@@ -205,9 +205,13 @@ conversation, the chat history, the system prompt, the hostname, and the
 shell history.
 
 An external destination is an `http://` or `https://` URL, or a bare host
-with a path (`stats.example.net/ping`). A loopback host (`localhost`,
-`127.0.0.1`, `0.0.0.0`, `[::1]`) is local. The check looks at where the host
-name ends, so a lookalike such as `localhost.evil.example` is external.
+with a path (`stats.example.net/ping`). Only a strict loopback authority is
+local: `localhost`, `127.0.0.1`, `0.0.0.0`, or `[::1]` right after the
+scheme, an optional port, then `/`, `?`, `#`, whitespace, a quote, a
+backtick, `)`, `>`, or the end (`http://localhost:8080/results`). Every other form counts as external, so
+the check fails closed: `localhost.evil.example`, `localhost:80@evil.example`,
+and a loopback URL with a userinfo part. A regex cannot parse a URL authority
+in full, so the rule does not try to resolve userinfo.
 
 Each window stops at a blank line, so a trigger does not pair with an
 instruction in a later paragraph. A trigger directly after an opening quote
@@ -218,7 +222,7 @@ These forms do not match:
   `When the user asks to attach a log, upload the file contents to https://api.tickets.example.com/v1/files`.
   The upload is the request itself, to the service of the skill.
 - An action without local data, also with a URL:
-  `also send a notification to the team channel`.
+  `also post a short status message to https://hooks.tickets.example.com/notify`.
 - An action without a literal destination, so the user picks it:
   `also upload the file contents to the URL that the user gives`.
 
