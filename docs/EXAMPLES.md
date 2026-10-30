@@ -192,7 +192,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: ondrej-merkun/skill-audit@v1
+      - uses: ondrej-merkun/skill-audit@v0.3.0
         with:
           fail-on: REVIEW
           results-file: skill-audit-results.json

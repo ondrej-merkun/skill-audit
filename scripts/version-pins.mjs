@@ -17,6 +17,11 @@ const ACTION_VERSION_DEFAULT = /^ {2}version:\n(?: {4}.*\n)*? {4}default: *'([^'
 // string, so an unpinned command also fails the check.
 const CLI_PACKAGE_REFERENCE = /@ondrej-merkun\/skill-audit(?:@([\w.+-]*[\w+-]))?/g;
 
+// Matches every GitHub Action example, `uses: ondrej-merkun/skill-audit@v<version>`.
+// The action is released from the same tag as the CLI, so group 1 follows the
+// package version.
+const ACTION_TAG_REFERENCE = /uses: *ondrej-merkun\/skill-audit@v([\w.+-]*[\w+-])/g;
+
 /**
  * Add one row per file that pins the CLI version. Each pattern is global, and
  * its group 1 is the pinned version. Patterns match LF text.
@@ -27,6 +32,9 @@ export const PINNED_LOCATIONS = [
   { file: 'action.yml', pattern: ACTION_VERSION_DEFAULT },
   { file: 'packages/skill/SKILL.md', pattern: CLI_PACKAGE_REFERENCE },
   { file: 'packages/skill/README.md', pattern: CLI_PACKAGE_REFERENCE },
+  { file: 'README.md', pattern: ACTION_TAG_REFERENCE },
+  { file: 'docs/EXAMPLES.md', pattern: ACTION_TAG_REFERENCE },
+  { file: 'docs/REFERENCE.md', pattern: ACTION_TAG_REFERENCE },
 ];
 
 /**

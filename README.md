@@ -241,7 +241,7 @@ case-insensitive. Any other value exits 2 with a usage error. The repository
 also ships a GitHub Action:
 
 ```yaml
-- uses: ondrej-merkun/skill-audit@v1
+- uses: ondrej-merkun/skill-audit@v0.3.0
 ```
 
 To show findings as GitHub code scanning alerts, set the action's `sarif-file`
@@ -250,7 +250,7 @@ input and upload that file with `github/codeql-action/upload-sarif`.
 Set `scan-path` to audit the skills in the checkout before anyone installs them:
 
 ```yaml
-- uses: ondrej-merkun/skill-audit@v1
+- uses: ondrej-merkun/skill-audit@v0.3.0
   with:
     scan-path: skills
 ```

@@ -233,8 +233,9 @@ describe('e2e: CLI binary', () => {
     expect(readme).toContain('img.shields.io/npm/v/%40ondrej-merkun%2Fskill-audit');
     expect(readme).toContain('img.shields.io/node/v/%40ondrej-merkun%2Fskill-audit');
     expect(readme).toContain('img.shields.io/badge/rules-50-red');
-    expect(readme).toContain('uses: ondrej-merkun/skill-audit@v1');
-    expect(examples).toContain('uses: ondrej-merkun/skill-audit@v1');
+    // test/version-pins.test.ts checks that the tag matches the package version.
+    expect(readme).toMatch(/uses: ondrej-merkun\/skill-audit@v\d+\.\d+\.\d+/);
+    expect(examples).toMatch(/uses: ondrej-merkun\/skill-audit@v\d+\.\d+\.\d+/);
     expect(action).toContain('npx --yes "@ondrej-merkun/skill-audit@${SA_VERSION}" scan');
     expect(action).toContain('--output "$SA_RESULTS_FILE"');
     expect(action).not.toContain('--offline');
