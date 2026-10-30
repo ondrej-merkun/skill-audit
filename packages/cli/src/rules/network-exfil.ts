@@ -126,8 +126,16 @@ function maskNonExecutingEnvDumpText(content: string, filePath: string): string 
     .join('\n');
 }
 
+const PYTHON_SCAN_PATH = /\.py$/i;
+const ENVIRON_TOKENS = new RegExp(ENVIRON_TOKEN_SOURCE, 'g');
+
+// The flow analysis reads Python, so it runs only on a Python scan path. In another language it
+// would restore an environ token that the language view masked, such as one in a `//` comment.
+// There, every environ token is masked, so the Python pattern cannot fire.
 function prepareEnvExfilView(content: string, filePath: string): string {
-  return maskEnvironReadsNotSent(maskNonExecutingEnvDumpText(content, filePath), content);
+  const view = maskNonExecutingEnvDumpText(content, filePath);
+  if (PYTHON_SCAN_PATH.test(filePath)) return maskEnvironReadsNotSent(view, content);
+  return view.replace(ENVIRON_TOKENS, (token) => ' '.repeat(token.length));
 }
 
 export const NET_EXFIL_ENV: Rule = {
