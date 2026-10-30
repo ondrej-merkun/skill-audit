@@ -7,7 +7,7 @@ function getConfigDir(): string {
   return process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config');
 }
 
-function getIgnoreListPath(): string {
+export function getIgnoreListPath(): string {
   return join(getConfigDir(), 'skill-audit', 'ignore.yaml');
 }
 

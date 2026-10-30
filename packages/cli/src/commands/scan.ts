@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { stripVTControlCharacters } from 'node:util';
 import { formatSupportedAgentIds, SUPPORTED_AGENT_IDS } from '../agent-names.js';
-import { loadIgnoreList } from '../allowlist/ignore.js';
+import { getIgnoreListPath, loadIgnoreList } from '../allowlist/ignore.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
 import type { EnrichmentSource } from '../enrich/index.js';
 import {
@@ -275,8 +275,10 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   const ignoredSkills = skills.filter((s) => ignoreList.has(s.treeSha256));
 
   if (ignoredSkills.length > 0) {
+    // No scan flag includes ignored skills, so the notice names the ignore list file.
+    const [noun, pronoun] = ignoredSkills.length === 1 ? ['skill', 'it'] : ['skills', 'one'];
     process.stderr.write(
-      `[skill-audit] ignoring ${ignoredSkills.length} skill${ignoredSkills.length === 1 ? '' : 's'} (run with --all to include)\n`
+      `[skill-audit] ignoring ${ignoredSkills.length} ${noun} (to scan ${pronoun} again, remove its line from ${getIgnoreListPath()})\n`
     );
   }
 

@@ -780,6 +780,24 @@ describe('runScan flag wiring', () => {
     });
   });
 
+  it('points the ignored-skills notice at the ignore list file, not a missing flag', async () => {
+    await withTempDir(async (dir) => {
+      process.env['XDG_CONFIG_HOME'] = dir;
+      const ignorePath = join(dir, 'skill-audit', 'ignore.yaml');
+      await mkdir(join(dir, 'skill-audit'), { recursive: true });
+      await writeFile(ignorePath, 'ignored:\n  - ignored-hash  # ignored-skill\n', 'utf-8');
+      vi.mocked(discoverAll).mockResolvedValue([makeSkill({ treeSha256: 'ignored-hash' })]);
+
+      await runScan({ json: true, offline: true });
+
+      const notice = stripAnsi(stderrChunks.join(''));
+      expect(notice).toContain(
+        `ignoring 1 skill (to scan it again, remove its line from ${ignorePath})`
+      );
+      expect(notice).not.toContain('--all');
+    });
+  });
+
   it.each([
     {
       scenario: 'isInstalled() throws beside a healthy agent',
