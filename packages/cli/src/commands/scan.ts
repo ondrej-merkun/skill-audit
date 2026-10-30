@@ -147,6 +147,15 @@ async function writeSarifFile(path: string, log: string): Promise<void> {
   process.stderr.write(`[skill-audit] SARIF report written to ${path}\n`);
 }
 
+// A code scanning upload closes every alert that the log does not report. An incomplete scan
+// missed skills, so its log would close their alerts as fixed. Exit code 3 still reports it.
+function withholdSarif(sarif: string | true): void {
+  const target = sarif === true ? 'stdout' : sarif;
+  process.stderr.write(
+    `[skill-audit] scan incomplete: no SARIF written to ${target}, so an upload cannot close the alerts of skills that were not scanned\n`
+  );
+}
+
 function scanProgressOutputKind(options: ScanOptions): ProgressOutputKind {
   if (options.json || options.sarif === true) return 'json';
   if (options.summary) return 'summary';
@@ -257,6 +266,9 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
 
     if (options.sarif === undefined) {
       process.stdout.write(notice);
+    } else if (discoveryFailureCount > 0) {
+      (options.sarif === true ? process.stderr : process.stdout).write(notice);
+      withholdSarif(options.sarif);
     } else {
       // An empty SARIF log lets an upload close the alerts of skills that a project removed.
       const emptySarif = `${renderSarif({ skills: [] }, scanProjectRoot())}\n`;
@@ -397,14 +409,20 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     },
   };
 
+  const incomplete = incompleteCount > 0;
   if (typeof options.sarif === 'string') {
-    await writeSarifFile(options.sarif, `${renderSarif(result, scanProjectRoot())}\n`);
+    if (incomplete) withholdSarif(options.sarif);
+    else await writeSarifFile(options.sarif, `${renderSarif(result, scanProjectRoot())}\n`);
   }
 
   if (options.html !== undefined) {
     const htmlOut = renderHtml(result);
     await writeFile(options.html, htmlOut, 'utf-8');
     process.stderr.write(`[skill-audit] HTML report written to ${options.html}\n`);
+  }
+  if (options.sarif === true && incomplete) {
+    withholdSarif(true);
+  } else if (options.html !== undefined) {
     process.stdout.write(renderScanPayload(result, options));
   } else {
     await writeScanPayload(renderScanPayload(result, options), options.output);

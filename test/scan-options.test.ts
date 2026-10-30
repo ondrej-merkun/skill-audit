@@ -669,6 +669,41 @@ describe('runScan flag wiring', () => {
     });
   });
 
+  // An upload closes every alert that the log does not report, so a log of a partial scan would
+  // close the alerts of the skills that it missed.
+  it.each([
+    { form: 'a failed skill scan', failedSkill: true },
+    { form: 'a failed discovery plugin', failedSkill: false },
+  ])('writes no SARIF after $form', async ({ failedSkill }) => {
+    await withTempDir(async (dir) => {
+      const sarifPath = join(dir, 'skill-audit.sarif');
+      const errored = makeSkill({ id: 'errored', name: 'errored-skill', path: '/tmp/errored' });
+      if (failedSkill) {
+        vi.mocked(discoverAll).mockResolvedValue([errored]);
+        vi.mocked(runRules).mockRejectedValue(new Error('cannot scan'));
+      } else {
+        vi.mocked(discoverAll).mockImplementation(async (options) => {
+          options?.onProgress?.({
+            type: 'agent-failed',
+            agentId: 'cursor',
+            displayName: 'Cursor',
+            message: 'EACCES: permission denied',
+          });
+          return [];
+        });
+      }
+
+      await runScan({ json: true, offline: true, sarif: sarifPath });
+      stdoutChunks.length = 0;
+      await runScan({ offline: true, sarif: true });
+
+      await expect(readFile(sarifPath, 'utf-8')).rejects.toThrow();
+      expect(stdoutChunks.join('')).not.toContain('"$schema"');
+      expect(stripAnsi(stderrChunks.join(''))).toContain('scan incomplete: no SARIF written');
+      expect(process.exitCode).toBe(3);
+    });
+  });
+
   it('points the ignored-skills notice at the ignore list file, not a missing flag', async () => {
     await withTempDir(async (dir) => {
       process.env['XDG_CONFIG_HOME'] = dir;

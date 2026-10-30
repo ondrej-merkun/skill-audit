@@ -133,6 +133,10 @@ SARIF log is a second machine format. It does not change the JSON schema.
   results, so an upload closes the alerts of removed skills. The `No skills
   found` notice stays on stdout, except with bare `--sarif`, where it goes to
   stderr.
+- An incomplete scan (exit code 3: a discovery plugin or a skill scan failed)
+  writes no SARIF log, in both forms, and says so on stderr. An upload closes
+  every alert that the log does not report, so a log of a partial scan would
+  close the alerts of the skills that the scan missed.
 
 The log has one run:
 
