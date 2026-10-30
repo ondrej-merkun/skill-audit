@@ -475,14 +475,20 @@ modules over HTTP(S).
 
 The rule also follows a URL through a name, and a module through a file, in
 the same file. The view marks the loader call, and the finding is on its line:
-- **URL name (JavaScript).** A name holds a URL when `const`, `let`, or `var`
-  sets it to an `http(s)` URL literal, or to a value that starts with such a
-  name, as in `` `${BASE}/x.js` `` or `BASE + '/x.js'`. A loader call whose
-  argument starts with the name fires: `import(u)`, `require(u)`,
+- **URL name (JavaScript).** A name holds a URL when an assignment sets it to
+  an `http(s)` URL literal, or to a value that starts with such a name, as in
+  `` `${BASE}/x.js` `` or `BASE + '/x.js'`. The assignment can be a `const`,
+  `let`, or `var` declaration, a later name in a declaration list, or a plain
+  assignment. A loader call reads the nearest assignment of the name before it,
+  or the first one after it when none comes before. A loader call whose
+  argument starts with a URL name fires: `import(u)`, `require(u)`,
   `import(BASE + '/x.js')`, and `` import(`${BASE}/x.js`) ``.
 - **Downloaded file.** A code file (`.js`, `.mjs`, `.cjs`, `.ts`, `.mts`,
-  `.cts`, `.jsx`, `.tsx`, `.py`) is downloaded when a curl or wget command in
-  a string names it, also as the last part of its URL. It is also downloaded
+  `.cts`, `.jsx`, `.tsx`, `.py`) is downloaded when a curl or wget command
+  names it, also as the last part of its URL. The command must be a string
+  argument of a call that runs it, such as `execSync`, `spawn`, `execa`,
+  `subprocess.run`, or `os.system`, so a printed or logged command does not
+  count. It is also downloaded
   when Python `urlretrieve` writes it, or when a file that calls a network API
   (`fetch`, `http(s).get`, `axios`, `got`, `urlopen`, `requests`, `httpx`)
   writes it with `writeFile`, `appendFile`, `createWriteStream`, or
@@ -509,17 +515,19 @@ Other rules own the other forms of remote code:
   `import_module` takes a module name, so a URL fails to import.
 
 The rule misses:
-- A URL in an object property (`CONFIG.url`), in `new URL(...)`, in an
-  assignment without `const`, `let`, or `var`, or from another file.
-- A download to a computed path, such as `path.join(dir, 'x.js')`, and a
-  loader that gets its path through a variable.
+- A URL in an object property (`CONFIG.url`), in `new URL(...)`, or from
+  another file.
+- A download to a computed path, such as `path.join(dir, 'x.js')`, a loader
+  that gets its path through a variable, and a curl or wget command that the
+  code builds in a variable before a call runs it.
 - A downloaded file that a separate command runs, as in
   `execSync('node x.js')`, `subprocess.run(['python', 'm.py'])`, or
   `exec(open('m.py').read())`.
 - A static `import ... from './x.js'` of a downloaded file. The static import
   runs before the download.
-- Names are file-wide, so a parameter that shadows a URL name also fires.
-  Files match by name, so a different file with the same name also fires.
+- The rule does not know scopes, so a parameter that shadows a URL name also
+  fires. Files match by name, so a different file with the same name also
+  fires.
 
 ## Summary of remaining rules
 

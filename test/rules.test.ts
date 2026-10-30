@@ -235,6 +235,8 @@ describe('malicious fixture attack lines', () => {
         "const icons = await import(CDN_BASE + '/icons.js');",
         'const plugin = await import(/* @vite-ignore */ PLUGIN_URL);',
         'const remoteRules = require(RULES_URL);',
+        'const legacy = await import(LEGACY_URL);',
+        'const fallback = await import(fallbackUrl);',
         // A module that the code downloads to a file and then loads.
         "fetch(url).then(r => r.text()).then(t => fs.writeFileSync('x.js', t)); require('./x.js');",
         "const format = require('./lib/format');",
@@ -722,10 +724,10 @@ describe('rule cost on masked content', () => {
       file: 'templates.js',
       content: `x = ${'`${'.repeat(10_000)}${'}`'.repeat(10_000)};\n`,
     },
-    // Each loader reads the nearest declaration of its name, and a curl command splits into
+    // Each loader reads the nearest assignment of its name, and a curl command splits into
     // file names.
     {
-      shape: 'many declarations of one name',
+      shape: 'many assignments of one name',
       file: 'names.js',
       content: `let e = 'https://x.example/a.js';\n${'let e = 1; import(e);\n'.repeat(20_000)}`,
     },

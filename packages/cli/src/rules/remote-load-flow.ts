@@ -1,15 +1,16 @@
 import { maskDocumentationTextInCode } from './code-context.js';
 
 // Data flow for DEPS-REMOTE-IMPORT: loader calls that get their code from the network through a
-// name or a file. In JavaScript, a name holds a URL when `const`, `let`, or `var` sets it to an
-// http(s) URL literal, or to a value that starts with such a name. A code file is downloaded when
-// a curl or wget command in a string names it, when `urlretrieve` writes it, or when a file that
-// calls a network API writes it. A loader that names a downloaded file loads remote code.
-// ponytail: a use reads the nearest declaration of its name, not its scope, so a parameter that
+// name or a file. In JavaScript, a name holds a URL when an assignment, such as a `const`
+// declaration, sets it to an http(s) URL literal or to a value that starts with such a name. A
+// code file is downloaded when a curl or wget command that a call runs names it, when
+// `urlretrieve` writes it, or when a file that calls a network API writes it. A loader that names
+// a downloaded file loads remote code.
+// ponytail: a use reads the nearest assignment of its name, not its scope, so a parameter that
 // shadows a URL name also counts. Only literal paths count, and they match by file name without
-// the extension. A download to a computed path, a URL in an object property or in `new URL(...)`,
-// and a downloaded file that a separate command runs are missed. Move to an AST pass if real
-// scans show these.
+// the extension. A download to a computed path, a command built in a variable, a URL in an object
+// property or in `new URL(...)`, and a downloaded file that a separate command runs are missed.
+// Move to an AST pass if real scans show these.
 
 /** The view puts this character on each remote load, and a DEPS-REMOTE-IMPORT pattern matches it. */
 export const REMOTE_LOAD_MARK = '\u0001';
@@ -24,11 +25,17 @@ const PATH_SEPARATOR = /[\\/]/;
 const SHELL_DOWNLOAD =
   /(?:(?<!\w)([rRbBuUfF]{0,2}['"`])|&&|\|\|?|;|\$\()[ \t]*(?:sudo[ \t]+)?(?:curl|wget)\b[^\n;)\]]*/g;
 const SHELL_TOKEN_SEPARATOR = /[\s'"`,;=>|&]+/;
+// Calls that run a command: Node child_process and execa, and Python subprocess and os.
+const COMMAND_CALL_NAME =
+  /\b(?:exec|execSync|execFile|execFileSync|spawn|spawnSync|execa|execaSync|system|popen|run|call|Popen|check_call|check_output|getoutput|getstatusoutput)\s*$/;
+// How far back from a command the call that runs it can open, and how long its name can be.
+const COMMAND_CALL_LOOKBACK = 300;
+const COMMAND_CALL_NAME_LENGTH = 24;
 const STRING_LITERAL = /[rRbBuUfF]{0,2}(['"`])([^'"`\n]+)\1/y;
 
-// `const NAME =`, also with a type such as `: string`. The value starts after the match.
-const JS_DECLARATION =
-  /(?<![\w$.])(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::\s*[\w$]+\s*)?=\s*/g;
+// `NAME =` in a declaration, a list of declarations, or an assignment, also with a type such as
+// `: string`. A method such as `obj.name =` does not set a name. The value starts after the match.
+const JS_ASSIGNMENT = /(?<![\w$.])([A-Za-z_$][\w$]*)\s*(?::\s*[\w$]+\s*)?=(?![=>])\s*/g;
 // An http(s) URL literal, or a name, also as the first interpolation of a template literal.
 const JS_URL_VALUE = /(['"`])https?:\/\/|(?:`\$\{\s*)?([A-Za-z_$][\w$]*)/y;
 const JS_LOADER_CALL = /(?<![\w$.])(?:import|require)\s*\(\s*/g;
@@ -71,7 +78,7 @@ export function markRemoteLoads(view: string, content: string, filePath: string)
 }
 
 function javaScriptRemoteLoads(text: string, isCode: IsCode): number[] {
-  const declarations = javaScriptDeclarations(text, isCode);
+  const assignments = javaScriptAssignments(text, isCode);
   const downloads = shellDownloads(text, isCode);
   if (codeMatches(text, JS_NETWORK_CALL, isCode).length > 0) {
     for (const write of codeMatches(text, JS_FILE_WRITE, isCode)) {
@@ -82,7 +89,7 @@ function javaScriptRemoteLoads(text: string, isCode: IsCode): number[] {
   return codeMatches(text, JS_LOADER_CALL, isCode)
     .filter((loader) => {
       const argument = matchEnd(loader);
-      const holdsUrl = (name: string) => declarationHoldsUrl(declarations, name, loader.index);
+      const holdsUrl = (name: string) => assignmentHoldsUrl(assignments, name, loader.index);
       return (
         startsWithUrlValue(text, argument, holdsUrl) ||
         downloads.has(fileStem(literalAt(text, argument)?.value))
@@ -92,24 +99,24 @@ function javaScriptRemoteLoads(text: string, isCode: IsCode): number[] {
 }
 
 // In source order, so a name that an earlier URL name sets holds a URL too.
-function javaScriptDeclarations(text: string, isCode: IsCode): Declarations {
-  const declarations: Declarations = new Map();
-  for (const declaration of codeMatches(text, JS_DECLARATION, isCode)) {
-    const holdsUrl = startsWithUrlValue(text, matchEnd(declaration), (name) =>
-      declarationHoldsUrl(declarations, name, declaration.index)
+function javaScriptAssignments(text: string, isCode: IsCode): Assignments {
+  const assignments: Assignments = new Map();
+  for (const assignment of codeMatches(text, JS_ASSIGNMENT, isCode)) {
+    const holdsUrl = startsWithUrlValue(text, matchEnd(assignment), (name) =>
+      assignmentHoldsUrl(assignments, name, assignment.index)
     );
-    const name = declaration[1] ?? '';
-    const list = declarations.get(name) ?? [];
-    list.push({ index: declaration.index, holdsUrl });
-    declarations.set(name, list);
+    const name = assignment[1] ?? '';
+    const list = assignments.get(name) ?? [];
+    list.push({ index: assignment.index, holdsUrl });
+    assignments.set(name, list);
   }
-  return declarations;
+  return assignments;
 }
 
-// A use reads the last declaration of the name before it. With none before it, the use reads
+// A use reads the last assignment of the name before it. With none before it, the use reads
 // the first one after it, as a function does that runs after the module sets the name.
-function declarationHoldsUrl(declarations: Declarations, name: string, index: number): boolean {
-  const list = declarations.get(name) ?? [];
+function assignmentHoldsUrl(assignments: Assignments, name: string, index: number): boolean {
+  const list = assignments.get(name) ?? [];
   let low = 0;
   let high = list.length - 1;
   let read = 0;
@@ -172,17 +179,17 @@ function importedModules(statement: RegExpExecArray): string[] {
   return (statement[2] ?? '').split(',').map((part) => part.trim().split(/\s/)[0] ?? '');
 }
 
-// A curl or wget command in a string names the files that it writes, also as the last part of
-// its URL, as in `wget <url>` or `curl -O <url>`. A message that only names the command, as in
-// "run `wget <url>` first", does not start a command.
+// A curl or wget command that a call runs names the files that it writes, also as the last part
+// of its URL, as in `wget <url>` or `curl -O <url>`. A message that only names the command, as in
+// "run `wget <url>` first" or a printed command, does not run it.
 function shellDownloads(text: string, isCode: IsCode): Set<string> {
   const stems = new Set<string>();
   for (const command of text.matchAll(SHELL_DOWNLOAD)) {
     const startsString = command[1] !== undefined;
-    const isCommand = startsString
+    const inCommandString = startsString
       ? opensString(text, command.index, isCode)
       : !isCode(command.index);
-    if (!isCommand) continue;
+    if (!inCommandString || !insideCommandCall(text, command.index, isCode)) continue;
     for (const token of command[0].split(SHELL_TOKEN_SEPARATOR)) addCodeFile(stems, token);
   }
   return stems;
@@ -193,6 +200,29 @@ function opensString(text: string, index: number, isCode: IsCode): boolean {
   let before = index - 1;
   while (before >= 0 && /\s/.test(text[before] ?? '')) before -= 1;
   return before < 0 || isCode(before);
+}
+
+// True when a call that runs a command, such as `execSync(` or `subprocess.run([`, is still open
+// at `index`. The walk back skips closed brackets and string text, and stops at the lookback.
+function insideCommandCall(text: string, index: number, isCode: IsCode): boolean {
+  const lookbackStart = Math.max(0, index - COMMAND_CALL_LOOKBACK);
+  let closedBrackets = 0;
+  for (let at = index - 1; at >= lookbackStart; at -= 1) {
+    const char = text[at] ?? '';
+    if (!isCode(at)) continue;
+
+    if (char === ')' || char === ']' || char === '}') {
+      closedBrackets += 1;
+    } else if (char === '(' || char === '[' || char === '{') {
+      if (closedBrackets > 0) {
+        closedBrackets -= 1;
+      } else if (char === '(') {
+        const callName = text.slice(Math.max(0, at - COMMAND_CALL_NAME_LENGTH), at);
+        if (COMMAND_CALL_NAME.test(callName)) return true;
+      }
+    }
+  }
+  return false;
 }
 
 function addCodeFile(stems: Set<string>, path: string | undefined): void {
@@ -228,5 +258,5 @@ function keepEveryString(): boolean {
 }
 
 type IsCode = (index: number) => boolean;
-/** The declarations of each JavaScript name in source order, and whether each sets a URL. */
-type Declarations = Map<string, Array<{ index: number; holdsUrl: boolean }>>;
+/** The assignments of each JavaScript name in source order, and whether each sets a URL. */
+type Assignments = Map<string, Array<{ index: number; holdsUrl: boolean }>>;
