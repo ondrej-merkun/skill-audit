@@ -48,3 +48,8 @@ graphify-out/manifest.json
 
 # local token tracking, not useful to share
 graphify-out/cost.json
+
+# local build and community-label state; the build state holds an absolute path
+graphify-out/.graphify_build_state.json
+graphify-out/.graphify_labels*
+graphify-out/.graphify_root
