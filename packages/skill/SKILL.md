@@ -80,8 +80,13 @@ output. Exit codes: `0` PASS, `1` threshold failure, `2` usage/runtime error,
 ### `scan`
 
 ```bash
-npx --yes @ondrej-merkun/skill-audit@0.2.1 scan [options]
+npx --yes @ondrej-merkun/skill-audit@0.2.1 scan [options] [path]
 ```
+
+Pass a path to scan the skills at that path instead of the installed skills,
+for example a downloaded skill before the user installs it. A file is one skill.
+In a directory, each directory that holds a `SKILL.md` is one skill, and the
+path is one more skill when it has other files.
 
 Options:
 

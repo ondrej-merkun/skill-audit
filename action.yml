@@ -14,9 +14,13 @@ inputs:
     # Keep equal to packages/cli/package.json (test/version-pins.test.ts).
     default: '0.2.1'
   path:
-    description: 'Working directory to scan (default: repo root)'
+    description: 'Working directory for the scan and the results file (default: repo root)'
     required: false
     default: '.'
+  scan-path:
+    description: 'Skill directory, skills directory, or file to scan, relative to `path`. Set it to audit skills in the checkout before anyone installs them. Leave blank to scan the installed and project skills.'
+    required: false
+    default: ''
   args:
     description: 'Additional arguments passed verbatim to `skill-audit scan`'
     required: false
@@ -63,6 +67,7 @@ runs:
       env:
         SA_VERSION: ${{ inputs.version }}
         SA_AGENT: ${{ inputs.agent }}
+        SA_SCAN_PATH: ${{ inputs.scan-path }}
         SA_FAIL_ON: ${{ inputs.fail-on }}
         SA_ARGS: ${{ inputs.args }}
         SA_RESULTS_FILE: ${{ inputs.results-file }}
@@ -81,6 +86,7 @@ runs:
         # SA_ARGS is intentionally word-split here (extra flags from caller).
         # shellcheck disable=SC2086
         npx --yes "@ondrej-merkun/skill-audit@${SA_VERSION}" scan \
+          ${SA_SCAN_PATH:+"$SA_SCAN_PATH"} \
           --json \
           --output "$SA_RESULTS_FILE" \
           --fail-on "$SA_FAIL_ON" \

@@ -99,6 +99,9 @@ Field notes:
 - `install_state` is always present and is `"installed"` for active or exposed
   skills, or `"marketplace"` for inactive local marketplace inventory included
   through `--include-marketplaces`.
+- A path scan (`skill-audit scan <path>`) maps each target onto these fields:
+  agent id `"cross-agent"`, the absolute target path, and `install_state:
+  "installed"`. The top-level `agents` array has one `cross-agent` entry.
 - `llm_reviews` is present only when `scan --llm ...` or `explain --llm ...`
   requested local model review. It preserves one record per selected model,
   ordered by model name.
@@ -199,7 +202,8 @@ helper.
 
 Documented command strings are output contracts too. `skill-audit` with no
 subcommand must behave like the default `skill-audit scan` flow unless the spec
-is explicitly changed. Every documented command-table row, README example,
+is explicitly changed. `skill-audit <path>` must behave like `skill-audit scan
+<path>`. Every documented command-table row, README example,
 GitHub Action invocation, and shorthand alias needs a built-binary smoke test
 using that exact invocation; calling the command function directly is not enough
 for CLI parser behavior.

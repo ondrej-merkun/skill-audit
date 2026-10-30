@@ -70,9 +70,10 @@ without a commit message explaining why it no longer applies.
   Keep e2e helpers executing the built binary, but avoid depending on piped
   Node child stdout when the environment drops it.
 
-- **L1.10 — `scan` does not take a positional fixture path.** _Task 16 first ran `node packages/cli/dist/index.js scan test/fixtures/...` and accidentally scanned the real discovered home skills._
-  For built-CLI fixture checks, create a temp home/project and use `HOME`,
-  `USERPROFILE`, and `SKILL_AUDIT_CWD` discovery overrides.
+- **L1.10 — Only `scan <path>` skips discovery.** _Task 16 first ran `node packages/cli/dist/index.js scan test/fixtures/...` before `scan` took a path, and accidentally scanned the real discovered home skills._
+  For a rule check of a fixture, run `scan <fixture-dir>`. For discovery,
+  `list`, `explain`, and default-scan checks, create a temp home/project and use
+  the `HOME`, `USERPROFILE`, and `SKILL_AUDIT_CWD` discovery overrides.
 
 - **L1.11 — Documented maintenance commands must exist and run.** _Task 22 found `anthropic-skills.json` pointing at missing `scripts/vendor-allowlist.ts` and unavailable `tsx`._
   Run any command you document for regenerating shipped data before committing
@@ -661,6 +662,13 @@ without a commit message explaining why it no longer applies.
   and reads every relative URI from the checkout root._
   Before you emit an optional SARIF field, check what the upload action does
   with it. Supply a fingerprint only where the action cannot compute one.
+
+- **L6.19: An action input that needs new CLI behavior fails until a release
+  moves the action's version pin.** _The `scan-path` input passes a path to
+  `skill-audit scan`, but the action's default `version` is the published CLI,
+  and that CLI rejects a path argument._
+  Smoke-test the action's run script against the built CLI, and say in the PR
+  that the input works only after the next release.
 
 ## 7. Rule fixtures
 

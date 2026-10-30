@@ -3,6 +3,7 @@ import { stripVTControlCharacters } from 'node:util';
 import { formatSupportedAgentIds, SUPPORTED_AGENT_IDS } from '../agent-names.js';
 import { getIgnoreListPath, loadIgnoreList } from '../allowlist/ignore.js';
 import { clearPlugins, discoverAll, initDefaultPlugins } from '../discovery/index.js';
+import { discoverPath } from '../discovery/path.js';
 import type { LocalLlmConfig } from '../llm/config.js';
 import type { LlmReviewFetch } from '../llm/review.js';
 import {
@@ -48,6 +49,8 @@ export function computeExitCode(
 }
 
 export type ScanOptions = {
+  // Set: scan the skills at this path instead of the installed skills.
+  path: string | undefined;
   json: boolean;
   summary: boolean;
   html: string | undefined;
@@ -66,6 +69,7 @@ export type ScanOptions = {
 };
 
 const DEFAULT_OPTIONS: ScanOptions = {
+  path: undefined,
   json: false,
   summary: false,
   html: undefined,
@@ -87,7 +91,7 @@ const SUPPORTED_SCAN_AGENTS: ReadonlySet<string> = new Set(SUPPORTED_AGENT_IDS);
 
 function renderScanPayload(
   result: ScanResult,
-  options: Pick<ScanOptions, 'json' | 'summary' | 'sarif'>
+  options: Pick<ScanOptions, 'json' | 'summary' | 'sarif' | 'path'>
 ): string {
   if (options.sarif === true) {
     return `${renderSarif(result, scanProjectRoot())}\n`;
@@ -98,7 +102,7 @@ function renderScanPayload(
   if (options.summary) {
     return renderSummaryCompact(result);
   }
-  return renderTableToString(result);
+  return renderTableToString(result, options.path);
 }
 
 async function mapWithConcurrency<T, R>(
@@ -188,6 +192,14 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     return; // unreachable in production; allows mocked exit in tests
   }
 
+  if (options.path !== undefined && (options.agent !== undefined || options.includeMarketplaces)) {
+    process.stderr.write(
+      '[skill-audit] a path scan cannot use --agent or --include-marketplaces\n'
+    );
+    process.exit(2);
+    return; // unreachable in production; allows mocked exit in tests
+  }
+
   if (options.agent !== undefined && !SUPPORTED_SCAN_AGENTS.has(options.agent)) {
     process.stderr.write(
       `[skill-audit] unsupported agent "${options.agent}". Supported agents: ${formatSupportedAgentIds()}\n`
@@ -226,14 +238,17 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   let discoveryFailureCount = 0;
   let skills: Skill[];
   try {
-    skills = await discoverAll({
-      ...(options.agent !== undefined ? { agent: options.agent } : {}),
-      ...(options.includeMarketplaces ? { includeMarketplaces: true } : {}),
-      onProgress: (event) => {
-        if (event.type === 'agent-failed') discoveryFailureCount++;
-        progress.onDiscoveryProgress(event);
-      },
-    });
+    skills =
+      options.path !== undefined
+        ? await discoverPath(options.path)
+        : await discoverAll({
+            ...(options.agent !== undefined ? { agent: options.agent } : {}),
+            ...(options.includeMarketplaces ? { includeMarketplaces: true } : {}),
+            onProgress: (event) => {
+              if (event.type === 'agent-failed') discoveryFailureCount++;
+              progress.onDiscoveryProgress(event);
+            },
+          });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(`[skill-audit] ${msg}\n`);
@@ -244,7 +259,9 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
     const target = findSkillByNameOrId(skills, options.skill);
     if (target === undefined) {
       process.stderr.write(
-        `[skill-audit] no skill matching "${options.skill}" found. Run \`skill-audit list\` to see installed skills.\n`
+        options.path === undefined
+          ? `[skill-audit] no skill matching "${options.skill}" found. Run \`skill-audit list\` to see installed skills.\n`
+          : `[skill-audit] no skill matching "${options.skill}" found in ${options.path}.\n`
       );
       process.exit(1);
       return;
@@ -260,9 +277,11 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
 
   if (skills.length === 0) {
     const notice =
-      options.agent === undefined
-        ? 'No skills found. Install some agent skills and try again.\n'
-        : `No skills found for agent "${options.agent}". Install or enable skills for that agent and try again.\n`;
+      options.path !== undefined
+        ? `No skills found in ${options.path}.\n`
+        : options.agent === undefined
+          ? 'No skills found. Install some agent skills and try again.\n'
+          : `No skills found for agent "${options.agent}". Install or enable skills for that agent and try again.\n`;
 
     if (options.sarif === undefined) {
       process.stdout.write(notice);

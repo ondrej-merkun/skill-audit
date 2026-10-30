@@ -104,7 +104,8 @@ function installStateCounts(skills: ScannedSkill[]): { installed: number; market
 export function renderSummaryFooter(
   result: ScanResult,
   orderedSkills: ScannedSkill[],
-  boxWidth = 82
+  boxWidth = 82,
+  scanPath?: string
 ): string {
   const riskOrderedSkills = sortScanSkills(orderedSkills);
   const { scan, summary } = result;
@@ -129,7 +130,7 @@ export function renderSummaryFooter(
 
   const compromisedStr =
     summary.compromised > 0
-      ? `${C_CRITICAL(String(summary.compromised))}   (${formatCompromisedPercent(summary.percentCompromised)}% of ${hasMarketplace ? 'scanned' : 'installed'})`
+      ? `${C_CRITICAL(String(summary.compromised))}   (${formatCompromisedPercent(summary.percentCompromised)}% of ${hasMarketplace || scanPath !== undefined ? 'scanned' : 'installed'})`
       : '0';
   lines.push(`  ${label('Compromised skills')} ${compromisedStr}`);
 
@@ -148,24 +149,35 @@ export function renderSummaryFooter(
   const firstFail = riskOrderedSkills.find((s) => s.summary.verdict === 'FAIL');
   const firstReview = riskOrderedSkills.find((s) => s.summary.verdict === 'REVIEW');
   const highlight = firstFail ?? firstReview;
-  const nextCommands: Array<{ command: string; description: string }> = [];
+  const nextCommands =
+    scanPath === undefined
+      ? installedScanNextCommands(highlight)
+      : pathScanNextCommands(scanPath, highlight);
+  for (const { command, description } of nextCommands) {
+    lines.push(`  →  ${command}    ${C_GREY(description)}`);
+  }
+  lines.push('');
+
+  return lines.join('\n');
+}
+
+const LLM_ADD_NEXT_COMMAND: NextCommand = {
+  command: 'skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model <model_name>',
+  description: 'Configure local LLM review',
+};
+
+function installedScanNextCommands(highlight: ScannedSkill | undefined): NextCommand[] {
+  const nextCommands: NextCommand[] = [];
   if (highlight) {
     nextCommands.push({
       command: `skill-audit explain ${highlight.name}`,
       description: 'See full findings',
     });
   }
-  nextCommands.push(
-    {
-      command:
-        'skill-audit llm add local --base-url http://127.0.0.1:11434/v1 --model <model_name>',
-      description: 'Configure local LLM review',
-    },
-    {
-      command: 'skill-audit --llm local',
-      description: 'Add local LLM review',
-    }
-  );
+  nextCommands.push(LLM_ADD_NEXT_COMMAND, {
+    command: 'skill-audit --llm local',
+    description: 'Add local LLM review',
+  });
   if (highlight) {
     nextCommands.push(
       {
@@ -192,12 +204,36 @@ export function renderSummaryFooter(
       description: 'Scan only Claude Code skills',
     }
   );
-  for (const { command, description } of nextCommands) {
-    lines.push(`  →  ${command}    ${C_GREY(description)}`);
-  }
-  lines.push('');
+  return nextCommands;
+}
 
-  return lines.join('\n');
+// `explain`, `ignore`, and `--agent` look up installed skills, so they cannot find a path target.
+function pathScanNextCommands(
+  scanPath: string,
+  highlight: ScannedSkill | undefined
+): NextCommand[] {
+  const scan = `skill-audit scan ${shellQuote(scanPath)}`;
+  return [
+    LLM_ADD_NEXT_COMMAND,
+    { command: `${scan} --llm local`, description: 'Add local LLM review' },
+    ...(highlight === undefined
+      ? []
+      : [
+          {
+            command: `${scan} --skill ${highlight.name} --llm local`,
+            description: 'Review this skill with local LLM',
+          },
+        ]),
+    {
+      command: `${scan} --html report.html`,
+      description: 'Generate HTML report (contains full findings)',
+    },
+  ];
+}
+
+// Quotes a path for a copy-pasted POSIX shell command, unless it has only safe characters.
+function shellQuote(value: string): string {
+  return /^[\w./@%+=:,-]+$/.test(value) ? value : `'${value.replaceAll("'", `'\\''`)}'`;
 }
 
 /**
@@ -240,3 +276,5 @@ export function renderSummaryCompact(result: ScanResult): string {
 export function renderSummary(result: ScanResult): void {
   process.stdout.write(renderSummaryCompact(result));
 }
+
+type NextCommand = { command: string; description: string };

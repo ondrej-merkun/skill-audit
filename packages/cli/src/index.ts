@@ -17,6 +17,14 @@ const DEFAULT_HTML_OUTPUT = 'scan.html';
 const FAIL_ON_BANDS = ['REVIEW', 'FAIL'] as const;
 // Commander exits 1 by default, which a CI gate cannot tell apart from a FAIL verdict.
 const USAGE_ERROR_EXIT_CODE = 2;
+const PATH_SCAN_HELP = `
+Path scan (skill-audit scan <path>):
+  A file is one skill.
+  In a directory, each directory that holds a SKILL.md is one skill. The path
+  itself is one more skill when it has files outside those directories, such as
+  plugin hooks, commands, or MCP configs. Every file under the path is scanned.
+  A path that does not exist exits 2.
+`;
 
 function collectRepeatedOption(value: string, previous: string[]): string[] {
   return [...previous, value];
@@ -98,9 +106,11 @@ program
 addScanOptions(
   program
     .command('scan', { isDefault: true })
-    .description('Scan installed agent skills for security issues')
-).action((cmdOpts: Record<string, unknown>) => {
-  runScan(scanOptionsFrom(cmdOpts)).catch((err: unknown) => {
+    .description('Scan installed agent skills, or the skills at a path, for security issues')
+    .argument('[path]', 'scan the skills at this path instead of the installed skills')
+    .addHelpText('after', PATH_SCAN_HELP)
+).action((path: string | undefined, cmdOpts: Record<string, unknown>) => {
+  runScan({ ...scanOptionsFrom(cmdOpts), path }).catch((err: unknown) => {
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(`[skill-audit] fatal: ${msg}\n`);
     process.exit(2);

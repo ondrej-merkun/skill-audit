@@ -107,6 +107,18 @@ skill-audit scan --include-marketplaces              # include inactive local ma
 skill-audit scan --scan-all-supporting-files         # paranoid supporting Markdown scan
 ```
 
+Audit a skill before you install it:
+
+```bash
+skill-audit scan ./downloaded-skill                  # one skill, a skills repo, or a plugin checkout
+skill-audit scan ./downloaded-skill/install.sh       # one file
+```
+
+A path scan does not look at installed skills. Each directory under the path
+that holds a `SKILL.md` is one skill. The path is one more skill when it has
+other files, such as plugin hooks or scripts. A path that does not exist exits
+2.
+
 Write reports:
 
 ```bash
@@ -225,6 +237,15 @@ also ships a GitHub Action:
 
 To show findings as GitHub code scanning alerts, set the action's `sarif-file`
 input and upload that file with `github/codeql-action/upload-sarif`.
+
+Set `scan-path` to audit the skills in the checkout before anyone installs them:
+
+```yaml
+- uses: ondrej-merkun/skill-audit@v1
+  with:
+    scan-path: skills
+```
+
 See the [CI reference](docs/REFERENCE.md#use-in-ci) for the full workflow. In
 CI, `skill-audit` scans files locally inside the GitHub Actions runner and
 writes report artifacts. It does not upload skill contents to a separate
