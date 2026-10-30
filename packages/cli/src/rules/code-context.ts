@@ -102,7 +102,7 @@ function isStringPrefixChar(char: string): boolean {
   );
 }
 
-function pythonStringStart(content: string, quoteIndex: number): number {
+export function pythonStringStart(content: string, quoteIndex: number): number {
   let start = quoteIndex;
   while (start > 0 && quoteIndex - start < 3 && isStringPrefixChar(content[start - 1] ?? '')) {
     start -= 1;

