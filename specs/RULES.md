@@ -49,8 +49,9 @@ and the real path. These files are operative:
   program comes directly before the path, with its options
   (`bash references/install.sh`, `source docs/env.sh`, `. docs/env.sh`,
   `python3 docs/check.py`, and the other shells and interpreters); or the path
-  starts a command in fenced code (`./examples/setup.sh --init`). The check
-  reads at most 200 characters before the path on its line.
+  starts a command in fenced code, also in quotes or after variable
+  assignments (`./examples/setup.sh --init`, `DEBUG=1 "./docs/setup.sh"`). The
+  check reads at most 200 characters before the path on its line.
 - A file that a command in an agent config file names: a hook or an MCP server
   in `hooks.json`, `settings.json`, `settings.local.json`, or `.mcp.json` in the
   same scan target. The command can name the file from any dir above it
