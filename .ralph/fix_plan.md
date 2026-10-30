@@ -38,8 +38,11 @@ at the bottom and the loop will stop.
     side effects.
   - Verify GitHub CI on Node 20 and 22 before merging.
 
-- [ ] **8.5** Repair enrichment provenance, provider dedupe, and visible source
+- [x] **8.5** Repair enrichment provenance, provider dedupe, and visible source
   diagnostics.
+
+  Dropped on 2026-10-30. The owner removed the enrichment subsystem instead
+  of repairing it. See "Decisions made during implementation".
 
   Follow-up investigation on 2026-05-02 found that a real scan of 634 local
   skills produced enrichment for only 60 skills: 53 with GitHub data, 10 with
@@ -128,6 +131,14 @@ document it here.)
 - #52 added the root `pnpm.overrides` entry `tsup>esbuild: ^0.28.2` to
   resolve GHSA-g7r4-m6w7-qqqr, because tsup 8.5.1 still asked for esbuild
   `^0.27.0`. #69 removed the override together with tsup.
+- 2026-10-30: the owner removed the enrichment subsystem (the skills.sh,
+  GitHub, and deps.dev clients, the cache, and their wiring, options, and
+  tests). It was dead code behind `ENRICHMENT_ENABLED = false`, and the
+  skills.sh endpoint returned `{}` in a live test. Task 8.5 is dropped. The
+  JSON contract does not change: schema 1.0 keeps the optional
+  `skills[].enrichment` field, and the CLI never emits it, as before. The
+  hidden `--offline` flag stays, because it also skips LLM review.
+  `specs/SPEC.md` §5 records the decision.
 
 ## Blockers
 
