@@ -425,8 +425,13 @@ function hasOperativeAliasPath(filePath: string, index: ReachabilityIndex): bool
  * hide a script that the agent runs. A markdown doc that SKILL.md references, by
  * path or as part of all its docs, is operative too, so it is prepared under a
  * neutral name at the skill root, whatever its own name (`references/README.md`).
+ * The file's real path is a known path too. A link in one skill can make discovery report
+ * another skill under that link's path (`aaa/examples/zzz -> ~/.agents/skills/zzz`), and
+ * that path must not mask the other skill's scripts.
  * ponytail: a script in a docs dir stays masked even when SKILL.md names it, because
  * security-education skills point at sample code (`see examples/loader.js`).
+ * ponytail: a skill whose real dir is also in a docs dir stays masked under such a link path.
+ * Discovery that names each skill after the shallowest path to it would close that case.
  */
 function preparePathFor(
   filePath: string,
@@ -437,7 +442,9 @@ function preparePathFor(
   if (!pathLooksDocumentationOnly(filePath)) return filePath;
 
   const aliasPaths = aliasPathsOf(filePath, dirAliases);
-  const operativePath = aliasPaths.find((aliasPath) => !pathLooksDocumentationOnly(aliasPath));
+  const operativePath = [...aliasPaths, realPathOf(filePath)].find(
+    (path) => path !== undefined && !pathLooksDocumentationOnly(path)
+  );
   if (operativePath !== undefined) return operativePath;
 
   // The same signals make a markdown doc operative in classifySupportingFileRole.
@@ -450,6 +457,14 @@ function preparePathFor(
   return isReferenced
     ? join(nearestNonDocsDir(index.root), `${REFERENCED_DOC_PREPARE_STEM}${extname(scanName)}`)
     : filePath;
+}
+
+function realPathOf(filePath: string): string | undefined {
+  try {
+    return realpathSync(filePath);
+  } catch {
+    return undefined;
+  }
 }
 
 /** The nearest dir at or above `dir` whose path does not look like docs. */

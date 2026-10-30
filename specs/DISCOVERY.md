@@ -514,9 +514,13 @@ workspaces that the config assigns to other agents.
    link (with `docs -> payload` or `payload -> docs`, the file is also
    at `payload/`, so it stays operative). For the same reason, rules
    prepare a file under a known path that does not look like docs, so
-   `docs -> scripts` cannot mask `scripts/setup.sh`. Each skipped second
-   link also goes into `treeSha256`, so two copies that differ only by
-   such a link do not collapse under rule 2.
+   `docs -> scripts` cannot mask `scripts/setup.sh`. The real path of the
+   file is a known path too. A walk can first reach a skill through a link
+   in another skill (`aaa/examples/zzz -> ~/.agents/skills/zzz`) and
+   report it under that link path, and that path must not mask the
+   scripts of `zzz`. Each skipped second link also goes into
+   `treeSha256`, so two copies that differ only by such a link do not
+   collapse under rule 2.
 6. A nested `SKILL.md` dir is its own skill, and the rule engine leaves it
    out of the parent's walk. That split must not change whether a doc
    that a manifest names counts. A doc in a skill is referenced when its
