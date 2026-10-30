@@ -520,9 +520,15 @@ name wins over a path with the same name: use `./list` to scan a directory named
   (`MCP-PROJECT-AUTO-APPROVE`, `NET-API-ENDPOINT-OVERRIDE`,
   `NET-HOOK-HTTP-EXTERNAL`, `SEC-PROJECT-CREDENTIAL-HELPER`) do not run, because
   no agent loads the files under the path as its settings.
+- Supporting Markdown keeps its normal prompt-risk severity, as with
+  `--scan-all-supporting-files`. The scan audits content before install, and
+  the split into targets decides which `SKILL.md` can name a doc, so a nested
+  `SKILL.md` or a symlink must not make an injection count as inert docs.
 - JSON output keeps schema 1.0. Each target reports the agent id `cross-agent`,
   its absolute path, and `install_state: "installed"`.
-- `--skill` selects one target from the path. `--agent` and
+- `--skill` selects one target from the path. The other targets are then not
+  scanned, so the selected target also reads the files that its symlinks reach
+  in them. `--agent` and
   `--include-marketplaces` select installed skills, so a path scan with them
   exits `2`.
 - A path that does not exist, is not a file or directory, or cannot be read

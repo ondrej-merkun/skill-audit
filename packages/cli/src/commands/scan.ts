@@ -173,6 +173,11 @@ function scanProgressOutputKind(options: ScanOptions): ProgressOutputKind {
   return 'pretty';
 }
 
+function withoutLinkExclusions(skill: Skill): Skill {
+  const { alsoInstalledAt: _linksIntoOtherTargets, ...rest } = skill;
+  return rest;
+}
+
 export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
   const options: ScanOptions = { ...DEFAULT_OPTIONS, ...opts };
 
@@ -266,7 +271,9 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
       process.exit(1);
       return;
     }
-    skills = [target];
+    // A path target lists only links into the other targets of the path. With one target left,
+    // those targets are not scanned, so its walk must follow the links.
+    skills = [options.path === undefined ? target : withoutLinkExclusions(target)];
   }
 
   if (options.offline) {
@@ -348,7 +355,9 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
         const findings = withSecurityEducationContextFinding(
           skill,
           await runRulesForSkill(skill, ALL_RULES, {
-            scanAllSupportingFiles: options.scanAllSupportingFiles,
+            // A path scan audits content before install, and its split into targets decides
+            // which manifest can name a doc. So no supporting doc counts as inert there.
+            scanAllSupportingFiles: options.scanAllSupportingFiles || options.path !== undefined,
             scanTargetPaths,
           })
         );
