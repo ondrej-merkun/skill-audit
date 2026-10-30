@@ -568,8 +568,13 @@ Configuration is local-first:
 - `skill-audit llm add` stores named model configs in
   `$XDG_CONFIG_HOME/skill-audit/llms.json`, or
   `~/.config/skill-audit/llms.json` when `XDG_CONFIG_HOME` is unset.
-- The initial provider type is `openai-compatible`, joined with
-  `/v1/chat/completions`.
+- The initial provider type is `openai-compatible`. The base URL follows the
+  OpenAI SDK convention that Ollama, LM Studio, llama.cpp server, and vLLM
+  document: it ends in `/v1`, and requests go to `<baseUrl>/chat/completions`.
+  A base URL whose path does not end in `/v1` is a server root, and requests go
+  to `<baseUrl>/v1/chat/completions`, so configs that older releases saved
+  still work. `http://127.0.0.1:11434/v1` and `http://127.0.0.1:11434` both
+  reach `http://127.0.0.1:11434/v1/chat/completions`.
 - Base URLs must be loopback HTTP(S) hosts: `localhost`, an IPv4 address in
   `127.0.0.0/8`, or `[::1]`, after WHATWG URL parsing. So `http://127.1` is
   loopback, and `http://127.0.0.1.evil.com` is not. Names below `localhost`,

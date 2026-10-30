@@ -191,6 +191,13 @@ URLs must use a loopback host: `localhost`, an address in `127.0.0.0/8`, or
 `[::1]`. Names such as `ollama.localhost` or `127.0.0.1.example.com` are
 rejected. No cloud API key, hosted account, or remote model is required.
 
+Use the base URL that your server documents for OpenAI clients. It ends in
+`/v1`, for example `http://127.0.0.1:11434/v1` for Ollama or
+`http://127.0.0.1:1234/v1` for LM Studio. skill-audit sends requests to the
+base URL plus `/chat/completions`. A base URL without
+`/v1`, such as `http://127.0.0.1:11434`, is a server root: skill-audit adds
+`/v1/chat/completions` to it.
+
 For comparison runs, repeat `--llm`, pass comma-separated names, or use
 `--llm all` for every enabled configured local model:
 
