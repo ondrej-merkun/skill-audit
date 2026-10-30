@@ -334,26 +334,60 @@ A password hides archive content from antivirus and data-loss scanners. The
 rule reads prompt files and scripts (`*.sh`, `*.bash`, `*.py`, `*.js`, `*.ts`,
 `*.mjs`, `*.cjs`) with one severity, because a script runs the command itself.
 
-Extraction is the direct ClawHavoc IOC. The `unzip` form needs a named `.zip`
-operand, so a skill that opens the archive and password that the user gives
-(`unzip -P "$PASSWORD" "$ARCHIVE"`) does not match:
+Extraction is the direct ClawHavoc IOC. A fixed password marks a payload that
+the skill ships, so `unzip` with a fixed password matches for any archive
+operand. A password from a variable, a substitution, a format placeholder
+(`%s`, `{pw}`, `<password>`), or a string concatenation does not match that
+line. The first `unzip` line needs a named `.zip` operand. So a skill that opens
+the archive and password that the user gives (`unzip -P "$PASSWORD" "$ARCHIVE"`)
+does not match. The `7z x` line matches any password value, also a variable:
 ```regex
 unzip\s+-P\s+["']?\S+["']?\s+\S+\.zip
 7z\s+x\s+-p\S+\s+\S+
+\bunzip[ \t]+-P[ \t]*(?:["'](?![\s"'$%{<`])|[^\s"'$%{<`])
 ```
+`unzip` and `7z x` differ only when both the password and the archive come from
+variables: `7z x` still matches. A variable can hold a fixed password, which a
+pure-regex rule cannot follow, and a rule regex is not narrowed to remove
+findings.
 
 Creation stages data for exfiltration. It matches any password value, also a
 variable, because a variable that holds a fixed password evades a literal-only
 check. The command must start a word, and the argument gap stops at `|`, `;`,
-`&`, or a line end. The 7-Zip and RAR line is case-insensitive. RAR `-p-` turns
-the password prompt off and does not match. pyzipper encrypts a written zip
-only with `WZ_AES`, and `zip-encrypted` is the Node.js `archiver` format of
-archiver-zip-encrypted:
+`&`, or a line end. Command names ignore case, because macOS file systems
+ignore case by default, so `ZIP -P pw out.zip src` runs zip there. Option
+letters keep their case, except on the 7-Zip and RAR lines, which ignore case.
+RAR `-p-` turns the password prompt off and does not match. pyzipper encrypts a
+written zip only with `WZ_AES`, and `zip-encrypted` is the Node.js `archiver`
+format of archiver-zip-encrypted:
 ```regex
-(?<![\w.-])zip(?=[ \t])[^\n|;&]{0,200}[ \t](?:-[A-Za-z0-9]{0,8}P|--password\b)
+[Zz](?<![\w.-][Zz])[Ii][Pp](?=[ \t])[^\n|;&]{0,200}[ \t](?:-[A-Za-z0-9]{0,8}[Pe]|--(?:password|encrypt)\b)
+zipcloak(?<![\w.-]zipcloak)[ \t]+(?:[-"'$]|[^\s|;&]{0,200}\.zip\b)
 (?<![\w.-])(?:7z[az]?|rar)[ \t]+a(?=[ \t])[^\n|;&]{0,200}[ \t]-h?p(?!-)\S
 \bWZ_AES\b
 ["']zip-encrypted["']
+```
+`zip -e` (`--encrypt`) and `zipcloak` read the password from the terminal, not
+from stdin. `expect` or `pexpect` types it, so a skill can run them unattended.
+`zipcloak` encrypts or decrypts an existing zip, and its line ignores case. Its
+operand must be an option, a quoted or variable value, or a `.zip` name. So
+prose such as "zipcloak and zipnote" does not match.
+
+A list-style process call passes each argument as its own string:
+`subprocess.run(["zip", "-P", pw, out, src])`, `os.execvp("zip", ["zip", ...])`,
+or `spawn('zip', ['-P', pw])`. The quoted command name must follow `[`, `(`, or
+`,`, and it can carry a path and `.exe`. Markdown quotes tool names with
+backticks, so a backtick does not open a command name. The argument gap crosses
+line breaks, because formatters put each item on its own line. It stops at `]`,
+`)`, `}`, and `;`, so a `-P` of another call does not count. A call before the
+flag, as in `["zip", "-r", str(out), "-P", pw]`, also ends the gap. 7-Zip and
+RAR need the `a` command and a password in the switch (`-pSECRET`, `f"-p{pw}"`)
+or a concatenation (`'-p' + pw`). A bare `-p` asks on the terminal and does not
+match. The 7-Zip, RAR, and `zipcloak` lines ignore case:
+```regex
+["'](?<=[\[(,][ \t\r\n]{0,40}["'])(?:[^"'\n]{0,120}[\\/])?(?:[Zz][Ii][Pp])(?:\.exe)?["'][^\])};]{0,200}["'`](?:-[A-Za-z0-9]{0,8}[Pe]|--(?:password|encrypt)\b)
+["'](?<=[\[(,][ \t\r\n]{0,40}["'])(?:[^"'\n]{0,120}[\\/])?(?:7z[az]?|rar)(?:\.exe)?["'][^\])};]{0,40}["'`]a["'`][^\])};]{0,200}["'`]-h?p(?!-)(?:[^\s"'`]|["'`][ \t]{0,4}\+)
+["'](?<=[\[(,][ \t\r\n]{0,40}["'])(?:[^"'\n]{0,120}[\\/])?(?:zipcloak)(?:\.exe)?["'][ \t]*,
 ```
 Standard-library `zipfile` cannot write an encrypted zip. Its `setpassword`
 applies only to reading, so no `zipfile` pattern marks creation.

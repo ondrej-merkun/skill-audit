@@ -126,14 +126,29 @@ export const SKILL_DISABLE_SAFETY: Rule = {
 // ---------------------------------------------------------------------------
 const unzipPasswordPattern = /unzip\s+-P\s+["']?\S+["']?\s+\S+\.zip/;
 const sevenZipPasswordPattern = /7z\s+x\s+-p\S+\s+\S+/;
+// A fixed password marks a payload that the skill ships, also when the archive name is
+// a variable. A password from a variable, a substitution, a format placeholder, or a
+// string concatenation stays clean, so the user can still give the password.
+const unzipFixedPasswordPattern = /\bunzip[ \t]+-P[ \t]*(?:["'](?![\s"'$%{<`])|[^\s"'$%{<`])/;
 
 // The archive command must start a word, so `unzip`, `gzip`, and a `.zip` file name do
 // not match. The bounded argument gap stops at a pipe, a list separator, or a line end,
-// so the `-P` of a next command (`&& scp -P 2222`) does not count.
+// so the `-P` of a next command (`&& scp -P 2222`) does not count. Command names ignore
+// case, because macOS file systems ignore case by default, so `ZIP` runs zip there.
 const MAX_ARCHIVE_ARGS_CHARS = 200;
-// Info-ZIP `-P <password>`, also in a flag cluster such as `-rP`, or `--password`.
+// Info-ZIP `-P <password>`, also in a flag cluster such as `-rP`, or `--password`. `-e`
+// and `--encrypt` read the password from the terminal, and `expect` types it unattended.
+// The pattern checks the word start after the first letter, which runs faster than a
+// leading lookbehind.
 const zipCreatePasswordPattern = new RegExp(
-  String.raw`(?<![\w.-])zip(?=[ \t])[^\n|;&]{0,${MAX_ARCHIVE_ARGS_CHARS}}[ \t](?:-[A-Za-z0-9]{0,8}P|--password\b)`
+  String.raw`[Zz](?<![\w.-][Zz])[Ii][Pp](?=[ \t])[^\n|;&]{0,${MAX_ARCHIVE_ARGS_CHARS}}[ \t](?:-[A-Za-z0-9]{0,8}[Pe]|--(?:password|encrypt)\b)`
+);
+// zipcloak encrypts or decrypts an existing zip, and it also reads the password from the
+// terminal. The operand must be an option, a quoted or variable value, or a `.zip` name,
+// so prose such as "zipcloak and zipnote" does not match.
+const zipcloakCommandPattern = new RegExp(
+  String.raw`zipcloak(?<![\w.-]zipcloak)[ \t]+(?:[-"'$]|[^\s|;&]{0,${MAX_ARCHIVE_ARGS_CHARS}}\.zip\b)`,
+  'i'
 );
 // 7-Zip `a -p<password>`, RAR `a -p<password>` or `a -hp<password>`. RAR `-p-` turns the
 // password prompt off.
@@ -141,6 +156,33 @@ const sevenZipOrRarCreatePasswordPattern = new RegExp(
   String.raw`(?<![\w.-])(?:7z[az]?|rar)[ \t]+a(?=[ \t])[^\n|;&]{0,${MAX_ARCHIVE_ARGS_CHARS}}[ \t]-h?p(?!-)\S`,
   'i'
 );
+
+// A list-style process call passes each argument as its own string, as in
+// `subprocess.run(["zip", "-P", pw, ...])`, `os.execvp("zip", ["zip", ...])`, or
+// `spawn('zip', ['-P', pw])`. The quoted command name must follow `[`, `(`, or `,`, and
+// it can carry a path and `.exe`. Markdown quotes tool names with backticks, so a backtick
+// does not open a command name. The argument gap crosses line breaks, because formatters
+// put each item on its own line, but it stops at `]`, `)`, `}`, and `;`, so a `-P` of
+// another call does not count.
+// ponytail: a call before the flag, as in `["zip", "-r", str(out), "-P", pw]`, ends the
+// gap. Track bracket depth if real skills put calls before the flag.
+const listCommand = (names: string): string =>
+  String.raw`["'](?<=[\[(,][ \t\r\n]{0,40}["'])(?:[^"'\n]{0,120}[\\/])?(?:${names})(?:\.exe)?["']`;
+const LIST_ARGS_GAP = String.raw`[^\])};]{0,${MAX_ARCHIVE_ARGS_CHARS}}`;
+const zipListPasswordPattern = new RegExp(
+  String.raw`${listCommand('[Zz][Ii][Pp]')}${LIST_ARGS_GAP}["'\`](?:-[A-Za-z0-9]{0,8}[Pe]|--(?:password|encrypt)\b)`
+);
+// 7-Zip and RAR take the password in the switch (`-pSECRET`, `f"-p{pw}"`) or from a
+// string concatenation (`'-p' + pw`). A bare `-p` asks on the terminal. The `a` command
+// comes first, after at most a repeated command name, as in `os.execvp("7z", ["7z", "a"])`.
+const sevenZipOrRarListPasswordPattern = new RegExp(
+  String.raw`${listCommand('7z[az]?|rar')}[^\])};]{0,40}["'\`]a["'\`]${LIST_ARGS_GAP}["'\`]-h?p(?!-)(?:[^\s"'\`]|["'\`][ \t]{0,4}\+)`,
+  'i'
+);
+// zipcloak needs no flag. The `,` after the name requires an argument, so a lookup such
+// as `shutil.which("zipcloak")` does not match.
+const zipcloakListPattern = new RegExp(String.raw`${listCommand('zipcloak')}[ \t]*,`, 'i');
+
 // pyzipper encrypts a written zip only with WZ_AES. Standard-library `zipfile` cannot
 // write an encrypted zip: its `setpassword` applies only to reading.
 const pyzipperEncryptPattern = /\bWZ_AES\b/;
@@ -155,8 +197,13 @@ export const SKILL_PASSWORD_ZIP: Rule = {
   patterns: [
     unzipPasswordPattern,
     sevenZipPasswordPattern,
+    unzipFixedPasswordPattern,
     zipCreatePasswordPattern,
+    zipcloakCommandPattern,
     sevenZipOrRarCreatePasswordPattern,
+    zipListPasswordPattern,
+    sevenZipOrRarListPasswordPattern,
+    zipcloakListPattern,
     pyzipperEncryptPattern,
     archiverEncryptedZipPattern,
   ],
