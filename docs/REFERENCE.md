@@ -225,6 +225,8 @@ npx --yes @ondrej-merkun/skill-audit@latest scan \
 `--fail-on FAIL` exits 1 only when the overall verdict is FAIL. `--fail-on
 REVIEW` exits 1 for REVIEW or FAIL. If no threshold is met, the command exits 0;
 an incomplete scan exits 3 unless a threshold failure already made it exit 1.
+The band is case-insensitive. Any other `--fail-on` value exits 2 with a usage
+error before the scan starts.
 
 ### GitHub Action
 

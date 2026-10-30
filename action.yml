@@ -22,7 +22,7 @@ inputs:
     required: false
     default: ''
   fail-on:
-    description: 'Exit 1 when any result meets this verdict band or worse. One of: review, fail'
+    description: 'Exit 1 when any result meets this verdict band or worse. One of: review, fail (case-insensitive). Any other value fails the step with exit code 2.'
     required: false
     default: 'fail'
   agent:
