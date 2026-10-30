@@ -155,11 +155,29 @@ function maskPythonStringsAndComments(content: string, keepString?: KeepString):
       continue;
     }
 
+    // A prefix such as `r` in r'...' belongs to the string, so the trail keeps the code before it.
+    const prefixEnd = pythonStringPrefixEnd(content, idx);
+    if (prefixEnd !== undefined) {
+      idx = prefixEnd;
+      continue;
+    }
+
     if (!isBlank(char)) pushCode(trail, idx);
     idx += 1;
   }
 
   return chars.join('');
+}
+
+// Returns the index of the quote after a string prefix such as `r` or `Rb` at `start`, or
+// undefined when no prefixed string starts there.
+function pythonStringPrefixEnd(content: string, start: number): number | undefined {
+  if (!isStringPrefixChar(content[start] ?? '') || /\w/.test(content[start - 1] ?? '')) {
+    return undefined;
+  }
+
+  const end = isStringPrefixChar(content[start + 1] ?? '') ? start + 2 : start + 1;
+  return content[end] === '"' || content[end] === "'" ? end : undefined;
 }
 
 function maskJavaScriptStringsAndComments(content: string, keepString?: KeepString): string {

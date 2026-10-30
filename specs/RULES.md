@@ -461,17 +461,65 @@ keyword and its string, as in `import(/* @vite-ignore */ '<url>')`, does not
 hide the URL. The JavaScript masker keeps the code in a template interpolation
 (`${...}`) visible, and a quote in a regex literal does not open a string. A
 slash after `)` or `}` reads as division, so a regex literal there is not
-recognized. `<q>` is one of `'`, `"`, or a backtick:
+recognized. A Python string prefix (`r`, `b`, `f`, `u`, in any case) before
+the URL does not hide it. `<q>` is one of `'`, `"`, or a backtick:
 ```regex
 \bfrom\s*<q>https?://
 (?<![.$])\bimport\s*(?:\(\s*)?<q>https?://
 (?<![.$])\brequire\s*\(\s*<q>https?://
-\bimportlib\.import_module\s*\(\s*<q>https?://
+\bimportlib\.import_module\s*\(\s*[rRbBuUfF]{0,2}<q>https?://
+(?<![\w.])(?:import[ \t][\w., \t]{0,200}?|from[ \t]+)\bhttpimport\b
 ```
-The rule does not follow data flow. It misses a URL held in a variable
-(`import(url)`) and a module that the code downloads to a file and then
-imports. Fetch-then-run is `CODEEXEC-JS-EVAL-FUNCTION` (any JS `eval` or
-`new Function`) and `SKILL-FETCH-AND-EXEC`.
+The last pattern finds an import of `httpimport`, a library that loads Python
+modules over HTTP(S).
+
+The rule also follows a URL through a name, and a module through a file, in
+the same file. The view marks the loader call, and the finding is on its line:
+- **URL name (JavaScript).** A name holds a URL when `const`, `let`, or `var`
+  sets it to an `http(s)` URL literal, or to a value that starts with such a
+  name, as in `` `${BASE}/x.js` `` or `BASE + '/x.js'`. A loader call whose
+  argument starts with the name fires: `import(u)`, `require(u)`,
+  `import(BASE + '/x.js')`, and `` import(`${BASE}/x.js`) ``.
+- **Downloaded file.** A code file (`.js`, `.mjs`, `.cjs`, `.ts`, `.mts`,
+  `.cts`, `.jsx`, `.tsx`, `.py`) is downloaded when a curl or wget command in
+  a string names it, also as the last part of its URL. It is also downloaded
+  when Python `urlretrieve` writes it, or when a file that calls a network API
+  (`fetch`, `http(s).get`, `axios`, `got`, `urlopen`, `requests`, `httpx`)
+  writes it with `writeFile`, `appendFile`, `createWriteStream`, or
+  `open(<path>, 'w')`. A loader that names the same file, with or without
+  its extension, fires: `require('./x')`, `import('./x.js')`, and in Python `import m`,
+  `from m import`, `import_module('m')`, `__import__('m')`,
+  `spec_from_file_location(<name>, 'm.py')`, `SourceFileLoader(<name>, 'm.py')`,
+  and `runpy.run_path('m.py')`.
+
+A JSON file, an image, or another file without a code extension is data, so
+its download does not fire. A URL name that the code only logs, fetches, or
+shows does not fire.
+
+Other rules own the other forms of remote code:
+- `exec(urlopen(url).read())` and `exec(requests.get(url).text)`, also with
+  the URL in a variable, are `SKILL-FETCH-AND-EXEC`. That rule does not follow
+  the payload through a variable, as in `code = urlopen(url).read()` and then
+  `exec(code)`.
+- A download and a run in one shell command, as in
+  `curl -o x.js <url> && node x.js`, are `SKILL-CURL-BASH-IN-MD`.
+- JavaScript `eval` and `new Function` of fetched text are
+  `CODEEXEC-JS-EVAL-FUNCTION`.
+- `importlib.import_module(url)` with the URL in a variable does not fire:
+  `import_module` takes a module name, so a URL fails to import.
+
+The rule misses:
+- A URL in an object property (`CONFIG.url`), in `new URL(...)`, in an
+  assignment without `const`, `let`, or `var`, or from another file.
+- A download to a computed path, such as `path.join(dir, 'x.js')`, and a
+  loader that gets its path through a variable.
+- A downloaded file that a separate command runs, as in
+  `execSync('node x.js')`, `subprocess.run(['python', 'm.py'])`, or
+  `exec(open('m.py').read())`.
+- A static `import ... from './x.js'` of a downloaded file. The static import
+  runs before the download.
+- Names are file-wide, so a parameter that shadows a URL name also fires.
+  Files match by name, so a different file with the same name also fires.
 
 ## Summary of remaining rules
 

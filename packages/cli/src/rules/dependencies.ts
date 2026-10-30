@@ -2,6 +2,7 @@ import { basename } from 'node:path';
 import type { Rule } from '../types.js';
 import { agentConfigJson, decodeJsonStrings } from './agent-config.js';
 import { type CodeTrail, maskDocumentationTextInCode } from './code-context.js';
+import { markRemoteLoads, REMOTE_LOAD_MARK } from './remote-load-flow.js';
 
 // Patterns are split to avoid triggering static-analysis hooks on this detector file.
 
@@ -15,9 +16,14 @@ const jsFromRemotePattern = new RegExp(`\\bfrom\\s*${remoteSpecifier}`);
 // Dynamic `import('<url>')` and side-effect `import '<url>'`.
 const jsImportRemotePattern = new RegExp(`(?<![.$])\\bimport\\s*(?:\\(\\s*)?${remoteSpecifier}`);
 const jsRequireRemotePattern = new RegExp(`(?<![.$])\\brequire\\s*\\(\\s*${remoteSpecifier}`);
+// A string prefix such as `r` or `Rb` can come before the URL.
 const pyImportlibRemotePattern = new RegExp(
-  `\\bimportlib\\.import_module\\s*\\(\\s*${remoteSpecifier}`
+  `\\bimportlib\\.import_module\\s*\\(\\s*[rRbBuUfF]{0,2}${remoteSpecifier}`
 );
+// httpimport loads Python modules over HTTP(S), so importing it is the remote import.
+const pyHttpimportPattern = /(?<![\w.])(?:import[ \t][\w., \t]{0,200}?|from[ \t]+)\bhttpimport\b/;
+// A loader call that gets a URL through a name, or a file that the code downloads.
+const remoteLoadFlowPattern = new RegExp(REMOTE_LOAD_MARK);
 // Keywords whose next string names the code that a loader fetches. A method such as
 // `Array.from` or `loader.require` is not a loader keyword.
 const moduleLoaderKeywordAtEndPattern = /(?:\bimport_module|(?<![.$\w])(?:import|require|from))$/;
@@ -34,6 +40,8 @@ export const DEPS_REMOTE_IMPORT: Rule = {
     jsImportRemotePattern,
     jsRequireRemotePattern,
     pyImportlibRemotePattern,
+    pyHttpimportPattern,
+    remoteLoadFlowPattern,
   ],
   prepareContent: keepModuleSpecifiers,
   message: 'Remote URL import detected — code fetched from the network with no integrity check.',
@@ -42,7 +50,8 @@ export const DEPS_REMOTE_IMPORT: Rule = {
 };
 
 function keepModuleSpecifiers(content: string, filePath: string): string {
-  return maskDocumentationTextInCode(content, filePath, isModuleSpecifier);
+  const view = maskDocumentationTextInCode(content, filePath, isModuleSpecifier);
+  return markRemoteLoads(view, content, filePath);
 }
 
 // True when the last code before the string is a loader keyword, or an open paren after one.
