@@ -409,6 +409,20 @@ without a commit message explaining why it no longer applies.
   `installed_plugins.json`, and read a `project` or `local` record's settings
   from its `projectPath`, not from the working directory.
 
+- **L2.21: One MCP file name can hold different shapes for different hosts.**
+  _Copilot MCP discovery found three shapes: Copilot CLI reads `mcpServers`, its
+  repository `.github/mcp.json` can also list servers at the top level, and VS
+  Code reads `servers` from `.vscode/mcp.json`. VS Code parses that file with
+  `json.visit` defaults, so comments and trailing commas are valid, and its
+  scanner also reads U+00A0, a BOM, and other characters as whitespace and ends a
+  `//` comment at CR. A `JSON.parse` reader would hide every server behind one
+  trailing comma or one U+00A0. Copilot CLI also reads `.mcp.json`, but MCP
+  entries have an empty tree hash and do not dedupe, so a second plugin that
+  reports it lists each server twice._
+  For each MCP file, read the server key and the parser of each host that loads
+  it. Report a file that two agents read from one plugin, and document the gap,
+  until MCP entries dedupe across agents.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**

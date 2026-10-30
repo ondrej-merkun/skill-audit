@@ -190,16 +190,39 @@ undocumented built-in skills in `~/.cursor/skills-cursor/`.
 - `~/.copilot/skills/*/SKILL.md`
 - Also read `~/.claude/skills/` (Copilot reads Claude skills)
 - Also read `~/.agents/skills/`
+- `~/.copilot/copilot-instructions.md`
+- `~/.copilot/instructions/**/*.instructions.md`
+- `~/.copilot/agents/**/*.md` (custom agents, `.agent.md` or `.md`)
+- `~/.copilot/mcp-config.json` (`mcpServers`, one target per server)
 - `~/.copilot/hooks/*.json` (each file is scanned as `hooks.json`)
 - `~/.copilot/settings.json` (inline `hooks`)
 
 **Project-local:**
 - `.github/skills/*/SKILL.md`
 - `.github/copilot-instructions.md`
-- `.github/instructions/*.instructions.md`
+- `.github/instructions/**/*.instructions.md`
+- `.github/prompts/**/*.prompt.md` (prompt files)
+- `.github/agents/**/*.md` (custom agents, `.agent.md` or `.md`)
+- `.github/mcp.json` (`mcpServers`, or servers at the top level; one target
+  per server)
+- `.vscode/mcp.json` (VS Code `servers`; comments and trailing commas are
+  valid; one target per server)
 - `.github/hooks/*.json` (each file is scanned as `hooks.json`)
 - `.github/copilot/settings.json`, `.github/copilot/settings.local.json`
   (inline `hooks`)
+
+Instruction, prompt, and agent folders are walked at any depth. A file in a
+subfolder is named by its relative path without the suffix, such as
+`frontend/react`. Each MCP server is scanned with only its own definition, as
+a one-server `.mcp.json` document.
+
+Not covered yet:
+- Copilot CLI also reads `.mcp.json`. Claude Code discovery reports its
+  `mcpServers`. MCP entries do not dedupe across agents, so Copilot does not
+  report them again. With `--agent copilot` or without Claude Code, they are
+  not scanned.
+- VS Code keeps user prompt files and the user `mcp.json` in its profile
+  storage, which has no documented fixed path.
 
 ### 4. Cline
 

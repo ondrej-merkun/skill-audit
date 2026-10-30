@@ -141,7 +141,7 @@ Adding a new agent = adding one file and registering in `discovery/index.ts`. No
 | **OpenAI Codex** | `~/.codex/AGENTS.md`, `~/.codex/AGENTS.override.md`, `~/.codex/config.toml`, `~/.codex/skills/`, `~/.codex/plugins/`, `~/.codex/prompts/`, `~/.agents/skills/`. `$CODEX_HOME` overrides the `~/.codex` paths. | `AGENTS.md` (walked up), `.codex/config.toml` (if trusted), `.agents/skills/` | `AGENTS.md`, `SKILL.md`, TOML `[mcp_servers.*]` |
 | **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/`, `~/.cursor/skills/`, `~/.cursor/agents/`, local plugins in `~/.cursor/plugins/local/`, `~/.agents/skills/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, `.cursor/skills/`, `.cursor/agents/`, legacy `.cursorrules`, `.agents/skills/` | `.mdc`, JSON, `SKILL.md`, `.cursor-plugin/plugin.json` or root `plugin.json` |
 | **Gemini CLI** | `~/.gemini/extensions/*/gemini-extension.json`, `~/.gemini/commands/*.toml`, `~/.gemini/agents/`, `~/.gemini/skills/`, `~/.gemini/settings.json`, `~/.agents/skills/` | `.gemini/extensions/`, `.gemini/commands/`, `.gemini/skills/`, `.gemini/settings.json`, `GEMINI.md`, `.agents/skills/` | `gemini-extension.json` (JSON), `.toml`, `SKILL.md` |
-| **GitHub Copilot** | `~/.copilot/skills/*/SKILL.md`, `~/.claude/skills/`, `~/.agents/skills/` | `.github/skills/*/SKILL.md`, `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.agents/skills/` | `SKILL.md`, plain `.md` |
+| **GitHub Copilot** | `~/.copilot/skills/*/SKILL.md`, `~/.claude/skills/`, `~/.copilot/copilot-instructions.md`, `~/.copilot/instructions/**/*.instructions.md`, `~/.copilot/agents/**/*.md`, MCP in `~/.copilot/mcp-config.json`, `~/.agents/skills/` | `.github/skills/*/SKILL.md`, `.github/copilot-instructions.md`, `.github/instructions/**/*.instructions.md`, `.github/prompts/**/*.prompt.md`, `.github/agents/**/*.md`, MCP in `.github/mcp.json` and `.vscode/mcp.json`, `.agents/skills/` | `SKILL.md`, plain `.md`, `.prompt.md`, `.agent.md`, JSON |
 | **Cline** | `~/Documents/Cline/Rules/`, `~/.cline/skills/`, `~/Documents/Cline/Workflows/`, `~/.cline/data/settings/cline_mcp_settings.json`, `$CLINE_DIR/data/settings/cline_mcp_settings.json`, VS Code / JetBrains `globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`, `~/.agents/skills/` | `.clinerules`, `.clinerules/*.md`, `.clinerules/*.txt`, `.cline/skills/`, `.clinerules/skills/`, `.clinerules/workflows/`, `.agents/skills/`, cross-reads `.cursorrules`, `AGENTS.md`, `CLAUDE.md` | `SKILL.md`, `.md`, `.txt`, JSON |
 | **Windsurf** | `~/.codeium/windsurf/memories/global_rules.md`, `~/.agents/skills/` | `.windsurf/rules/*.md` in the workspace, nested workspace `.windsurf/rules/*.md`, parent `.windsurf/rules/*.md` up to git root, legacy `.windsurfrules`, `.agents/skills/`, auto-reads `AGENTS.md` | Plain `.md`, `SKILL.md` |
 | **Cross-agent (AGENTS.md sweep)** | — | `AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `CONVENTIONS.md` (catches 7+ agents in one pass) | plain `.md` |
@@ -165,9 +165,10 @@ Home files have `scope: "user"`; working-directory files have
 scripts that project and plugin hooks name, so a payload moved into a hook
 script is still scanned. Each MCP server from
 `~/.claude.json`, `.mcp.json`, a Claude Code plugin `.mcp.json`,
-`~/.gemini/settings.json`, or `.gemini/settings.json` is scanned with only its
-own definition, so findings stay on that server and never quote other parts of
-a shared config file.
+`~/.gemini/settings.json`, `.gemini/settings.json`, `~/.copilot/mcp-config.json`,
+`.github/mcp.json`, or `.vscode/mcp.json` is scanned with only its own
+definition, so findings stay on that server and never quote other parts of a
+shared config file.
 
 **Discovery depth rule.** When an installed plugin path contains "plugins",
 walk the full tree and emit one Skill per leaf SKILL.md / plugin.json /
