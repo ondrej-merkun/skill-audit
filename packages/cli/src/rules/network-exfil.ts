@@ -10,6 +10,7 @@ import {
   maskDocumentationTextInCode,
   maskSecurityEducationExampleContext,
 } from './code-context.js';
+import { ENVIRON_TOKEN_SOURCE, maskEnvironReadsNotSent } from './python-env-flow.js';
 
 // Patterns are split to avoid triggering static-analysis hooks on this detector file itself.
 // These rules detect env-exfil and network calls in scanned skills, not in this codebase.
@@ -22,10 +23,10 @@ function maskLine(line: string): string {
   return ' '.repeat(line.length);
 }
 
-// NET-EXFIL-ENV: the whole environment (os.environ, process.env, env) sent over the network
-const pyEnvPostPattern = new RegExp(
-  ['(?:requests|httpx)\\.\\w+\\s*\\([^)]{0,200}(?:json|data)\\s*=\\s*os\\.', 'environ'].join('')
-);
+// NET-EXFIL-ENV: the whole environment (os.environ, process.env, env) sent over the network.
+// The view keeps a Python environment token only where the whole environment reaches a network
+// call, so any token in it is a hit.
+const pyEnvironSentPattern = new RegExp(ENVIRON_TOKEN_SOURCE);
 const jsEnvStringifyPattern = new RegExp(
   ['JSON\\.stringify\\s*\\(\\s*process\\.', 'env\\s*\\)'].join('')
 );
@@ -125,19 +126,23 @@ function maskNonExecutingEnvDumpText(content: string, filePath: string): string 
     .join('\n');
 }
 
+function prepareEnvExfilView(content: string, filePath: string): string {
+  return maskEnvironReadsNotSent(maskNonExecutingEnvDumpText(content, filePath), content);
+}
+
 export const NET_EXFIL_ENV: Rule = {
   id: 'NET-EXFIL-ENV',
   category: 'network-exfil',
   severity: 'critical',
   appliesTo: ['*.py', '*.sh', '*.bash', '*.js', '*.ts', '*.mjs'],
   patterns: [
-    pyEnvPostPattern,
+    pyEnvironSentPattern,
     jsEnvStringifyPattern,
     shellEnvDumpDataPattern,
     shellEnvDumpPipePattern,
     shellEnvDumpRedirectPattern,
   ],
-  prepareContent: maskNonExecutingEnvDumpText,
+  prepareContent: prepareEnvExfilView,
   message: 'Environment variables transmitted over outbound HTTP — credential exfiltration.',
   fix: 'Remove code that sends os.environ / process.env to external endpoints.',
   cwe: ['CWE-200'],
