@@ -439,6 +439,11 @@ describe('runRules', () => {
       severities: ['critical'],
     },
     {
+      skillMd: '```bash\nDEBUG=1 "$SKILL_DIR/examples/setup.sh"\n```',
+      docFile: join('examples', 'setup.sh'),
+      severities: ['critical'],
+    },
+    {
       skillMd: 'Run scripts/example-setup.sh first.',
       docFile: join('scripts', 'example-setup.sh'),
       severities: ['critical'],

@@ -15,10 +15,11 @@ const SENTENCE_END_PATTERN = /[.!?](?=\s|$)/;
 // A program that runs the path right after it, with its options: `bash -e docs/setup.sh`,
 // `source docs/env.sh`, `. docs/env.sh`, `python3 references/install.py`.
 const INTERPRETER_BEFORE_PATH_PATTERN =
-  /(?:^|[\s;&|(`])(?:\.|source|exec|sudo|bash|sh|zsh|dash|ksh|fish|python[\d.]*|node|deno|bun|bunx|npx|tsx|ts-node|uv|uvx|ruby|perl|php|pwsh|powershell|osascript)(?:\s+-[\w=.-]+)*\s+["'`]?$/i;
-// The start of a command in fenced code, so the path is the program: `./docs/setup.sh`.
-const LINE_START_COMMAND_PATTERN = /^\s*(?:[$>]\s+)?$/;
-const AFTER_COMMAND_SEPARATOR_PATTERN = /(?:&&|\|\||[;|&(])\s*$/;
+  /(?:^|[\s;&|(`])(?:\.|source|exec|sudo|env|nohup|bash|sh|zsh|dash|ksh|fish|python[\d.]*|node|deno|bun|bunx|npx|tsx|ts-node|uv|uvx|ruby|perl|php|pwsh|powershell|osascript)(?:\s+-[\w=.-]+)*\s+["'`]?$/i;
+// The start of a command in fenced code, so the path is the program: `./docs/setup.sh`, also
+// after variable assignments and in quotes (`DEBUG=1 "./docs/setup.sh"`).
+const LINE_START_COMMAND_PATTERN = /^\s*(?:[$>]\s+)?(?:\w+=\S*\s+)*["']?$/;
+const AFTER_COMMAND_SEPARATOR_PATTERN = /(?:&&|\|\||[;|&(`])\s*(?:\w+=\S*\s+)*["']?$/;
 // The part of a word before the path: `./`, `$SKILL_DIR/`, or `${CLAUDE_PLUGIN_ROOT}/`.
 const PATH_PREFIX_PATTERN = /[^\s;&|(`"']*$/;
 // A path starts after a space, a quote, a bracket, `=`, or the `/` of a dir that names it.
