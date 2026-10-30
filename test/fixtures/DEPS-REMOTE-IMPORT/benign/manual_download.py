@@ -11,3 +11,10 @@ def load_model_proto():
             "Run `wget https://example.com/sentencepiece/sentencepiece_model_pb2.py` first."
         ) from error
     return model.ModelProto()
+
+
+def show_setup():
+    subprocess_hint = "pip install requests"
+    print('wget https://example.com/tools/setup_helper.py')
+    import setup_helper
+    return subprocess_hint, setup_helper
