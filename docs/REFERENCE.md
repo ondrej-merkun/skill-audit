@@ -12,7 +12,7 @@ first screen while preserving the details users need after their first scan.
 | **GitHub Copilot** | `~/.copilot/skills/*/SKILL.md`, `~/.copilot/hooks/*.json`, `~/.copilot/settings.json`, `~/.agents/skills/` | `.github/skills/`, `.github/copilot-instructions.md`, `.github/instructions/`, `.github/hooks/*.json`, `.github/copilot/settings.json`, `.agents/skills/` |
 | **Cursor** | `~/.cursor/mcp.json`, `~/.cursor/rules/`, `~/.cursor/hooks.json`, `~/.agents/skills/` | `.cursor/mcp.json`, `.cursor/rules/*.mdc`, `.cursor/hooks.json`, `.cursorrules`, `.agents/skills/` |
 | **Cline** | `~/Documents/Cline/Rules/`, `~/.cline/skills/`, `~/Documents/Cline/Workflows/`, Cline MCP settings, `~/.agents/skills/` | `.clinerules/`, `.cline/skills/`, `.clinerules/skills/`, `.clinerules/workflows/`, `.agents/skills/` |
-| **Gemini CLI** | `~/.gemini/extensions/`, `~/.gemini/commands/`, `~/.gemini/agents/`, `~/.gemini/settings.json`, `~/.agents/skills/` | `.gemini/extensions/`, `.gemini/commands/`, `.gemini/settings.json`, `GEMINI.md`, `.agents/skills/` |
+| **Gemini CLI** | `~/.gemini/extensions/`, `~/.gemini/commands/`, `~/.gemini/agents/`, `~/.gemini/skills/`, `~/.gemini/settings.json`, `~/.agents/skills/` | `.gemini/extensions/`, `.gemini/commands/`, `.gemini/skills/`, `.gemini/settings.json`, `GEMINI.md`, `.agents/skills/` |
 | **Windsurf** | `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/hooks.json`, `~/.agents/skills/` | `.windsurf/rules/*.md`, nested workspace `.windsurf/rules/`, `.windsurfrules`, `.devin/hooks.json`, `.agents/skills/` |
 | **Cross-agent sweep** | - | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.windsurfrules`, `CONVENTIONS.md` (walks parents) |
 

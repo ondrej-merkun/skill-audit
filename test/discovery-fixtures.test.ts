@@ -496,6 +496,14 @@ describe('gemini: fixture skill tree', () => {
       join(tempCwd, '.gemini', 'extensions'),
       { recursive: true }
     );
+    await cp(join(FIXTURES, 'gemini', 'skills'), join(tempHome, '.gemini', 'skills'), {
+      recursive: true,
+    });
+    await cp(
+      join(FIXTURES, 'gemini', 'project', '.gemini', 'skills'),
+      join(tempCwd, '.gemini', 'skills'),
+      { recursive: true }
+    );
 
     const userCommandsDir = join(tempHome, '.gemini', 'commands', 'ops');
     await mkdir(userCommandsDir, { recursive: true });
@@ -552,7 +560,7 @@ describe('gemini: fixture skill tree', () => {
     );
   });
 
-  it('discovers user extensions, nested commands, agents, and MCP servers in commented settings', async () => {
+  it('discovers user extensions, nested commands, agents, skills, and MCP servers in commented settings', async () => {
     expect(await geminiDiscovery.isInstalled()).toBe(true);
 
     const skills = await geminiDiscovery.discoverSkills();
@@ -563,6 +571,8 @@ describe('gemini: fixture skill tree', () => {
     expect(byName.get('doctor')?.format).toBe('gemini-command-toml');
     expect(byName.get('doctor')?.scope).toBe('user');
     expect(byName.get('planner')?.format).toBe('gemini-agent-md');
+    expect(byName.get('release-notes')?.format).toBe('SKILL.md');
+    expect(byName.get('release-notes')?.scope).toBe('user');
     expect(byName.get('browser')?.format).toBe('mcp-json');
   });
 
@@ -589,7 +599,7 @@ describe('gemini: fixture skill tree', () => {
     expect(skills.find((skill) => skill.name === 'padded')?.format).toBe('mcp-json');
   });
 
-  it('discovers project-local Gemini extensions and commands without GEMINI.md duplicates', async () => {
+  it('discovers project-local Gemini extensions, commands, and skills without GEMINI.md duplicates', async () => {
     const skills = await geminiDiscovery.discoverSkills();
     const byName = new Map(skills.map((skill) => [skill.name, skill]));
 
@@ -597,6 +607,8 @@ describe('gemini: fixture skill tree', () => {
     expect(byName.get('project-helper')?.scope).toBe('project');
     expect(byName.get('review')?.format).toBe('gemini-command-toml');
     expect(byName.get('review')?.scope).toBe('project');
+    expect(byName.get('api-review')?.format).toBe('SKILL.md');
+    expect(byName.get('api-review')?.scope).toBe('project');
     expect(byName.has('GEMINI.md')).toBe(false);
   });
 

@@ -168,6 +168,9 @@ Report each as a `Skill` with `agentId: "cross-agent"` and
 - `~/.gemini/extensions/**/gemini-extension.json`
 - `~/.gemini/commands/**/*.toml`
 - `~/.gemini/agents/**/*.md`
+- `~/.gemini/skills/**/SKILL.md`. Every directory that holds a `SKILL.md` is
+  one skill, as in the shared `.agents/skills` walk (section 8). Gemini CLI
+  loads `SKILL.md` and `*/SKILL.md` from this root.
 - `~/.gemini/settings.json` (hooks, plus one entry per `mcpServers` server).
   Each server entry scans the server's definition as the file writes it, so
   rules that read lines see the same layout as in the file. The settings file
@@ -183,7 +186,10 @@ Report each as a `Skill` with `agentId: "cross-agent"` and
 **Project-local:**
 - `.gemini/extensions/`
 - `.gemini/commands/`
-- `.gemini/settings.json` (hooks)
+- `.gemini/skills/**/SKILL.md`, walked as `~/.gemini/skills`.
+- `.gemini/settings.json` (hooks, plus one entry per `mcpServers` server).
+  The servers and the rest of the file split as in `~/.gemini/settings.json`.
+  `gemini mcp add` writes a server to this file by default.
 - `GEMINI.md` is handled by the cross-agent sweep.
 
 ### 7. Windsurf

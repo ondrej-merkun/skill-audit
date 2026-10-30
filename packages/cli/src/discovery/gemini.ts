@@ -12,7 +12,7 @@ import {
   splitMcpServerScanMetadata,
 } from './agent-config.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
-import { discoverSharedAgentSkills } from './shared-agent-skills.js';
+import { discoverSharedAgentSkills, discoverSkillDirs } from './shared-agent-skills.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
 const AGENT_ID = 'gemini';
@@ -295,22 +295,26 @@ async function discoverSettingsFile(
   });
 }
 
-// ~/.gemini/settings.json holds hooks and MCP servers. Each server is reported on its own entry,
-// so the settings file entry scans the rest of the file. One read feeds both, so the servers
-// that the settings scan leaves out are the servers that have entries.
-async function discoverUserSettings(userBase: string): Promise<Skill[]> {
-  const settingsPath = join(userBase, 'settings.json');
+// The user and the project settings.json hold hooks and MCP servers. Each server is reported on
+// its own entry, so the settings file entry scans the rest of the file. One read feeds both, so
+// the servers that the settings scan leaves out are the servers that have entries.
+async function discoverSettings(
+  base: string,
+  displayDir: string,
+  scope: Skill['scope']
+): Promise<Skill[]> {
+  const settingsPath = join(base, 'settings.json');
   // A FIFO at this path would block the read forever, so only a regular file is read.
   const raw = (await isRegularFile(settingsPath))
     ? await readFile(settingsPath, 'utf8').catch(() => undefined)
     : undefined;
-  if (raw === undefined) return discoverSettingsFile(userBase, '~/.gemini', 'user');
+  if (raw === undefined) return discoverSettingsFile(base, displayDir, scope);
 
   // Split the comment-free text, as Gemini CLI parses it. Blanking keeps every offset in place.
   const split = splitMcpServerScanMetadata(blankJsonComments(raw));
   return [
-    ...discoverMcpJson(settingsPath, raw, 'user', split?.servers),
-    ...(await discoverSettingsFile(userBase, '~/.gemini', 'user', split?.settings)),
+    ...discoverMcpJson(settingsPath, raw, scope, split?.servers),
+    ...(await discoverSettingsFile(base, displayDir, scope, split?.settings)),
   ];
 }
 
@@ -334,7 +338,8 @@ const geminiDiscovery: AgentDiscovery = {
     );
     skills.push(...(await discoverCommandTomlFiles(join(userBase, 'commands'), 'user', options)));
     skills.push(...(await discoverAgentMarkdownFiles(join(userBase, 'agents'), 'user', options)));
-    skills.push(...(await discoverUserSettings(userBase)));
+    skills.push(...(await discoverSkillDirs(AGENT_ID, join(userBase, 'skills'), 'user')));
+    skills.push(...(await discoverSettings(userBase, '~/.gemini', 'user')));
 
     skills.push(
       ...(await discoverExtensionManifests(join(projectBase, 'extensions'), 'project', options))
@@ -342,7 +347,8 @@ const geminiDiscovery: AgentDiscovery = {
     skills.push(
       ...(await discoverCommandTomlFiles(join(projectBase, 'commands'), 'project', options))
     );
-    skills.push(...(await discoverSettingsFile(projectBase, '.gemini', 'project')));
+    skills.push(...(await discoverSkillDirs(AGENT_ID, join(projectBase, 'skills'), 'project')));
+    skills.push(...(await discoverSettings(projectBase, '.gemini', 'project')));
 
     skills.push(...(await discoverSharedAgentSkills(AGENT_ID)));
 

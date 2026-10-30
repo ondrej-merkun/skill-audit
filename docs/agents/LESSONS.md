@@ -354,6 +354,16 @@ without a commit message explaining why it no longer applies.
   Keep scope, format, and scan name together in one record per installation
   (`installations`). Test both path sort orders and files of different names.
 
+- **L2.17: Cover every tier and scope that the agent loads, not only the shared
+  alias or the user file.** _Gemini discovery read the shared `.agents/skills`
+  alias but not `~/.gemini/skills` or `.gemini/skills`, which Gemini CLI loads
+  from the same tiers. The per-server MCP split ran only on
+  `~/.gemini/settings.json`, so a server in `.gemini/settings.json` (the default
+  target of `gemini mcp add`) was reported on the settings file instead._
+  Read the agent's loader (for Gemini CLI, `skillManager.ts` and `storage.ts`)
+  and list every root that it reads. When you add a feature to one settings
+  scope, run the same test table for every scope.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**
