@@ -445,6 +445,28 @@ without a commit message explaining why it no longer applies.
   an older release) and compare the files there with the discovered rows. Read
   the old shapes too: an extra target is cheap, and a missed one hides a server.
 
+- **L2.24: A split into scan targets must not change which references count.**
+  _A benign `helper/SKILL.md` under an installed skill made `helper` its own
+  target. The parent SKILL.md named `helper/docs/inject.md`, but the nested
+  target read only its own manifest, so the injection dropped to `info`. A
+  link `aaa/examples/zzz` to another installed skill made discovery name `zzz`
+  after a docs-like path, which masked all of its scripts._
+  For a nested target, read the manifests in every folder above each of its
+  installed paths, including deduped copies, and rebase their paths to the
+  target. Mask a file as docs only when its real path also looks like docs.
+
+- **L2.25: Set an explicit scan name only when discovery knows the language.**
+  _Discovery left out a hook script's scan name when it equaled the file name,
+  so the engine added shebang rules, and `node tag.js` with a stale
+  `#!/bin/sh` got the shell rules. Always setting the name then dropped the
+  shebang rules for `exec scripts/check` and `env FOO=bar scripts/setup`,
+  where the word before the script is no interpreter. Pairing every option
+  value with the interpreter scanned `node --env-file .env` as JavaScript._
+  Record the scan name when a known interpreter runs the script. After an
+  unknown word such as `exec`, `nohup`, or `NAME=value`, keep the file's own
+  name and add the shebang name. Treat an option value as code only for
+  options that load code, such as `--require`, `-r`, or `--preload`.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**
@@ -551,6 +573,18 @@ without a commit message explaining why it no longer applies.
   that the raw text matched. Record the last code position while masking
   instead of walking back from each string, and time hostile inputs through
   `runRules`.
+
+- **L4.12: Bound the cost of each match on hostile input.** _In the Python env
+  flow, `(?<=[)\]]\s*\.\s*)urlopen` hung for more than 20 s on a real 520 KB
+  file of large strings: V8 tries the lookbehind at every position, and each
+  try scans the whole blanked run backward. Synthetic hostile shapes did not
+  show it. A check that read all text before each path mention was quadratic
+  on long lines, and `push(...arr)` with 200,000 items overflowed the call
+  stack._
+  Start a match at its anchor character, not with a variable-length
+  lookbehind. Read context in a fixed window. Never spread an attacker-sized
+  array into a call. Time a probe over real files one file at a time, not only
+  synthetic shapes.
 
 ## 5. Orphans, cleanup, and the one-task-per-loop rule
 
@@ -721,6 +755,13 @@ without a commit message explaining why it no longer applies.
   `PATH`, and `GITHUB_OUTPUT` pointing at a temp file. To force an incomplete
   scan (exit 3) in a test, use a sparse file above the V8 string limit; an
   unreadable file does not trigger it.
+
+- **L6.21: Give each parallel agent its own scratch paths, and rebuild after a
+  rebase.** _Two agents wrote probe output into the same `/tmp/sa-probe`
+  directory. A stale `dist/` after a rebase failed two e2e tests that came from
+  `main`._
+  Put probe output under a temp dir that only your task uses. After every
+  rebase, run `pnpm build` before the full suite.
 
 ## 7. Rule fixtures
 
@@ -908,6 +949,43 @@ without a commit message explaining why it no longer applies.
   hostile shapes through `runRules`: many functions with one name, many `;`
   statements on one line, and long dotted names each took quadratic time or
   memory before the fix.
+
+- **L7.21: A quoted command name counts only at a command position.**
+  _The list-call patterns of `SKILL-PASSWORD-ZIP` first fired on
+  `["grep", "zip", "-P", log]` and `shutil.which("zipcloak", path=p)`, because
+  a `,` let an argument act as the command. In Node.js,
+  `spawn('grep', ['zip', '-P', log])` has an argument array that looks like a
+  Python argv list._
+  Match a command name only right after the `(` of a call or the `[` that
+  opens its argv, never after a `,`. Info-ZIP `zip -e` and `zipcloak` read the
+  password from `/dev/tty`, so a stdin probe never ends: test them under
+  `expect` with a hard timeout.
+
+- **L7.22: Probe a data-flow rule over real code before the first review.**
+  _The `DEPS-REMOTE-IMPORT` flow hit 17 false positives in real code: a `wget`
+  hint in an error message, a reused `url` name, and a minified name. The
+  JavaScript `NET-EXFIL-ENV` flow hit false positives in copilot,
+  claude-agent-sdk, and vite bundles, which reuse short names, use `this.#x`
+  like a variable, and put brackets inside regex literals._
+  Run the new patterns over a large real corpus, including minified bundles,
+  and turn each false-positive shape into a benign fixture. A `curl` string is
+  a download only inside an open call that runs commands: track open calls in
+  one forward pass, because padding hides a call from a fixed lookback. In a
+  view that blanks strings, treat blanked string text as a value, or a line
+  that ends with a string looks like it continues. When an assignment regex
+  grows past `const`/`let`/`var`, check the token before the name: reject a
+  name, a string, or a dot, but keep keywords such as `return`.
+
+- **L7.23: Find what opened each masked region before you narrow a mask.**
+  _The code-risk mask read `#` comments in fenced code as headings, so one
+  shell comment with "pattern" or "rules" hid the rest of the file. In a real
+  corpus, these comments, not real headings, caused most of the masked text._
+  Before you narrow a heading-based mask, record on real files which line
+  opened each masked region. Decide that the agent runs a file from run
+  signals (a run verb, a program before the path, a hook or MCP command),
+  never from its extension: `bash docs/payload.md` runs a `.md` file. To
+  unmask an operative file, remove only the docs dirs from its prepare path,
+  because some rules read other parent dirs, such as `.gemini` or `commands`.
 
 ---
 

@@ -128,6 +128,43 @@
 - Detect trigger clauses that send local context, such as the working
   directory, git remote, files, environment, or conversation, to an external
   URL as `PI-EXFIL-TRIGGER-CLAUSE`.
+- Follow import aliases, closures, shell commands that Python runs
+  (`os.system`, `os.popen`, `subprocess.getoutput`, `shell=True`, `bash -c`),
+  and `smtplib`, `ftplib`, `asyncio.open_connection`, WebSocket, and
+  `xmlrpc.client` sends in the Python checks of `NET-EXFIL-ENV`.
+- Detect JavaScript and TypeScript that sends a copy of the whole
+  `process.env` (a spread, `Object.entries`, `Object.keys`, `Object.values`,
+  `Object.assign`, `URLSearchParams`, `util.inspect`, or a local copy) to
+  `fetch`, `axios`, `navigator.sendBeacon`, an `http` or `https` request, a
+  `net` or `tls` socket, or a WebSocket as `NET-EXFIL-ENV`.
+- Detect a URL in a JavaScript variable that reaches `import()` or
+  `require()`, JavaScript and Python code that downloads a script and then
+  loads it, Python `import_module` URLs with an `r`, `b`, `f`, or `u` prefix,
+  and `httpimport` as `DEPS-REMOTE-IMPORT`. Detect
+  `curl <url> -o x.js && node x.js` as `SKILL-CURL-BASH-IN-MD`.
+- Detect password-protected archives that Python and Node.js list-style
+  process calls create, `zipcloak`, `zip -e`, and an uppercase `ZIP` command as
+  `SKILL-PASSWORD-ZIP`. `unzip -P` with a fixed password fires also when the
+  archive name is a variable.
+- Scan a hook script with the rules of every interpreter that hooks run it
+  with. Common interpreter options that take a separate value, such as
+  `python3 -W ignore` or `bash -o pipefail`, no longer hide the interpreter.
+  `ruby` selects the Ruby rules, and `deno` and `bun` select the TypeScript
+  rules. After a word that is not an interpreter, such as `exec` or
+  `env NAME=value`, the shebang of the script adds rules.
+- Add the rules of the shebang language to a file in a skill directory, so a
+  `run.txt` or `setup.cfg` that starts with `#!/bin/bash` gets the shell rules.
+- Stop scanning the file that `node --env-file` loads as JavaScript.
+- Stop hiding fenced commands under headings such as `## Testing`,
+  `## Install`, or the skill title from the code-risk rules. Only quoted
+  material under example or detection headings, such as `## Attack examples`,
+  stays hidden, and a `#` comment in fenced code is no longer a heading.
+- Scan a script in a docs folder (`docs/`, `references/`, `examples/`) when
+  SKILL.md tells the agent to run it or a hook or MCP command names it.
+- Read the references of every parent `SKILL.md` for a nested skill in the
+  installed-skill scan, so a benign nested `SKILL.md` cannot demote an
+  injection that the parent points at. Mask a file as docs only when its real
+  path also looks like docs.
 - Stop flagging standard emoji ZWJ sequences, such as flags and skin-tone
   variants, as `PI-HIDDEN-UNICODE`.
 - Send local LLM review requests to `/v1/chat/completions` for the documented
