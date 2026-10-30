@@ -36,8 +36,11 @@ it, so rules scan it under a neutral name at the skill root, whatever its own
 name (`references/README.md`). The SKILL.md of a parent dir counts too, so a
 nested skill cannot hide a doc that its parent names. When the skill root
 itself is in a docs dir (`references/helper/`), the neutral name goes in the
-nearest dir above it that does not look like docs. A script in a docs dir stays masked even when
-SKILL.md names it, because security-education skills point at sample code. For
+nearest dir above it that does not look like docs. A file is masked as docs
+only when every known path to it looks like docs: the walked path, a path
+through a skipped symlink, and the real path. A script in a docs dir stays
+masked even when SKILL.md names it, because security-education skills point at
+sample code. For
 rules with line masking (`FS-CREDSTORE`, `NET-DNS-UNUSUAL-TLD`), a documentation
 word such as "example" or "test" hides a markdown line only in example
 structure: a section under an example heading, a line that opens with a label

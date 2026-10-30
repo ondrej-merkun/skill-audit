@@ -1091,6 +1091,24 @@ describe('e2e: scan nested installed skills', () => {
       ['security-pack', 'PASS'],
     ]);
   });
+
+  // zzz is installed in the shared store, and Claude Code reaches it only through the link in
+  // aaa, so discovery names zzz after the link path. The `examples` segment of that path must
+  // not mask the script of zzz as documentation.
+  it('keeps the findings of a skill that a docs link in another skill reaches', async () => {
+    const storeSkill = join(tempHome, '.agents', 'skills', 'zzz');
+    await cp(join(MALICIOUS_DIR, 'webhook-exfil-skill'), storeSkill, { recursive: true });
+    await mkdir(join(skillsDir, 'aaa', 'examples'), { recursive: true });
+    await writeFile(join(skillsDir, 'aaa', 'SKILL.md'), '# aaa\n\nFormats dates.\n');
+    await symlink(storeSkill, join(skillsDir, 'aaa', 'examples', 'zzz'));
+
+    const result = await scanJson();
+
+    const ruleIds = result.skills
+      .filter((s) => s.name === 'zzz')
+      .flatMap((s) => s.findings.map((f) => f.rule_id));
+    expect(ruleIds).toContain('NET-WEBHOOK-KNOWN');
+  });
 });
 
 describe('e2e: scan a path', () => {
