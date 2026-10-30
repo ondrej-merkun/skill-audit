@@ -275,8 +275,9 @@ the same file. The finding is on the line of the read.
   `const a = 1, b = 2`) and through an assignment to a declared name
   (`name = value`, `name += value`, `name.key = value`). A name resolves to its
   declaration in the innermost enclosing block. A parameter is a declaration
-  of its function, and a destructuring pattern (`const { a, b } = c`) declares
-  its names, so two functions that use the same name do not share its value. A private member (`this.#name`) is not a variable. A key
+  of its function, and a destructuring pattern (`const { a, b: c } = d`)
+  declares the names that it binds, so two functions that use the same name do
+  not share its value. A key, a type, and a default value bind no name. A private member (`this.#name`) is not a variable. A key
   lookup or a test on a variable that holds the environment reads one item.
 - Comments, string text, and regex literals do not count. The code in a
   template literal field does.
@@ -342,17 +343,19 @@ example pipeline.
 JavaScript and TypeScript fixtures: a `.mjs` file that sends a spread,
 `Object.entries`, `Object.keys`, `Object.values`, `URLSearchParams`, and
 `util.inspect` through `fetch`, `axios.post`, an `http.request` body, and a
-socket, a multi-line template in a variable, and a copy that an `if` block
-sends, and a `.ts` file that sends a copy through two variables, are
-malicious. A JavaScript file that authenticates with one key, gives copies of
-the environment to child processes through bare and quoted `env` keys, sends
-membership flags on `process.env` and on a copy, reads the environment in block
-and expression response callbacks, posts a name that another function uses for
-a copy, and quotes the attack in a comment and a string is benign. So is a
-JavaScript file with the shapes of bundled packages: a `process.env &&` guard,
-regex literals with unpaired brackets, a parameter, a comma-declared name, and
-a destructured name that share names with module values, a private member
-named like a sent variable, and a comparison on a copy.
+socket, a multi-line template in a variable, a copy that an `if` block sends,
+and a copy that a function sends while a pattern key and a default value of
+its parameters use the same name, and a `.ts` file that sends a copy through
+two variables, are malicious. A JavaScript file that authenticates with one
+key, gives copies of the environment to child processes through bare and
+quoted `env` keys, sends membership flags on `process.env` and on a copy,
+reads the environment in block and expression response callbacks, posts a
+name that another function uses for a copy, and quotes the attack in a comment
+and a string is benign. So is a JavaScript file with the shapes of bundled
+packages: a `process.env &&` guard, regex literals with unpaired brackets, a
+parameter, a comma-declared name, and a destructured name that share names
+with module values, a private member named like a sent variable, and a
+comparison on a copy.
 
 ### NET-WEBHOOK-KNOWN (Critical)
 URLs in code and markdown that deliver data to a chat webhook, a request

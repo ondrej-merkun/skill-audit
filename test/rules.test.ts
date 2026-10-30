@@ -348,6 +348,7 @@ describe('malicious fixture attack lines', () => {
         'const snapshot: Record<string, string | undefined> = { ...process.env };',
         "${Object.entries(process.env).join('\\n')}`;",
         'const copy = { ...process.env };',
+        'const vars = { ...process.env };',
       ],
     },
     {

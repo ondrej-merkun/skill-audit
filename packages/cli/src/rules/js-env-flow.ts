@@ -312,7 +312,7 @@ function collectDeclarations(
   });
   // A parameter list binds names in its function; a pattern binds them in its statement's block.
   const parameterLists = scan.functions.map((fn) => fn.parameters);
-  for (const bound of boundNames(code, [...parameterLists, ...declared.patterns])) {
+  for (const bound of bindingNames(code, scan, [...parameterLists, ...declared.patterns])) {
     const isParameter = bound.list < parameterLists.length;
     const scope = isParameter
       ? functionScopes[bound.list]
@@ -323,31 +323,64 @@ function collectDeclarations(
 }
 
 /**
- * Each name in a parameter list or a destructuring pattern, with the index of its innermost list.
- * Keys and default values count too, which can only hide a flow. A default value can hold a
- * function, so lists nest; each character is marked once.
+ * The names that each parameter list or destructuring pattern binds, with the index of its list. A
+ * key (`{ key: name }`), a type (`name: Type`), and a default value (`name = value`) bind nothing:
+ * a name there that shadowed an outer copy would hide its flow. Nested patterns go on a stack, so
+ * deep nesting cannot exhaust the call stack.
  */
-function boundNames(code: string, lists: Range[]): Array<NameUse & { list: number }> {
-  const inList = new Uint8Array(code.length);
-  let markedUntil = 0;
-  for (const index of sortedIndexes(lists)) {
-    const list = lists[index];
-    if (list === undefined) continue;
-    for (let idx = Math.max(list.start, markedUntil); idx < list.end; idx += 1) inList[idx] = 1;
-    markedUntil = Math.max(markedUntil, list.end);
-  }
+function bindingNames(
+  code: string,
+  scan: BracketScan,
+  lists: Range[]
+): Array<NameUse & { list: number }> {
+  const names: Array<NameUse & { list: number }> = [];
 
-  const names: NameUse[] = [];
-  for (const match of code.matchAll(IDENTIFIER)) {
-    if (inList[match.index] && !isPropertyName(code, match.index)) {
-      names.push({ name: match[0], offset: match.index });
+  lists.forEach((list, listIndex) => {
+    const pending = [{ ...list, inObject: code[list.start - 1] === '{' }];
+    for (let elements = pending.pop(); elements !== undefined; elements = pending.pop()) {
+      let idx = nextCodeIndex(code, elements.start);
+      while (idx < elements.end) {
+        if (code.startsWith('...', idx)) idx = nextCodeIndex(code, idx + 3);
+        const target = elements.inObject ? afterPatternKey(code, scan, idx) : idx;
+
+        if (code[target] === '{' || code[target] === '[') {
+          const close = scan.closing[target] ?? code.length;
+          pending.push({ start: target + 1, end: close, inObject: code[target] === '{' });
+          idx = close + 1;
+        } else {
+          DECLARED_NAME.lastIndex = target;
+          const name = DECLARED_NAME.exec(code)?.[0];
+          if (name !== undefined) names.push({ name, offset: target, list: listIndex });
+          idx = target + (name?.length ?? 1);
+        }
+        idx = nextElement(code, scan, idx, elements.end);
+      }
     }
+  });
+  return names;
+}
+
+/** In an object pattern, the target after `key:` or `[key]:`, else the element itself. */
+function afterPatternKey(code: string, scan: BracketScan, idx: number): number {
+  let keyEnd = idx;
+  if (code[idx] === '[') {
+    keyEnd = (scan.closing[idx] ?? code.length) + 1;
+  } else {
+    DECLARED_NAME.lastIndex = idx;
+    if (DECLARED_NAME.exec(code) !== null) keyEnd = DECLARED_NAME.lastIndex;
   }
-  const owners = innermostRanges(
-    lists,
-    names.map((name) => name.offset)
-  );
-  return names.map((name, idx) => ({ ...name, list: owners[idx] ?? -1 }));
+  const colon = nextCodeIndex(code, keyEnd);
+  return code[colon] === ':' ? nextCodeIndex(code, colon + 1) : idx;
+}
+
+/** The start of the next element after `idx`: past a type or a default value and its comma. */
+function nextElement(code: string, scan: BracketScan, idx: number, end: number): number {
+  for (let at = idx; at < end; at += 1) {
+    const char = code[at];
+    if (char === '(' || char === '[' || char === '{') at = scan.closing[at] ?? end;
+    else if (char === ',') return nextCodeIndex(code, at + 1);
+  }
+  return end;
 }
 
 /**
