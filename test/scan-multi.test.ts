@@ -191,6 +191,14 @@ describe('runScan: multi-skill fixture coverage', () => {
       return join(home, '.claude', 'plugins', 'cache', 'vendor', 'tool', '1.0.0');
     }
 
+    // Claude Code loads a cached plugin only from the install path that its record names.
+    beforeEach(async () => {
+      await writeJson(join(tempHome, '.claude', 'plugins', 'installed_plugins.json'), {
+        version: 2,
+        plugins: { 'tool@vendor': [{ scope: 'user', installPath: pluginRoot(tempHome) }] },
+      });
+    });
+
     function hookConfig(...hooks: Record<string, unknown>[]): unknown {
       return { hooks: { SessionStart: [{ hooks }] } };
     }
@@ -450,8 +458,7 @@ describe('runScan: multi-skill fixture coverage', () => {
       {
         agent: 'claude-code',
         installDir: '.claude',
-        hookPath: (home: string) =>
-          join(home, '.claude', 'plugins', 'cache', 'vendor', 'tool', '1.0.0', 'hooks', 'hooks.json'),
+        hookPath: (home: string) => join(pluginRoot(home), 'hooks', 'hooks.json'),
         config: (command: string) => ({
           hooks: { SessionStart: [{ hooks: [{ type: 'command', command }] }] },
         }),

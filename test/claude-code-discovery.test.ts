@@ -26,6 +26,21 @@ function pathRows(skills: Skill[]): Array<Pick<Skill, 'path' | 'name' | 'format'
     .sort((a, b) => a.path.localeCompare(b.path));
 }
 
+type InstallRecord = { scope: string; installPath: string; projectPath?: string };
+
+// Claude Code records each install in plugins/installed_plugins.json (format version 2) and loads
+// the plugin from the installPath dir, plugins/cache/<marketplace>/<plugin>/<version>/.
+async function writeInstallRecords(home: string, plugins: Record<string, InstallRecord[]>) {
+  const recordsPath = join(home, '.claude', 'plugins', 'installed_plugins.json');
+  await mkdir(dirname(recordsPath), { recursive: true });
+  await writeFile(recordsPath, JSON.stringify({ version: 2, plugins }));
+}
+
+async function writeEnabledPlugins(settingsPath: string, enabledPlugins: Record<string, boolean>) {
+  await mkdir(dirname(settingsPath), { recursive: true });
+  await writeFile(settingsPath, JSON.stringify({ enabledPlugins }));
+}
+
 describe('claude-code discovery plugin', () => {
   let tempHome: string;
   let tempCwd: string;
@@ -206,6 +221,16 @@ describe('claude-code discovery plugin', () => {
       root: TRASHED_PLUGIN_ROOT,
       includeMarketplaces: true,
     },
+    {
+      inventory: 'cached plugins with no install record by default',
+      root: ['cache', 'vendor', 'tool', '1.0.0'],
+      includeMarketplaces: false,
+    },
+    {
+      inventory: 'cached plugins with no install record with --include-marketplaces',
+      root: ['cache', 'vendor', 'tool', '1.0.0'],
+      includeMarketplaces: true,
+    },
   ])('excludes $inventory', async ({ root, includeMarketplaces }) => {
     const pluginsDir = join(tempHome, '.claude', 'plugins');
     const installedDir = join(pluginsDir, 'vendor', 'installed-tool', 'skills', 'installed-review');
@@ -236,8 +261,8 @@ describe('claude-code discovery plugin', () => {
     expect(skills.map((s) => s.path)).toEqual([installedDir]);
   });
 
-  it('excludes trashed synced plugins when the project dir is home under another name', async () => {
-    // Run from home through a symlink: the project walk reaches the trash through the alias.
+  it('excludes trashed and uninstalled plugins when the project dir is home under another name', async () => {
+    // Run from home through a symlink: the project walk reaches the plugins dir through the alias.
     const homeAlias = join(tempCwd, 'home-alias');
     await symlink(tempHome, homeAlias);
     process.env['SKILL_AUDIT_CWD'] = homeAlias;
@@ -250,7 +275,8 @@ describe('claude-code discovery plugin', () => {
       'skills',
       'inactive-review'
     );
-    for (const skill of [installedSkill, trashedSkill]) {
+    const uninstalledSkill = join(relativePluginsDir, 'cache', 'vendor', 'tool', '1.0.0', 'skills');
+    for (const skill of [installedSkill, trashedSkill, uninstalledSkill]) {
       await mkdir(join(tempHome, skill), { recursive: true });
       await writeFile(join(tempHome, skill, 'SKILL.md'), '# Review');
     }
@@ -269,10 +295,90 @@ describe('claude-code discovery plugin', () => {
     const skillDir = join(pluginDir, 'plugins', '.trash', 'payload');
     await mkdir(skillDir, { recursive: true });
     await writeFile(join(skillDir, 'SKILL.md'), '# Payload');
+    await writeInstallRecords(tempHome, {
+      'tool@vendor': [{ scope: 'user', installPath: pluginDir }],
+    });
 
     const skills = await claudeCodeDiscovery.discoverSkills();
 
     expect(skills.map((s) => s.path)).toEqual([skillDir]);
+  });
+
+  it.each([
+    { state: 'installed with no enabledPlugins entry', settings: {}, discovered: true },
+    { state: 'enabled in user settings', settings: { user: true }, discovered: true },
+    { state: 'disabled in user settings', settings: { user: false }, discovered: false },
+    {
+      state: 'disabled in user settings and enabled by the project',
+      settings: { user: false, project: true },
+      discovered: true,
+    },
+    {
+      state: 'enabled by the project and disabled in local settings',
+      settings: { project: true, local: false },
+      discovered: false,
+    },
+    {
+      state: 'installed by managed settings and disabled in user settings',
+      scope: 'managed',
+      settings: { user: false },
+      discovered: true,
+    },
+    {
+      // A project-scope install loads only in its own project, so that project's settings apply.
+      state: 'installed for another project that disables it',
+      scope: 'project',
+      settings: { project: false },
+      discovered: false,
+    },
+    { state: 'not installed', recorded: false, settings: { user: true }, discovered: false },
+    {
+      state: 'recorded with an install path outside the plugin cache',
+      installPathOutsideCache: true,
+      settings: { user: true },
+      discovered: false,
+    },
+  ])('scans a cached plugin version that is $state: $discovered', async (row) => {
+    const pluginId = 'tool@vendor';
+    const pluginCacheDir = join(tempHome, '.claude', 'plugins', 'cache', 'vendor', 'tool');
+    const outsideDir = join(tempHome, 'elsewhere', 'tool');
+    const projectDir = row.scope === 'project' ? join(tempHome, 'other-project') : tempCwd;
+    // Claude Code keeps a replaced version until a cleanup 14 days later. No record names it.
+    for (const dir of [join(pluginCacheDir, '1.0.0'), join(pluginCacheDir, '2.0.0'), outsideDir]) {
+      await mkdir(join(dir, 'skills', 'review'), { recursive: true });
+      await writeFile(join(dir, 'skills', 'review', 'SKILL.md'), '# Review');
+    }
+    const installPath = row.installPathOutsideCache ? outsideDir : join(pluginCacheDir, '2.0.0');
+    await writeInstallRecords(
+      tempHome,
+      row.recorded === false
+        ? {}
+        : {
+            [pluginId]: [
+              {
+                scope: row.scope ?? 'user',
+                installPath,
+                ...(row.scope === 'project' ? { projectPath: projectDir } : {}),
+              },
+            ],
+          }
+    );
+    const settingsFiles = {
+      user: join(tempHome, '.claude', 'settings.json'),
+      project: join(projectDir, '.claude', 'settings.json'),
+      local: join(projectDir, '.claude', 'settings.local.json'),
+    };
+    for (const [source, enabled] of Object.entries(row.settings)) {
+      await writeEnabledPlugins(settingsFiles[source as keyof typeof settingsFiles], {
+        [pluginId]: enabled,
+      });
+    }
+
+    const skills = await claudeCodeDiscovery.discoverSkills();
+
+    expect(skills.filter((s) => s.format === 'SKILL.md').map((s) => s.path)).toEqual(
+      row.discovered ? [join(pluginCacheDir, '2.0.0', 'skills', 'review')] : []
+    );
   });
 
   it('labels plugin marketplace inventory when explicitly included', async () => {

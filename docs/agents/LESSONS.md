@@ -399,6 +399,16 @@ without a commit message explaining why it no longer applies.
   Mirror each walk on its own. When the docs do not state a bound, run `strings`
   on the installed agent binary and read its loader before you pick one.
 
+- **L2.20: A cache rule for one agent applies to every agent's plugin walker.**
+  _The "plugin caches are not active skills" rule came with the Codex fix, but
+  Claude Code discovery still walked `~/.claude/plugins/cache` whole. A real
+  scan reported 15 targets from a plugin that `enabledPlugins` turned off, plus
+  old versions that no install record named._
+  When you gate one agent's cache, check every walker that reaches a plugin
+  cache. For Claude Code, walk only the `installPath` of each enabled record in
+  `installed_plugins.json`, and read a `project` or `local` record's settings
+  from its `projectPath`, not from the working directory.
+
 ## 3. Identity & author metadata — never guess
 
 - **L3.1 — Never transcribe filesystem paths into author identity.**

@@ -10,6 +10,7 @@ import {
   mcpServerScanMetadata,
 } from './agent-config.js';
 import { ancestorDirs } from './agents-md-sweep.js';
+import { activePluginInstallPaths } from './claude-plugin-installs.js';
 import { shouldSkipMarketplacePath, withInstallState } from './marketplace.js';
 import { fallbackSkillNameFromDirectory } from './names.js';
 import { computeTreeSha256 } from './tree-hash.js';
@@ -26,10 +27,12 @@ function getCwd(): string {
   return process.env.SKILL_AUDIT_CWD ?? process.cwd();
 }
 
-// Claude Code moves the synced plugins that it removes to `~/.claude/plugins/.trash` and never
-// loads them again. Only that exact dir is skipped: a plugin manifest can load skills or hooks
-// from a nested `plugins/.trash` dir, so a path-segment match would hide a loaded payload.
-const PLUGIN_TRASH_DIR_NAME = '.trash';
+// Claude Code never loads these dirs of `~/.claude/plugins` as a whole. It moves the synced
+// plugins that it removes to `.trash`. It loads a dir of `cache` only when an install record
+// names it and the plugin is enabled, so discovery walks those dirs on their own. Only these
+// exact dirs are skipped: a plugin manifest can load skills or hooks from a nested
+// `plugins/.trash` dir, so a path-segment match would hide a loaded payload.
+const SKIPPED_PLUGINS_DIR_ENTRIES = new Set(['.trash', 'cache']);
 
 // Instruction files that Claude Code loads from the working directory and every dir above it.
 // The cross-agent sweep owns the root CLAUDE.md and AGENTS.md.
@@ -107,7 +110,7 @@ async function walkFiles(root: string, options: DiscoverSkillsOptions = {}): Pro
       const fullPath = join(dir, entry.name);
       if (entry.kind === 'dir') {
         if (shouldSkipMarketplacePath(fullPath, options.includeMarketplaces)) continue;
-        if (await isPluginTrashDir(dir, entry.name, realPluginsDir)) continue;
+        if (await isSkippedPluginsDirEntry(dir, entry.name, realPluginsDir)) continue;
         await walk(fullPath);
       } else {
         files.push(fullPath);
@@ -121,14 +124,14 @@ async function walkFiles(root: string, options: DiscoverSkillsOptions = {}): Pro
 }
 
 // Compares real paths: a run from home through another name for it, such as a symlink, makes
-// the project walk reach `~/.claude/plugins` as `<cwd>/.claude/plugins`. Only `.trash` entries
-// are resolved, so the walk does not pay one realpath call per dir.
-async function isPluginTrashDir(
+// the project walk reach `~/.claude/plugins` as `<cwd>/.claude/plugins`. Only entries with a
+// skipped name are resolved, so the walk does not pay one realpath call per dir.
+async function isSkippedPluginsDirEntry(
   parentDir: string,
   entryName: string,
   realPluginsDir: string | undefined
 ): Promise<boolean> {
-  if (entryName !== PLUGIN_TRASH_DIR_NAME || realPluginsDir === undefined) return false;
+  if (!SKIPPED_PLUGINS_DIR_ENTRIES.has(entryName) || realPluginsDir === undefined) return false;
 
   return (await realpath(parentDir).catch(() => undefined)) === realPluginsDir;
 }
@@ -464,6 +467,9 @@ const claudeCodeDiscovery: AgentDiscovery = {
     const userBase = join(home, '.claude');
     skills.push(...(await discoverSkillDirs(join(userBase, 'skills'), 'user', options)));
     skills.push(...(await discoverPluginTree(join(userBase, 'plugins'), 'user', options)));
+    for (const installPath of await activePluginInstallPaths(home, cwd)) {
+      skills.push(...(await discoverPluginTree(installPath, 'user', options)));
+    }
     skills.push(
       ...(await discoverMarkdownFiles(join(userBase, 'commands'), 'SKILL.md', 'user', options))
     );
