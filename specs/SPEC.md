@@ -265,7 +265,7 @@ Plus a JS pattern for `fetch(url, { body: JSON.stringify(process.env) })` and sh
 (\$[A-Z_]{3,}|api[_\s-]?key|token|secret|credential|process\.env|os\.environ|\.ssh|\.aws)
 ```
 
-**`PI-HIDDEN-UNICODE` — Critical.** Scan for codepoints in `U+200B-200F`, `U+202A-202E`, `U+2060-2064`, `U+2066-2069` (bidi isolates), `U+FEFF` (not at BOF), `U+E0020-E007F` (tag chars = ASCII smuggling), and the variation selectors `U+FE00-FE0F` and `U+E0100-E01EF` (one `U+FE0E` or `U+FE0F` directly after an emoji, or in a keycap sequence, is fine). Report codepoint + offset + decoded visible-text diff.
+**`PI-HIDDEN-UNICODE` — Critical.** Scan for codepoints in `U+200B-200F` (a `U+200D` inside an emoji ZWJ sequence, UTS #51 ED-16, is fine), `U+202A-202E`, `U+2060-2064`, `U+2066-2069` (bidi isolates), `U+FEFF` (not at BOF), `U+E0020-E007F` (tag chars = ASCII smuggling), and the variation selectors `U+FE00-FE0F` and `U+E0100-E01EF` (one `U+FE0E` or `U+FE0F` directly after an emoji, or in a keycap sequence, is fine). Report codepoint + offset + decoded visible-text diff.
 
 **`PI-OVERRIDE` — Critical.** Instruction-override lexicon:
 ```regex

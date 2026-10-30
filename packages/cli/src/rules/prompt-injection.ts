@@ -75,10 +75,15 @@ export const PI_JAILBREAK: Rule = {
 
 // U+200B-U+200F: ZWSP, ZWNJ, ZWJ, LRM, RLM.
 // U+200D is also used in visible emoji ZWJ sequences such as family emoji.
-// Keep flagging it unless it sits directly between emoji pictographs.
+// UTS #51 (ED-15a, ED-16): emoji_zwj_sequence := emoji_zwj_element (ZWJ emoji_zwj_element)+.
+// Keep flagging a ZWJ unless it sits between two elements. An element ends with a
+// pictograph, a pictograph and VS16 (ED-9a), a skin tone on a modifier base (ED-13),
+// or a keycap (ED-14c). An element starts with a pictograph or a keycap.
+// Flag and tag sequences are not accepted as elements: no RGI ZWJ sequence uses
+// them, and every tag character fires on its own pattern.
 const zeroWidthNonJoinerPattern = /[\u200B\u200C\u200E\u200F]/;
 const suspiciousZwjPattern =
-  /(?<!\p{Extended_Pictographic})\u200D|\u200D(?!\p{Extended_Pictographic})/u;
+  /(?<!\p{Extended_Pictographic}\uFE0F?|\p{Emoji_Modifier_Base}\p{Emoji_Modifier}|[#*0-9]\uFE0F\u20E3)\u200D|\u200D(?!\p{Extended_Pictographic}|[#*0-9]\uFE0F\u20E3)/u;
 // U+202A-U+202E: LRE, RLE, PDF, LRO, RLO (bidi controls)
 // U+2066-U+2069: LRI, RLI, FSI, PDI (bidi isolates, Trojan Source CVE-2021-42574)
 const bidiControlPattern = /[\u202A-\u202E\u2066-\u2069]/;

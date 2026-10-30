@@ -160,7 +160,18 @@ Case-insensitive, dot-all. This is the Repello-signature attack.
 
 ### PI-HIDDEN-UNICODE (Critical)
 Enumerate these codepoint ranges explicitly; scan all text files:
-- `U+200B`–`U+200F` (ZWSP, ZWNJ, ZWJ, LRM, RLM)
+- `U+200B`–`U+200F` (ZWSP, ZWNJ, ZWJ, LRM, RLM), except a `U+200D` (ZWJ)
+  inside an emoji ZWJ sequence. UTS #51 (ED-15a, ED-16) defines it as
+  `emoji_zwj_element ( ZWJ emoji_zwj_element )+`. The ZWJ must come after an
+  element: an `Extended_Pictographic` character, optionally with `U+FE0F`; an
+  `Emoji_Modifier_Base` character with a skin tone `U+1F3FB`–`U+1F3FF`; or a
+  keycap (`1` `U+FE0F` `U+20E3`). The ZWJ must come before an
+  `Extended_Pictographic` character or a keycap. Examples: heart on fire
+  (`U+2764` `U+FE0F` `U+200D` `U+1F525`) and woman technologist with a skin
+  tone (`U+1F469` `U+1F3FD` `U+200D` `U+1F4BB`). A ZWJ between letters, at the
+  start or end of a word, in a run, after a selector run, or after `U+FE0E`
+  fires. Flag and tag sequences are not accepted as elements: no RGI ZWJ
+  sequence uses them, and every tag character fires on its own.
 - `U+202A`–`U+202E` (bidi controls)
 - `U+2060`–`U+2064` (WJ, invisible ops)
 - `U+2066`–`U+2069` (LRI, RLI, FSI, PDI bidi isolates; Trojan Source, CVE-2021-42574)

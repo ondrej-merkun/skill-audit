@@ -207,6 +207,15 @@ describe('malicious fixture attack lines', () => {
         'Selector runs after an emoji are suspicious: done ✅️︎️️︎.',
         'Emoji selectors after letters are suspicious: dep️loy.',
         'Emoji selectors after a digit outside a keycap are suspicious: option 2️.',
+        // A ZWJ fires unless it joins two emoji ZWJ elements (UTS #51 ED-15a, ED-16).
+        'Joiner chains between letters are suspicious: t‍o‍k‍e‍n.',
+        'Joiner runs between emoji are suspicious: \u{1F525}‍‍\u{1F525}.',
+        'A leading joiner before an emoji is suspicious: ‍\u{1F525} hot.',
+        'A trailing joiner after an emoji is suspicious: ❤️‍ done.',
+        'A joiner after a selector run is suspicious: ❤️️‍\u{1F525}.',
+        'A joiner after a text-style selector is suspicious: ❤︎‍\u{1F525}.',
+        'A joiner after a skin tone on a letter is suspicious: x\u{1F3FD}‍\u{1F4BB}.',
+        'A joiner after a bare digit is suspicious: 1‍\u{1F525}.',
       ],
     },
   ])('$rule.id fires on every malicious attack line', async ({ rule, attackLines }) => {

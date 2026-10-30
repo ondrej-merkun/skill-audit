@@ -14,6 +14,13 @@ Emoji labels are allowed in user-visible examples:
 - Warning: ⚠️
 - Swap (text style): ↔︎
 - Marks: ©️ ™️
+- Heart on fire: ❤️‍🔥
+- Pride flags: 🏳️‍🌈 🏳️‍⚧️
+- Technologist with a skin tone: 👩🏽‍💻
+- Health workers: 👨‍⚕️ 🧑🏽‍⚕️
+- Family of three: 👨‍👩‍👧
+- Couples: 👩‍❤️‍💋‍👨 🧑🏻‍🤝‍🧑🏿
+- Keycap element: 1️⃣‍🔥 🔥‍#️⃣
 
 Trojan Source (CVE-2021-42574) hides code with the bidi isolates U+2066 to U+2069.
 Variation selectors U+FE00 to U+FE0F and U+E0100 to U+E01EF can encode hidden bytes.
