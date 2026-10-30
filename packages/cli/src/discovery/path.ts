@@ -39,12 +39,16 @@ export async function discoverPath(inputPath: string): Promise<Skill[]> {
 
 async function findDirTargets(root: string): Promise<PathTarget[]> {
   const skillDirs: string[] = [];
+  const aliasDirs: string[] = [];
   let hasFilesOutsideSkills = false;
   const visitedRealDirs = new Set<string>();
 
   // Same walk as the shared Agent Skills discovery: no depth limit, links followed.
   async function visit(dir: string, insideSkill: boolean): Promise<void> {
-    if (!(await enterDirOnce(visitedRealDirs, dir))) return;
+    if (!(await enterDirOnce(visitedRealDirs, dir))) {
+      aliasDirs.push(dir);
+      return;
+    }
 
     const entries = await readDirFollowingLinks(dir);
     const isSkill = entries.some((entry) => entry.name === SKILL_MANIFEST && entry.kind === 'file');
@@ -60,7 +64,7 @@ async function findDirTargets(root: string): Promise<PathTarget[]> {
 
   await visit(root, false);
 
-  const targets = skillDirs
+  const targets: PathTarget[] = skillDirs
     .sort((a, b) => a.localeCompare(b))
     .map((dir) => ({
       path: dir,
@@ -68,9 +72,16 @@ async function findDirTargets(root: string): Promise<PathTarget[]> {
       name: fallbackSkillNameFromDirectory(dir),
     }));
   // The rule engine leaves the skill dirs out of the root's walk, so no file is scanned twice.
-  return hasFilesOutsideSkills
-    ? [{ path: root, manifestPath: null, name: fallbackSkillNameFromDirectory(root) }, ...targets]
-    : targets;
+  if (hasFilesOutsideSkills) {
+    targets.unshift({ path: root, manifestPath: null, name: fallbackSkillNameFromDirectory(root) });
+  }
+
+  // A skipped alias reaches a dir that this walk gave to the target it entered first. The root's
+  // engine walk does not enter skill dirs, so it can reach a skill's real dir first through such
+  // an alias and scan the skill again. The engine skips every path in `alsoInstalledAt`.
+  const rootTarget = targets[0];
+  if (rootTarget?.path === root && aliasDirs.length > 0) rootTarget.alsoInstalledAt = aliasDirs;
+  return targets;
 }
 
 async function pathSkill(target: PathTarget): Promise<Skill> {
@@ -83,6 +94,7 @@ async function pathSkill(target: PathTarget): Promise<Skill> {
     name: target.name,
     path: target.path,
     manifestPath: target.manifestPath,
+    ...(target.alsoInstalledAt === undefined ? {} : { alsoInstalledAt: target.alsoInstalledAt }),
     format: 'SKILL.md',
     scope: 'project',
     // The user selected the path, so it is reported like an active skill.
@@ -91,4 +103,9 @@ async function pathSkill(target: PathTarget): Promise<Skill> {
   };
 }
 
-type PathTarget = { path: string; manifestPath: string | null; name: string };
+type PathTarget = {
+  path: string;
+  manifestPath: string | null;
+  name: string;
+  alsoInstalledAt?: string[];
+};

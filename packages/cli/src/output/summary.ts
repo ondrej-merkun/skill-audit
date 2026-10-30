@@ -170,7 +170,7 @@ function installedScanNextCommands(highlight: ScannedSkill | undefined): NextCom
   const nextCommands: NextCommand[] = [];
   if (highlight) {
     nextCommands.push({
-      command: `skill-audit explain ${highlight.name}`,
+      command: `skill-audit explain ${shellQuote(highlight.name)}`,
       description: 'See full findings',
     });
   }
@@ -181,11 +181,11 @@ function installedScanNextCommands(highlight: ScannedSkill | undefined): NextCom
   if (highlight) {
     nextCommands.push(
       {
-        command: `skill-audit scan --skill ${highlight.name} --llm local`,
+        command: `skill-audit scan --skill ${shellQuote(highlight.name)} --llm local`,
         description: 'Review this skill with local LLM',
       },
       {
-        command: `skill-audit explain ${highlight.name} --llm local`,
+        command: `skill-audit explain ${shellQuote(highlight.name)} --llm local`,
         description: 'Explain this skill with local LLM',
       }
     );
@@ -220,7 +220,7 @@ function pathScanNextCommands(
       ? []
       : [
           {
-            command: `${scan} --skill ${highlight.name} --llm local`,
+            command: `${scan} --skill ${shellQuote(highlight.name)} --llm local`,
             description: 'Review this skill with local LLM',
           },
         ]),
@@ -231,7 +231,8 @@ function pathScanNextCommands(
   ];
 }
 
-// Quotes a path for a copy-pasted POSIX shell command, unless it has only safe characters.
+// Skill names and paths come from untrusted files. Quotes one for a copy-pasted POSIX shell
+// command, unless it has only safe characters.
 function shellQuote(value: string): string {
   return /^[\w./@%+=:,-]+$/.test(value) ? value : `'${value.replaceAll("'", `'\\''`)}'`;
 }
