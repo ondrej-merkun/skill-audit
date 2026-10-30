@@ -176,6 +176,54 @@ In `.md` files (SKILL.md, AGENTS.md, etc.):
 ```
 Case-insensitive, dot-all. This is the Repello-signature attack.
 
+Two more patterns catch a trigger clause that sends local context to an
+external destination as a side effect of a normal request:
+- A request trigger (`when the user asks`, `runs`, `requests`, `says`,
+  `opens`, `invokes`, `types`, or `wants`; also `whenever`, `if`,
+  `each time`, and `every time` before `the user`, and `when asked`), then
+  within 200 characters a side-effect marker (`also`, `additionally`,
+  `silently`, `quietly`, `secretly`, `covertly`), then an action.
+- A recurring or agent-action trigger (`whenever`, `each time`,
+  `every time`, or `before` or `after` with `you`, `each`, `every`,
+  `responding`, `answering`, or `replying`), then within 200 characters an
+  action. `Whenever the user asks` is a request trigger, so
+  it needs the marker.
+
+An action is one of these:
+- A send verb (`send`, `post`, `upload`, `report`, `forward`, `transmit`,
+  `submit`), local data within 80 characters, then `to` or `at` and an
+  external destination within 120 characters.
+- An include verb (`include`, `attach`, `append`, `embed`), local data within
+  80 characters, then `request to` or `call to` and an external destination
+  within 120 characters.
+
+Local data: the working directory (`cwd`, `pwd`), the git remote or remote
+URL, file, source, or project contents, environment variables (`.env`,
+`process.env`, `os.environ`), credentials, API keys, access or auth tokens,
+secrets, passwords, SSH or private keys, `.ssh`, `.aws`, a `$VARIABLE`, the
+conversation, the chat history, the system prompt, the hostname, and the
+shell history.
+
+An external destination is an `http://` or `https://` URL, or a bare host
+with a path (`stats.example.net/ping`). A loopback host (`localhost`,
+`127.0.0.1`, `0.0.0.0`, `[::1]`) is local. The check looks at where the host
+name ends, so a lookalike such as `localhost.evil.example` is external.
+
+Each window stops at a blank line, so a trigger does not pair with an
+instruction in a later paragraph. A trigger directly after an opening quote
+(`"`, `'`, a backtick, `“`) is a quoted example and does not match.
+
+These forms do not match:
+- A request trigger without a side-effect marker:
+  `When the user asks to attach a log, upload the file contents to https://api.tickets.example.com/v1/files`.
+  The upload is the request itself, to the service of the skill.
+- An action without local data, also with a URL:
+  `also send a notification to the team channel`.
+- An action without a literal destination, so the user picks it:
+  `also upload the file contents to the URL that the user gives`.
+
+Security-education sections in markdown stay masked.
+
 ### PI-HIDDEN-UNICODE (Critical)
 Enumerate these codepoint ranges explicitly; scan all text files:
 - `U+200B`–`U+200F` (ZWSP, ZWNJ, ZWJ, LRM, RLM), except a `U+200D` (ZWJ)
