@@ -579,7 +579,7 @@ document.getElementById('btn-share').addEventListener('click', function(){
   <h1>skill-audit</h1>
   ${scoreRingSvg(overallScore, overallVerdict)}
   <div>
-    <div class="meta">${result.summary.skillsScanned} skills scanned · ${result.summary.compromised} compromised (${formatCompromisedPercent(result.summary.percentCompromised)}%)</div>
+    <div class="meta">${result.summary.skillsScanned} skill${result.summary.skillsScanned === 1 ? '' : 's'} scanned · ${result.summary.compromised} compromised (${formatCompromisedPercent(result.summary.percentCompromised)}%)</div>
     <div class="meta">Scanned ${escapeHtml(result.scan.startedAt)} · ${result.scan.durationMs}ms · v${escapeHtml(result.scan.toolVersion)}</div>
   </div>
 </div>

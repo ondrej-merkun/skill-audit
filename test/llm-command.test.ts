@@ -91,6 +91,21 @@ describe('llm commands', () => {
     expect(stderrChunks.join('')).toBe('');
   });
 
+  it.each([
+    [0, 'No local LLMs configured.'],
+    [1, '1 local LLM configured.'],
+    [2, '2 local LLMs configured.'],
+  ])('prints a matching configured local LLM count line for count %i', async (count, expected) => {
+    for (let i = 0; i < count; i++) {
+      await runLlmAdd(`model-${i}`, { baseUrl: 'http://localhost:11434', model: 'llama3' });
+    }
+    stdoutChunks = [];
+
+    await runLlmList({});
+
+    expect(stripAnsi(stdoutChunks.join(''))).toContain(expected);
+  });
+
   it('checks a model with the minimal OpenAI-compatible chat request', async () => {
     await runLlmAdd('lmstudio', {
       baseUrl: 'http://127.0.0.1:1234/api',

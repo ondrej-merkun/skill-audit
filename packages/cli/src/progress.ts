@@ -182,13 +182,13 @@ export function createProgressReporter(options: ProgressReporterOptions = {}): P
     },
     startLlmReview(total) {
       start(
-        `${progressBar(0, total, unicode)} LLM review 0/${total} skills`,
+        `${progressBar(0, total, unicode)} LLM review 0/${total} ${skillNoun(total)}`,
         unicode ? STATIC_UNICODE_SPINNER : STATIC_ASCII_SPINNER
       );
     },
     updateLlmReview(completed, total, skillName) {
       update(
-        `${progressBar(completed, total, unicode)} LLM review ${completed}/${total} skills - ${skillName}`
+        `${progressBar(completed, total, unicode)} LLM review ${completed}/${total} ${skillNoun(total)} - ${skillName}`
       );
     },
     succeedLlmReview(total) {
