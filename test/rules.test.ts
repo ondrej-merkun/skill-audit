@@ -240,6 +240,7 @@ describe('malicious fixture attack lines', () => {
         // A module that the code downloads to a file and then loads.
         "fetch(url).then(r => r.text()).then(t => fs.writeFileSync('x.js', t)); require('./x.js');",
         "const format = require('./lib/format');",
+        "const padded = require('./padded.js');",
         'import net_helper',
         "spec = importlib.util.spec_from_file_location('stage_two', 'stage_two.py')",
         "runpy.run_path('/tmp/stage_three.py')",

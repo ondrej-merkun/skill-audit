@@ -25,17 +25,20 @@ const PATH_SEPARATOR = /[\\/]/;
 const SHELL_DOWNLOAD =
   /(?:(?<!\w)([rRbBuUfF]{0,2}['"`])|&&|\|\|?|;|\$\()[ \t]*(?:sudo[ \t]+)?(?:curl|wget)\b[^\n;)\]]*/g;
 const SHELL_TOKEN_SEPARATOR = /[\s'"`,;=>|&]+/;
-// Calls that run a command: Node child_process and execa, and Python subprocess and os.
+// Calls that run a command: Node child_process and execa, and Python subprocess and os. The
+// window that the pattern reads also holds the character before the name.
 const COMMAND_CALL_NAME =
-  /\b(?:exec|execSync|execFile|execFileSync|spawn|spawnSync|execa|execaSync|system|popen|run|call|Popen|check_call|check_output|getoutput|getstatusoutput)\s*$/;
-// How far back from a command the call that runs it can open, and how long its name can be.
-const COMMAND_CALL_LOOKBACK = 300;
-const COMMAND_CALL_NAME_LENGTH = 24;
+  /(?<![\w$])(?:exec|execSync|execFile|execFileSync|spawn|spawnSync|execa|execaSync|system|popen|run|call|Popen|check_call|check_output|getoutput|getstatusoutput)$/;
+const LONGEST_COMMAND_CALL_NAME = 'getstatusoutput';
 const STRING_LITERAL = /[rRbBuUfF]{0,2}(['"`])([^'"`\n]+)\1/y;
 
 // `NAME =` in a declaration, a list of declarations, or an assignment, also with a type such as
-// `: string`. A method such as `obj.name =` does not set a name. The value starts after the match.
+// `: string`. The value starts after the match.
 const JS_ASSIGNMENT = /(?<![\w$.])([A-Za-z_$][\w$]*)\s*(?::\s*[\w$]+\s*)?=(?![=>])\s*/g;
+// Keywords that declare the name after them. Another name before a name, as in `<Link u="...">`,
+// makes a JSX attribute.
+const DECLARATION_KEYWORD_AT_END = /(?<![\w$])(?:const|let|var)$/;
+const LONGEST_DECLARATION_KEYWORD = 'const';
 // An http(s) URL literal, or a name, also as the first interpolation of a template literal.
 const JS_URL_VALUE = /(['"`])https?:\/\/|(?:`\$\{\s*)?([A-Za-z_$][\w$]*)/y;
 const JS_LOADER_CALL = /(?<![\w$.])(?:import|require)\s*\(\s*/g;
@@ -102,6 +105,8 @@ function javaScriptRemoteLoads(text: string, isCode: IsCode): number[] {
 function javaScriptAssignments(text: string, isCode: IsCode): Assignments {
   const assignments: Assignments = new Map();
   for (const assignment of codeMatches(text, JS_ASSIGNMENT, isCode)) {
+    if (!setsName(text, assignment.index)) continue;
+
     const holdsUrl = startsWithUrlValue(text, matchEnd(assignment), (name) =>
       assignmentHoldsUrl(assignments, name, assignment.index)
     );
@@ -111,6 +116,21 @@ function javaScriptAssignments(text: string, isCode: IsCode): Assignments {
     assignments.set(name, list);
   }
   return assignments;
+}
+
+// True when the `NAME =` at `index` sets a name. A declaration keyword, an operator, a bracket,
+// or the start of the file can come before it. A name or a string before it makes a JSX
+// attribute, and a dot makes a property.
+// ponytail: a plain assignment on a new line after a name or a string, in code without
+// semicolons, does not set a name either.
+function setsName(text: string, index: number): boolean {
+  const before = lastNonBlankBefore(text, index);
+  const char = text[before] ?? '';
+  if (/[\w$]/.test(char)) {
+    const keywordStart = Math.max(0, before - LONGEST_DECLARATION_KEYWORD.length);
+    return DECLARATION_KEYWORD_AT_END.test(text.slice(keywordStart, before + 1));
+  }
+  return !/['"`.]/.test(char);
 }
 
 // A use reads the last assignment of the name before it. With none before it, the use reads
@@ -183,13 +203,18 @@ function importedModules(statement: RegExpExecArray): string[] {
 // of its URL, as in `wget <url>` or `curl -O <url>`. A message that only names the command, as in
 // "run `wget <url>` first" or a printed command, does not run it.
 function shellDownloads(text: string, isCode: IsCode): Set<string> {
+  const commands = [...text.matchAll(SHELL_DOWNLOAD)].filter((command) =>
+    command[1] === undefined ? !isCode(command.index) : opensString(text, command.index, isCode)
+  );
+  const runCommands = insideCommandCalls(
+    text,
+    commands.map((command) => command.index),
+    isCode
+  );
+
   const stems = new Set<string>();
-  for (const command of text.matchAll(SHELL_DOWNLOAD)) {
-    const startsString = command[1] !== undefined;
-    const inCommandString = startsString
-      ? opensString(text, command.index, isCode)
-      : !isCode(command.index);
-    if (!inCommandString || !insideCommandCall(text, command.index, isCode)) continue;
+  for (const command of commands) {
+    if (!runCommands.has(command.index)) continue;
     for (const token of command[0].split(SHELL_TOKEN_SEPARATOR)) addCodeFile(stems, token);
   }
   return stems;
@@ -197,32 +222,52 @@ function shellDownloads(text: string, isCode: IsCode): Set<string> {
 
 // True when the quote at `index` opens a string: code or the start of the file comes before it.
 function opensString(text: string, index: number, isCode: IsCode): boolean {
-  let before = index - 1;
-  while (before >= 0 && /\s/.test(text[before] ?? '')) before -= 1;
+  const before = lastNonBlankBefore(text, index);
   return before < 0 || isCode(before);
 }
 
-// True when a call that runs a command, such as `execSync(` or `subprocess.run([`, is still open
-// at `index`. The walk back skips closed brackets and string text, and stops at the lookback.
-function insideCommandCall(text: string, index: number, isCode: IsCode): boolean {
-  const lookbackStart = Math.max(0, index - COMMAND_CALL_LOOKBACK);
-  let closedBrackets = 0;
-  for (let at = index - 1; at >= lookbackStart; at -= 1) {
-    const char = text[at] ?? '';
-    if (!isCode(at)) continue;
+// Returns the indexes in `commands`, in source order, that an open call that runs a command,
+// such as `execSync(` or `subprocess.run([`, encloses. One forward pass keeps the open brackets
+// of the code, so no distance between the call and its command hides it.
+function insideCommandCalls(text: string, commands: number[], isCode: IsCode): Set<number> {
+  const enclosed = new Set<number>();
+  // For each open bracket, whether it opens a call that runs a command.
+  const openBrackets: boolean[] = [];
+  let openCommandCalls = 0;
+  let next = 0;
 
-    if (char === ')' || char === ']' || char === '}') {
-      closedBrackets += 1;
-    } else if (char === '(' || char === '[' || char === '{') {
-      if (closedBrackets > 0) {
-        closedBrackets -= 1;
-      } else if (char === '(') {
-        const callName = text.slice(Math.max(0, at - COMMAND_CALL_NAME_LENGTH), at);
-        if (COMMAND_CALL_NAME.test(callName)) return true;
-      }
+  for (let at = 0; at < text.length && next < commands.length; at += 1) {
+    if (commands[next] === at) {
+      if (openCommandCalls > 0) enclosed.add(at);
+      next += 1;
+    }
+
+    const char = text[at] ?? '';
+    if (!'()[]{}'.includes(char) || !isCode(at)) continue;
+    if (char === '(' || char === '[' || char === '{') {
+      const runsCommand = char === '(' && callRunsCommand(text, at);
+      openBrackets.push(runsCommand);
+      if (runsCommand) openCommandCalls += 1;
+    } else if (openBrackets.pop() === true) {
+      openCommandCalls -= 1;
     }
   }
-  return false;
+
+  return enclosed;
+}
+
+// True when the name before the `(` at `index`, also with blanks between, runs a command.
+function callRunsCommand(text: string, index: number): boolean {
+  const nameEnd = lastNonBlankBefore(text, index) + 1;
+  const nameStart = Math.max(0, nameEnd - LONGEST_COMMAND_CALL_NAME.length - 1);
+  return COMMAND_CALL_NAME.test(text.slice(nameStart, nameEnd));
+}
+
+// Returns the index of the last character before `index` that is not blank, or -1.
+function lastNonBlankBefore(text: string, index: number): number {
+  let before = index - 1;
+  while (before >= 0 && /\s/.test(text[before] ?? '')) before -= 1;
+  return before;
 }
 
 function addCodeFile(stems: Set<string>, path: string | undefined): void {
