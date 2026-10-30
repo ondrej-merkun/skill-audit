@@ -4,7 +4,7 @@ import { basename, isAbsolute, join, posix, relative, resolve, sep } from 'node:
 import { isRegularFile } from '../fs-walk.js';
 import { agentConfigCommandValues, jsonStringEnd } from '../rules/agent-config.js';
 import {
-  hookScriptScanName,
+  hookScriptScanNames,
   isShellInterpreter,
   keepsInterpreter,
   optionValueInterpreters,
@@ -154,7 +154,8 @@ async function discoverHookScripts(
     // The config file's metadata does not apply to its scripts. A script gets the scan name
     // of each language that the hooks run it with, as one installation per name. The scan
     // name is set also when it is the file's own name: the hooks decide the language, so the
-    // engine adds no shebang rules.
+    // engine adds no shebang rules. hookScriptScanNames adds the shebang name itself when an
+    // unknown word such as `exec` runs the script.
     const scanNames = [...(scripts.get(path) ?? [])];
     const [ruleScanFilename = basename(path)] = scanNames;
     const skill = await agentConfigSkill(files, path, name, { ruleScanFilename });
@@ -197,7 +198,7 @@ async function hookScripts(
       const realPath = await realPathOrUndefined(path);
       if (realPath !== undefined && isBelow(realRoot, realPath) && (await isRegularFile(path))) {
         const scanNames = scripts.get(path) ?? new Set<string>();
-        scanNames.add(hookScriptScanName(path, interpreter) ?? basename(path));
+        for (const scanName of hookScriptScanNames(path, interpreter)) scanNames.add(scanName);
         scripts.set(path, scanNames);
       }
     }

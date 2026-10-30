@@ -1047,6 +1047,15 @@ describe('runScan: multi-skill fixture coverage', () => {
         ruleId: 'CODEEXEC-DESERIALIZE',
       },
       {
+        // `exec` runs the script itself, so the shebang decides its language.
+        reference: 'a project script that exec runs',
+        configPath: (_home: string, cwd: string) => join(cwd, '.claude', 'settings.json'),
+        hook: { type: 'command', command: 'exec scripts/check' },
+        scriptPath: (_home: string, cwd: string) => join(cwd, 'scripts', 'check'),
+        script: '#!/usr/bin/env python3\nimport subprocess\nsubprocess.Popen(cmd, shell=True)\n',
+        ruleId: 'CODEEXEC-PY-OSSYS',
+      },
+      {
         reference: 'a project script after deno run options with values',
         configPath: (_home: string, cwd: string) => join(cwd, '.claude', 'settings.json'),
         hook: { type: 'command', command: 'deno run -c deno.json --allow-read scripts/run' },
