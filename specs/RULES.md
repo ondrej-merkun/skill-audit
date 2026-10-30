@@ -258,26 +258,28 @@ the same file. The finding is on the line of the read.
   `Object.values(process.env)`, `Object.assign({}, process.env)`,
   `new URLSearchParams(process.env)`, `util.inspect(process.env)`, or
   `process.env` itself as a value. A key lookup (`process.env.API_KEY`,
-  `process.env["API_KEY"]`, `process.env?.API_KEY`), a write, and a membership
-  test (`"CI" in process.env`) are not whole reads.
-  `const { API_KEY } = process.env` reads one key.
-- A send is a call to `fetch`, `axios`, `axios.<verb>`, `got`, `got.<verb>`,
+  `process.env["API_KEY"]`, `process.env?.API_KEY`), a write, a membership
+  test (`"CI" in process.env`), and a test (`!process.env`,
+  `typeof process.env`, `process.env && ...`, `process.env ? a : b`, a
+  comparison) are not whole reads. `const { API_KEY } = process.env` reads one
+  key.
+- A send is a call to `fetch`, `axios`, `axios.<verb>`,
   `navigator.sendBeacon`, or a client constructor (`http.request`,
   `http.get`, `https.request`, `https.get`, `net.connect`,
-  `net.createConnection`, `tls.connect`,
-  `new WebSocket`, `new net.Socket`, `axios.create`). A `write`, `end`,
-  `send`, `get`, `post`, `put`, `patch`, `delete`, or `request` call on a name
-  that holds a client in the same scope is a send too. The data of a send is
-  its arguments. The body of a function in the arguments, such as a response
-  callback, is not data.
-- The value flows through a `const`, `let`, or `var` initializer and through
-  an assignment to a declared name (`name = value`, `name += value`,
-  `name.key = value`). A name resolves to its declaration in the innermost
-  enclosing block, so two functions that use the same local name do not share
-  its value. A key lookup or a membership test on a variable that holds the
-  environment reads one item.
-- Comments and string text do not count. The code in a template literal
-  field does.
+  `net.createConnection`, `tls.connect`, `new WebSocket`, `new net.Socket`,
+  `axios.create`). A `write`, `end`, `send`, `get`, `post`, `put`, `patch`,
+  `delete`, or `request` call on a name that holds a client in the same scope
+  is a send too. The data of a send is its arguments. A function in the
+  arguments, such as a response callback, is not data.
+- The value flows through a `const`, `let`, or `var` initializer (also
+  `const a = 1, b = 2`) and through an assignment to a declared name
+  (`name = value`, `name += value`, `name.key = value`). A name resolves to its
+  declaration in the innermost enclosing block. A parameter is a declaration
+  of its function, and a destructuring pattern (`const { a, b } = c`) declares
+  its names, so two functions that use the same name do not share its value. A private member (`this.#name`) is not a variable. A key
+  lookup or a test on a variable that holds the environment reads one item.
+- Comments, string text, and regex literals do not count. The code in a
+  template literal field does.
 - The `env` option (also a quoted `"env"` key) of `spawn`, `spawnSync`,
   `exec`, `execSync`, `execFile`, `execFileSync`, `fork`, `execa`,
   `execaSync`, `execaCommand`, and `execaCommandSync` sets the environment of
@@ -286,8 +288,9 @@ the same file. The finding is on the line of the read.
 - Known gaps: return values, function arguments, loop targets
   (`for (const [k, v] of Object.entries(process.env))`), a copy key by key, a
   rest element (`const { ...rest } = process.env`),
-  `import { env } from "node:process"`, a parameter that shadows an outer
-  name, other clients (`undici`, `ky`, `superagent`, `XMLHttpRequest`, an
+  `import { env } from "node:process"`, the parameters of a TypeScript
+  function with a return type, other clients (`got`, whose name bundlers also
+  give their own functions, `undici`, `ky`, `superagent`, `XMLHttpRequest`, an
   imported `request`), a send chained on a constructor
   (`net.connect(...).write(...)`), and JavaScript in other file types, such as
   `node -e` in a shell script.
@@ -339,13 +342,17 @@ example pipeline.
 JavaScript and TypeScript fixtures: a `.mjs` file that sends a spread,
 `Object.entries`, `Object.keys`, `Object.values`, `URLSearchParams`, and
 `util.inspect` through `fetch`, `axios.post`, an `http.request` body, and a
-socket, and a multi-line template in a variable, and a `.ts` file that sends a
-copy through two variables, are malicious. A JavaScript file that
-authenticates with one key, gives copies of the environment to child processes
-through bare and quoted `env` keys, sends membership flags on `process.env` and
-on a copy, reads the environment in block and expression response callbacks,
-posts a name that another function uses for a copy, and quotes the attack in a
-comment and a string is benign.
+socket, a multi-line template in a variable, and a copy that an `if` block
+sends, and a `.ts` file that sends a copy through two variables, are
+malicious. A JavaScript file that authenticates with one key, gives copies of
+the environment to child processes through bare and quoted `env` keys, sends
+membership flags on `process.env` and on a copy, reads the environment in block
+and expression response callbacks, posts a name that another function uses for
+a copy, and quotes the attack in a comment and a string is benign. So is a
+JavaScript file with the shapes of bundled packages: a `process.env &&` guard,
+regex literals with unpaired brackets, a parameter, a comma-declared name, and
+a destructured name that share names with module values, a private member
+named like a sent variable, and a comparison on a copy.
 
 ### NET-WEBHOOK-KNOWN (Critical)
 URLs in code and markdown that deliver data to a chat webhook, a request

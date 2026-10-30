@@ -1,14 +1,15 @@
 import { maskDocumentationTextInCode } from './code-context.js';
 
 // Data flow for NET-EXFIL-ENV in JavaScript and TypeScript: which reads of the whole `process.env`
-// reach a network send in the same file. The code is the language view, so comments are blank and
-// string text is one operand. A value flows through a `const`, `let`, or `var` initializer and
-// through an assignment to a declared name. A name resolves to its declaration in the innermost
-// enclosing block, so functions that share a local name do not share its value. Each pass is a
-// regex scan, a bracket scan, or a sort, so a large or hostile file stays near linear.
-// ponytail: return values, function arguments, loop targets, destructuring
-// (`const { ...rest } = process.env`), `import { env } from 'node:process'`, and parameters that
-// shadow an outer name are not followed. Move to an AST pass if real scans show any of these.
+// reach a network send in the same file. The code is the language view, so comments are blank, and
+// each string or regex literal is one operand. A value flows through a `const`, `let`, or `var`
+// initializer and through an assignment to a declared name. A name resolves to its declaration in
+// the innermost scope: a block declares its `const`, `let`, `var`, and destructured names, and a
+// function declares its parameters. So functions that share a name do not share its value. Each
+// pass is a regex scan, a bracket scan, or a sort, so a large or hostile file stays near linear.
+// ponytail: return values, function arguments, loop targets, a rest element
+// (`const { ...rest } = process.env`), and `import { env } from 'node:process'` are not followed.
+// Move to an AST pass if real scans show any of these.
 
 /**
  * `process.env`, also after a spread (`...process.env`), but not as a property of another object.
@@ -25,28 +26,36 @@ const STRINGIFIED_PROCESS_ENV = new RegExp(
   'g'
 );
 
-// A key lookup, an optional-chain lookup, or an assignment touches one variable, not all of them.
-const SINGLE_KEY_ACCESS = /\s*(?:\??\.|\[|=(?!=))/y;
-const IDENTIFIER = /(?<![\w$])[A-Za-z_$][\w$]*/g;
+// What can follow a read that does not pass every variable on: a key lookup, an assignment, a
+// truthiness test (`process.env && ...`, `env ? a : b`), or a comparison.
+const NOT_A_VALUE_AFTER = /\s*(?:\??\.|\[|=(?!=)|&&|\?(?![?.])|[!=]==?|[<>]|instanceof\b|in\b)/y;
+// Words before a read that make it a test: a membership test (`'CI' in env`) reads one key.
+const TEST_WORDS = ['in', 'typeof', 'instanceof'];
+// A name after `#` is a private class member (`this.#token`), not a variable.
+const IDENTIFIER = /(?<![\w$#])[A-Za-z_$][\w$]*/g;
 
 const CLIENT_CONSTRUCTOR = String.raw`(?:https?\.(?:request|get)|net\.(?:connect|createConnection)|tls\.connect|new\s+(?:WebSocket|net\.Socket)|axios\.create)`;
 // Calls whose arguments leave the machine. A client constructor counts too, as in the Python flow:
 // its host goes to a DNS lookup and a connect.
 const SEND_CALL = new RegExp(
-  String.raw`(?<![\w$.])(?:fetch|axios(?:\.(?:get|post|put|patch|delete|head|options|request))?|got(?:\.(?:get|post|put|patch|delete|head))?|navigator\.sendBeacon|${CLIENT_CONSTRUCTOR})\s*\(`,
+  String.raw`(?<![\w$.#])(?:fetch|axios(?:\.(?:get|post|put|patch|delete|head|options|request))?|navigator\.sendBeacon|${CLIENT_CONSTRUCTOR})\s*\(`,
   'g'
 );
 const CLIENT_VALUE = new RegExp(String.raw`\s*(?:await\s+)?${CLIENT_CONSTRUCTOR}\s*\(`, 'y');
 // Methods that send through a name that holds a client: a request body, a socket write, a
 // WebSocket message, or an axios instance verb.
 const CLIENT_SEND_CALL =
-  /(?<![\w$.])([A-Za-z_$][\w$]*)\.(?:write|end|send|get|post|put|patch|delete|request)\s*\(/g;
+  /(?<![\w$.#])([A-Za-z_$][\w$]*)\.(?:write|end|send|get|post|put|patch|delete|request)\s*\(/g;
 
-const DECLARATION = /(?<![\w$.])(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g;
+// A declaration keyword before a name or a destructuring pattern (`let{a,b}=c` in minified code).
+const DECLARATION = /(?<![\w$.#])(?:const|let|var)(?:\s+|(?=[{[]))/g;
+const DECLARED_NAME = /[A-Za-z_$][\w$]*/y;
 // The optional type annotation and the `=` after a declared name.
 const INITIALIZER = /\s*(?::[^=;\n]{0,200})?=(?![=>])/y;
+// The comma before the next target of the same statement: `const a = 1, b = 2`.
+const NEXT_DECLARATOR = /\s*,\s*/y;
 // `name = value`, `name += value`, and `name.key = value`, which changes what `name` holds.
-const ASSIGNMENT = /(?<![\w$.])([A-Za-z_$][\w$]*)(?:\.[A-Za-z_$][\w$]*)*\s*\+?=(?![=>])/g;
+const ASSIGNMENT = /(?<![\w$.#])([A-Za-z_$][\w$]*)(?:\.[A-Za-z_$#][\w$]*)*\s*\+?=(?![=>])/g;
 
 // Calls that start a child process. Their `env` option is the child's environment and does not
 // flow into the call result: `execFileSync(cmd, args, { env: { ...process.env, CI: '1' } })`.
@@ -56,6 +65,9 @@ const PROCESS_LAUNCH_CALL =
 // turns a quoted key into string text. The flow reads the punctuation around it in the view.
 const ENV_OPTION = /(?<![\w$.])(?:env|(['"])env\1)(?![\w$])/g;
 
+// A `{` after the `)` of these keywords opens a block, not a function body.
+const CONTROL_KEYWORDS = ['if', 'for', 'while', 'switch', 'with', 'await'];
+
 // A line break ends a statement unless the line ends with, or the next line starts with, an
 // operator that continues the expression.
 const CONTINUES_AFTER = new Set('=+-*/%&|^<>!?:,.([{');
@@ -63,9 +75,14 @@ const CONTINUES_BEFORE = new Set('.?:+-*/%&|^<>=,');
 
 // The extensions whose view masks JavaScript comments and strings.
 const JAVASCRIPT_SCAN_PATH = /\.(?:[cm]?js|[jt]sx|ts)$/;
-// Stands for a character of string text, which the view blanks. It is not a name, an operator, or
-// a bracket, so the scans read a string as one operand.
-const STRING_TEXT = '#';
+// Stands for a character of string or regex literal text. It is not a name, an operator, or a
+// bracket, so the scans read a literal as one operand. The view blanks every quote, so a quote in
+// the flow's code is always literal text.
+const LITERAL_TEXT = '"';
+const LITERAL_TEXT_CODE = LITERAL_TEXT.charCodeAt(0);
+const SPACE_CODE = 32;
+const LINE_BREAK_CODE = 10;
+const UTF16 = new TextDecoder('utf-16le');
 
 /**
  * Blanks each `process.env` token in a prepared view, except the reads that send the whole
@@ -87,12 +104,15 @@ export function maskProcessEnvReadsNotSent(
     for (const read of findSentProcessEnvReads(view, content, filePath)) kept.add(read);
   }
 
-  const chars = view.split('');
+  // Splice the blanks in, so a large file is not split into one string per character.
+  let masked = '';
+  let copiedUntil = 0;
   for (const token of tokens) {
     if (kept.has(token.index)) continue;
-    for (let idx = token.index; idx < token.index + token[0].length; idx += 1) chars[idx] = ' ';
+    masked += view.slice(copiedUntil, token.index) + ' '.repeat(token[0].length);
+    copiedUntil = token.index + token[0].length;
   }
-  return chars.join('');
+  return masked + view.slice(copiedUntil);
 }
 
 /** Returns the offset of each whole `process.env` read whose value reaches a network send. */
@@ -100,17 +120,20 @@ function findSentProcessEnvReads(view: string, content: string, filePath: string
   const reads = wholeProcessEnvReads(view);
   if (reads.length === 0 || view.search(SEND_CALL) < 0) return [];
 
-  const code = markStringText(view, content, filePath);
+  const code = markLiteralText(view, content, filePath);
   const scan = scanBrackets(code);
   const ends = expressionEnds(code, scan.lineContinues);
-  const declarations = collectDeclarations(code, scan);
-  const values = valueRegions(code, ends, declarations);
+  // A function runs from its parameters to the end of its body.
+  const functionScopes = scan.functions.map((fn) => ({
+    start: fn.parameters.start,
+    end: (fn.braced ? scan.closing[fn.body] : ends[fn.body]) ?? code.length,
+  }));
+  const declared = declarators(code, scan, ends);
+  const declarations = collectDeclarations(code, scan, declared, functionScopes);
+  const values = valueRegions(code, ends, declared, declarations);
   const sends = sendRegions(code, scan, declarations);
-  const functionBodies = [
-    ...scan.functionBodies.map((brace) => barrier(brace + 1, scan.closing[brace] ?? code.length)),
-    ...scan.arrowExpressionBodies.map((start) => barrier(start, ends[start] ?? code.length)),
-  ];
-  const flowRegions = [...sends, ...values, ...functionBodies];
+  const functions = functionScopes.map((scope) => barrier(scope.start, scope.end));
+  const flowRegions = [...sends, ...values, ...functions];
   const childEnvironments = childEnvironmentRegions(code, content, scan, ends, flowRegions);
 
   return traceReadsIntoSends(code, declarations, reads, [...flowRegions, ...childEnvironments]);
@@ -168,11 +191,8 @@ function wholeProcessEnvReads(code: string): number[] {
   const reads: number[] = [];
 
   for (const match of code.matchAll(PROCESS_ENV_TOKEN)) {
-    SINGLE_KEY_ACCESS.lastIndex = match.index + match[0].length;
-    if (SINGLE_KEY_ACCESS.test(code)) continue;
-    // A membership test (`'CI' in process.env`) reads one key.
-    if (endsWithWord(code, previousCodeIndex(code, match.index), 'in')) continue;
-    reads.push(match.index);
+    const end = match.index + match[0].length;
+    if (!isTestedOrLookedUp(code, match.index, end)) reads.push(match.index);
   }
   return reads;
 }
@@ -185,17 +205,13 @@ function wholeNameUses(code: string, names: Set<string>): NameUse[] {
     const name = match[0];
     const start = match.index;
     if (!names.has(name)) continue;
-    // A property name after `.` is not the variable, but a spread (`...name`) reads it.
-    if (code[start - 1] === '.' && code.slice(start - 3, start) !== '...') continue;
+    if (isPropertyName(code, start)) continue;
 
     const end = start + name.length;
-    SINGLE_KEY_ACCESS.lastIndex = end;
-    if (SINGLE_KEY_ACCESS.test(code)) continue;
-    const previous = previousCodeIndex(code, start);
-    // A membership test (`'CI' in env`) reads one key.
-    if (endsWithWord(code, previous, 'in')) continue;
+    if (isTestedOrLookedUp(code, start, end)) continue;
     // An object key (`{ env: value }`) names a property. A shorthand key (`{ env }`) is a use.
-    const startsProperty = code[previous] === '{' || code[previous] === ',';
+    const previous = code[previousCodeIndex(code, start)];
+    const startsProperty = previous === '{' || previous === ',';
     if (startsProperty && code[nextCodeIndex(code, end)] === ':') continue;
 
     uses.push({ name, offset: start });
@@ -203,49 +219,154 @@ function wholeNameUses(code: string, names: Set<string>): NameUse[] {
   return uses;
 }
 
-/** Each `const`, `let`, and `var` name, scoped to its innermost enclosing block. */
-function collectDeclarations(code: string, scan: BracketScan): Declaration[] {
-  const matches = [...code.matchAll(DECLARATION)];
+/**
+ * Whether the reference in [start, end) only tests or looks into the value: a key lookup, an
+ * assignment, `!env`, `typeof env`, `'CI' in env`, `env && ...`, `env ? a : b`, or a comparison.
+ * The result is then a key's value or a boolean, not every variable.
+ */
+function isTestedOrLookedUp(code: string, start: number, end: number): boolean {
+  NOT_A_VALUE_AFTER.lastIndex = end;
+  if (NOT_A_VALUE_AFTER.test(code)) return true;
+
+  const previous = previousCodeIndex(code, start);
+  const char = code[previous];
+  const beforeChar = code[previous - 1];
+  if (char === '!' || char === '<') return true;
+  // `== env` and `!== env` compare; `= env` assigns, and `=> env` is an arrow body.
+  if (char === '=') return beforeChar === '=' || beforeChar === '!';
+  if (char === '>') return beforeChar !== '=';
+  return TEST_WORDS.some((word) => endsWithWord(code, previous, word));
+}
+
+/**
+ * What each `const`, `let`, or `var` statement declares: each name with the start of its
+ * initializer, and each destructuring pattern, whose names hold parts of the value. Each carries
+ * the offset of the keyword. A statement can declare several (`const a = 1, { b } = c`); the
+ * expression ends step from one to the next.
+ */
+function declarators(code: string, scan: BracketScan, ends: Int32Array): Declarators {
+  const names: Declarator[] = [];
+  const patterns: Array<Range & { offset: number }> = [];
+
+  for (const match of code.matchAll(DECLARATION)) {
+    let cursor = match.index + match[0].length;
+    for (;;) {
+      let name: string | undefined;
+      if (code[cursor] === '{' || code[cursor] === '[') {
+        const end = scan.closing[cursor] ?? code.length;
+        patterns.push({ start: cursor + 1, end, offset: match.index });
+        cursor = end + 1;
+      } else {
+        DECLARED_NAME.lastIndex = cursor;
+        name = DECLARED_NAME.exec(code)?.[0];
+        if (name === undefined) break;
+        cursor = DECLARED_NAME.lastIndex;
+      }
+
+      INITIALIZER.lastIndex = cursor;
+      const valueStart = INITIALIZER.test(code) ? INITIALIZER.lastIndex : undefined;
+      if (name !== undefined) names.push({ name, offset: match.index, valueStart });
+      if (valueStart !== undefined) cursor = ends[valueStart] ?? code.length;
+
+      NEXT_DECLARATOR.lastIndex = cursor;
+      if (!NEXT_DECLARATOR.test(code)) break;
+      cursor = NEXT_DECLARATOR.lastIndex;
+    }
+  }
+  return { names, patterns };
+}
+
+/**
+ * Each `const`, `let`, `var`, and destructured name, scoped to the innermost block of its
+ * statement, and each parameter, scoped to its function.
+ */
+function collectDeclarations(
+  code: string,
+  scan: BracketScan,
+  declared: Declarators,
+  functionScopes: Range[]
+): Declaration[] {
   const blocks = scan.braces.map((brace) => ({
     start: brace + 1,
     end: scan.closing[brace] ?? code.length,
   }));
-  const blockIndexes = innermostRanges(
-    blocks,
-    matches.map((match) => match.index)
-  );
+  const blockOf = (offsets: number[]): Range[] =>
+    [...innermostRanges(blocks, offsets)].map(
+      (index) => blocks[index] ?? { start: -1, end: code.length }
+    );
+  const nameBlocks = blockOf(declared.names.map((declarator) => declarator.offset));
+  const patternBlocks = blockOf(declared.patterns.map((pattern) => pattern.offset));
   const indexByScopedName = new Map<string, number>();
   const declarations: Declaration[] = [];
-
-  matches.forEach((match, idx) => {
-    const name = match[1] ?? '';
-    const scope = blocks[blockIndexes[idx] ?? -1] ?? { start: -1, end: code.length };
+  const declare = (name: string, scope: Range): void => {
     // `var` can declare a name twice in one block. Both declare the same variable.
     const key = `${scope.start}:${name}`;
     if (indexByScopedName.has(key)) return;
     indexByScopedName.set(key, declarations.length);
     declarations.push({ name, scope, isClient: false });
+  };
+
+  declared.names.forEach((declarator, idx) => {
+    const scope = nameBlocks[idx];
+    if (scope !== undefined) declare(declarator.name, scope);
   });
+  // A parameter list binds names in its function; a pattern binds them in its statement's block.
+  const parameterLists = scan.functions.map((fn) => fn.parameters);
+  for (const bound of boundNames(code, [...parameterLists, ...declared.patterns])) {
+    const isParameter = bound.list < parameterLists.length;
+    const scope = isParameter
+      ? functionScopes[bound.list]
+      : patternBlocks[bound.list - parameterLists.length];
+    if (scope !== undefined) declare(bound.name, scope);
+  }
   return declarations;
+}
+
+/**
+ * Each name in a parameter list or a destructuring pattern, with the index of its innermost list.
+ * Keys and default values count too, which can only hide a flow. A default value can hold a
+ * function, so lists nest; each character is marked once.
+ */
+function boundNames(code: string, lists: Range[]): Array<NameUse & { list: number }> {
+  const inList = new Uint8Array(code.length);
+  let markedUntil = 0;
+  for (const index of sortedIndexes(lists)) {
+    const list = lists[index];
+    if (list === undefined) continue;
+    for (let idx = Math.max(list.start, markedUntil); idx < list.end; idx += 1) inList[idx] = 1;
+    markedUntil = Math.max(markedUntil, list.end);
+  }
+
+  const names: NameUse[] = [];
+  for (const match of code.matchAll(IDENTIFIER)) {
+    if (inList[match.index] && !isPropertyName(code, match.index)) {
+      names.push({ name: match[0], offset: match.index });
+    }
+  }
+  const owners = innermostRanges(
+    lists,
+    names.map((name) => name.offset)
+  );
+  return names.map((name, idx) => ({ ...name, list: owners[idx] ?? -1 }));
 }
 
 /**
  * The value of each initializer and each assignment to a declared name. A value that constructs a
  * network client marks its declaration as a client.
  */
-function valueRegions(code: string, ends: Int32Array, declarations: Declaration[]): Region[] {
+function valueRegions(
+  code: string,
+  ends: Int32Array,
+  declared: Declarators,
+  declarations: Declaration[]
+): Region[] {
   const assignments: Assignment[] = [];
   const valueStarts = new Set<number>();
 
-  for (const match of code.matchAll(DECLARATION)) {
-    INITIALIZER.lastIndex = match.index + match[0].length;
-    if (!INITIALIZER.test(code)) continue;
-    valueStarts.add(INITIALIZER.lastIndex);
-    assignments.push({
-      name: match[1] ?? '',
-      offset: match.index,
-      valueStart: INITIALIZER.lastIndex,
-    });
+  for (const { name, offset, valueStart } of declared.names) {
+    if (valueStart === undefined) continue;
+    valueStarts.add(valueStart);
+    assignments.push({ name, offset, valueStart });
   }
   for (const match of code.matchAll(ASSIGNMENT)) {
     const valueStart = match.index + match[0].length;
@@ -303,9 +424,9 @@ function childEnvironmentRegions(
     const quoted = match[1] !== undefined;
     const start = match.index;
     const end = start + match[0].length;
-    // A bare key must be code in the view, a quoted key string text. A word in a comment is
+    // A bare key must be code in the view, a quoted key literal text. A word in a comment is
     // neither, and it is dropped before the walks below cross the blank comment.
-    const inView = quoted ? code[start] === STRING_TEXT : code.startsWith('env', start);
+    const inView = quoted ? code[start] === LITERAL_TEXT : code.startsWith('env', start);
     if (!inView) return [];
 
     const previous = code[previousCodeIndex(code, start)];
@@ -332,45 +453,54 @@ function childEnvironmentRegions(
 }
 
 /**
- * Fills the string text that the view blanks with STRING_TEXT. Without it, `const url = '...'`
- * looks like a line that ends with `=`, and the value runs on into the next statement. A line
- * break between string text and more string text is inside a template literal, so it is string
- * text too.
+ * Fills the string text that the view blanks, and the regex literals that it keeps, with
+ * LITERAL_TEXT. Without it, `const url = '...'` looks like a line that ends with `=`, and a bracket
+ * in `/\(/` has no pair, so a value runs on into the next statements. A line break between string
+ * text and more string text is inside a template literal, so it is string text too.
  */
-function markStringText(view: string, content: string, filePath: string): string {
-  const withStrings = maskDocumentationTextInCode(content, filePath, () => true);
-  const chars = view.split('');
-  let afterStringText = false;
+function markLiteralText(view: string, content: string, filePath: string): string {
+  // Strings are kept and regex literals are masked: the reverse of the view.
+  const literals = maskDocumentationTextInCode(content, filePath, () => true, true);
+  // Character codes, not one string per character: a bundle can hold tens of millions.
+  const codes = new Uint16Array(view.length);
+  let afterLiteralText = false;
   let lineBreaks: number[] = [];
 
-  for (let idx = 0; idx < chars.length; idx += 1) {
-    const char = chars[idx] ?? '';
-    const isStringText = char <= ' ' && (withStrings[idx] ?? '') > ' ';
-    if (char === '\n' && afterStringText) lineBreaks.push(idx);
-    if (char <= ' ' && !isStringText) continue;
+  for (let idx = 0; idx < view.length; idx += 1) {
+    const code = view.charCodeAt(idx);
+    const literalCode = literals.charCodeAt(idx);
+    const isBlank = code <= SPACE_CODE;
+    const isLiteralText = isBlank ? literalCode > SPACE_CODE : literalCode <= SPACE_CODE;
+    codes[idx] = isLiteralText ? LITERAL_TEXT_CODE : code;
+    if (code === LINE_BREAK_CODE && afterLiteralText) lineBreaks.push(idx);
+    if (isBlank && !isLiteralText) continue;
 
-    if (isStringText) {
-      chars[idx] = STRING_TEXT;
-      if (afterStringText) for (const lineBreak of lineBreaks) chars[lineBreak] = STRING_TEXT;
+    if (isLiteralText && afterLiteralText) {
+      for (const lineBreak of lineBreaks) codes[lineBreak] = LITERAL_TEXT_CODE;
     }
-    afterStringText = isStringText;
+    afterLiteralText = isLiteralText;
     lineBreaks = [];
   }
-  return chars.join('');
+  // Each code unit decodes to one, so offsets stay aligned. A lone surrogate becomes U+FFFD.
+  return UTF16.decode(codes);
 }
 
 /**
- * Matches brackets, finds the blocks, the function bodies (a `{` after `)` or `=>`), and the starts
- * of arrow expression bodies, and marks each line break that a trailing operator continues.
+ * Matches brackets, finds the blocks and the functions, and marks each line break that a trailing
+ * operator continues. A function is a `{` after a `)` that no control keyword owns, or the code
+ * after `=>`. Its parameters are the list in the parentheses, or the one name before `=>`.
  */
 function scanBrackets(code: string): BracketScan {
   const closing = new Int32Array(code.length).fill(code.length);
   const lineContinues = new Uint8Array(code.length);
   const braces: number[] = [];
-  const functionBodies: number[] = [];
-  const arrowExpressionBodies: number[] = [];
+  const functions: FunctionShape[] = [];
   const openBrackets: number[] = [];
   let previous = -1;
+  let beforePrevious = -1;
+  // The opening bracket of the last closing bracket, and the parameters of an `=>` before its body.
+  let lastClosedOpen = -1;
+  let arrowParameters: Range | undefined;
 
   for (let idx = 0; idx < code.length; idx += 1) {
     const char = code[idx] ?? '';
@@ -380,22 +510,44 @@ function scanBrackets(code: string): BracketScan {
     }
     if (char <= ' ') continue;
 
+    if (arrowParameters !== undefined) {
+      functions.push({ parameters: arrowParameters, body: idx, braced: char === '{' });
+      arrowParameters = undefined;
+    } else if (char === '{' && code[previous] === ')' && !isControlBlock(code, lastClosedOpen)) {
+      const parameters = { start: lastClosedOpen + 1, end: previous };
+      functions.push({ parameters, body: idx, braced: true });
+    }
+
     if (char === '(' || char === '[' || char === '{') {
       openBrackets.push(idx);
+      if (char === '{') braces.push(idx);
     } else if (char === ')' || char === ']' || char === '}') {
       const openBracket = openBrackets.pop();
       if (openBracket !== undefined) closing[openBracket] = idx;
+      if (openBracket !== undefined) lastClosedOpen = openBracket;
+    } else if (char === '>' && previous === idx - 1 && code[previous] === '=') {
+      arrowParameters = parametersBeforeArrow(code, beforePrevious, lastClosedOpen);
     }
-    const afterArrow = code[previous] === '>' && code[previous - 1] === '=';
-    if (char === '{') {
-      braces.push(idx);
-      if (code[previous] === ')' || afterArrow) functionBodies.push(idx);
-    } else if (afterArrow) {
-      arrowExpressionBodies.push(idx);
-    }
+    beforePrevious = previous;
     previous = idx;
   }
-  return { closing, braces, functionBodies, arrowExpressionBodies, lineContinues };
+  return { closing, braces, functions, lineContinues };
+}
+
+/** The parameters of an arrow function whose `=>` comes after `end`: `(a, b)` or one name. */
+function parametersBeforeArrow(code: string, end: number, lastClosedOpen: number): Range {
+  if (code[end] === ')') {
+    return { start: lastClosedOpen + 1, end };
+  }
+  let start = end + 1;
+  while (start > 0 && /[\w$]/.test(code[start - 1] ?? '')) start -= 1;
+  return { start, end: end + 1 };
+}
+
+/** Whether the parentheses at `open` belong to a keyword such as `if`, so a `{` after them is a block. */
+function isControlBlock(code: string, open: number): boolean {
+  const before = previousCodeIndex(code, open);
+  return CONTROL_KEYWORDS.some((keyword) => endsWithWord(code, before, keyword));
 }
 
 /**
@@ -507,7 +659,7 @@ function argumentRegion(code: string, scan: BracketScan, match: RegExpExecArray)
   };
 }
 
-/** Code whose reads go nowhere: a function body or a child process's environment. */
+/** Code whose reads go nowhere: a function or a child process's environment. */
 function barrier(start: number, end: number): Region {
   return { start, end, kind: 'barrier', declaration: -1 };
 }
@@ -522,6 +674,11 @@ function sortedIndexes(ranges: Range[]): number[] {
       if (a === undefined || b === undefined) return 0;
       return a.start - b.start || b.end - a.end;
     });
+}
+
+/** A property name after `.` is not a variable, but a spread (`...name`) reads one. */
+function isPropertyName(code: string, start: number): boolean {
+  return code[start - 1] === '.' && code.slice(start - 3, start) !== '...';
 }
 
 function pushTo(map: Map<number, number[]>, key: number, value: number): void {
@@ -553,13 +710,16 @@ type Region = Range & { kind: 'send' | 'value' | 'barrier'; declaration: number 
 type Declaration = { name: string; scope: Range; isClient: boolean };
 type NameUse = { name: string; offset: number };
 type Assignment = NameUse & { valueStart: number };
+/** A declared name, the offset of its statement's keyword, and the start of its initializer. */
+type Declarator = NameUse & { valueStart: number | undefined };
+type Declarators = { names: Declarator[]; patterns: Array<Range & { offset: number }> };
+/** A function: its parameter list or single parameter, and where its body starts. */
+type FunctionShape = { parameters: Range; body: number; braced: boolean };
 type BracketScan = {
   /** For each opening bracket offset, the offset of its closing bracket, else the code length. */
   closing: Int32Array;
   braces: number[];
-  functionBodies: number[];
-  /** The first code offset of each arrow function whose body is an expression. */
-  arrowExpressionBodies: number[];
+  functions: FunctionShape[];
   /** 1 at each line break after an operator that continues the expression. */
   lineContinues: Uint8Array;
 };

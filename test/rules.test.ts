@@ -347,6 +347,7 @@ describe('malicious fixture attack lines', () => {
         'socket.write(util.inspect(process.env));',
         'const snapshot: Record<string, string | undefined> = { ...process.env };',
         "${Object.entries(process.env).join('\\n')}`;",
+        'const copy = { ...process.env };',
       ],
     },
     {

@@ -189,7 +189,11 @@ function pythonStringPrefixEnd(content: string, start: number): number | undefin
   return content[end] === '"' || content[end] === "'" ? end : undefined;
 }
 
-function maskJavaScriptStringsAndComments(content: string, keepString?: KeepString): string {
+function maskJavaScriptStringsAndComments(
+  content: string,
+  keepString?: KeepString,
+  maskRegexLiterals = false
+): string {
   const chars = content.split('');
   // One brace depth per open `${` of a template literal. A `}` at depth 0 closes the
   // interpolation, and the template text goes on after it.
@@ -217,9 +221,10 @@ function maskJavaScriptStringsAndComments(content: string, keepString?: KeepStri
       continue;
     }
 
-    // A regex literal stays visible, but a quote in it does not open a string.
+    // A regex literal stays visible unless asked, but a quote in it does not open a string.
     const regexEnd = char === '/' ? regexLiteralEnd(content, chars, idx, trail) : undefined;
     if (regexEnd !== undefined) {
+      if (maskRegexLiterals) maskRange(chars, idx, regexEnd);
       pushCode(trail, regexEnd - 1);
       idx = regexEnd;
       continue;
@@ -397,17 +402,19 @@ export function maskShellCommentsAndSingleQuotedStrings(content: string): string
 
 /**
  * Masks comments and strings in Python, JavaScript, and shell code. In Python and JavaScript,
- * `keepString` can keep a string that the code itself reads, such as a module specifier.
+ * `keepString` can keep a string that the code itself reads, such as a module specifier. In
+ * JavaScript, `maskRegexLiterals` masks regex literals too, whose brackets need not pair.
  */
 export function maskDocumentationTextInCode(
   content: string,
   filePath: string,
-  keepString?: KeepString
+  keepString?: KeepString,
+  maskRegexLiterals = false
 ): string {
   const ext = extensionOf(filePath);
   if (PYTHON_CODE_EXTENSIONS.has(ext)) return maskPythonStringsAndComments(content, keepString);
   if (JAVASCRIPT_CODE_EXTENSIONS.has(ext))
-    return maskJavaScriptStringsAndComments(content, keepString);
+    return maskJavaScriptStringsAndComments(content, keepString, maskRegexLiterals);
   if (SHELL_CODE_EXTENSIONS.has(ext)) return maskShellCommentsAndSingleQuotedStrings(content);
   return content;
 }
