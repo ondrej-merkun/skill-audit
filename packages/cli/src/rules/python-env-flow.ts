@@ -121,15 +121,23 @@ const IMPLICIT_PARAMETERS = new Set(['self', 'cls']);
 /**
  * Blanks each environment token in a prepared view, except the reads of the whole environment
  * that reach a network call. Those are copied back from the content, so a read inside an
- * f-string field stays visible when the view masks strings.
+ * f-string field stays visible when the view masks strings. With `restoreMaskedReads` false,
+ * a read comes back only where the view kept it: for a file in another language, the view of
+ * that language decides, so a read in a JavaScript comment stays masked while Python in a
+ * shell heredoc still counts.
  */
-export function maskEnvironReadsNotSent(view: string, content: string): string {
+export function maskEnvironReadsNotSent(
+  view: string,
+  content: string,
+  restoreMaskedReads = true
+): string {
   const masked = view.replace(ENVIRON_TOKEN, (token) => ' '.repeat(token.length));
   const sentReads = findSentEnvironReads(content);
   if (sentReads.length === 0) return masked;
 
   const chars = masked.split('');
   for (const { start, end } of sentReads) {
+    if (!restoreMaskedReads && view.slice(start, end) !== content.slice(start, end)) continue;
     for (let idx = start; idx < end; idx += 1) chars[idx] = content[idx] ?? ' ';
   }
   return chars.join('');

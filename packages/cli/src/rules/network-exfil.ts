@@ -127,15 +127,13 @@ function maskNonExecutingEnvDumpText(content: string, filePath: string): string 
 }
 
 const PYTHON_SCAN_PATH = /\.py$/i;
-const ENVIRON_TOKENS = new RegExp(ENVIRON_TOKEN_SOURCE, 'g');
 
-// The flow analysis reads Python, so it runs only on a Python scan path. In another language it
-// would restore an environ token that the language view masked, such as one in a `//` comment.
-// There, every environ token is masked, so the Python pattern cannot fire.
+// The flow analysis reads Python. In a Python file it may restore a read that the view masked,
+// such as one in an f-string field. In another language only the reads that the language view
+// kept come back: Python in a shell heredoc counts, a read in a `//` comment does not.
 function prepareEnvExfilView(content: string, filePath: string): string {
   const view = maskNonExecutingEnvDumpText(content, filePath);
-  if (PYTHON_SCAN_PATH.test(filePath)) return maskEnvironReadsNotSent(view, content);
-  return view.replace(ENVIRON_TOKENS, (token) => ' '.repeat(token.length));
+  return maskEnvironReadsNotSent(view, content, PYTHON_SCAN_PATH.test(filePath));
 }
 
 export const NET_EXFIL_ENV: Rule = {
