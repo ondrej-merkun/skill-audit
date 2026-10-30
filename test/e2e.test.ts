@@ -11,7 +11,7 @@ import { realpathSync } from 'node:fs';
 import { cp, mkdir, mkdtemp, open, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { basename, dirname, join } from 'node:path';
+import { basename, delimiter, dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { sarifSchemaErrors } from './helpers/sarif-schema.js';
@@ -155,6 +155,49 @@ const SARIF_LEVEL_BY_SEVERITY: Record<string, string> = {
   info: 'note',
 };
 
+const RESULTS_FILE = 'skill-audit-results.json';
+const SARIF_FILE = 'skill-audit.sarif';
+
+// Stands in for `npx --yes @ondrej-merkun/skill-audit@<version>`. It writes the results file
+// only when STUB_VERDICT is set, writes no SARIF file, and exits with STUB_EXIT_CODE.
+const STUB_NPX = `#!/usr/bin/env bash
+while [ $# -gt 0 ]; do
+  if [ "$1" = --output ]; then results=$2; fi
+  shift
+done
+if [ -n "$STUB_VERDICT" ]; then
+  printf '{"summary":{"verdict":"%s"}}\\n' "$STUB_VERDICT" > "$results"
+fi
+exit "$STUB_EXIT_CODE"
+`;
+
+// The `run: |` block of the action's scan step, without its YAML indentation.
+function actionScanStepScript(actionYml: string): string {
+  const blockIndent = ' '.repeat(8);
+  const lines = actionYml.split('\n');
+  const start = lines.findIndex((line) => line.trim() === 'run: |') + 1;
+  const length = lines
+    .slice(start)
+    .findIndex((line) => line !== '' && !line.startsWith(blockIndent));
+  return lines
+    .slice(start, start + length)
+    .map((line) => line.slice(blockIndent.length))
+    .join('\n');
+}
+
+// Reads the `name=value` lines that a step appends to $GITHUB_OUTPUT.
+function readGithubOutputs(text: string): Record<string, string> {
+  return Object.fromEntries(
+    text
+      .split('\n')
+      .filter((line) => line !== '')
+      .map((line) => {
+        const separator = line.indexOf('=');
+        return [line.slice(0, separator), line.slice(separator + 1)];
+      })
+  );
+}
+
 describe('e2e: CLI binary', () => {
   it('package metadata supports the documented npx command', async () => {
     const pkg = JSON.parse(await readFile(PACKAGE_JSON, 'utf-8')) as {
@@ -194,11 +237,61 @@ describe('e2e: CLI binary', () => {
     expect(examples).toContain('uses: ondrej-merkun/skill-audit@v1');
     expect(action).toContain('npx --yes "@ondrej-merkun/skill-audit@${SA_VERSION}" scan');
     expect(action).toContain('--output "$SA_RESULTS_FILE"');
-    expect(action).toContain('.summary.verdict // "PASS"');
     expect(action).not.toContain('--offline');
     expect(action).not.toContain('SA_OFFLINE');
     expect(action).toContain('SA_VERSION: ${{ inputs.version }}');
     expect(action).not.toContain('.results[]');
+  });
+
+  // writtenVerdict is the verdict in the results file that the stub CLI writes. Blank: no file.
+  it.each([
+    { scan: 'a PASS scan', exitCode: 0, writtenVerdict: 'PASS', resultsFile: RESULTS_FILE, verdict: 'PASS' },
+    { scan: 'a FAIL scan', exitCode: 1, writtenVerdict: 'FAIL', resultsFile: RESULTS_FILE, verdict: 'FAIL' },
+    { scan: 'an incomplete scan', exitCode: 3, writtenVerdict: 'PASS', resultsFile: RESULTS_FILE, verdict: '' },
+    { scan: 'a scan that found no skills', exitCode: 0, writtenVerdict: '', resultsFile: '', verdict: 'PASS' },
+    { scan: 'a usage error', exitCode: 2, writtenVerdict: '', resultsFile: '', verdict: '' },
+  ])('root action sets outputs from this run only, after $scan', async (row) => {
+    const workDir = await mkdtemp(join(tmpdir(), 'skill-audit-action-'));
+    try {
+      const binDir = join(workDir, 'bin');
+      const githubOutput = join(workDir, 'github-output');
+      await mkdir(binDir);
+      await writeFile(join(binDir, 'npx'), STUB_NPX, { mode: 0o755 });
+      const action = await readFile(ACTION_YML, 'utf-8');
+      await writeFile(join(workDir, 'step.sh'), actionScanStepScript(action));
+      await writeFile(githubOutput, '');
+      // Files of an earlier run must not reach the outputs.
+      await writeFile(join(workDir, RESULTS_FILE), '{"summary":{"verdict":"REVIEW"}}\n');
+      await writeFile(join(workDir, SARIF_FILE), '{}\n');
+
+      // GitHub runs a `shell: bash` step with these flags.
+      const step = spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', 'step.sh'], {
+        cwd: workDir,
+        env: {
+          ...process.env,
+          PATH: `${binDir}${delimiter}${process.env['PATH'] ?? ''}`,
+          GITHUB_OUTPUT: githubOutput,
+          SA_VERSION: '0.0.0',
+          SA_AGENT: '',
+          SA_SCAN_PATH: '',
+          SA_FAIL_ON: 'fail',
+          SA_ARGS: '',
+          SA_RESULTS_FILE: RESULTS_FILE,
+          SA_SARIF_FILE: SARIF_FILE,
+          STUB_EXIT_CODE: String(row.exitCode),
+          STUB_VERDICT: row.writtenVerdict,
+        },
+      });
+
+      expect(step.status).toBe(row.exitCode);
+      expect(readGithubOutputs(await readFile(githubOutput, 'utf-8'))).toEqual({
+        'results-file': row.resultsFile,
+        'sarif-file': '',
+        verdict: row.verdict,
+      });
+    } finally {
+      await rm(workDir, { recursive: true, force: true });
+    }
   });
 
   it('--version prints a semver string', async () => {

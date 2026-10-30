@@ -248,7 +248,12 @@ Set `scan-path` to audit the skills in the checkout before anyone installs them:
     scan-path: skills
 ```
 
-See the [CI reference](docs/REFERENCE.md#use-in-ci) for the full workflow. In
+The action's `verdict` output is `PASS`, `REVIEW`, or `FAIL` when the scan
+finishes. It is blank when the scan is incomplete (exit code 3) or when the CLI
+stops with an error, for example a usage error.
+
+See the [CI reference](docs/REFERENCE.md#use-in-ci) for the full workflow and
+all action outputs. In
 CI, `skill-audit` scans files locally inside the GitHub Actions runner and
 writes report artifacts. It does not upload skill contents to a separate
 analysis service.

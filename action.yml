@@ -48,13 +48,13 @@ inputs:
 
 outputs:
   results-file:
-    description: 'Path to the JSON results file'
+    description: 'Path to the JSON results file, or blank when the CLI wrote no results file: the scan found no skills, or the CLI stopped with an error. After an incomplete scan (exit code 3), the file has only the skills that the scan checked.'
     value: ${{ steps.scan.outputs.results-file }}
   sarif-file:
-    description: 'Path to the SARIF file, or blank when the sarif-file input is blank or the scan was incomplete (exit code 3)'
+    description: 'Path to the SARIF file, or blank when the sarif-file input is blank, the scan was incomplete (exit code 3), or the CLI stopped with an error'
     value: ${{ steps.scan.outputs.sarif-file }}
   verdict:
-    description: 'Worst verdict across all scanned skills (PASS, REVIEW, FAIL)'
+    description: 'Worst verdict across all scanned skills (PASS, REVIEW, FAIL). PASS when the scan found no skills. Blank when the scan was incomplete (exit code 3) or the CLI stopped with an error, for example a usage error (exit code 2).'
     value: ${{ steps.scan.outputs.verdict }}
 
 runs:
@@ -82,6 +82,9 @@ runs:
           AGENT_FLAG="--agent"
         fi
 
+        # Remove the files of an earlier run, so that the outputs describe only this scan.
+        rm -f -- "$SA_RESULTS_FILE" ${SA_SARIF_FILE:+"$SA_SARIF_FILE"}
+
         # Run scan and write JSON output (and SARIF, if requested) to the requested files.
         # SA_ARGS is intentionally word-split here (extra flags from caller).
         # shellcheck disable=SC2086
@@ -102,13 +105,22 @@ runs:
           rm skill-audit-stderr.txt
         fi
 
-        # Extract worst verdict for the output variable.
-        VERDICT="PASS"
-        if command -v jq &>/dev/null && [ -f "$SA_RESULTS_FILE" ]; then
-          VERDICT=$(jq -r '.summary.verdict // "PASS"' "$SA_RESULTS_FILE" 2>/dev/null || echo "PASS")
+        # The CLI writes no results file when the scan finds no skills or when it stops with an error.
+        RESULTS_OUTPUT=""
+        if [ -f "$SA_RESULTS_FILE" ]; then RESULTS_OUTPUT="$SA_RESULTS_FILE"; fi
+
+        # Only a finished scan (exit code 0 or 1) has a verdict. Exit code 3 means that the scan
+        # missed skills, and any other code means that the CLI stopped with an error.
+        # Node reads the file because npx needs Node, and a runner can lack jq.
+        VERDICT=""
+        if [ -n "$RESULTS_OUTPUT" ] && { [ "$EXIT_CODE" -eq 0 ] || [ "$EXIT_CODE" -eq 1 ]; }; then
+          VERDICT=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).summary.verdict)' "$SA_RESULTS_FILE" 2>/dev/null)
+        elif [ "$EXIT_CODE" -eq 0 ]; then
+          # Exit code 0 without a results file: the scan found no skills.
+          VERDICT="PASS"
         fi
 
-        echo "results-file=$SA_RESULTS_FILE" >> "$GITHUB_OUTPUT"
+        echo "results-file=$RESULTS_OUTPUT" >> "$GITHUB_OUTPUT"
         # An incomplete scan writes no SARIF file, so the output stays blank and no upload runs.
         SARIF_OUTPUT=""
         if [ -n "$SA_SARIF_FILE" ] && [ -f "$SA_SARIF_FILE" ]; then SARIF_OUTPUT="$SA_SARIF_FILE"; fi
