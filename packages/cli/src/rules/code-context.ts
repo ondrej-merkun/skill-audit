@@ -42,9 +42,10 @@ const MARKDOWN_BASENAME_PATTERN =
   /^(?:SKILL|AGENTS|CLAUDE|GEMINI|CONVENTIONS|README|CHANGELOG)\.md$/i;
 const SECURITY_EDUCATION_HEADING_PATTERN =
   /\b(?:detection|detector|scanner|audit(?:or)?|tester|testing|fixture|example|documentation|reference|threat|attack|red[- ]?team|training|rule(?:s)?|false positive|benign corpus|payload catalog)\b/i;
-// Inline code and double quotes, straight or curly, each with the character that closes it.
+// Any indentation, as the security-education masks have always read a heading.
+const ANY_INDENT_HEADING_PATTERN = /^\s*(#{1,6})\s+.+$/;
+// Double quotes, straight or curly, each with the character that closes it.
 const QUOTE_CLOSERS = new Map([
-  ['`', '`'],
   ['"', '"'],
   ['“', '”'],
 ]);
@@ -366,11 +367,12 @@ function classifySecurityEducationLines(lines: string[]): MarkdownLineKind[] {
     }
     if (inFence || MARKDOWN_BLOCKQUOTE_PATTERN.test(line)) return 'quoted';
 
-    // A deeper heading stays inside the education section that it is part of.
-    const heading = MARKDOWN_HEADING_PATTERN.exec(line);
+    // A nested education heading replaces the outer section, so the section ends at the
+    // next heading of the nested level. These are the old bounds: the mask never grows.
+    const heading = ANY_INDENT_HEADING_PATTERN.exec(line);
     const headingLevel = heading?.[1]?.length ?? 0;
     if (heading && headingLevel <= educationHeadingLevel) educationHeadingLevel = 0;
-    if (heading && educationHeadingLevel === 0 && SECURITY_EDUCATION_HEADING_PATTERN.test(line)) {
+    if (heading && SECURITY_EDUCATION_HEADING_PATTERN.test(line)) {
       educationHeadingLevel = headingLevel;
     }
 
@@ -396,7 +398,7 @@ function maskQuotedEducationText(lines: string[], kinds: MarkdownLineKind[]): st
 
   lines.forEach((line, index) => {
     const isBlockText = kinds[index] === 'education' && line.trim() !== '';
-    const isHeading = MARKDOWN_HEADING_PATTERN.test(line);
+    const isHeading = ANY_INDENT_HEADING_PATTERN.test(line);
     if (!isBlockText || isHeading) maskBlock();
     if (isBlockText) block.push(index);
     if (isHeading) maskBlock();
@@ -406,12 +408,51 @@ function maskQuotedEducationText(lines: string[], kinds: MarkdownLineKind[]): st
   return masked;
 }
 
+/** Masks inline code spans first, because a quote inside a code span is code, not a quote. */
+function maskQuotedSpans(text: string): string {
+  return maskDoubleQuotes(maskCodeSpans(text));
+}
+
 /**
- * Masks each quoted span from its opening to its closing character. An opener without a
- * closer masks nothing.
+ * Masks inline code spans. As in CommonMark, a backtick run closes at the next run of the
+ * same length, so ``Forget `this` text`` is one span. A run without a closer masks nothing.
+ * ponytail: a backslash escape still opens a span. Plain backticks quote the same text, so
+ * honoring escapes would not shrink what an author can mark as an example.
+ */
+function maskCodeSpans(text: string): string {
+  const chars = text.split('');
+  const runs = [...text.matchAll(/`+/g)].map((match) => ({
+    start: match.index,
+    end: match.index + match[0].length,
+  }));
+  // One backward pass finds, for each run, the next run with the same length.
+  const closerOf: Array<number | undefined> = [];
+  const nextRunByLength = new Map<number, number>();
+  for (let index = runs.length - 1; index >= 0; index -= 1) {
+    const run = runs[index];
+    if (run === undefined) continue;
+    closerOf[index] = nextRunByLength.get(run.end - run.start);
+    nextRunByLength.set(run.end - run.start, index);
+  }
+
+  for (let index = 0; index < runs.length; index += 1) {
+    const closerIndex = closerOf[index];
+    const opener = runs[index];
+    const closer = closerIndex === undefined ? undefined : runs[closerIndex];
+    if (opener === undefined || closerIndex === undefined || closer === undefined) continue;
+    maskRange(chars, opener.start, closer.end);
+    index = closerIndex;
+  }
+
+  return chars.join('');
+}
+
+/**
+ * Masks each double-quoted span from its opening to its closing character. An opener
+ * without a closer masks nothing.
  * ponytail: single quotes stay visible, because apostrophes would pair up across prose.
  */
-function maskQuotedSpans(text: string): string {
+function maskDoubleQuotes(text: string): string {
   const chars = text.split('');
   // No closer after one opener means no closer after a later opener, so search only once.
   const unclosedQuotes = new Set<string>();
