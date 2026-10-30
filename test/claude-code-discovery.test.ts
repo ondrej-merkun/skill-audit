@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import claudeCodeDiscovery from '../packages/cli/src/discovery/claude-code.js';
+import type { Skill } from '../packages/cli/src/types.js';
 
 // Claude Code moves the synced plugins that it removes to plugins/.trash/<epoch-ms>-<pid>-<rand>/
 // <plugin-uuid> and never loads them again. The values are synthetic.
@@ -11,6 +12,19 @@ const TRASHED_PLUGIN_ROOT = [
   '1700000000000-12345-abcDEF',
   '00000000-0000-4000-8000-000000000001',
 ];
+
+async function writeFiles(root: string, files: Record<string, string>): Promise<void> {
+  for (const [file, content] of Object.entries(files)) {
+    await mkdir(dirname(join(root, file)), { recursive: true });
+    await writeFile(join(root, file), content);
+  }
+}
+
+function pathRows(skills: Skill[]): Array<Pick<Skill, 'path' | 'name' | 'format' | 'scope'>> {
+  return skills
+    .map(({ path, name, format, scope }) => ({ path, name, format, scope }))
+    .sort((a, b) => a.path.localeCompare(b.path));
+}
 
 describe('claude-code discovery plugin', () => {
   let tempHome: string;
@@ -382,6 +396,150 @@ describe('claude-code discovery plugin', () => {
 
     expect(skill).toBeDefined();
     expect(skill?.scope).toBe('project');
+  });
+
+  it('discovers project skills, commands, and agents in each parent up to the repository root', async () => {
+    const cwd = join(tempCwd, 'outer', 'repo', 'packages', 'app');
+    process.env['SKILL_AUDIT_CWD'] = cwd;
+    await mkdir(cwd, { recursive: true });
+    await writeFiles(tempCwd, {
+      // A linked worktree marks its root with a .git file, a main checkout with a .git dir.
+      'outer/repo/.git': 'gitdir: /elsewhere/.git/worktrees/repo\n',
+      'outer/repo/.claude/skills/root-skill/SKILL.md': '# Root skill',
+      'outer/repo/.claude/commands/root-command.md': '# Root command',
+      'outer/repo/.claude/agents/root-agent.md': '# Root agent',
+      'outer/repo/packages/.claude/agents/package-agent.md': '# Package agent',
+      'outer/.claude/skills/outside-skill/SKILL.md': '# Above the repository root',
+    });
+    const repo = join(tempCwd, 'outer', 'repo');
+
+    const skills = await claudeCodeDiscovery.discoverSkills();
+
+    expect(pathRows(skills)).toEqual([
+      {
+        path: join(repo, '.claude', 'agents', 'root-agent.md'),
+        name: 'root-agent',
+        format: 'agents-md',
+        scope: 'project',
+      },
+      {
+        path: join(repo, '.claude', 'commands', 'root-command.md'),
+        name: 'root-command',
+        format: 'SKILL.md',
+        scope: 'project',
+      },
+      {
+        path: join(repo, '.claude', 'skills', 'root-skill'),
+        name: 'root-skill',
+        format: 'SKILL.md',
+        scope: 'project',
+      },
+      {
+        path: join(repo, 'packages', '.claude', 'agents', 'package-agent.md'),
+        name: 'package-agent',
+        format: 'agents-md',
+        scope: 'project',
+      },
+    ]);
+  });
+
+  it('does not read home skills as project skills when the working directory is below home', async () => {
+    const cwd = join(tempHome, 'work', 'app');
+    process.env['SKILL_AUDIT_CWD'] = cwd;
+    await mkdir(cwd, { recursive: true });
+    await writeFiles(tempHome, {
+      '.claude/skills/user-skill/SKILL.md': '# User skill',
+      'work/.claude/commands/work-command.md': '# Work command',
+    });
+
+    const skills = await claudeCodeDiscovery.discoverSkills();
+
+    expect(pathRows(skills)).toEqual([
+      {
+        path: join(tempHome, '.claude', 'skills', 'user-skill'),
+        name: 'user-skill',
+        format: 'SKILL.md',
+        scope: 'user',
+      },
+      {
+        path: join(tempHome, 'work', '.claude', 'commands', 'work-command.md'),
+        name: 'work-command',
+        format: 'SKILL.md',
+        scope: 'project',
+      },
+    ]);
+  });
+
+  it('discovers memory and rule files in home, the working directory, and every parent', async () => {
+    // Claude Code loads these at launch from every dir above the working directory, also above
+    // the repository root. Root CLAUDE.md and AGENTS.md belong to the cross-agent sweep.
+    const repo = join(tempCwd, 'repo');
+    const cwd = join(repo, 'packages', 'app');
+    process.env['SKILL_AUDIT_CWD'] = cwd;
+    await mkdir(join(repo, '.git'), { recursive: true });
+    await mkdir(cwd, { recursive: true });
+    await writeFiles(tempHome, {
+      '.claude/CLAUDE.md': '# User memory',
+      '.claude/rules/team/style.md': '# User rule',
+    });
+    await writeFiles(tempCwd, {
+      'CLAUDE.local.md': '# Local memory above the repository root',
+      'repo/CLAUDE.md': '# Cross-agent sweep file',
+      'repo/.claude/CLAUDE.md': '# Project memory',
+      'repo/.claude/AGENTS.md': '# Project agents memory',
+      'repo/.claude/rules/frontend/api.md': '# Project rule',
+      'repo/.claude/rules/notes.txt': 'Claude Code loads only .md rule files.',
+      'repo/packages/app/CLAUDE.local.md': '# Local memory',
+    });
+
+    const skills = await claudeCodeDiscovery.discoverSkills();
+
+    // Rows sort by path: the temp cwd ("skill-audit-cwd-") sorts before the temp home.
+    expect(pathRows(skills)).toEqual([
+      {
+        path: join(tempCwd, 'CLAUDE.local.md'),
+        name: 'CLAUDE.local.md',
+        format: 'agents-md',
+        scope: 'project',
+      },
+      {
+        path: join(repo, '.claude', 'AGENTS.md'),
+        name: 'AGENTS.md',
+        format: 'agents-md',
+        scope: 'project',
+      },
+      {
+        path: join(repo, '.claude', 'CLAUDE.md'),
+        name: 'CLAUDE.md',
+        format: 'agents-md',
+        scope: 'project',
+      },
+      {
+        path: join(repo, '.claude', 'rules', 'frontend', 'api.md'),
+        name: 'api',
+        format: 'agents-md',
+        scope: 'project',
+      },
+      {
+        path: join(cwd, 'CLAUDE.local.md'),
+        name: 'CLAUDE.local.md',
+        format: 'agents-md',
+        scope: 'project',
+      },
+      {
+        path: join(tempHome, '.claude', 'CLAUDE.md'),
+        name: 'CLAUDE.md',
+        format: 'agents-md',
+        scope: 'user',
+      },
+      {
+        path: join(tempHome, '.claude', 'rules', 'team', 'style.md'),
+        name: 'style',
+        format: 'agents-md',
+        scope: 'user',
+      },
+    ]);
+    expect(skills.every((skill) => /^[0-9a-f]{64}$/.test(skill.treeSha256))).toBe(true);
   });
 
   it('does not count plain .claude-plugin/plugin.json as a skill', async () => {

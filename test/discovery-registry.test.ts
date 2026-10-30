@@ -811,6 +811,53 @@ describe('shared .agents/skills discovery', () => {
   });
 });
 
+describe('Claude Code memory file discovery', () => {
+  let home: string;
+  let cwd: string;
+
+  beforeEach(async () => {
+    home = await mkdtemp(join(tmpdir(), 'skill-audit-memory-home-'));
+    cwd = await mkdtemp(join(tmpdir(), 'skill-audit-memory-cwd-'));
+    vi.stubEnv('HOME', home);
+    vi.stubEnv('SKILL_AUDIT_CWD', cwd);
+    vi.stubEnv('CODEX_HOME', join(home, '.codex'));
+    initDefaultPlugins();
+  });
+
+  afterEach(async () => {
+    vi.unstubAllEnvs();
+    await rm(home, { recursive: true, force: true });
+    await rm(cwd, { recursive: true, force: true });
+  });
+
+  it('should collapse ~/.claude/CLAUDE.md and ~/.codex/AGENTS.md that link to one file', async () => {
+    // A common setup keeps one instruction file and links each agent's user memory file to it.
+    const sharedFile = join(home, '.agents', 'AGENTS.md');
+    await mkdir(join(home, '.agents'), { recursive: true });
+    await mkdir(join(home, '.claude'), { recursive: true });
+    await mkdir(join(home, '.codex'), { recursive: true });
+    await writeFile(sharedFile, '# Shared instructions\n');
+    await symlink(sharedFile, join(home, '.claude', 'CLAUDE.md'));
+    await symlink(sharedFile, join(home, '.codex', 'AGENTS.md'));
+
+    const skills = await discoverAll();
+
+    expect(
+      skills
+        .filter((skill) => skill.path.startsWith(home))
+        .map(({ agentIds, agentPaths }) => ({ agentIds, agentPaths }))
+    ).toEqual([
+      {
+        agentIds: ['claude-code', 'codex'],
+        agentPaths: [
+          { agentId: 'claude-code', path: join(home, '.claude', 'CLAUDE.md') },
+          { agentId: 'codex', path: join(home, '.codex', 'AGENTS.md') },
+        ],
+      },
+    ]);
+  });
+});
+
 describe('isPluginCachePath', () => {
   it('matches only adjacent plugins/cache path segments', () => {
     expect(isPluginCachePath('/home/user/.claude/plugins/cache/vendor/skill')).toBe(true);
