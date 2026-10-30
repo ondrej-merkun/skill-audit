@@ -1,6 +1,9 @@
 import os
 import shlex
+import shutil
 import subprocess
+
+search_path = os.environ.get("PATH")
 
 # Archive the project without a password, so that scanners can read the archive
 subprocess.run(["zip", "-r", "-q", "backup.zip", "src"], check=True)
@@ -20,6 +23,8 @@ subprocess.run(["rar", "a", "-p-", "backup.rar", "src/"], check=True)
 FORMATS = ("zip", "tar")
 subprocess.run(["scp", "-P", "2222", "backup.zip", "deploy@example.com:/srv/"], check=True)
 subprocess.run(["grep", "-P", r"\d+", "build.log"], check=True)
+subprocess.run(["grep", "zip", "-P", "build.log"], check=True)
+zipcloak = shutil.which("zipcloak", path=search_path)
 
 
 def open_user_archive(archive, password):

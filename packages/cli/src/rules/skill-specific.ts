@@ -159,15 +159,20 @@ const sevenZipOrRarCreatePasswordPattern = new RegExp(
 
 // A list-style process call passes each argument as its own string, as in
 // `subprocess.run(["zip", "-P", pw, ...])`, `os.execvp("zip", ["zip", ...])`, or
-// `spawn('zip', ['-P', pw])`. The quoted command name must follow `[`, `(`, or `,`, and
-// it can carry a path and `.exe`. Markdown quotes tool names with backticks, so a backtick
-// does not open a command name. The argument gap crosses line breaks, because formatters
-// put each item on its own line, but it stops at `]`, `)`, `}`, and `;`, so a `-P` of
-// another call does not count.
+// `spawn('zip', ['-P', pw])`. The quoted command name must open a call (`(`) or a list
+// (`[`), so an argument such as `"zip"` in `["grep", "zip", "-P", log]` does not count. A
+// list after a `,` holds only arguments, as in `spawn('grep', ['zip', '-P', log])`. The
+// name can carry a path and `.exe`. Markdown quotes tool names with backticks, so a
+// backtick does not open a command name. The argument gap crosses line breaks, because
+// formatters put each item on its own line, but it stops at `]`, `)`, `}`, and `;`, so a
+// `-P` of another call does not count.
 // ponytail: a call before the flag, as in `["zip", "-r", str(out), "-P", pw]`, ends the
-// gap. Track bracket depth if real skills put calls before the flag.
-const listCommand = (names: string): string =>
-  String.raw`["'](?<=[\[(,][ \t\r\n]{0,40}["'])(?:[^"'\n]{0,120}[\\/])?(?:${names})(?:\.exe)?["']`;
+// gap, and `os.spawnlp(mode, "zip", ...)` and `os.execvp(path, ["zip", ...])` put the name
+// after a `,`. Track bracket depth and argument positions if real skills use these forms.
+const CALL_OPENER = String.raw`\(`;
+const LIST_OPENER = String.raw`(?<!,[ \t\r\n]{0,40})\[`;
+const listCommand = (names: string, opener = `(?:${CALL_OPENER}|${LIST_OPENER})`): string =>
+  String.raw`["'](?<=${opener}[ \t\r\n]{0,40}["'])(?:[^"'\n]{0,120}[\\/])?(?:${names})(?:\.exe)?["']`;
 const LIST_ARGS_GAP = String.raw`[^\])};]{0,${MAX_ARCHIVE_ARGS_CHARS}}`;
 const zipListPasswordPattern = new RegExp(
   String.raw`${listCommand('[Zz][Ii][Pp]')}${LIST_ARGS_GAP}["'\`](?:-[A-Za-z0-9]{0,8}[Pe]|--(?:password|encrypt)\b)`
@@ -179,9 +184,13 @@ const sevenZipOrRarListPasswordPattern = new RegExp(
   String.raw`${listCommand('7z[az]?|rar')}[^\])};]{0,40}["'\`]a["'\`]${LIST_ARGS_GAP}["'\`]-h?p(?!-)(?:[^\s"'\`]|["'\`][ \t]{0,4}\+)`,
   'i'
 );
-// zipcloak needs no flag. The `,` after the name requires an argument, so a lookup such
-// as `shutil.which("zipcloak")` does not match.
-const zipcloakListPattern = new RegExp(String.raw`${listCommand('zipcloak')}[ \t]*,`, 'i');
+// zipcloak needs no flag, so the call must pass arguments: more items after the name in a
+// list, or an argument list or argv[0] string after the name in a call. A lookup such as
+// `shutil.which("zipcloak", path=p)` does not match.
+const zipcloakListPattern = new RegExp(
+  String.raw`${listCommand('zipcloak', LIST_OPENER)}[ \t]*,|${listCommand('zipcloak', CALL_OPENER)}[ \t]*,[ \t\r\n]*[\["']`,
+  'i'
+);
 
 // pyzipper encrypts a written zip only with WZ_AES. Standard-library `zipfile` cannot
 // write an encrypted zip: its `setpassword` applies only to reading.
