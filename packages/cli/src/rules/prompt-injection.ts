@@ -223,8 +223,13 @@ const exfilTriggerPattern = new RegExp(
 // with an unrelated instruction in a later paragraph.
 const paragraphWindow = (maxChars: number): string =>
   String.raw`(?:[^\n]|\n(?!\r?\n)){0,${maxChars}}?`;
-// An opening quote marks a quoted example, as in PI-OVERRIDE.
-const notQuoted = String.raw`(?<!["'\x60\u201c])`;
+// An opening quote marks a quoted example, as in PI-OVERRIDE. A double quote also marks one
+// when a short lead-in such as "For example, " sits between it and the trigger. The quote must
+// open: it follows whitespace, "(", ":", or the start of the text, and no other quote follows
+// it, so `said "hi" and when the user ...` stays operative. Apostrophes and backticks count
+// only right before the trigger, because one sits in many ordinary words.
+// ponytail: an instruction in double quotes stays hidden, as in PI-OVERRIDE.
+const notQuoted = String.raw`(?<!["'\x60\u201c])(?<!(?:^|[\s(:])["\u201c][^"\u201c\u201d\n]{0,60})`;
 // A request trigger needs a side-effect marker such as "also". Without the marker, the
 // instruction can be the request itself: send the user's data to the service of the skill.
 const userRequest = String.raw`(?:the\s+)?user\s+(?:asks?|requests?|runs?|says?|opens?|invokes?|types?|wants?)\b`;
