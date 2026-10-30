@@ -513,9 +513,10 @@ name wins over a path with the same name: use `./list` to scan a directory named
   one skill. The walk has no depth limit and follows symlinks. A skill that the
   walk reaches through a symlink keeps the path and name of its real directory
   when that directory is under the path.
-- The path itself is one more skill when it has files outside those skill
-  directories, for example plugin hooks, commands, scripts, or `.mcp.json`. The
-  rule engine leaves the skill directories out of that target.
+- The path itself is one more skill when it has files or symlinks outside those
+  skill directories, for example plugin hooks, commands, scripts, `.mcp.json`,
+  or a `scripts -> docs` link. The rule engine leaves the skill directories out
+  of that target.
 - Each target also scans the files that its symlinks reach, also in another
   target. One file can then show up under more than one target. A symlink can
   give a file an operative path in one skill and a docs path in another, so no
