@@ -59,7 +59,7 @@ function makeScannedSkill(root: string, finding: Finding): ScannedSkill {
 }
 
 describe('LLM review prompt and parsing', () => {
-  it('caps context to finding-driving files and redacts obvious secrets', async () => {
+  it('redacts obvious secrets in finding snippets and skill files', async () => {
     const root = await mkdtemp(join(tmpdir(), 'skill-audit-llm-review-'));
     tempRoots.push(root);
     const nested = join(root, 'src');
@@ -75,7 +75,6 @@ describe('LLM review prompt and parsing', () => {
       ].join('\n'),
       'utf-8'
     );
-    await writeFile(join(root, 'unrelated.txt'), 'do not send me', 'utf-8');
 
     const payload = await buildLlmReviewPayload(makeScannedSkill(root, makeFinding(file)), {
       contextTokens: 600,
@@ -84,8 +83,52 @@ describe('LLM review prompt and parsing', () => {
     expect(payload.snippets).toHaveLength(1);
     expect(payload.snippets[0]).toMatchObject({ file: 'src/tool.js' });
     expect(payload.snippets[0]?.content).toContain('[REDACTED]');
+    expect(payload.skillFiles.map((skillFile) => skillFile.file)).toEqual(['src/tool.js']);
     expect(JSON.stringify(payload)).not.toContain('sk-123456789012345678901234');
-    expect(JSON.stringify(payload)).not.toContain('do not send me');
+  });
+
+  it('caps skill files per file and in total, and marks each cut', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'skill-audit-llm-review-'));
+    tempRoots.push(root);
+    await mkdir(join(root, 'agents', 'inner'), { recursive: true });
+    await mkdir(join(root, 'lib'));
+    await mkdir(join(root, 'refs'));
+    await writeFile(join(root, 'SKILL.md'), 'word '.repeat(1_000), 'utf-8');
+    await writeFile(join(root, 'README.md'), 'docs\n', 'utf-8');
+    // A nested skill that the scan reports on its own is not part of this skill's payload.
+    await writeFile(join(root, 'agents', 'inner', 'SKILL.md'), 'inner skill\n', 'utf-8');
+    await writeFile(join(root, 'bin.dat'), Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x00, 0x01]));
+    await writeFile(join(root, 'lib', 'a.sh'), 'echo a\n'.repeat(500), 'utf-8');
+    await writeFile(join(root, 'lib', 'b.sh'), 'echo b\n'.repeat(500), 'utf-8');
+    await writeFile(join(root, 'lib', 'c.sh'), 'echo c\n', 'utf-8');
+    for (let index = 0; index < 50; index++) {
+      await writeFile(join(root, 'refs', `${String(index).padStart(2, '0')}.md`), 'ref\n');
+    }
+    const skill = { ...makeScannedSkill(root, makeFinding(join(root, 'SKILL.md'))), findings: [] };
+
+    // 2,048 tokens give an 8,192-character budget, and one file sends at most 4,000 of it.
+    const payload = await buildLlmReviewPayload(skill, {
+      contextTokens: 2_048,
+      scanTargetPaths: new Set([join(root, 'agents', 'inner')]),
+    });
+
+    const sent = payload.skillFiles.map(({ file, status, content }) => [
+      file,
+      status,
+      content.length,
+    ]);
+    expect(sent.slice(0, 7)).toEqual([
+      ['SKILL.md', 'truncated', 4_000],
+      ['README.md', 'complete', 5],
+      ['bin.dat', 'binary', 0],
+      ['lib/a.sh', 'complete', 3_500],
+      ['lib/b.sh', 'truncated', 8_192 - 4_000 - 5 - 3_500],
+      ['lib/c.sh', 'not-sent', 0],
+      ['refs/00.md', 'not-sent', 0],
+    ]);
+    // 56 files remain after the nested skill: the payload lists 50 and counts the rest.
+    expect(payload.skillFiles).toHaveLength(50);
+    expect(payload.skillFilesNotListed).toBe(6);
   });
 
   it('quotes only the scanned MCP server definition from a shared config file', async () => {
@@ -134,6 +177,8 @@ describe('LLM review prompt and parsing', () => {
       },
       deterministicFindings: [],
       snippets: [],
+      skillFiles: [],
+      skillFilesNotListed: 0,
     });
     const serialized = JSON.stringify(messages);
 

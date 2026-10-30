@@ -248,7 +248,11 @@ export async function reviewWithOpenAiCompatibleModel(
   payload: LlmReviewPayload,
   fetchImpl: LlmReviewFetch = fetch
 ): Promise<LlmReviewResult> {
-  if (payload.deterministicFindings.length === 0 && payload.snippets.length === 0) {
+  const hasReviewContext =
+    payload.deterministicFindings.length > 0 ||
+    payload.snippets.length > 0 ||
+    payload.skillFiles.some((skillFile) => skillFile.content !== '');
+  if (!hasReviewContext) {
     return {
       modelName: config.name,
       provider: config.provider,

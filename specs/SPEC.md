@@ -586,10 +586,28 @@ Scan review stays bounded and redacted:
 - `scan --skill <name-or-id> --llm <name>` and `explain <name-or-id> --llm
   <name>` review only the matched skill.
 - Each selected model receives the same prompt version and normalized payload:
-  skill metadata, deterministic findings, relevant file paths, and capped
-  snippets from files that produced findings after obvious secret redaction.
-- The payload must not include whole home directories, unrelated files, cache
-  trees, environment variables, or discovered secrets.
+  skill metadata, deterministic findings, capped snippets around the findings,
+  and the skill's own files. Obvious secrets are redacted from all text.
+- The skill's own files are the files that the rule scan reads for that skill:
+  the whole skill directory, or the single target file. A nested path that the
+  same scan reports as its own skill is left out. For an MCP server entry in a
+  shared config file, the payload holds only that entry's definition. The entry
+  file (`SKILL.md` or the target's manifest) comes first, then the other files
+  in path order.
+- The total budget is 4 characters per `contextTokens` token, from 2,000 to
+  16,000 characters (8,192 when `contextTokens` is not set). Finding snippets
+  use at most half of it. The skill's files use the rest, with at most 4,000
+  characters per file. The payload lists at most 50 files and counts the files
+  that it leaves out.
+- Each listed file has a status: `complete` (whole file sent), `truncated` (only
+  the start sent), `binary` (not sent), or `not-sent` (the budget was spent or
+  the file could not be read). A skill with no findings and no file text gets a
+  clean review without a model request.
+- All skill text goes under one `untrusted_payload` key in the prompt. The
+  prompt tells the model that this text is data to review and that it must not
+  follow instructions in it.
+- The payload must not include whole home directories, files outside the
+  skill, cache trees, environment variables, or discovered secrets.
 - Per-model statuses such as `ok`, `unavailable`, `timeout`,
   `invalid-response`, and `skipped-offline` stay visible. A failed model must
   not hide deterministic findings or other models' completed reviews.

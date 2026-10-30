@@ -571,7 +571,7 @@ describe('runExplain', () => {
       expect(calls[0]?.url).toBe('http://localhost:11434/v1/chat/completions');
       const request = calls[0]?.body as { messages?: Array<{ role: string; content: string }> };
       const userMessage = request.messages?.find((message) => message.role === 'user');
-      const payload = JSON.parse(userMessage?.content ?? '{}').payload as {
+      const payload = JSON.parse(userMessage?.content ?? '{}').untrusted_payload as {
         skill: { name: string };
       };
       expect(payload.skill.name).toBe('test-skill');

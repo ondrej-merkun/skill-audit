@@ -62,7 +62,11 @@ export async function reviewSkillsWithLlm(
   configs: LocalLlmConfig[],
   fetchImpl: LlmReviewFetch | undefined,
   progress: ProgressReporter,
-  options: { showDetailsHint?: boolean } = {}
+  options: {
+    showDetailsHint?: boolean;
+    // The nested skill paths that the rule scan skipped. Their files stay out of the payload too.
+    scanTargetPaths?: ReadonlySet<string>;
+  } = {}
 ): Promise<ScannedSkill[]> {
   const reviewed: ScannedSkill[] = [];
   const reviewableTotal = skills.filter((skill) => skill.ignored !== true).length;
@@ -70,6 +74,7 @@ export async function reviewSkillsWithLlm(
     .map((config) => config.contextTokens)
     .filter((value): value is number => value !== undefined)
     .sort((a, b) => a - b)[0];
+  const scanTargetPaths = options.scanTargetPaths ?? new Set<string>();
   let completedReviews = 0;
   let hasLlmOnlyFindings = false;
 
@@ -79,10 +84,10 @@ export async function reviewSkillsWithLlm(
       reviewed.push(skill);
       continue;
     }
-    const payload = await buildLlmReviewPayload(
-      skill,
-      contextTokens !== undefined ? { contextTokens } : {}
-    );
+    const payload = await buildLlmReviewPayload(skill, {
+      scanTargetPaths,
+      ...(contextTokens !== undefined ? { contextTokens } : {}),
+    });
     const results = (
       await Promise.all(
         configs.map((config) => reviewWithOpenAiCompatibleModel(config, payload, fetchImpl))
