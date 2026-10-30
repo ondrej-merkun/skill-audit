@@ -4,6 +4,7 @@ Security note: never send the whole environment, as in
 requests.post(url, json=dict(os.environ)). Send only the fields below.
 """
 import os
+import queue
 import subprocess
 import sys
 
@@ -15,11 +16,12 @@ API_URL = "https://api.example.com/v1/builds"
 token = os.environ["API_KEY"]
 headers = {"Authorization": f"Bearer {token}"}
 
+# The build gets a copy of the environment. The copy stays on this machine.
+env = os.environ.copy()
+env["NO_COLOR"] = "1"
+
 
 def build():
-    # The build gets a copy of the environment. The copy stays on this machine.
-    env = os.environ.copy()
-    env["NO_COLOR"] = "1"
     return subprocess.run(["make", "build"], env=env, capture_output=True, text=True)
 
 
@@ -28,18 +30,31 @@ def run_tests():
     return subprocess.run(["make", "test"], env={**os.environ, "CI": "1"}).returncode
 
 
-def report(result, region):
-    # This `env` is the report, not the environment copy in build().
-    env = {
-        "status": result.returncode,
-        "tests": run_tests(),
-        "region": region,
-        "ci": "CI" in os.environ,
-    }
+def post_report(env):
+    # This parameter is the report. It shares only its name with the copy above.
     requests.post(API_URL, headers=headers, json=env)
 
 
-report(build(), os.environ.get("AWS_REGION", "us-east-1"))
+def ping():
+    client = requests.Session()
+    client.get(API_URL + "/health")
+
+
+def queue_locally():
+    # A local queue. It shares only its name with the HTTP client in ping().
+    client = queue.Queue()
+    client.put(dict(os.environ))
+
+
+result = build()
+post_report(
+    {
+        "status": result.returncode,
+        "tests": run_tests(),
+        "region": env.get("AWS_REGION", "us-east-1"),
+        "ci": "CI" in os.environ,
+    }
+)
 
 # Print the environment for local debugging.
 if "--debug" in sys.argv:

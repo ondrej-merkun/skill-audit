@@ -116,22 +116,27 @@ the same file. The finding is on the line of the read.
   `aiohttp.request`, a client constructor (`requests.Session`, `httpx.Client`,
   `httpx.AsyncClient`, `aiohttp.ClientSession`, `http.client.HTTPConnection`,
   `http.client.HTTPSConnection`, `socket.socket`, `socket.create_connection`),
-  or a send method of a client name: an HTTP verb, `request`, `putrequest`,
-  `putheader`, `endheaders`, `send`, `sendall`, `sendto`, `sendmsg`,
-  `connect`, or `ws_connect`. The arguments `timeout`, `verify`,
-  `allow_redirects`, `follow_redirects`, `cert`, and `context` are not data.
+  or a send method of a name that holds a client in the same scope: an HTTP
+  verb, `request`, `putrequest`, `putheader`, `endheaders`, `send`, `sendall`,
+  `sendto`, `sendmsg`, `connect`, or `ws_connect`. The arguments `timeout`,
+  `verify`, `allow_redirects`, `follow_redirects`, `cert`, and `context` are
+  not data.
 - The value flows through an assignment, a loop target, a container update
   (`append`, `extend`, `insert`, `update`, `add`, `setdefault`), a return value
   (also read as `self.<method>()`), and an argument of a function in the file.
   A keyword argument goes to the parameter of that name, and a positional
-  argument goes by position. A name that a function binds is local to that
-  function. `self.<name>` is shared by all methods. A key lookup on a variable
-  that holds the environment, or on a call result, reads one item.
-- Strings and comments do not count. The fields of an f-string do.
+  argument goes by position. A default value goes to its parameter. Functions
+  with the same name share their call arguments. A name that a function binds
+  is local to that function. `self.<name>` is shared by all methods. A key
+  lookup on a variable that holds the environment, or on a call result, reads
+  one item.
+- Strings and comments do not count. The fields of an f-string do, but a
+  string inside a field does not.
 - The `env=` argument of `subprocess.run`, `subprocess.Popen`,
   `subprocess.call`, `subprocess.check_call`, `subprocess.check_output`,
   `asyncio.create_subprocess_exec`, and `asyncio.create_subprocess_shell` sets
   the environment of the child process. It does not flow into the call result.
+  A network call inside that argument still counts.
 - A filtered copy, such as
   `{k: v for k, v in os.environ.items() if k.startswith("APP_")}`, still
   counts. The rule cannot tell which names the filter keeps.
@@ -174,12 +179,14 @@ escaped one (`\$(env)`) prints as text and does not match.
 
 Malicious fixtures: `.py` files that send the whole environment with each
 listed client, directly and through variables, a return value, a method
-attribute, and a function argument, and a shell script that sends `$(env)`.
-Benign fixtures: a script that authenticates with one named variable, gives a
-copy of the environment to a child process, sends a membership flag, uses one
-local name for the copy in one function and for a report in another, prints the
-environment locally, and quotes the attack in a docstring; a script that posts
-a static JSON body; and a shell script that prints an example pipeline.
+attribute, a function argument, and a post inside a subprocess `env=` value,
+and a shell script that sends `$(env)`. Benign fixtures: a script that
+authenticates with one named variable, gives a copy of the environment to a
+child process, sends a membership flag, posts a parameter that has the name of
+the module copy, puts the environment on a local queue named like an HTTP
+client in another function, prints the environment locally, and quotes the
+attack in a docstring; a script that posts a static JSON body; and a shell
+script that prints an example pipeline.
 
 ### NET-WEBHOOK-KNOWN (Critical)
 URLs in code and markdown that deliver data to a chat webhook, a request
