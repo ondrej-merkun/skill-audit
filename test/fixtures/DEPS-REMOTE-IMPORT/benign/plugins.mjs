@@ -17,8 +17,13 @@ const refusal = `Skill refused to run require('https://cdn.example.com/helper.js
 const docsUrl = 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import';
 const letters = Array.from('https://example.com');
 const redirect = { from: 'https://old.example.com', to: 'https://new.example.com' };
+const note = `${plugin.name}: never import('https://cdn.example.com/charts.js')`;
+const quoteChar = /'/; console.log("import('https://cdn.example.com/charts.js') is blocked");
+const ratio = charts.size / tables.size; const label = "import('https://cdn.example.com/x.js')";
 
 export async function build(report) {
   const template = await readFile('./template.txt', 'utf8');
-  return chalk.green(charts.draw(report, template, plugin, tables, docsUrl, letters, redirect));
+  return chalk.green(
+    charts.draw(report, template, docsUrl, letters, redirect, note, quoteChar, ratio, label)
+  );
 }

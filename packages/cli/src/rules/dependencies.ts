@@ -1,7 +1,7 @@
 import { basename } from 'node:path';
 import type { Rule } from '../types.js';
 import { agentConfigJson, decodeJsonStrings } from './agent-config.js';
-import { maskDocumentationTextInCode } from './code-context.js';
+import { type CodeTrail, maskDocumentationTextInCode } from './code-context.js';
 
 // Patterns are split to avoid triggering static-analysis hooks on this detector file.
 
@@ -45,21 +45,15 @@ function keepModuleSpecifiers(content: string, filePath: string): string {
   return maskDocumentationTextInCode(content, filePath, isModuleSpecifier);
 }
 
-// True when a loader keyword comes before the string, with at most one open paren between them.
-// Comments before the string are masked to spaces, so `import(/* @vite-ignore */ '<url>')` and a
-// comment that holds a quote still count.
-function isModuleSpecifier(masked: readonly string[], stringStart: number): boolean {
-  let idx = indexBeforeSpaces(masked, stringStart - 1);
-  if (masked[idx] === '(') idx = indexBeforeSpaces(masked, idx - 1);
-
-  const keywordWindow = masked.slice(Math.max(0, idx - LONGEST_LOADER_KEYWORD.length), idx + 1);
+// True when the last code before the string is a loader keyword, or an open paren after one.
+// Comments are not code, so `import(/* @vite-ignore */ '<url>')` keeps its URL.
+function isModuleSpecifier(masked: readonly string[], trail: Readonly<CodeTrail>): boolean {
+  const keywordEnd = masked[trail.last] === '(' ? trail.beforeLast : trail.last;
+  const keywordWindow = masked.slice(
+    Math.max(0, keywordEnd - LONGEST_LOADER_KEYWORD.length),
+    keywordEnd + 1
+  );
   return moduleLoaderKeywordAtEndPattern.test(keywordWindow.join(''));
-}
-
-function indexBeforeSpaces(masked: readonly string[], from: number): number {
-  let idx = from;
-  while (idx >= 0 && /\s/.test(masked[idx] ?? '')) idx -= 1;
-  return idx;
 }
 
 // DEPS-INSTALL-SCRIPT-HOOKS: npm postinstall/preinstall lifecycle scripts that install packages.
