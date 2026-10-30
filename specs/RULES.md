@@ -146,7 +146,8 @@ the same file. The finding is on the line of the read.
   positional argument goes by position. A default value goes to its parameter.
   Functions with the same name share their call arguments. A name that a
   function binds (a parameter, or an assignment, loop, or `as` target) is local
-  to that function. A nested function also reads the
+  to that function. An attribute or subscript target, such as `self.log` or
+  `items[0]`, binds no name. A nested function also reads the
   locals of the functions around it, up to 100 levels, as CPython allows.
   `self.<name>` is shared by all methods. A key lookup on a variable that holds
   the environment, or on a call result, reads one item.

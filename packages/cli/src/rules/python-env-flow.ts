@@ -110,7 +110,8 @@ const TRANSPORT_OPTION_ARGUMENT =
   /\s*(?:timeout|verify|allow_redirects|follow_redirects|cert|context)\s*=(?!=)/y;
 const CALLED_VALUE = /^\s*(?:await\s+)?([A-Za-z_][\w.]*)\s*\(/;
 const AS_NAME = /\s*as\s+([A-Za-z_]\w*)/y;
-const AS_TARGET = /\bas\s+([A-Za-z_]\w*)/g;
+// A plain name after `as`. An attribute or a subscript target, as in `as self.log`, binds no name.
+const AS_TARGET = /\bas\s+([A-Za-z_]\w*)(?!\s*[\w.[])/g;
 
 // The full names of calls that start a child process. Their `env=` argument is the child's
 // environment and does not flow into the call result: `subprocess.run(cmd, env={**os.environ})`.
@@ -339,7 +340,7 @@ function collectFlows(parsed: ParsedCode, imported: ImportedNames): FlowGraph {
     const loop = FOR_LOOP.exec(text);
     if (loop?.[1] !== undefined) {
       const targets = identifiers(loop[1]);
-      bindLocals(graph, scope, targets);
+      bindLocals(graph, scope, boundNames(loop[1]));
       addFlow(targets, loop[0].length);
       continue;
     }
