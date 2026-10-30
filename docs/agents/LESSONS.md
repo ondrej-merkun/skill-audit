@@ -204,6 +204,13 @@ without a commit message explaining why it no longer applies.
   Node floor in `.github/CONTRIBUTING.md`, and build on the lowest allowed
   version.
 
+- **L1.31: A hint in CLI output is a documented invocation.** _The scan notice
+  for ignored skills said `run with --all to include`, but the CLI never had an
+  `--all` flag, and no test read the notice._
+  When an output line tells the user to run a command or flag, test that line
+  and run the named command on the built CLI. If no command does the job, name
+  the real file or step instead.
+
 ## 2. Discovery & spec-reading — disambiguate depth explicitly
 
 - **L2.1 — "Plugins" paths are multi-level; walk the full tree.** _Task
