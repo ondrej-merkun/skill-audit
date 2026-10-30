@@ -42,8 +42,8 @@ content exposed to Claude Code, OpenAI Codex, GitHub Copilot, Cursor, Gemini
 CLI, Windsurf, Cline, and cross-agent project files, then shows the riskiest
 result first in a colorized verdict table.
 When you want a deeper semantic pass, add optional localhost-only LLM review over
-the same discovered skills, deterministic findings, relevant file paths, and
-capped snippets.
+the same discovered skills: their deterministic findings, capped snippets, and
+capped content of each skill's own files.
 
 Run a one-off scan with `npx`, or install the `skill-audit` binary globally
 before using the commands below, including local LLM review.
@@ -188,9 +188,13 @@ skill-audit scan --llm all --html skill-audit-report.html
 LLM findings are labeled separately from deterministic rule findings. They do
 not replace rule results, and model failures, timeouts, or invalid responses do
 not hide scanner findings. Review payloads include skill metadata, deterministic
-findings, relevant file paths, and capped snippets from files that triggered
-findings after obvious secret redaction. `skill-audit` does not send whole home
-directories, unrelated files, environment variables, or discovered secrets.
+findings, capped snippets around the findings, and the skill's own files, after
+obvious secret redaction. The entry file (`SKILL.md` or the target's main file)
+comes first. Each file sends at most 4,000 characters, and the payload stays
+within a total budget that `--context-tokens` sets. The payload marks each cut
+file and lists the files that it did not send, so a skill without findings still
+gets a model review. `skill-audit` does not send whole home directories, files
+outside the skill, environment variables, or discovered secrets.
 
 Detailed reference:
 

@@ -354,7 +354,8 @@ export async function runScan(opts: Partial<ScanOptions> = {}): Promise<void> {
       scannedSkills,
       selectedLlmConfigs,
       options.llmFetchImpl,
-      progress
+      progress,
+      { scanTargetPaths }
     );
     scannedSkills.splice(0, scannedSkills.length, ...reviewedSkills);
   }

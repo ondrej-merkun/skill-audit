@@ -79,10 +79,10 @@ For the full security boundary, see [`THREAT_MODEL.md`](THREAT_MODEL.md).
 | `skill-audit scan --summary` | Skill contents | No | Nothing |
 | `skill-audit scan --json` | Skill contents and dependency manifests | No | Nothing |
 | `skill-audit scan --html [file]` | Skill contents and dependency manifests | No | Nothing |
-| `skill-audit scan --llm local` | Skill contents and deterministic findings | Only to loopback model URL | Bounded skill metadata, findings, and capped snippets |
-| `skill-audit scan --skill <name> --llm local` | Selected skill contents and deterministic findings | Only to loopback model URL | Bounded selected-skill metadata, findings, and capped snippets |
+| `skill-audit scan --llm local` | Skill contents and deterministic findings | Only to loopback model URL | Bounded skill metadata, findings, snippets, and capped skill files |
+| `skill-audit scan --skill <name> --llm local` | Selected skill contents and deterministic findings | Only to loopback model URL | Bounded selected-skill metadata, findings, snippets, and capped skill files |
 | `skill-audit explain <name>` | Selected skill contents | No | Nothing |
-| `skill-audit explain <name> --llm local` | Selected skill contents and deterministic findings | Only to loopback model URL | Bounded selected-skill metadata, findings, and capped snippets |
+| `skill-audit explain <name> --llm local` | Selected skill contents and deterministic findings | Only to loopback model URL | Bounded selected-skill metadata, findings, snippets, and capped skill files |
 
 ## Example Findings
 

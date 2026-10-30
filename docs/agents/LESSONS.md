@@ -456,6 +456,16 @@ without a commit message explaining why it no longer applies.
   Run the check in the loader that every send path uses, and add a test that
   writes the bad value to the file directly.
 
+- **L4.9: An LLM review must see the skill, not only the rule findings.** _The
+  local LLM review sent only snippets around rule findings. A skill with zero
+  findings sent no content, so the L1.27 gate skipped the model, and the second
+  opinion could never find what the rules missed._
+  Send the skill's own files within a per-file and total budget, entry file
+  first, and mark each cut. Gate the model request on file text too, not only
+  on findings. Give the model the file set that the rule scan read: `scan`
+  passes its `scanTargetPaths` to the review, so a nested skill is not reviewed
+  twice.
+
 ## 5. Orphans, cleanup, and the one-task-per-loop rule
 
 - **L5.1 — Delete direct predecessors in the same commit.** _Task 1.7

@@ -49,7 +49,7 @@ ship as the hero GIF).
           "provider": "openai-compatible",
           "model": "llama3.1",
           "status": "ok",
-          "prompt_version": "2026-04-28.schema-v2",
+          "prompt_version": "2026-10-30.skill-files-v3",
           "findings": [
             {
               "severity": "high",
@@ -207,10 +207,11 @@ remain visible and authoritative for the baseline scan.
   deterministic scanning and before enrichment; JSON, summary, HTML, and file
   output keep stdout and written payloads free of progress text.
 - Review payloads sent to local models are bounded to skill metadata,
-  deterministic findings, relevant file paths, and capped snippets from files
-  that produced findings after obvious secret redaction. Outputs and docs must
-  not imply that whole home directories, unrelated files, environment
-  variables, cache trees, or discovered secrets are sent to models.
+  deterministic findings, capped snippets around the findings, and capped
+  content of the skill's own files, after obvious secret redaction. The budget
+  and file statuses are in `specs/SPEC.md`, "Optional local LLM review". Outputs
+  and docs must not imply that whole home directories, files outside the skill,
+  environment variables, cache trees, or discovered secrets are sent to models.
 
 ## Visible data contract
 
