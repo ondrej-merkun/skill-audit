@@ -43,15 +43,16 @@ and the real path. These files are operative:
   nested skill cannot hide a doc that its parent names.
 - A file that SKILL.md tells the agent to run. SKILL.md names the file by its
   path from the skill root or from a deeper dir above the file, alone or after
-  a prefix such as `./`, `$SKILL_DIR/`, or `${CLAUDE_PLUGIN_ROOT}/`, and one of
-  these is true: a run verb (`run`, `execute`, `exec`, `invoke`, `launch`)
-  comes before the path in the same sentence (`Run docs/setup.sh first.`); a
-  program comes directly before the path, with its options
-  (`bash references/install.sh`, `source docs/env.sh`, `. docs/env.sh`,
-  `python3 docs/check.py`, and the other shells and interpreters); or the path
-  starts a command in fenced code, also in quotes or after variable
-  assignments (`./examples/setup.sh --init`, `DEBUG=1 "./docs/setup.sh"`). The
-  check reads at most 200 characters before the path on its line.
+  a prefix in the same shell word, quoted or not (`./`, `"$SKILL_DIR/`,
+  `"${CLAUDE_PLUGIN_ROOT}"/`), and one of these is true: a run verb (`run`,
+  `execute`, `exec`, `invoke`, `launch`) comes before the path in the same
+  sentence (`Run docs/setup.sh first.`); a program comes directly before the
+  path, with its options (`bash references/install.sh`, `source docs/env.sh`,
+  `. docs/env.sh`, `python3 docs/check.py`, and the other shells and
+  interpreters); or the path starts a command in fenced code, also in quotes or
+  after variable assignments (`./examples/setup.sh --init`,
+  `DEBUG=1 "./docs/setup.sh"`). The check reads at most 200 characters before
+  the path on its line.
 - A file that a command in an agent config file names: a hook or an MCP server
   in `hooks.json`, `settings.json`, `settings.local.json`, or `.mcp.json` in the
   same scan target. The command can name the file from any dir above it
