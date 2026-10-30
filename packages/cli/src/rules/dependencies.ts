@@ -349,11 +349,16 @@ function keepMcpStartupFieldBlocks(content: string): string {
     keep[index] = true;
     let balance = squareBracketBalance(line);
     let lookahead = index + 1;
-    while (balance > 0 && lookahead < lines.length && lookahead <= index + 24) {
+    // Keep the whole array, so padding args cannot push `-c` and its command out of the block.
+    // A pretty-printed array then matches like the same array on one line.
+    while (balance > 0 && lookahead < lines.length) {
       keep[lookahead] = true;
       balance += squareBracketBalance(lines[lookahead]);
       lookahead += 1;
     }
+    // The block already keeps its lines, so the walk goes on after it. That keeps the pass
+    // linear when a file holds many unclosed arrays.
+    index = Math.max(index, lookahead - 1);
   }
 
   return lines.map((line, index) => (keep[index] ? line : maskLine(line))).join('\n');
