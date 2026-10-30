@@ -20,7 +20,9 @@ type PrepareContent = NonNullable<Rule['prepareContent']>;
 // One view of a file that a rule matches, and the severity of the findings in it.
 type SeverityView = { severity: Severity; prepareContent: PrepareContent | undefined };
 type RunRulesOptions = {
-  filenameOverride?: string;
+  // The names that select the rules of a single-file target in place of its own name, such
+  // as `check.sh` and `check.py` for a script that hooks run with bash and with python3.
+  scanNames?: string[];
   scanAllSupportingFiles?: boolean;
   /** Paths from collectScanTargetPaths; a directory walk does not enter them. */
   scanTargetPaths?: ReadonlySet<string>;
@@ -598,15 +600,19 @@ export async function runRules(
     ? buildReachabilityIndex(skillPath, files, dirAliases, options.alsoInstalledAt ?? [])
     : undefined;
 
+  // Scan names from discovery name a single file. A merged directory target holds the names
+  // of its directories there, and its files keep their own names.
+  const scanNames = isDirectory ? undefined : options.scanNames;
+
   for (const filePath of files) {
-    // The file's own name: a shebang scan name applies only to a file without an extension,
-    // never to the markdown docs that preparePathFor unmasks.
-    const fileName = options.filenameOverride ?? basename(filePath);
+    // The first name decides the file's role. A shebang adds rules but not a role, so the
+    // markdown docs that preparePathFor unmasks stay markdown.
+    const fileName = scanNames?.[0] ?? basename(filePath);
     const scanPath = preparePathFor(filePath, fileName, dirAliases, reachability);
-    const { name, passes } = scanNameAndPasses(filePath, scanPath, rules, options);
+    const passes = scanPasses(filePath, scanPath, rules, scanNames);
     if (passes.length === 0) continue;
 
-    const fileRole = classifySupportingFileRole(filePath, name, reachability, options);
+    const fileRole = classifySupportingFileRole(filePath, fileName, reachability, options);
     const content = readScanContent(filePath);
     if (content === undefined) continue;
 
@@ -622,10 +628,9 @@ export async function runRulesForSkill(
   rules: Rule[],
   options: Pick<RunRulesOptions, 'scanAllSupportingFiles' | 'scanTargetPaths'> = {}
 ): Promise<Finding[]> {
+  const scanNames = ruleScanNames(skill);
   const runOptions: RunRulesOptions = {
-    ...(skill.metadata?.ruleScanFilename !== undefined
-      ? { filenameOverride: skill.metadata.ruleScanFilename }
-      : {}),
+    ...(scanNames === undefined ? {} : { scanNames }),
     ...(skill.alsoInstalledAt !== undefined ? { alsoInstalledAt: skill.alsoInstalledAt } : {}),
     ...options,
   };
@@ -644,6 +649,19 @@ export async function runRulesForSkill(
   }
 
   return runRules(skill.path, skillRules, runOptions);
+}
+
+/**
+ * The names that select the rules of a single-file target: the scan name from discovery
+ * first, then the name of each installation. A script that hooks run with bash and with
+ * python3 gets the rules of both languages, also when dedupe merged two copies of it.
+ */
+function ruleScanNames(skill: Skill): string[] | undefined {
+  const names = (skill.installations ?? []).map((installation) => installation.scanName);
+  const ruleScanFilename = skill.metadata?.ruleScanFilename;
+  if (ruleScanFilename !== undefined) names.unshift(ruleScanFilename);
+
+  return names.length === 0 ? undefined : [...new Set(names)];
 }
 
 // A scope-limited rule judges agent config files of its scopes, under a name it applies to. A
@@ -665,38 +683,34 @@ async function runRulesOnContent(
   rules: Rule[],
   options: RunRulesOptions
 ): Promise<Finding[]> {
-  const name = options.filenameOverride ?? basename(filePath);
-  const preparePath = join(dirname(filePath), name);
-  return matchRules(filePath, content, matchPasses(rules, name, preparePath));
+  const names = options.scanNames ?? [basename(filePath)];
+  const passes = names.flatMap((name) => matchPasses(rules, name, join(dirname(filePath), name)));
+  return matchRules(filePath, content, passes);
 }
 
 /**
- * Picks the name that selects the rules for a file, and the passes for that name. A scan
- * name from discovery wins. A file without an extension whose own name selects no rule, such
- * as `scripts/setup`, is scanned under the name of its shebang interpreter. A name that
- * selects rules keeps them, so a `#!` line cannot hide a Pipfile or a `.cursorrules` file.
+ * Returns the passes for each name that selects rules for a file. Scan names from discovery
+ * win. Otherwise the file's own name selects rules, and a shebang line adds the rules of the
+ * language that runs the file, so `scripts/setup`, `run.txt`, and `setup.cfg` with
+ * `#!/bin/bash` get the shell rules. In a skill directory, nothing tells whether the agent
+ * runs the file through its shebang or reads it by its name, so both apply. A shebang never
+ * removes rules, so a `#!` line cannot hide a Pipfile or a `.cursorrules` file.
  */
-function scanNameAndPasses(
+function scanPasses(
   filePath: string,
   scanPath: string,
   rules: Rule[],
-  options: RunRulesOptions
-): { name: string; passes: MatchPass[] } {
-  const override = options.filenameOverride;
-  const name = override ?? basename(filePath);
-  const preparePath = override === undefined ? scanPath : join(dirname(scanPath), override);
-  const passes = matchPasses(rules, name, preparePath);
-  if (passes.length > 0 || override !== undefined) return { name, passes };
+  scanNames: string[] | undefined
+): MatchPass[] {
+  const ownName = basename(filePath);
+  const shebangName = scanNames === undefined ? shebangScanName(filePath) : undefined;
+  const names = scanNames ?? (shebangName === undefined ? [ownName] : [ownName, shebangName]);
 
-  const shebangName = shebangScanName(filePath);
-  if (shebangName === undefined) return { name, passes };
-
-  // The shebang name also prepares the content, so shell comment masking applies.
-  const shebangPreparePath = join(dirname(scanPath), shebangName);
-  return {
-    name: shebangName,
-    passes: matchPasses(rules, shebangName, shebangPreparePath),
-  };
+  // Another name also prepares the content, so a script gets the comment masking of its
+  // language.
+  return names.flatMap((name) =>
+    matchPasses(rules, name, name === ownName ? scanPath : join(dirname(scanPath), name))
+  );
 }
 
 /**
