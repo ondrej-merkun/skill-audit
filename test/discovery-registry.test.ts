@@ -716,11 +716,13 @@ describe('shared .agents/skills discovery', () => {
 
   // A home-directory marker that makes each agent's isInstalled() gate pass.
   const AGENT_INSTALL_MARKERS = [
+    ['amp', join('.config', 'amp')],
     ['cline', '.cline'],
     ['codex', '.codex'],
     ['copilot', '.copilot'],
     ['cursor', '.cursor'],
     ['gemini', '.gemini'],
+    ['opencode', join('.config', 'opencode')],
     ['windsurf', join('.codeium', 'windsurf')],
   ] as const;
 

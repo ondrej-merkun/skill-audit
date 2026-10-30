@@ -14,7 +14,10 @@ first screen while preserving the details users need after their first scan.
 | **Cline** | `~/Documents/Cline/Rules/`, `~/.cline/skills/`, `~/Documents/Cline/Workflows/`, Cline MCP settings, `~/.agents/skills/` | `.clinerules/`, `.cline/skills/`, `.clinerules/skills/`, `.clinerules/workflows/`, `.agents/skills/` |
 | **Gemini CLI** | `~/.gemini/extensions/`, `~/.gemini/commands/`, `~/.gemini/agents/`, `~/.gemini/skills/`, `~/.gemini/settings.json`, `~/.agents/skills/` | `.gemini/extensions/`, `.gemini/commands/`, `.gemini/skills/`, `.gemini/settings.json`, `GEMINI.md`, `.agents/skills/` |
 | **Windsurf** | `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/hooks.json`, `~/.agents/skills/` | `.windsurf/rules/*.md`, nested workspace `.windsurf/rules/`, `.windsurfrules`, `.devin/hooks.json`, `.agents/skills/` |
-| **Cross-agent sweep** | - | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.windsurfrules`, `CONVENTIONS.md` (walks parents) |
+| **OpenCode** | `~/.config/opencode/` (`opencode.json(c)` MCP servers, local plugins in `plugin` lists, `AGENTS.md`, `agents/`, `commands/`, `skills/`, `plugins/`, `tools/`), `~/.claude/skills/`, `~/.agents/skills/` | `opencode.json(c)`, `.opencode/`, `.claude/skills/`, `.agents/skills/` (walks parents to the git root) |
+| **Amp** | `~/.config/amp/settings.json(c)` (`amp.mcpServers`), `~/.config/amp/AGENTS.md`, `~/.config/AGENTS.md`, `~/.config/amp/skills/`, `~/.config/agents/skills/`, `~/.config/amp/plugins/`, `~/.claude/skills/`, `~/.agents/skills/` | nearest `.amp/settings.json(c)`, `.amp/plugins/`, `.claude/skills/`, `.agents/skills/` (walks parents to the git root) |
+| **OpenClaw** | `~/.openclaw/openclaw.json` (MCP servers), `~/.openclaw/skills/`, Skill Workshop skills, `~/.openclaw/hooks/`, `~/.openclaw/extensions/`, `~/.agents/skills/`, workspace `~/.openclaw/workspace/` (`AGENTS.md`, `SOUL.md`, and other bootstrap files, `skills/`, `.agents/skills/`) | - (the workspace is the project) |
+| **Cross-agent sweep** | - | `AGENTS.md`, `AGENT.md`, `CLAUDE.md`, `GEMINI.md`, `.windsurfrules`, `CONVENTIONS.md` (walks parents) |
 
 By default, `scan` and `list` include only installed or currently exposed
 skills. Plugin marketplace payloads under `plugins/marketplaces/` are inactive
@@ -29,7 +32,7 @@ produce shareable CLI output without an account.
 
 | Tool | Best fit | Account or token | Agent discovery | Output | Rule/model approach |
 |---|---|---|---|---|---|
-| **skill-audit** | Local skill and instruction audit before installing, sharing, or running agent workflows | No account | Claude Code, Codex, Copilot, Cursor, Cline, Gemini CLI, Windsurf, and cross-agent project files | Table, summary, JSON, HTML, file output, GitHub Action | Deterministic local rules |
+| **skill-audit** | Local skill and instruction audit before installing, sharing, or running agent workflows | No account | Claude Code, Codex, Copilot, Cursor, Cline, Gemini CLI, Windsurf, OpenCode, Amp, OpenClaw, and cross-agent project files | Table, summary, JSON, HTML, file output, GitHub Action | Deterministic local rules |
 | [**Snyk Agent Scan**](https://github.com/snyk/agent-scan) | Agent/MCP/skill security scanning with Snyk-backed verification and enterprise monitoring options | Requires `SNYK_TOKEN` for CLI scanning | MCP configs, tools, prompts, resources, and skills across many agents; skills require `--skills` | Rich CLI, JSON, background/enterprise modes | Local checks plus Agent Scan API analysis |
 | [**Cisco AI Security Scanner / Skill Scanner**](https://cisco-ai-defense.github.io/docs/ai-security-scanner) | IDE-centered agent asset review, skill scanning, allowlists, and optional deeper analyzers | Basic YARA scanning runs without setup; LLM, Cisco AI Defense, and VirusTotal analyzers need provider/API keys | VS Code, Cursor, Windsurf, Antigravity extension commands for MCP configs and skills | IDE sidebar, Problems panel, SARIF via the underlying scanner | YARA and behavioral analysis, with optional LLM/cloud/VT analyzers |
 | [**Semgrep CLI**](https://semgrep.dev/docs/getting-started/cli) | General source-code SAST and custom rule development | `semgrep scan` can run locally without an account; `semgrep ci` uses Semgrep AppSec Platform login/policies | Code repositories, not agent-skill inventory | CLI findings, CI integrations, Semgrep platform workflows | Language-aware static analysis rules |
@@ -54,7 +57,7 @@ skill-audit ignore <name>      # add a skill's treeSha256 to your ignore list
 |---|---|
 | `--json` | Emit machine-readable JSON (schema v1.0) |
 | `--summary` | One-line summary footer only |
-| `--agent <id>` | Restrict to one agent (`claude-code`, `codex`, `cross-agent`, `cursor`, `gemini`, `copilot`, `windsurf`, `cline`) |
+| `--agent <id>` | Restrict to one agent (`claude-code`, `codex`, `cross-agent`, `cursor`, `gemini`, `copilot`, `windsurf`, `cline`, `opencode`, `amp`, `openclaw`) |
 | `--skill <name-or-id>` | Restrict `scan` to one matching skill |
 | `--include-marketplaces` | Include inactive local marketplace inventory and label rows as `marketplace` |
 | `--llm <name>` | Add optional local LLM review; repeat, comma-separate, or use `all` |

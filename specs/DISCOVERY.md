@@ -9,6 +9,7 @@ Cursor skills, subagent, and plugin paths were verified against the Cursor docs
 in October 2026.
 Claude Code plugin install records and `enabledPlugins` were verified against
 vendor docs in October 2026.
+OpenCode, Amp, and OpenClaw paths were verified against official docs in October 2026.
 
 Claude Code memory, rule, and parent-directory paths were verified against the
 Claude Code docs and the loader in Claude Code 2.1.314 in October 2026.
@@ -255,10 +256,11 @@ docs do not define the hook file format.
 ### 5. Cross-agent AGENTS.md sweep
 
 One walker handles shared project instruction files for Codex, Gemini CLI,
-Windsurf, Cline, Zed, Amp, and Factory. Walk cwd and parents up to repo root;
-collect:
+Windsurf, Cline, OpenCode, Zed, Amp, and Factory. Walk cwd and parents up to
+repo root; collect:
 - `AGENTS.md`
 - `AGENTS.override.md`
+- `AGENT.md` (Amp reads it when a directory has no `AGENTS.md`)
 - `CLAUDE.md`
 - `GEMINI.md`
 - `.cursorrules`
@@ -354,8 +356,9 @@ Claude Code-only memory files (`CLAUDE.local.md`, `.claude/CLAUDE.md`,
 
 ### 8. Shared Agent Skills directory
 
-OpenAI Codex, Cursor, GitHub Copilot, Gemini CLI, Windsurf, and Cline read the
-cross-agent `.agents/skills` directory. Claude Code does not.
+OpenAI Codex, Cursor, GitHub Copilot, Gemini CLI, Windsurf, Cline, OpenCode,
+and Amp read the cross-agent `.agents/skills` directory. OpenClaw reads only
+`~/.agents/skills`, with its default state directory. Claude Code does not.
 
 **User-global:** `~/.agents/skills/**/SKILL.md`
 
@@ -371,6 +374,100 @@ One shared walker emits these skills once for each of those agents that is
 installed. `discoverAll()` then collapses the identical rows into one skill
 that keeps every owning agent. Not scanned yet: Codex parent directories up to
 the repo root and `/etc/codex/skills`, and Cursor nested project directories.
+OpenCode and Amp also read `.agents/skills` in the parents up to the git root;
+their own plugins emit those rows.
+
+### 9. OpenCode
+
+`<config>` is `$XDG_CONFIG_HOME/opencode`, or `~/.config/opencode`. OpenCode
+counts as installed when `<config>` or its data directory
+(`~/.local/share/opencode`) exists.
+
+**User-global:**
+- `<config>/opencode.json`, `<config>/opencode.jsonc` (one entry per MCP server)
+- Local plugin files that the `plugin` list of `opencode.json(c)` or
+  `tui.json(c)` names by path (`./`, `../`, `/`, `~/`, or `file://`). A
+  relative path resolves against the directory of the config file.
+- `<config>/AGENTS.md`
+- `<config>/agents/`, `agent/`, `modes/`, `mode/`: `**/*.md`
+- `<config>/commands/`, `command/`: `**/*.md`. A command body can run a shell
+  command with !`cmd`.
+- `<config>/skills/`, `skill/`: `SKILL.md` directories at any depth, and
+  `*.md` files at the top (the OpenCode 2 file form)
+- `<config>/plugins/`, `plugin/`, `tools/`, `tool/`: each `.js`, `.ts`, `.mjs`,
+  or `.cjs` file at the top, and each package directory
+- `~/.claude/skills/`, `~/.agents/skills/`
+- `$OPENCODE_CONFIG` (an extra config file) and `$OPENCODE_CONFIG_DIR` (an
+  extra directory with the layout of `.opencode`)
+
+**Project-local (cwd and parents up to the git root):**
+- `opencode.json`, `opencode.jsonc`, `tui.json`, `tui.jsonc`
+- `.opencode/` with the same layout as `<config>`
+- `.claude/skills/`, `.agents/skills/`
+- `AGENTS.md` and `CLAUDE.md` are handled by the cross-agent sweep.
+
+OpenCode reads config as JSONC: comments and trailing commas are allowed.
+OpenCode 1 puts MCP servers in `mcp.<name>`; OpenCode 2 nests them in
+`mcp.servers.<name>`. Both shapes are read. A `servers` entry that is itself a
+server definition (it has `command`, `url`, or `type`) is an OpenCode 1
+server. Not scanned yet: npm plugins that a `plugin` list names (OpenCode
+installs them into its cache, `~/.cache/opencode/node_modules/`), and a local
+`plugin` entry that names a directory.
+
+### 10. Amp
+
+`<config>` is `$XDG_CONFIG_HOME/amp`, or `~/.config/amp`. Amp counts as
+installed when `<config>` exists.
+
+**User-global:**
+- `<config>/settings.json`, `<config>/settings.jsonc` (one entry per server in
+  the `"amp.mcpServers"` key)
+- `<config>/AGENTS.md`, `~/.config/AGENTS.md`
+- `<config>/skills/`, `~/.config/agents/skills/`, `~/.claude/skills/`,
+  `~/.agents/skills/`
+- `<config>/plugins/`: each code file at the top, and each plugin directory
+
+**Project-local:**
+- The nearest `.amp/settings.json` or `.amp/settings.jsonc`, searched from cwd
+  up to the git root
+- `.amp/plugins/` at the project root (the git root, or cwd without one)
+- `.claude/skills/` and `.agents/skills/` in cwd and parents up to the git root
+- `AGENTS.md`, `AGENT.md`, and `CLAUDE.md` are handled by the cross-agent sweep.
+
+Amp settings are JSONC. No other Amp setting runs code. A skill can hold its
+own `mcp.json`; the skill directory scan covers it.
+
+### 11. OpenClaw
+
+OpenClaw is a gateway. Its project is the agent workspace, not the scan's
+working directory, so every OpenClaw target has `scope: "user"`. `<state>` is
+`$OPENCLAW_STATE_DIR`, or `~/.openclaw`. `openclaw --profile <name>` sets
+`OPENCLAW_STATE_DIR` and `OPENCLAW_CONFIG_PATH`. OpenClaw counts as installed
+when `<state>` exists.
+
+- `$OPENCLAW_CONFIG_PATH`, or `<state>/openclaw.json` (one entry per server in
+  `mcp.servers` and `nodeHost.mcp.servers`). A config that OpenClaw 2026.6
+  wrote keeps its servers in a root `mcpServers` map, which the current docs do
+  not name; discovery reads that map too. OpenClaw reads this file as JSON5, so
+  unquoted keys, single quotes, comments, and trailing commas are allowed.
+- `<state>/skills/` (managed skills)
+- `<state>/agents/*/agent/workshop-skills/` (Skill Workshop skills)
+- `~/.agents/skills/`, only with the default state directory
+- `<state>/hooks/*/` (managed hooks: each directory with `HOOK.md` and its
+  handler is one target)
+- `<state>/extensions/*/` (each plugin directory is one target; OpenClaw skips
+  script files at the top of this directory)
+- The workspace, `$OPENCLAW_WORKSPACE_DIR` or `<state>/workspace`:
+  `AGENTS.md`, `SOUL.md`, `USER.md`, `IDENTITY.md`, `BOOT.md`, `BOOTSTRAP.md`,
+  `MEMORY.md`, `skills/`, and `.agents/skills/`. Older releases also inject
+  `TOOLS.md` and `HEARTBEAT.md`, so these are targets too.
+
+Not scanned yet: workspace hooks (`<workspace>/hooks/`) and workspace
+extensions (`<workspace>/.openclaw/extensions/`), because OpenClaw loads them
+only after the user enables them; `skills.load.extraDirs`,
+`hooks.internal.load.extraDirs`, and `plugins.load.paths` from the config;
+plugins that `openclaw plugins install` puts in its managed npm projects; and
+workspaces that the config assigns to other agents.
 
 
 ## Disambiguation rules

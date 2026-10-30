@@ -1,7 +1,8 @@
 # skill-audit
 
 A CLI that scans installed AI agent skills (Claude Code, Cursor, Copilot,
-Codex, Gemini, Windsurf, Cline) for prompt injection and malicious code.
+Codex, Gemini, Windsurf, Cline, OpenCode, Amp, OpenClaw) for prompt injection and
+malicious code.
 Local-first, zero-auth, published as `@ondrej-merkun/skill-audit` with the
 `skill-audit` bin.
 
@@ -56,7 +57,8 @@ test runners or split the test command.
 ```
 packages/cli/          @ondrej-merkun/skill-audit — npm package, exposes the `skill-audit` bin
   src/commands/        scan, list, explain, ignore
-  src/discovery/       per-agent plugins (claude-code, codex, cursor, copilot, cline, gemini, agents-md-sweep)
+  src/discovery/       per-agent plugins (claude-code, codex, cursor, copilot, cline, gemini, windsurf,
+                       opencode, amp, openclaw, agents-md-sweep)
   src/rules/           50 rules grouped by category (pure regex)
   src/output/          table (TUI), json, html, summary
   src/score.ts         scoring + verdict bands + mandatory-fail overrides

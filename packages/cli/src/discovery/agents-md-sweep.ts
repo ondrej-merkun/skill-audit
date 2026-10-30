@@ -10,6 +10,8 @@ const AGENT_ID = 'cross-agent';
 const TARGET_FILENAMES = new Set([
   'AGENTS.md',
   'AGENTS.override.md',
+  // Amp reads AGENT.md when a directory has no AGENTS.md.
+  'AGENT.md',
   'CLAUDE.md',
   'GEMINI.md',
   '.cursorrules',

@@ -39,8 +39,8 @@ configs, and project instruction files. It reads files from your machine, runs
 shipped deterministic rules locally, and does not upload skill contents,
 snippets, environment variables, or findings to a cloud service. It discovers
 content exposed to Claude Code, OpenAI Codex, GitHub Copilot, Cursor, Gemini
-CLI, Windsurf, Cline, and cross-agent project files, then shows the riskiest
-result first in a colorized verdict table.
+CLI, Windsurf, Cline, OpenCode, Amp, OpenClaw, and cross-agent project files,
+then shows the riskiest result first in a colorized verdict table.
 When you want a deeper semantic pass, add optional localhost-only LLM review over
 the same discovered skills: their deterministic findings, capped snippets, and
 capped content of each skill's own files.
@@ -157,9 +157,10 @@ More workflows: [`docs/EXAMPLES.md`](docs/EXAMPLES.md).
 ## What It Covers
 
 `skill-audit` scans global and project-local skill locations for Claude Code,
-Codex, Copilot, Cursor, Gemini CLI, Windsurf, Cline, and instruction files such
-as `AGENTS.md`, `CLAUDE.md`, and Claude Code rules. It also scans agent hook and settings files and each
-MCP server definition, because those run commands. It matches 50 shipped rules
+Codex, Copilot, Cursor, Gemini CLI, Windsurf, Cline, OpenCode, Amp, OpenClaw,
+and instruction files such as `AGENTS.md`, `CLAUDE.md`, and Claude Code rules.
+It also scans agent hook and settings files, agent plugin code, and each MCP
+server definition, because those run commands. It matches 50 shipped rules
 across prompt injection, network exfiltration, filesystem access, code
 execution, obfuscation, hardcoded secrets, git-history access, dependency risk,
 and skill-specific malware patterns.

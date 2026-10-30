@@ -8,7 +8,7 @@ import { fallbackSkillNameFromDirectory } from './names.js';
 import { computeTreeSha256 } from './tree-hash.js';
 
 // Cross-agent Agent Skills location. Codex, Cursor, GitHub Copilot, Gemini CLI,
-// Windsurf, and Cline read it under the home directory and the project root.
+// Windsurf, Cline, OpenCode, and Amp read it under the home directory and the project root.
 const SHARED_SKILLS_DIR = join('.agents', 'skills');
 const SKILL_MANIFEST = 'SKILL.md';
 const SKILL_ID_HEX_LENGTH = 16;
@@ -31,7 +31,7 @@ export async function discoverSharedAgentSkills(agentId: string): Promise<Skill[
 
 /**
  * Emits one skill for each directory under `skillsDir`, root included, that holds a SKILL.md.
- * Gemini CLI and Cursor also use it for their own `.gemini/skills` and `.cursor/skills` roots.
+ * Gemini CLI, Cursor, OpenCode, Amp, and OpenClaw also use it for their own skills roots.
  */
 export async function discoverSkillDirs(
   agentId: string,

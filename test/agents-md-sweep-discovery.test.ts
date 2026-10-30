@@ -71,6 +71,8 @@ describe('agents-md-sweep discovery plugin', () => {
     const targets = [
       'AGENTS.md',
       'AGENTS.override.md',
+      // Amp reads AGENT.md when a directory has no AGENTS.md.
+      'AGENT.md',
       'CLAUDE.md',
       'GEMINI.md',
       '.cursorrules',

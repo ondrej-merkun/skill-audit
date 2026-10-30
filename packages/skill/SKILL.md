@@ -106,7 +106,7 @@ Options:
 | `--offline` | Hidden maintenance option; skip optional LLM review. Use only when explicitly requested. |
 
 Supported `--agent` ids are `claude-code`, `codex`, `cross-agent`, `cursor`,
-`gemini`, `copilot`, `windsurf`, and `cline`.
+`gemini`, `copilot`, `windsurf`, `cline`, `opencode`, `amp`, and `openclaw`.
 
 Output combinations:
 

@@ -58,6 +58,9 @@ skill-audit/
 │   │   │   │   ├── gemini.ts
 │   │   │   │   ├── copilot.ts
 │   │   │   │   ├── windsurf.ts
+│   │   │   │   ├── opencode.ts
+│   │   │   │   ├── amp.ts
+│   │   │   │   ├── openclaw.ts
 │   │   │   │   ├── continue.ts
 │   │   │   │   ├── mcp-sweep.ts
 │   │   │   │   └── index.ts        # registry of agents
@@ -144,7 +147,10 @@ Adding a new agent = adding one file and registering in `discovery/index.ts`. No
 | **GitHub Copilot** | `~/.copilot/skills/*/SKILL.md`, `~/.claude/skills/`, `~/.copilot/copilot-instructions.md`, `~/.copilot/instructions/**/*.instructions.md`, `~/.copilot/agents/**/*.md`, MCP in `~/.copilot/mcp-config.json`, `~/.agents/skills/` | `.github/skills/*/SKILL.md`, `.github/copilot-instructions.md`, `.github/instructions/**/*.instructions.md`, `.github/prompts/**/*.prompt.md`, `.github/agents/**/*.md`, MCP in `.github/mcp.json` and `.vscode/mcp.json`, `.agents/skills/` | `SKILL.md`, plain `.md`, `.prompt.md`, `.agent.md`, JSON |
 | **Cline** | `~/Documents/Cline/Rules/`, `~/.cline/skills/`, `~/Documents/Cline/Workflows/`, `~/.cline/data/settings/cline_mcp_settings.json`, `$CLINE_DIR/data/settings/cline_mcp_settings.json`, VS Code / JetBrains `globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`, `~/.agents/skills/` | `.clinerules`, `.clinerules/*.md`, `.clinerules/*.txt`, `.cline/skills/`, `.clinerules/skills/`, `.clinerules/workflows/`, `.agents/skills/`, cross-reads `.cursorrules`, `AGENTS.md`, `CLAUDE.md` | `SKILL.md`, `.md`, `.txt`, JSON |
 | **Windsurf** | `~/.codeium/windsurf/memories/global_rules.md`, `~/.agents/skills/` | `.windsurf/rules/*.md` in the workspace, nested workspace `.windsurf/rules/*.md`, parent `.windsurf/rules/*.md` up to git root, legacy `.windsurfrules`, `.agents/skills/`, auto-reads `AGENTS.md` | Plain `.md`, `SKILL.md` |
-| **Cross-agent (AGENTS.md sweep)** | — | `AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `CONVENTIONS.md` (catches 7+ agents in one pass) | plain `.md` |
+| **OpenCode** | `~/.config/opencode/opencode.json(c)` (`mcp` servers) and `tui.json(c)` (local `plugin` files), `~/.config/opencode/AGENTS.md`, `~/.config/opencode/{agents,commands,skills,plugins,tools}/` and their legacy singular names, `~/.claude/skills/`, `~/.agents/skills/`, `$OPENCODE_CONFIG`, `$OPENCODE_CONFIG_DIR` | `opencode.json(c)`, `tui.json(c)`, `.opencode/` (same layout), `.claude/skills/`, `.agents/skills/`, from cwd up to git root | JSONC, `.md`, `SKILL.md`, JS/TS plugins |
+| **Amp** | `~/.config/amp/settings.json(c)` (`amp.mcpServers`), `~/.config/amp/AGENTS.md`, `~/.config/AGENTS.md`, `~/.config/amp/skills/`, `~/.config/agents/skills/`, `~/.claude/skills/`, `~/.agents/skills/`, `~/.config/amp/plugins/` | nearest `.amp/settings.json(c)` up to git root, `.amp/plugins/` at the project root, `.claude/skills/` and `.agents/skills/` up to git root, `AGENT.md` through the sweep | JSONC, `SKILL.md`, JS/TS plugins |
+| **OpenClaw** | `~/.openclaw/openclaw.json` (`mcp.servers`, `nodeHost.mcp.servers`, legacy root `mcpServers`), `~/.openclaw/skills/`, `~/.openclaw/agents/*/agent/workshop-skills/`, `~/.openclaw/hooks/*/`, `~/.openclaw/extensions/*/`, `~/.agents/skills/` (default state only), workspace `~/.openclaw/workspace/` bootstrap files, `skills/`, `.agents/skills/`. `$OPENCLAW_STATE_DIR`, `$OPENCLAW_CONFIG_PATH`, `$OPENCLAW_WORKSPACE_DIR` override them. | - (the workspace is the project) | JSON5, `.md`, `SKILL.md`, hook and extension directories |
+| **Cross-agent (AGENTS.md sweep)** | - | `AGENTS.md`, `AGENTS.override.md`, `AGENT.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `CONVENTIONS.md` (catches 7+ agents in one pass) | plain `.md` |
 
 **Hook and settings rule.** Agent hooks and command-valued settings run code,
 so each installed agent also reports its hook and settings files as
@@ -166,9 +172,12 @@ scripts that project and plugin hooks name, so a payload moved into a hook
 script is still scanned. Each MCP server from
 `~/.claude.json`, `.mcp.json`, a Claude Code plugin `.mcp.json`,
 `~/.gemini/settings.json`, `.gemini/settings.json`, `~/.copilot/mcp-config.json`,
-`.github/mcp.json`, or `.vscode/mcp.json` is scanned with only its own
-definition, so findings stay on that server and never quote other parts of a
-shared config file.
+`.github/mcp.json`, `.vscode/mcp.json`, an OpenCode `opencode.json(c)`, an Amp
+`settings.json(c)`, or `openclaw.json` is scanned with only its own definition,
+so findings stay on that server and never quote other parts of a shared config
+file. OpenCode and Amp plugins, OpenCode custom tools, and OpenClaw hooks and
+extensions run code, so they are `agent-config` targets. A plugin file keeps its
+own file name, so the JavaScript and TypeScript rules apply to it.
 
 **Discovery depth rule.** When an installed plugin path contains "plugins",
 walk the full tree and emit one Skill per leaf SKILL.md / plugin.json /
@@ -194,8 +203,10 @@ whose plugin is enabled (verified against official docs in October 2026).
 `--include-marketplaces` does not add other cache dirs.
 
 **Shared Agent Skills rule.** `~/.agents/skills/` (user) and `.agents/skills/`
-(project) are read by Codex, Cursor, GitHub Copilot, Gemini CLI, Windsurf, and
-Cline (verified against official docs in October 2026). Discovery reports every
+(project) are read by Codex, Cursor, GitHub Copilot, Gemini CLI, Windsurf,
+Cline, OpenCode, and Amp (verified against official docs in October 2026).
+OpenClaw reads only `~/.agents/skills/`, and only with its default state
+directory. Discovery reports every
 directory under these roots that holds a `SKILL.md`, at any depth and including
 the root itself. Each installed agent among them reports these skills, and the
 registry dedupe collapses them into one skill that keeps every owning agent.

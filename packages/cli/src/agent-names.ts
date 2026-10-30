@@ -7,6 +7,9 @@ export const SUPPORTED_AGENT_IDS = [
   'copilot',
   'windsurf',
   'cline',
+  'opencode',
+  'amp',
+  'openclaw',
 ] as const;
 
 const AGENT_DISPLAY_NAMES: Record<string, string> = {
@@ -18,6 +21,9 @@ const AGENT_DISPLAY_NAMES: Record<string, string> = {
   copilot: 'GitHub Copilot',
   windsurf: 'Windsurf',
   cline: 'Cline',
+  opencode: 'OpenCode',
+  amp: 'Amp',
+  openclaw: 'OpenClaw',
 };
 
 export function formatAgentName(agentId: string): string {
