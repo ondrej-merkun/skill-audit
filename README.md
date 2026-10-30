@@ -209,8 +209,9 @@ npx --yes @ondrej-merkun/skill-audit@latest scan \
   --fail-on REVIEW
 ```
 
-`--fail-on REVIEW` exits 1 for REVIEW or FAIL verdicts. The repository also
-ships a GitHub Action:
+`--fail-on REVIEW` exits 1 for REVIEW or FAIL verdicts. The band is
+case-insensitive. Any other value exits 2 with a usage error. The repository
+also ships a GitHub Action:
 
 ```yaml
 - uses: ondrej-merkun/skill-audit@v1

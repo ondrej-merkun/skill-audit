@@ -544,10 +544,10 @@ Single standalone HTML file (inlined CSS + JS). Layout:
 | `skill-audit ignore <skill-name>` | Append skill's tree sha256 to `~/.config/skill-audit/ignore.yaml` |
 
 **Exit codes** (CI-friendly):
-- `0` — all PASS
-- `1` — any REVIEW or FAIL (configurable: `--fail-on=fail`, `--fail-on=review`, `--fail-on=any`)
-- `2` — tool error
-- `3` — scan incomplete: a discovery plugin or a skill scan failed (exit `1` still wins)
+- `0`: the overall verdict is below the `--fail-on` band.
+- `1`: the overall verdict meets the `--fail-on` band, `fail` (default) or `review`. Band values are case-insensitive. `--strict` sets the band to `review`.
+- `2`: tool error or usage error, such as a `--fail-on` value that is not a band.
+- `3`: scan incomplete. A discovery plugin or a skill scan failed (exit `1` still wins).
 
 **Interactivity.** Zero prompts at MVP. No "Press y to continue". No auth flow. Running the binary with no args performs a full scan. The single most-important UX rule: **a first-time user can type the install command, hit enter, and be reading the result in under 5 seconds.**
 
