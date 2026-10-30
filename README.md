@@ -116,8 +116,9 @@ skill-audit scan ./downloaded-skill/install.sh       # one file
 
 A path scan does not look at installed skills. Each directory under the path
 that holds a `SKILL.md` is one skill. The path is one more skill when it has
-other files, such as plugin hooks or scripts. A path that does not exist exits
-2.
+other files, such as plugin hooks or scripts. Supporting Markdown keeps its
+normal severity, as with `--scan-all-supporting-files`. A path that does not
+exist exits 2.
 
 Write reports:
 
